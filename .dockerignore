@@ -1,0 +1,17 @@
+node_modules
+dist
+dist-ssr
+dev-dist
+coverage
+.git
+.github
+.env
+.env.local
+.env.bak
+.env.example.bak
+*.local
+*.bak
+tsconfig.tsbuildinfo
+.vite
+Dockerfile
+.dockerignore

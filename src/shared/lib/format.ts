@@ -1,0 +1,112 @@
+const AMOUNT_FORMATTER = new Intl.NumberFormat("en-US", {
+  useGrouping: true,
+  maximumFractionDigits: 0,
+});
+
+export function shortAddr(a?: string, n = 6): string {
+  if (!a) return "";
+  if (a.length <= 2 * n + 2) return a;
+  return `${a.slice(0, n + 2)}…${a.slice(-n)}`;
+}
+
+/// Render a bigint amount with thousand separators. Use when no asset
+/// decimals are available; otherwise prefer `formatDecimal`.
+export function formatAmount(v: bigint): string {
+  return AMOUNT_FORMATTER.format(v);
+}
+
+export function parseAmount(s: string): bigint {
+  const t = s.replaceAll(",", "").replaceAll("_", "").trim();
+  if (!isPositiveIntegerString(t)) throw new Error("amount must be a positive integer");
+  return BigInt(t);
+}
+
+/// Format `value` (in token base units / circuit units, scale=1 assumed)
+/// as a human decimal string with `decimals` fractional places. Strips
+/// trailing zeros; integer part gets thousand separators.
+export function formatDecimal(value: bigint, decimals: number): string {
+  if (decimals <= 0) return formatAmount(value);
+  const neg = value < 0n;
+  const abs = neg ? -value : value;
+  const base = 10n ** BigInt(decimals);
+  const whole = abs / base;
+  const frac = abs % base;
+  const wholeStr = AMOUNT_FORMATTER.format(whole);
+  if (frac === 0n) return neg ? `-${wholeStr}` : wholeStr;
+  const fracStr = frac.toString().padStart(decimals, "0").replace(/0+$/, "");
+  return `${neg ? "-" : ""}${wholeStr}.${fracStr}`;
+}
+
+/// Parse a user-typed decimal string (e.g., "1.5", "1,234.567") into a
+/// bigint quantity scaled by `decimals`. Throws on malformed input or
+/// when the fractional part exceeds `decimals` digits.
+export function parseDecimal(input: string, decimals: number): bigint {
+  const t = input.replaceAll(",", "").replaceAll("_", "").trim();
+  if (!/^\d+(\.\d+)?$/.test(t)) throw new Error("amount must be a non-negative number");
+  if (decimals <= 0) return BigInt(t.split(".")[0] ?? "0");
+  const [whole, frac = ""] = t.split(".");
+  if (frac.length > decimals) {
+    throw new Error(`too many fractional digits (max ${decimals})`);
+  }
+  const padded = (frac + "0".repeat(decimals)).slice(0, decimals);
+  return BigInt(whole) * 10n ** BigInt(decimals) + BigInt(padded);
+}
+
+export function isDecimalString(s: string): boolean {
+  return /^\d+(\.\d+)?$/.test(s.replaceAll(",", "").replaceAll("_", "").trim());
+}
+
+/// MASP encodes `publicIn` / `publicOut` as `uint48` on-chain in circuit
+/// units (`MASP.sol :: PublicInTooLarge` checks the circuit-units value, not
+/// base units). Amounts above this cap must be rejected before submission —
+/// on-chain they fail as an opaque `execution reverted` after gas is paid.
+export const PUBLIC_IN_MAX = (1n << 48n) - 1n;
+
+export function exceedsPublicInLimit(circuitUnits: bigint, _scale: bigint): boolean {
+  return circuitUnits > PUBLIC_IN_MAX;
+}
+
+/// Parse a decimal string into circuit-units for an asset. `decimals` is
+/// the ERC20 token's `decimals()`, `scale` is the registry-provided
+/// circuit→base multiplier. Throws if the input has finer precision than
+/// the asset can represent (i.e., `base % scale !== 0`).
+export function parseAmountForAsset(input: string, decimals: number, scale: bigint): bigint {
+  const base = parseDecimal(input, decimals);
+  if (scale > 1n && base % scale !== 0n) {
+    throw new Error("amount precision exceeds asset granularity");
+  }
+  return scale > 1n ? base / scale : base;
+}
+
+/// Inverse of `parseAmountForAsset`: render an asset-quantity bigint
+/// (circuit units) as a human-readable decimal string.
+export function formatAmountForAsset(
+  circuitUnits: bigint,
+  decimals: number,
+  scale: bigint,
+): string {
+  return formatDecimal(scale > 1n ? circuitUnits * scale : circuitUnits, decimals);
+}
+
+/// Convenience: `${formattedAmount} ${symbol}` for a registered asset.
+export function formatAssetAmount(
+  amount: bigint,
+  asset: { decimals: number; scale: bigint; symbol: string },
+): string {
+  return `${formatAmountForAsset(amount, asset.decimals, asset.scale)} ${asset.symbol}`;
+}
+
+export function isPositiveIntegerString(s: string): boolean {
+  return /^\d+$/.test(s.replaceAll(",", "").replaceAll("_", "").trim());
+}
+
+/// Compact human-readable relative time. Updates only when caller re-renders.
+const RTF = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "short" });
+export function relativeTime(from: number, now: number = Date.now()): string {
+  const sec = Math.round((from - now) / 1000);
+  const abs = Math.abs(sec);
+  if (abs < 60) return RTF.format(sec, "second");
+  if (abs < 3600) return RTF.format(Math.round(sec / 60), "minute");
+  if (abs < 86400) return RTF.format(Math.round(sec / 3600), "hour");
+  return RTF.format(Math.round(sec / 86400), "day");
+}

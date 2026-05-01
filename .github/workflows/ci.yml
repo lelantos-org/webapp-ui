@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: read
+
+env:
+  VITE_CHAIN_ID: "31337"
+  VITE_RPC_URL: "http://localhost:8545"
+  VITE_MASP_ADDRESS: "0x0000000000000000000000000000000000000000"
+  VITE_RELAYER_URL: "/relayer"
+  VITE_FMD_URL: "/fmd"
+  VITE_RELAYER_ADDRESS: "0x0000000000000000000000000000000000000000"
+  VITE_TREE_DEPTH: "10"
+  VITE_PROVER_WASM_URL: "/prover/prover.wasm"
+  VITE_PROVER_ZKEY_URL: "/prover/prover.zkey"
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@lelantos-org"
+      - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm run check:ci
+      - run: npm run typecheck
+      - run: npm run test
+      - name: Fetch prover artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          rm -f public/prover/prover.wasm public/prover/prover.zkey
+          gh release download v0.1.0 \
+            --repo lelantos-org/circuits \
+            --pattern '2x2.wasm' \
+            --pattern '2x2_final.zkey' \
+            --dir public/prover
+          mv public/prover/2x2.wasm public/prover/prover.wasm
+          mv public/prover/2x2_final.zkey public/prover/prover.zkey
+      - run: npm run build

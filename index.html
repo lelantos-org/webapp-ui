@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#050507" />
+    <meta name="referrer" content="no-referrer" />
+    <!--
+      CSP via meta is partial: `frame-ancestors`, `sandbox`, `report-uri` are ignored here
+      and must be set as HTTP response headers in production. SDK uses `new Function`
+      (jubjub-wasm) which requires 'unsafe-eval'; Vite dev injects inline bootstrap
+      scripts which require 'unsafe-inline'. This baseline blocks third-party origins;
+      tighten further at the deployment edge with proper headers.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' http: https: ws: wss:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'none'"
+    />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <title>SilentSwap Wallet</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/app/main.tsx"></script>
+  </body>
+</html>

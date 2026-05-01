@@ -1,0 +1,101 @@
+name: Docker
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-[a-z]+"
+
+concurrency:
+  group: ${{ github.ref }}-docker
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+permissions:
+  packages: write
+  contents: read
+  pull-requests: read
+
+env:
+  REGISTRY_URL: ghcr.io
+  REPOSITORY: ${{ github.repository }}
+  VITE_CHAIN_ID: "31337"
+  VITE_RPC_URL: "http://localhost:8545"
+  VITE_MASP_ADDRESS: "0x0000000000000000000000000000000000000000"
+  VITE_RELAYER_URL: "/relayer"
+  VITE_FMD_URL: "/fmd"
+  VITE_RELAYER_ADDRESS: "0x0000000000000000000000000000000000000000"
+  VITE_TREE_DEPTH: "10"
+  VITE_PROVER_WASM_URL: "/prover/prover.wasm"
+  VITE_PROVER_ZKEY_URL: "/prover/prover.zkey"
+
+jobs:
+  docker:
+    name: Docker (webapp-ui)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch prover artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          rm -f public/prover/prover.wasm public/prover/prover.zkey
+          gh release download v0.1.0 \
+            --repo lelantos-org/circuits \
+            --pattern '2x2.wasm' \
+            --pattern '2x2_final.zkey' \
+            --dir public/prover
+          mv public/prover/2x2.wasm public/prover/prover.wasm
+          mv public/prover/2x2_final.zkey public/prover/prover.zkey
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_URL }}/${{ env.REPOSITORY }}
+          flavor: |
+            latest=auto
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=ref,event=tag
+            type=sha
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_CHAIN_ID=${{ env.VITE_CHAIN_ID }}
+            VITE_RPC_URL=${{ env.VITE_RPC_URL }}
+            VITE_MASP_ADDRESS=${{ env.VITE_MASP_ADDRESS }}
+            VITE_RELAYER_URL=${{ env.VITE_RELAYER_URL }}
+            VITE_FMD_URL=${{ env.VITE_FMD_URL }}
+            VITE_RELAYER_ADDRESS=${{ env.VITE_RELAYER_ADDRESS }}
+            VITE_TREE_DEPTH=${{ env.VITE_TREE_DEPTH }}
+            VITE_PROVER_WASM_URL=${{ env.VITE_PROVER_WASM_URL }}
+            VITE_PROVER_ZKEY_URL=${{ env.VITE_PROVER_ZKEY_URL }}
+          secrets: |
+            npm_token=${{ secrets.GITHUB_TOKEN }}
+          cache-from: type=gha,scope=webapp-ui
+          cache-to: type=gha,scope=webapp-ui,mode=max

@@ -1,0 +1,12 @@
+node_modules
+dist
+dist-ssr
+dev-dist
+coverage
+*.local
+*.bak
+.env
+.env.local
+.vite
+tsconfig.tsbuildinfo
+dev-dist
