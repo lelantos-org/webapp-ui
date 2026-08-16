@@ -39,6 +39,30 @@ export function formatDecimal(value: bigint, decimals: number): string {
   return `${neg ? "-" : ""}${wholeStr}.${fracStr}`;
 }
 
+/// Display-only variant of `formatDecimal` that caps the fractional part.
+/// 18-decimal balances are unreadable in a hint line, so keep at most
+/// `maxFrac` digits, truncating toward zero — never round up, so a balance
+/// is never shown as larger than it is. Dust below that cap (fees, say)
+/// would truncate to "0", so tiny values instead keep digits until four
+/// significant ones show.
+export function formatDecimalCompact(value: bigint, decimals: number, maxFrac = 6): string {
+  if (decimals <= 0) return formatAmount(value);
+  const neg = value < 0n;
+  const abs = neg ? -value : value;
+  const base = 10n ** BigInt(decimals);
+  const whole = abs / base;
+  const frac = abs % base;
+  const sign = neg ? "-" : "";
+  const wholeStr = AMOUNT_FORMATTER.format(whole);
+  if (frac === 0n) return `${sign}${wholeStr}`;
+  const digits = frac.toString().padStart(decimals, "0");
+  const leadingZeros = digits.length - digits.replace(/^0+/, "").length;
+  const floor = whole === 0n ? leadingZeros + 4 : maxFrac;
+  const keep = Math.min(decimals, Math.max(maxFrac, floor));
+  const fracStr = digits.slice(0, keep).replace(/0+$/, "");
+  return fracStr === "" ? `${sign}${wholeStr}` : `${sign}${wholeStr}.${fracStr}`;
+}
+
 /// Parse a user-typed decimal string (e.g., "1.5", "1,234.567") into a
 /// bigint quantity scaled by `decimals`. Throws on malformed input or
 /// when the fractional part exceeds `decimals` digits.

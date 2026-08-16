@@ -23,20 +23,18 @@ permissions:
 env:
   REGISTRY_URL: ghcr.io
   REPOSITORY: ${{ github.repository }}
-  VITE_CHAIN_ID: "31337"
-  VITE_RPC_URL: "http://localhost:8545"
-  VITE_MASP_ADDRESS: "0x0000000000000000000000000000000000000000"
+  # Only the shared services are baked in. Every per-chain value now comes
+  # from the relayer's /chains at runtime, so the image is deployment-agnostic
+  # and these placeholders no longer have to pretend to describe a chain.
   VITE_RELAYER_URL: "/relayer"
   VITE_FMD_URL: "/fmd"
-  VITE_RELAYER_ADDRESS: "0x0000000000000000000000000000000000000000"
-  VITE_TREE_DEPTH: "10"
-  VITE_PERMIT2_ADDRESS: ""
-  # Blank hides the native-ETH deposit/withdraw option.
-  VITE_NATIVE_ADAPTER_ADDRESS: ""
-  VITE_EXPLORER_API_URL: "/explorer"
-  # Blank leaves the swap tab inert; a real deployment must set both.
-  VITE_METAQUOTER_URL: ""
-  VITE_SWAP_WRAPPER_ADDRESS: ""
+  # Same-origin path, matching the dev proxy in vite.config.ts and the
+  # `handle_path /metaquoter/*` route Caddy serves in production.
+  #
+  # Blank here leaves the swap tab inert: env.ts treats an empty string as
+  # absent, and useSwapQuote then throws "VITE_METAQUOTER_URL not configured"
+  # when the user requests a quote — at click time, not at boot.
+  VITE_METAQUOTER_URL: "/metaquoter"
 
 jobs:
   docker:
@@ -78,18 +76,9 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VITE_CHAIN_ID=${{ env.VITE_CHAIN_ID }}
-            VITE_RPC_URL=${{ env.VITE_RPC_URL }}
-            VITE_MASP_ADDRESS=${{ env.VITE_MASP_ADDRESS }}
             VITE_RELAYER_URL=${{ env.VITE_RELAYER_URL }}
             VITE_FMD_URL=${{ env.VITE_FMD_URL }}
-            VITE_RELAYER_ADDRESS=${{ env.VITE_RELAYER_ADDRESS }}
-            VITE_TREE_DEPTH=${{ env.VITE_TREE_DEPTH }}
-            VITE_PERMIT2_ADDRESS=${{ env.VITE_PERMIT2_ADDRESS }}
-            VITE_NATIVE_ADAPTER_ADDRESS=${{ env.VITE_NATIVE_ADAPTER_ADDRESS }}
-            VITE_EXPLORER_API_URL=${{ env.VITE_EXPLORER_API_URL }}
             VITE_METAQUOTER_URL=${{ env.VITE_METAQUOTER_URL }}
-            VITE_SWAP_WRAPPER_ADDRESS=${{ env.VITE_SWAP_WRAPPER_ADDRESS }}
           secrets: |
             npm_token=${{ secrets.GITHUB_TOKEN }}
           cache-from: type=gha,scope=webapp-ui

@@ -45,6 +45,19 @@ export function Layout({ children }: { children: ReactNode }) {
           <span className="ftr__sep" aria-hidden="true" />
           <span className="muted">no cookies 🍪 · no tracking 👁️ · no accounts 👤</span>
           <span className="ftr__sep" aria-hidden="true" />
+          {/* Hard-coded like the GitHub link beside it: this is the project's
+              own explorer, not a per-deployment service. The `explorerUrl` a
+              chain carries is a different thing — the block explorer its tx
+              links point at. */}
+          <a
+            className="ftr__link"
+            href="https://explorer.lelantos.xyz"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            explorer
+          </a>
+          <span className="ftr__sep" aria-hidden="true" />
           <a
             className="ftr__link"
             href="https://github.com/lelantos-org"

@@ -23,7 +23,7 @@ import { SetupFlow } from "@/features/onboarding/SetupFlow";
 import { SetupNotice } from "@/features/onboarding/SetupNotice";
 import { useDepositSetup } from "@/features/onboarding/use-deposit-setup";
 import type { FeeBreakdown } from "@/shared/lib/fees";
-import { formatDecimal, parseAmountForAsset } from "@/shared/lib/format";
+import { formatDecimalCompact, parseAmountForAsset } from "@/shared/lib/format";
 import { TextField } from "@/shared/ui/Field";
 
 export function DepositForm() {
@@ -140,10 +140,10 @@ function depositHint(
   const head =
     sourceBalance === undefined
       ? mode
-      : `${mode} · balance ${formatDecimal(sourceBalance, asEth ? 18 : selected.decimals)} ${sym}`;
+      : `${mode} · balance ${formatDecimalCompact(sourceBalance, asEth ? 18 : selected.decimals)} ${sym}`;
   if (!fee || fee.fee === 0n) return head;
   // fee.{inAmt,fee,total} are in ERC20 base units → format by token decimals only.
-  const fmt = (v: bigint) => formatDecimal(v, selected.decimals);
+  const fmt = (v: bigint) => formatDecimalCompact(v, selected.decimals);
   const bps = (Number(fee.feeBps) / 100).toFixed(2);
   return `${head} · fee ${fmt(fee.fee)} (${bps}%) · total ${fmt(fee.total)} ${selected.symbol}`;
 }

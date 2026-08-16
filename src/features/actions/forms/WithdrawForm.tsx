@@ -18,7 +18,7 @@ import {
 import { useAssetBalance } from "@/features/assets/use-balances";
 import { useEthAssetPicker } from "@/features/assets/use-eth-asset-picker";
 import { SyncErrorNotice } from "@/features/wallet/SyncErrorNotice";
-import { formatDecimal, parseAmountForAsset } from "@/shared/lib/format";
+import { formatDecimalCompact, parseAmountForAsset } from "@/shared/lib/format";
 
 export function WithdrawForm() {
   const { mutation: m, progress } = useWithdraw();
@@ -129,7 +129,7 @@ function withdrawHint(
   fee?: FeePreview,
 ): string | undefined {
   if (!selected || !fee || fee.fee === 0n) return base;
-  const fmt = (v: bigint) => formatDecimal(v, selected.decimals);
+  const fmt = (v: bigint) => formatDecimalCompact(v, selected.decimals);
   const bps = (Number(fee.feeBps) / 100).toFixed(2);
   const line = `fee ${fmt(fee.fee)} (${bps}%) · receive ${fmt(fee.total)} ${selected.symbol}`;
   return base ? `${base} · ${line}` : line;

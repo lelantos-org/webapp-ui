@@ -3,6 +3,7 @@ import {
   exceedsPublicInLimit,
   formatAmountForAsset,
   formatDecimal,
+  formatDecimalCompact,
   PUBLIC_IN_MAX,
   parseAmountForAsset,
   parseDecimal,
@@ -65,6 +66,33 @@ describe("formatDecimal", () => {
 
   it("handles negatives", () => {
     expect(formatDecimal(-1_500_000n, 6)).toBe("-1.5");
+  });
+});
+
+describe("formatDecimalCompact", () => {
+  it("truncates long fractions to six digits", () => {
+    // 0.00293281582168355 ETH — the raw wei balance shown in the deposit hint.
+    expect(formatDecimalCompact(2_932_815_821_683_550n, 18)).toBe("0.002932");
+    expect(formatDecimalCompact(parseDecimal("1234.56789012", 18), 18)).toBe("1,234.56789");
+  });
+
+  it("never rounds up", () => {
+    expect(formatDecimalCompact(parseDecimal("0.9999999", 18), 18)).toBe("0.999999");
+  });
+
+  it("keeps four significant digits for dust below the cap", () => {
+    expect(formatDecimalCompact(parseDecimal("0.0000002", 18), 18)).toBe("0.0000002");
+    expect(formatDecimalCompact(parseDecimal("0.0001002", 18), 18)).toBe("0.0001002");
+  });
+
+  it("drops a fraction that truncates away entirely", () => {
+    expect(formatDecimalCompact(parseDecimal("1.0000000002", 18), 18)).toBe("1");
+  });
+
+  it("handles negatives and zero decimals", () => {
+    expect(formatDecimalCompact(parseDecimal("1.5", 6), 6)).toBe("1.5");
+    expect(formatDecimalCompact(-2_932_815_821_683_550n, 18)).toBe("-0.002932");
+    expect(formatDecimalCompact(1_234_567n, 0)).toBe("1,234,567");
   });
 });
 

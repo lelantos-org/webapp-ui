@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { type ChainEntry, chainKey, findChain, toChainEntry } from "@/config/chains";
-import { env } from "@/config/env";
 
 const entry = (chainId: bigint, chainName: string): ChainEntry =>
   ({ chainId, chainName }) as ChainEntry;
@@ -38,10 +37,6 @@ describe("findChain", () => {
 });
 
 describe("toChainEntry", () => {
-  /// The chain this bundle was built for; only it may fall back to `env`.
-  const BUILT_FOR = Number(env.chainId);
-  const OTHER = 8453;
-
   const full = (chainId: number) => ({
     chainId,
     chainName: "base",
@@ -58,34 +53,23 @@ describe("toChainEntry", () => {
     return r.entry;
   };
 
-  it("takes a fully described chain the deployment does not match", () => {
-    const e = entry(full(OTHER));
-    expect(e.chainId).toBe(BigInt(OTHER));
+  it("takes a fully described chain", () => {
+    const e = entry(full(8453));
+    expect(e.chainId).toBe(8453n);
     expect(e.chainName).toBe("base");
     expect(e.rpcUrl).toBe("https://rpc.example");
     expect(e.treeDepth).toBe(10);
   });
 
-  // The fallback is the whole risk in this mapping: `env` describes exactly
-  // one deployment, so letting a second chain inherit its RPC or MASP address
-  // would point a wallet at the wrong pool while looking configured.
-  it("never lends env's config to a chain it was not built for", () => {
-    const r = toChainEntry({ chainId: OTHER });
+  // The relayer is the only source. Build-time values used to stand in for
+  // whichever chain the bundle was configured for, which let a deployment run
+  // on stale baked-in addresses while looking correctly configured.
+  it("has no build-time fallback: an undescribed chain is unusable", () => {
+    const r = toChainEntry({ chainId: 31337 });
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.reason.missing).toContain("rpcUrl");
-  });
-
-  it("fills the built-for chain from env when the relayer says nothing", () => {
-    const e = entry({ chainId: BUILT_FOR });
-    expect(e.chainId).toBe(BigInt(BUILT_FOR));
-    expect(e.rpcUrl).toBe(env.rpcUrl);
-    expect(e.treeDepth).toBe(env.treeDepth);
-  });
-
-  it("prefers the relayer's value over env for the built-for chain", () => {
-    expect(entry({ ...full(BUILT_FOR), rpcUrl: "https://from-relayer" }).rpcUrl).toBe(
-      "https://from-relayer",
-    );
+    if (!r.ok) {
+      expect(r.reason.missing).toEqual(["rpcUrl", "maspAddress", "relayerAddress", "treeDepth"]);
+    }
   });
 
   it.each([
@@ -94,7 +78,7 @@ describe("toChainEntry", () => {
     ["relayerAddress"],
     ["treeDepth"],
   ])("drops a chain missing %s rather than half-building it", (field) => {
-    const row: Record<string, unknown> = full(OTHER);
+    const row: Record<string, unknown> = full(8453);
     delete row[field];
     const r = toChainEntry(row as Parameters<typeof toChainEntry>[0]);
     expect(r.ok).toBe(false);
@@ -102,14 +86,16 @@ describe("toChainEntry", () => {
     if (!r.ok) expect(r.reason.missing).toEqual([field]);
   });
 
-  it("leaves optional contracts absent when nobody supplies them", () => {
-    const e = entry(full(OTHER));
+  it("leaves optional contracts absent when the relayer omits them", () => {
+    const e = entry(full(8453));
     expect(e.nativeAdapterAddress).toBeUndefined();
     expect(e.swapWrapperAddress).toBeUndefined();
+    expect(e.permit2Address).toBeUndefined();
+    expect(e.explorerUrl).toBeUndefined();
   });
 
   it("names an undescribed chain after its id rather than leaving it blank", () => {
-    const { chainName: _drop, ...rest } = full(OTHER);
-    expect(entry(rest).chainName).toBe(`chain ${OTHER}`);
+    const { chainName: _drop, ...rest } = full(8453);
+    expect(entry(rest).chainName).toBe("chain 8453");
   });
 });

@@ -1464,6 +1464,9 @@ select.fld__inp {
   display: inline-flex;
   align-items: center;
   color: var(--fg-mute);
+  /* Needed since this started carrying text as well as an icon: there is no
+     global anchor reset, so the browser default would underline it. */
+  text-decoration: none;
   transition: color 0.15s ease;
 }
 .ftr__link:hover { color: var(--accent); }

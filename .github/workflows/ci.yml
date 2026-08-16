@@ -14,13 +14,14 @@ permissions:
   packages: read
 
 env:
-  VITE_CHAIN_ID: "31337"
-  VITE_RPC_URL: "http://localhost:8545"
-  VITE_MASP_ADDRESS: "0x0000000000000000000000000000000000000000"
+  # The two the build actually requires. Per-chain values come from the
+  # relayer's /chains at runtime, so a build no longer needs a chain described
+  # to it — which is what the zero-address placeholders here used to fake.
   VITE_RELAYER_URL: "/relayer"
   VITE_FMD_URL: "/fmd"
-  VITE_RELAYER_ADDRESS: "0x0000000000000000000000000000000000000000"
-  VITE_TREE_DEPTH: "10"
+  # Kept in step with docker.yml so the CI build exercises the same
+  # configuration the published image ships with.
+  VITE_METAQUOTER_URL: "/metaquoter"
 
 jobs:
   verify:
