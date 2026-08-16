@@ -21,8 +21,6 @@ env:
   VITE_FMD_URL: "/fmd"
   VITE_RELAYER_ADDRESS: "0x0000000000000000000000000000000000000000"
   VITE_TREE_DEPTH: "10"
-  VITE_PROVER_WASM_URL: "/prover/prover.wasm"
-  VITE_PROVER_ZKEY_URL: "/prover/prover.zkey"
 
 jobs:
   verify:
@@ -41,16 +39,6 @@ jobs:
       - run: npm run check:ci
       - run: npm run typecheck
       - run: npm run test
-      - name: Fetch prover artifacts
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
-        run: |
-          rm -f public/prover/prover.wasm public/prover/prover.zkey
-          gh release download v0.1.0 \
-            --repo lelantos-org/circuits \
-            --pattern '2x2.wasm' \
-            --pattern '2x2_final.zkey' \
-            --dir public/prover
-          mv public/prover/2x2.wasm public/prover/prover.wasm
-          mv public/prover/2x2_final.zkey public/prover/prover.zkey
+      # Prover artifacts ship in the @lelantos-org/circuits package and are
+      # resolved through Vite `?url` imports, so `npm ci` is all the build needs.
       - run: npm run build

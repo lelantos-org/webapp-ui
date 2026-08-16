@@ -1,6 +1,15 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { describe, expect, it, vi } from "vitest";
+import type { ChainEntry } from "@/config/chains";
 import { createSdkActions } from "./sdk-adapter";
+
+// The adapter brands L1 recipients via `evmAddress`, which requires a
+// 20-byte 0x-prefixed address.
+const RECIPIENT = "0x000000000000000000000000000000000000dead";
+
+/// Only the fields the adapter reads. `swapWrapperAddress` is absent, matching
+/// a chain with no wrapper deployed.
+const CHAIN = { chainId: 31337n, chainName: "local" } as ChainEntry;
 
 function fakeWallet() {
   const deposit = vi.fn().mockResolvedValue({ txHash: "0xdep" });
@@ -13,7 +22,7 @@ function fakeWallet() {
 describe("createSdkActions", () => {
   it("deposit forwards amount + optional asset to wallet.deposit", async () => {
     const w = fakeWallet();
-    const a = createSdkActions(w);
+    const a = createSdkActions(w, CHAIN);
     const r = await a.deposit({ amount: 100n });
     expect(r.txHash).toBe("0xdep");
     expect(w.deposit).toHaveBeenCalledWith({ amount: 100n, asset: undefined });
@@ -24,7 +33,7 @@ describe("createSdkActions", () => {
 
   it("transfer forwards to + amount + optional asset with autoConsolidate", async () => {
     const w = fakeWallet();
-    const a = createSdkActions(w);
+    const a = createSdkActions(w, CHAIN);
     await a.transfer({ to: "lel1abc", amount: 50n });
     expect(w.transfer).toHaveBeenCalledWith({
       to: "lel1abc",
@@ -44,18 +53,18 @@ describe("createSdkActions", () => {
 
   it("withdraw forwards to + amount + optional asset with autoConsolidate", async () => {
     const w = fakeWallet();
-    const a = createSdkActions(w);
-    await a.withdraw({ to: "0xdead", amount: 1n });
+    const a = createSdkActions(w, CHAIN);
+    await a.withdraw({ to: RECIPIENT, amount: 1n });
     expect(w.withdraw).toHaveBeenCalledWith({
-      to: "0xdead",
+      to: RECIPIENT,
       amount: 1n,
       asset: undefined,
       autoConsolidate: true,
     });
 
-    await a.withdraw({ to: "0xdead", amount: 1n, asset: 2n });
+    await a.withdraw({ to: RECIPIENT, amount: 1n, asset: 2n });
     expect(w.withdraw).toHaveBeenLastCalledWith({
-      to: "0xdead",
+      to: RECIPIENT,
       amount: 1n,
       asset: 2n,
       autoConsolidate: true,
@@ -64,10 +73,10 @@ describe("createSdkActions", () => {
 
   it("withdrawEth forwards to + amount + asset to wallet.withdrawEth with autoConsolidate", async () => {
     const w = fakeWallet();
-    const a = createSdkActions(w);
-    await a.withdrawEth({ to: "0xdead", amount: 1n, asset: 2n });
+    const a = createSdkActions(w, CHAIN);
+    await a.withdrawEth({ to: RECIPIENT, amount: 1n, asset: 2n });
     expect(w.withdrawEth).toHaveBeenCalledWith({
-      to: "0xdead",
+      to: RECIPIENT,
       amount: 1n,
       asset: 2n,
       autoConsolidate: true,
@@ -76,7 +85,7 @@ describe("createSdkActions", () => {
 
   it("propagates rejections from underlying wallet", async () => {
     const deposit = vi.fn().mockRejectedValue(new Error("boom"));
-    const a = createSdkActions({ deposit } as unknown as WalletApi);
+    const a = createSdkActions({ deposit } as unknown as WalletApi, CHAIN);
     await expect(a.deposit({ amount: 1n })).rejects.toThrow("boom");
   });
 });

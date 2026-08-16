@@ -55,13 +55,7 @@ export function AccountCard({ shielded, eth }: AccountCardProps) {
 
       {showQr ? (
         <div className="acct__qr">
-          <QRCodeSVG
-            value={shielded}
-            size={156}
-            bgColor="#ffffff"
-            fgColor="#1e1b4b"
-            level="M"
-          />
+          <QRCodeSVG value={shielded} size={156} bgColor="#ffffff" fgColor="#1e1b4b" level="M" />
           <p className="muted txt-xs">scan to send to this shielded address</p>
         </div>
       ) : null}

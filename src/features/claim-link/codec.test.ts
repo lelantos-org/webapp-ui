@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { unwrap } from "@/shared/lib/result";
 import {
-  describeNskError,
+  describeClaimError,
+  encodeClaimPayload,
   NSK_HEX_LEN,
   nskFieldFromHex,
   nskHexFromField,
@@ -40,26 +41,49 @@ describe("nskHexFromField round-trip", () => {
 });
 
 describe("parseClaimFragment", () => {
+  /// `7a69` is 31337.
+  const FRAGMENT = `7a69:${SAMPLE}`;
+
   it("strips leading #", () => {
-    expect(parseClaimFragment(`#${SAMPLE}`).ok).toBe(true);
+    expect(parseClaimFragment(`#${FRAGMENT}`).ok).toBe(true);
   });
 
   it("accepts no #", () => {
-    expect(parseClaimFragment(SAMPLE).ok).toBe(true);
+    expect(parseClaimFragment(FRAGMENT).ok).toBe(true);
   });
 
-  it("rejects empty input as invalid-length", () => {
-    const r = parseClaimFragment("");
+  it("round-trips what encodeClaimPayload produced", () => {
+    const parsed = unwrap(parseClaimFragment(encodeClaimPayload(31337n, SAMPLE)));
+    expect(parsed.chainId).toBe(31337n);
+    expect(parsed.nskHex).toBe(SAMPLE);
+  });
+
+  // The format is unversioned by choice, so a pre-multichain link — a bare
+  // 64-hex nsk with no chain prefix — is rejected rather than silently
+  // assumed to belong to whichever chain is being viewed.
+  it("rejects a legacy chainless link", () => {
+    const r = parseClaimFragment(SAMPLE);
     expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.error).toBe("invalid-length");
+    if (!r.ok) expect(r.error).toBe("malformed");
+  });
+
+  it.each([
+    ["empty", "", "malformed"],
+    ["chain prefix only", "7a69:", "invalid-length"],
+    ["non-hex chain", `zz:${SAMPLE}`, "invalid-chain"],
+    ["zero chain", `0:${SAMPLE}`, "invalid-chain"],
+  ])("rejects %s", (_label, input, expected) => {
+    const r = parseClaimFragment(input);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toBe(expected);
   });
 });
 
-describe("describeNskError", () => {
+describe("describeClaimError", () => {
   it("maps invalid-length", () => {
-    expect(describeNskError("invalid-length")).toMatch(/64 hex/);
+    expect(describeClaimError("invalid-length")).toMatch(/64 hex/);
   });
   it("maps invalid-hex", () => {
-    expect(describeNskError("invalid-hex")).toMatch(/non-hex/);
+    expect(describeClaimError("invalid-hex")).toMatch(/non-hex/);
   });
 });

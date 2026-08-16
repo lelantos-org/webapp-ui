@@ -1,0 +1,52 @@
+import { ADDRESS_HRP, shieldedAddress as brandShieldedAddress } from "@lelantos-org/sdk";
+import { z } from "zod";
+import { isDecimalString, isPositiveIntegerString } from "@/shared/lib/format";
+
+/// bech32m data part for the SDK's 96-byte payload: `ceil(96 * 8 / 5)` = 154
+/// characters, plus the 6-character checksum. Exact rather than a minimum — the
+/// HRP carries the format version, so a payload of a different size arrives
+/// under a different HRP and fails that check first.
+const ADDRESS_DATA_LEN = 160;
+const ADDRESS_LEN = ADDRESS_HRP.length + 1 + ADDRESS_DATA_LEN;
+
+/// HRP and charset come from the SDK's own validator rather than a second regex
+/// here — a hand-written `[0-9a-z]` admits `1`, `b`, `i` and `o`, which are not
+/// in the bech32 charset. It performs no length check, hence the pair.
+///
+/// `decodeAddress` is the definitive answer (checksum and curve points), but it
+/// needs a Jubjub context and is far too much to run on every keystroke. A bad
+/// address that clears this still fails there, before anything is signed.
+function isWellFormedAddress(value: string): boolean {
+  if (value.length !== ADDRESS_LEN) return false;
+  try {
+    brandShieldedAddress(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const amount = z.string().refine(isDecimalString, "must be a positive number");
+const ethAddress = z.string().regex(/^0x[0-9a-fA-F]{40}$/, "expected 0x-prefixed address");
+const shieldedAddress = z
+  .string()
+  .refine(isWellFormedAddress, `expected bech32 ${ADDRESS_HRP}1… address`);
+const asset = z.string().refine(isPositiveIntegerString, "must be a positive integer").default("1");
+
+/// `asEth: true` switches withdraw to the WETH-bridge entry point
+/// (`MASP.withdrawEth`). Only valid when the selected asset is the
+/// chain's WETH; the form layer hides the toggle otherwise. Deposits
+/// have no equivalent — users wrap ETH→WETH off-pool before depositing.
+const asEth = z.coerce.boolean().default(false);
+
+export const depositSchema = z.object({ amount, asset, asEth });
+export type DepositInput = z.infer<typeof depositSchema>;
+
+export const transferSchema = z.object({ to: shieldedAddress, amount, asset });
+export type TransferInput = z.infer<typeof transferSchema>;
+
+export const withdrawSchema = z.object({ to: ethAddress, amount, asset, asEth });
+export type WithdrawInput = z.infer<typeof withdrawSchema>;
+
+export const generateLinkSchema = z.object({ asset, amount });
+export type GenerateLinkInput = z.infer<typeof generateLinkSchema>;

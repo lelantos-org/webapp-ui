@@ -1,15 +1,12 @@
 // Vite recognises the `new Worker(new URL(..., import.meta.url), { type:
 // "module" })` pattern and emits a separate worker chunk, keeping
-// `WasmProver` + the rust pkg out of the main bundle.
+// `WasmProver` and the rust pkg out of the main bundle.
 
-import circuitUrl from "@lelantos-org/circuits/2x2/2x2.wasm?url";
-import zkeyUrl from "@lelantos-org/circuits/2x2/2x2_final.zkey?url";
-import {
-  browserWorkerProver,
-  type ProverArtifacts,
-  type WorkerProver,
-} from "@lelantos-org/sdk/prover";
+import circuitUrl from "@lelantos-org/circuits/3x3/3x3.wasm?url";
+import zkeyUrl from "@lelantos-org/circuits/3x3/3x3_final.zkey?url";
+import { type ProverArtifacts, WorkerProver } from "@lelantos-org/sdk/prover";
 import { createLogger } from "@/shared/lib/logger";
+import { asSdkWorker } from "@/shared/lib/worker";
 
 const log = createLogger("prover:worker");
 
@@ -18,28 +15,30 @@ const proverArtifacts: ProverArtifacts = {
   zkey: zkeyUrl,
 };
 
+/// Rayon pool size: `?threads=N` beats `VITE_PROVER_THREADS`, and unset
+/// leaves the SDK default (`min(8, hardwareConcurrency)`).
+function threadOverride(): number | undefined {
+  const fromUrl =
+    typeof location === "undefined" ? null : new URLSearchParams(location.search).get("threads");
+  const raw = fromUrl ?? import.meta.env.VITE_PROVER_THREADS;
+  if (!raw) return undefined;
+  const n = Number.parseInt(String(raw), 10);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 let cached: WorkerProver | null = null;
 let preloadPromise: Promise<void> | null = null;
 
 export function getProverWorker(): WorkerProver {
   if (cached) return cached;
-  // `?threads=N` URL param or `VITE_PROVER_THREADS` env var override the
-  // rayon pool size. Unset = SDK default (`min(8, hardwareConcurrency)`).
-  const urlThreads = (() => {
-    if (typeof location === "undefined") return undefined;
-    const v = new URLSearchParams(location.search).get("threads");
-    return v ? parseInt(v, 10) : undefined;
-  })();
-  const envThreads = import.meta.env.VITE_PROVER_THREADS
-    ? parseInt(import.meta.env.VITE_PROVER_THREADS as string, 10)
-    : undefined;
-  const threads = urlThreads ?? envThreads;
+  const threads = threadOverride();
   if (threads !== undefined) log.info(`thread override: ${threads}`);
-  cached = browserWorkerProver({
-    workerUrl: new URL("@lelantos-org/sdk/prover-worker", import.meta.url),
-    paths: proverArtifacts,
-    threads,
-  });
+  // The `new Worker(new URL(…))` literal must stay inline here rather than
+  // going through the SDK's `browserWorkerProver`; see `asSdkWorker`.
+  const worker = asSdkWorker(
+    new Worker(new URL("@lelantos-org/sdk/prover-worker", import.meta.url), { type: "module" }),
+  );
+  cached = new WorkerProver({ worker, paths: proverArtifacts, threads });
   return cached;
 }
 

@@ -4,12 +4,13 @@ import type { EphemeralBalance } from "@/features/claim-link/claimLink";
 export type Phase =
   | { kind: "reading-fragment" }
   | { kind: "bad-link"; error: string }
-  | { kind: "need-wallet"; nskHex: string }
-  | { kind: "loading"; nskHex: string }
-  | { kind: "ready"; nskHex: string; eph: WalletApi; balances: EphemeralBalance[] }
+  | { kind: "need-wallet"; nskHex: string; chainId: bigint }
+  | { kind: "loading"; nskHex: string; chainId: bigint }
+  | { kind: "ready"; nskHex: string; chainId: bigint; eph: WalletApi; balances: EphemeralBalance[] }
   | {
       kind: "sweeping";
       nskHex: string;
+      chainId: bigint;
       eph: WalletApi;
       balances: EphemeralBalance[];
       asset: bigint;
@@ -19,7 +20,7 @@ export type Phase =
   | { kind: "error"; message: string; nskHex?: string };
 
 export type Event =
-  | { t: "fragment-good"; nskHex: string }
+  | { t: "fragment-good"; nskHex: string; chainId: bigint }
   | { t: "fragment-missing" }
   | { t: "fragment-bad"; error: string }
   | { t: "load-start" }
@@ -41,12 +42,16 @@ export function reduce(s: Phase, e: Event): Phase {
     case "fragment-bad":
       return s.kind === "reading-fragment" ? { kind: "bad-link", error: e.error } : s;
     case "fragment-good":
-      return s.kind === "reading-fragment" ? { kind: "need-wallet", nskHex: e.nskHex } : s;
+      return s.kind === "reading-fragment"
+        ? { kind: "need-wallet", nskHex: e.nskHex, chainId: e.chainId }
+        : s;
     case "load-start":
-      return s.kind === "need-wallet" ? { kind: "loading", nskHex: s.nskHex } : s;
+      return s.kind === "need-wallet"
+        ? { kind: "loading", nskHex: s.nskHex, chainId: s.chainId }
+        : s;
     case "load-success":
       return s.kind === "loading"
-        ? { kind: "ready", nskHex: s.nskHex, eph: e.eph, balances: e.balances }
+        ? { kind: "ready", nskHex: s.nskHex, chainId: s.chainId, eph: e.eph, balances: e.balances }
         : s;
     case "load-failure":
       return s.kind === "loading" || s.kind === "need-wallet"
@@ -61,6 +66,7 @@ export function reduce(s: Phase, e: Event): Phase {
         ? {
             kind: "sweeping",
             nskHex: s.nskHex,
+            chainId: s.chainId,
             eph: s.eph,
             balances: s.balances,
             asset: e.asset,

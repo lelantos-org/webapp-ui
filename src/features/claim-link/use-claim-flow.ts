@@ -1,4 +1,6 @@
 import { useEffect, useReducer, useRef } from "react";
+import { findChain } from "@/config/chains";
+import { useChainRegistry } from "@/features/chain/ChainProvider";
 import {
   buildEphemeralWallet,
   clearEphemeralStore,
@@ -23,6 +25,7 @@ export interface ClaimFlow {
 export function useClaimFlow(): ClaimFlow {
   const { wallet, status } = useWallet();
   const { bundle } = useConnection();
+  const registry = useChainRegistry();
   const [phase, dispatch] = useReducer(reduce, initial);
 
   const mounted = useRef(true);
@@ -42,7 +45,7 @@ export function useClaimFlow(): ClaimFlow {
       else dispatch({ t: "fragment-bad", error: read.error.message });
       return;
     }
-    dispatch({ t: "fragment-good", nskHex: read.value.hex });
+    dispatch({ t: "fragment-good", nskHex: read.value.nskHex, chainId: read.value.chainId });
     scrubLocationHash(window.location, window.history);
   }, []);
 
@@ -53,10 +56,23 @@ export function useClaimFlow(): ClaimFlow {
     startedFor.current = phase.nskHex;
 
     const nskHex = phase.nskHex;
+    // The link's chain, not the app's. The notes live in one specific pool,
+    // and building against whatever chain the user happens to be viewing
+    // would scan the wrong one and report an empty, already-claimed-looking
+    // link.
+    const linkChain = findChain(registry, phase.chainId);
+    if (!linkChain) {
+      dispatch({
+        t: "load-failure",
+        message: `this link is for chain ${phase.chainId}, which this app does not serve`,
+      });
+      return;
+    }
+
     dispatch({ t: "load-start" });
     void (async () => {
       try {
-        const eph = await buildEphemeralWallet(nskHex, bundle);
+        const eph = await buildEphemeralWallet(nskHex, bundle, linkChain);
         await eph.sync({ limit: 500 });
         if (!mounted.current) return;
         dispatch({ t: "load-success", eph, balances: summarizeEphemeralNotes(eph) });
@@ -66,17 +82,17 @@ export function useClaimFlow(): ClaimFlow {
         dispatch({ t: "load-failure", message: describeError(err) });
       }
     })();
-  }, [phase, status, wallet, bundle]);
+  }, [phase, status, wallet, bundle, registry]);
 
   async function claim(asset: bigint): Promise<void> {
     if (phase.kind !== "ready" || !wallet) return;
-    const { eph, nskHex, balances } = phase;
+    const { eph, nskHex, chainId, balances } = phase;
     const row = balances.find((b) => b.asset === asset);
     if (!row) return;
     dispatch({ t: "sweep-start", asset, amount: row.amount });
     try {
       const txHash = await sweepEphemeral(eph, wallet.address, asset);
-      await clearEphemeralStore(nskHex).catch(() => {});
+      await clearEphemeralStore(chainId, nskHex).catch(() => {});
       if (!mounted.current) return;
       dispatch({ t: "sweep-success", txHash });
     } catch (err) {

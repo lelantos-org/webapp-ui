@@ -2,10 +2,11 @@
 
 import { useId } from "react";
 import { createPortal } from "react-dom";
-import type { Step, TxPhase } from "@/features/actions/tx-progress";
+import type { Step, TxPhase } from "@/features/actions/tx/tx-progress";
 import { ConfirmScreen } from "@/features/claim-link/components/screens/ConfirmScreen";
 import { RunningScreen } from "@/features/claim-link/components/screens/RunningScreen";
 import { SuccessScreen } from "@/features/claim-link/components/screens/SuccessScreen";
+import { cx } from "@/shared/lib/cx";
 
 export type ModalScreen = "confirm" | "running" | "success";
 
@@ -43,13 +44,21 @@ function ModalShell(props: GenerateModalProps) {
     // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click + cancel button cover dismiss; running screen intentionally locked
     // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard equivalent is Escape, handled at the cancel button
     <div
-      className={overlayClass(dismissable, closing)}
+      className={cx(
+        "setup-overlay",
+        !dismissable && "setup-overlay--locked",
+        closing && "setup-overlay--fade-out",
+      )}
       onClick={(e) => {
         if (e.target === e.currentTarget && dismissable) onCancel();
       }}
     >
       <div
-        className={modalClass(screen, closing)}
+        className={cx(
+          "setup-modal",
+          screen === "running" && "setup-modal--running",
+          closing && "setup-modal--fade-out",
+        )}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -86,24 +95,4 @@ function ScreenContent({
     case "running":
       return <RunningScreen amountLabel={amountLabel} steps={steps} activePhase={activePhase} />;
   }
-}
-
-function overlayClass(dismissable: boolean, closing: boolean): string {
-  return [
-    "setup-overlay",
-    dismissable ? "" : "setup-overlay--locked",
-    closing ? "setup-overlay--fade-out" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
-}
-
-function modalClass(screen: ModalScreen, closing: boolean): string {
-  return [
-    "setup-modal",
-    screen === "running" ? "setup-modal--running" : "",
-    closing ? "setup-modal--fade-out" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
 }

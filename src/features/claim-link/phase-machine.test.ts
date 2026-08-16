@@ -4,6 +4,9 @@ import type { EphemeralBalance } from "./claimLink";
 import { initial, type Phase, reduce } from "./phase-machine";
 
 const stubWallet = {} as WalletApi;
+/// Chain the link names. Threaded through every phase that carries `nskHex`,
+/// since the ephemeral wallet has to be built against the link's chain.
+const CHAIN = 31337n;
 const balances: EphemeralBalance[] = [{ asset: 1n, amount: 100n, notes: 1 }];
 
 describe("phase-machine", () => {
@@ -12,8 +15,8 @@ describe("phase-machine", () => {
   });
 
   it("fragment-good → need-wallet", () => {
-    const next = reduce(initial, { t: "fragment-good", nskHex: "abc" });
-    expect(next).toEqual({ kind: "need-wallet", nskHex: "abc" });
+    const next = reduce(initial, { t: "fragment-good", nskHex: "abc", chainId: CHAIN });
+    expect(next).toEqual({ kind: "need-wallet", nskHex: "abc", chainId: CHAIN });
   });
 
   it("fragment-bad → bad-link", () => {
@@ -27,8 +30,8 @@ describe("phase-machine", () => {
   });
 
   it("load-start only valid from need-wallet", () => {
-    const a = reduce({ kind: "need-wallet", nskHex: "x" }, { t: "load-start" });
-    expect(a).toEqual({ kind: "loading", nskHex: "x" });
+    const a = reduce({ kind: "need-wallet", nskHex: "x", chainId: CHAIN }, { t: "load-start" });
+    expect(a).toEqual({ kind: "loading", nskHex: "x", chainId: CHAIN });
 
     const b = reduce({ kind: "bad-link", error: "e" }, { t: "load-start" });
     expect(b.kind).toBe("bad-link");
@@ -36,23 +39,27 @@ describe("phase-machine", () => {
 
   it("load-success → ready", () => {
     const next = reduce(
-      { kind: "loading", nskHex: "x" },
+      { kind: "loading", nskHex: "x", chainId: CHAIN },
       { t: "load-success", eph: stubWallet, balances },
     );
-    expect(next).toEqual({ kind: "ready", nskHex: "x", eph: stubWallet, balances });
+    expect(next).toEqual({ kind: "ready", nskHex: "x", chainId: CHAIN, eph: stubWallet, balances });
   });
 
   it("load-failure carries nskHex", () => {
-    const next = reduce({ kind: "loading", nskHex: "x" }, { t: "load-failure", message: "boom" });
+    const next = reduce(
+      { kind: "loading", nskHex: "x", chainId: CHAIN },
+      { t: "load-failure", message: "boom" },
+    );
     expect(next).toEqual({ kind: "error", message: "boom", nskHex: "x" });
   });
 
   it("sweep-start → sweeping carries asset+amount", () => {
-    const ready: Phase = { kind: "ready", nskHex: "x", eph: stubWallet, balances };
+    const ready: Phase = { kind: "ready", nskHex: "x", chainId: CHAIN, eph: stubWallet, balances };
     const next = reduce(ready, { t: "sweep-start", asset: 1n, amount: 100n });
     expect(next).toMatchObject({
       kind: "sweeping",
       nskHex: "x",
+      chainId: CHAIN,
       balances,
       asset: 1n,
       amount: 100n,
@@ -63,6 +70,7 @@ describe("phase-machine", () => {
     const sweeping: Phase = {
       kind: "sweeping",
       nskHex: "x",
+      chainId: CHAIN,
       eph: stubWallet,
       balances,
       asset: 1n,
@@ -76,6 +84,7 @@ describe("phase-machine", () => {
     const sweeping: Phase = {
       kind: "sweeping",
       nskHex: "x",
+      chainId: CHAIN,
       eph: stubWallet,
       balances,
       asset: 1n,
@@ -86,19 +95,19 @@ describe("phase-machine", () => {
   });
 
   it("fragment-missing from need-wallet is a no-op (StrictMode replay)", () => {
-    const s: Phase = { kind: "need-wallet", nskHex: "x" };
+    const s: Phase = { kind: "need-wallet", nskHex: "x", chainId: CHAIN };
     expect(reduce(s, { t: "fragment-missing" })).toBe(s);
   });
 
   it("fragment-bad from need-wallet is a no-op", () => {
-    const s: Phase = { kind: "need-wallet", nskHex: "x" };
+    const s: Phase = { kind: "need-wallet", nskHex: "x", chainId: CHAIN };
     expect(reduce(s, { t: "fragment-bad", error: "nope" })).toBe(s);
   });
 
   it("fragment-good then fragment-missing stays in need-wallet", () => {
-    const a = reduce(initial, { t: "fragment-good", nskHex: "abc" });
+    const a = reduce(initial, { t: "fragment-good", nskHex: "abc", chainId: CHAIN });
     const b = reduce(a, { t: "fragment-missing" });
-    expect(b).toEqual({ kind: "need-wallet", nskHex: "abc" });
+    expect(b).toEqual({ kind: "need-wallet", nskHex: "abc", chainId: CHAIN });
   });
 
   it("illegal transitions are no-ops", () => {

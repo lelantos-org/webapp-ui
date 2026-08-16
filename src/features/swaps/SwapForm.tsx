@@ -1,27 +1,38 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { quoteAgeSecs, type SwapQuote } from "@lelantos-org/sdk/bundle";
+import { quoteAgeSecs, type SwapQuote } from "@lelantos-org/sdk/quoter";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import { env } from "@/config/env";
-import { ActionForm } from "@/features/actions/ActionForm";
-import { AmountField } from "@/features/actions/AmountField";
-import { parseAmountSafe, validateAmount } from "@/features/actions/amount-field";
+import { ActionForm } from "@/features/actions/forms/ActionForm";
+import { AmountField } from "@/features/actions/forms/AmountField";
+import { parseAmountSafe, validateAmount } from "@/features/actions/forms/amount-field";
+import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
 import { useSwap } from "@/features/actions/mutations";
 import { AssetPicker } from "@/features/assets/AssetPicker";
-import { findAsset, useRegisteredAssets } from "@/features/assets/registered-assets";
+import {
+  DEFAULT_ASSET_ID,
+  findAsset,
+  useRegisteredAssets,
+} from "@/features/assets/registered-assets";
+import { useAssetBalance } from "@/features/assets/use-balances";
+import { useActiveChain } from "@/features/chain/ChainProvider";
 import { type SwapInput, swapSchema } from "@/features/swaps/schemas";
 import { type QuoteRequest, useSwapQuote } from "@/features/swaps/use-swap-quote";
-import { useWalletState } from "@/features/wallet/use-wallet-state";
+import { SyncErrorNotice } from "@/features/wallet/SyncErrorNotice";
 import { formatAmountForAsset, parseAmountForAsset } from "@/shared/lib/format";
 
 const SLIPPAGE_PRESETS_BPS = [10, 50, 100] as const;
 const QUOTE_STALE_SECS = 30;
+/// Any asset other than `DEFAULT_ASSET_ID`, so the pair starts valid: a swap
+/// needs two distinct assets and `canQuote` rejects `assetIn === assetOut`.
+const DEFAULT_SWAP_ASSET_OUT_ID = "2";
+const DEFAULT_SLIPPAGE_BPS = 50;
 
 export function SwapForm() {
   const { mutation: m, progress } = useSwap();
   const quoteM = useSwapQuote();
-  const balances = useWalletState().data?.balances ?? [];
   const assets = useRegisteredAssets();
+  const activeChain = useActiveChain();
+  const clearFinished = useClearFinishedOp(m, progress);
 
   const {
     register,
@@ -32,7 +43,12 @@ export function SwapForm() {
     formState: { errors },
   } = useForm<SwapInput>({
     resolver: zodResolver(swapSchema),
-    defaultValues: { assetIn: "1", assetOut: "2", amount: "", slippageBps: 50 },
+    defaultValues: {
+      assetIn: DEFAULT_ASSET_ID,
+      assetOut: DEFAULT_SWAP_ASSET_OUT_ID,
+      amount: "",
+      slippageBps: DEFAULT_SLIPPAGE_BPS,
+    },
   });
 
   const wAssetIn = watch("assetIn");
@@ -40,10 +56,9 @@ export function SwapForm() {
   const wAmount = watch("amount");
   const wSlippage = watch("slippageBps");
 
-  const inAsset = findAsset(assets.data, wAssetIn);
-  const outAsset = findAsset(assets.data, wAssetOut);
-  const inRow = inAsset ? balances.find((b) => b.asset === inAsset.id) : undefined;
-  const inBalance = inRow?.balance;
+  const inAsset = findAsset(assets, wAssetIn);
+  const outAsset = findAsset(assets, wAssetOut);
+  const inBalance = useAssetBalance(inAsset?.id)?.balance;
 
   const parsed = parseAmountSafe(wAmount, inAsset);
   const v = validateAmount(parsed, inAsset, inBalance);
@@ -83,9 +98,9 @@ export function SwapForm() {
     // adapter-side input is slightly less; user's `slippageBps` floor
     // absorbs the difference.
     const req: QuoteRequest = {
-      chainId: Number(env.chainId),
-      tokenIn: inAsset.token as `0x${string}`,
-      tokenOut: outAsset.token as `0x${string}`,
+      chainId: activeChain.chainId,
+      tokenIn: inAsset.token,
+      tokenOut: outAsset.token,
       amountIn: amountInUnits * inAsset.scale,
       slippageBps: wSlippage,
     };
@@ -98,8 +113,11 @@ export function SwapForm() {
     if (!inAsset || !outAsset || !quote) return;
     const amount = parseAmountForAsset(values.amount, inAsset.decimals, inAsset.scale);
     await m.mutateAsync({ assetIn: inAsset.id, assetOut: outAsset.id, amount, quote });
+    // The quote is bound to this exact amount and pair, so it cannot outlive
+    // the submit — unlike the pair and slippage, which are the user's standing
+    // choices. Amount only, as in the other forms.
     quoteM.reset();
-    reset();
+    reset({ ...values, amount: "" });
   });
 
   return (
@@ -112,17 +130,24 @@ export function SwapForm() {
       progress={progress}
       txHash={m.data?.txHash}
     >
+      <SyncErrorNotice />
       <AssetPicker
         label="from"
         value={wAssetIn}
-        onChange={(v) => setValue("assetIn", v, { shouldValidate: true })}
+        onChange={(next) => {
+          clearFinished();
+          setValue("assetIn", next, { shouldValidate: true });
+        }}
         error={errors.assetIn?.message}
       />
       <input type="hidden" {...register("assetIn")} />
       <AssetPicker
         label="to"
         value={wAssetOut}
-        onChange={(v) => setValue("assetOut", v, { shouldValidate: true })}
+        onChange={(next) => {
+          clearFinished();
+          setValue("assetOut", next, { shouldValidate: true });
+        }}
         error={errors.assetOut?.message}
       />
       <input type="hidden" {...register("assetOut")} />
@@ -197,17 +222,22 @@ function SlippageField({ bps, onChange, error }: SlippageFieldProps) {
           const m = SLIP_META[b];
           const on = bps === b;
           return (
-            <button
-              key={b}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              className={`slip__opt ${on ? "slip__opt--on" : ""}`}
-              onClick={() => onChange(b)}
-            >
+            // Native radios: the browser supplies arrow-key navigation and
+            // roving focus that the equivalent ARIA pattern would have to
+            // reimplement. The input is visually hidden; the label carries
+            // the styling.
+            <label key={b} className={`slip__opt ${on ? "slip__opt--on" : ""}`}>
+              <input
+                type="radio"
+                name="slippage-preset"
+                className="slip__radio"
+                value={b}
+                checked={on}
+                onChange={() => onChange(b)}
+              />
               <span className="slip__pct">{(b / 100).toFixed(b < 100 ? 2 : 1)}%</span>
               <span className="slip__sub">{m?.tag}</span>
-            </button>
+            </label>
           );
         })}
       </div>
@@ -281,9 +311,7 @@ function QuoteCard({
           <span>{slipPct}%</span>
         </div>
       </div>
-      {stale ? (
-        <div className="quote__stale">Quote expired — refresh before swapping.</div>
-      ) : null}
+      {stale ? <div className="quote__stale">Quote expired — refresh before swapping.</div> : null}
     </div>
   );
 }

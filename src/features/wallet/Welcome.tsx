@@ -1,4 +1,4 @@
-import { targetChain } from "@/config/chain";
+import { ChainSwitchButtons } from "@/features/chain/ChainSwitchButtons";
 import { useWallet } from "@/features/wallet";
 
 export interface WelcomeProps {
@@ -10,12 +10,12 @@ export interface WelcomeProps {
 export function Welcome({
   tagline = "private balances + transfers on Ethereum, secured by zk-SNARKs.",
 }: WelcomeProps) {
-  const { status, connect, switchChain, error } = useWallet();
+  const { status, connect, error } = useWallet();
 
   return (
     <div className="welcome">
       <div className="welcome__inner">
-        <div className="welcome__brand">SILENTSWAP</div>
+        <div className="welcome__brand">LELANTOS</div>
         <h1 className="welcome__t">shielded wallet</h1>
         <p className="welcome__sub muted">{tagline}</p>
 
@@ -30,23 +30,23 @@ export function Welcome({
           </>
         ) : null}
 
+        {status === "unsupported-chain" ? (
+          <div className="welcome__panel">
+            <h3 className="warn">unsupported network</h3>
+            <p className="muted">
+              your wallet is on a network this deployment does not serve. switch it to continue —
+              your shielded address is the same on every chain.
+            </p>
+            <ChainSwitchButtons />
+          </div>
+        ) : null}
+
         {status === "connecting" ? (
           <div className="welcome__panel">
             <span className="spinner spinner--lg" aria-hidden />
             <h3>connecting…</h3>
             <p className="muted">approve the connection request in your wallet.</p>
           </div>
-        ) : null}
-
-        {status === "wrong-chain" ? (
-          <>
-            <button type="button" className="btn btn--xl warn" onClick={switchChain}>
-              switch to {targetChain.name}
-            </button>
-            <p className="welcome__hint muted">
-              network mismatch — switch to {targetChain.name} (chain id {targetChain.id}).
-            </p>
-          </>
         ) : null}
 
         {status === "deriving" ? (

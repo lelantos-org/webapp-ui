@@ -6,7 +6,7 @@
 /// tag attached by the adapter — SDK results don't carry the asset id and
 /// the UI needs it for pending-tx overlays + lifecycle.
 
-import type { SwapQuote } from "@lelantos-org/sdk";
+import type { SwapQuote } from "@lelantos-org/sdk/quoter";
 import type {
   DepositPhase,
   DepositResult,
@@ -23,11 +23,11 @@ export type { DepositPhase, OnPhase, SpendPhase };
 /// Tag any SDK result with the asset id the action operated on. The
 /// intersection preserves the `kind` discriminator so UI code can narrow
 /// `(r: WithAsset<TransactionResult>) => r.kind === "deposit"` and TS will
-/// gate `r.intentId` correctly.
+/// gate `r.depositId` correctly.
 export type WithAsset<R> = R & { asset: bigint };
 
 /// Webapp-facing result type. Discriminated union over op kinds + asset tag.
-/// Switch on `kind` to read variant-specific fields (intentId, change, ...).
+/// Switch on `kind` to read variant-specific fields (depositId, change, ...).
 export type TxResult = WithAsset<TransactionResult>;
 
 /// Composite phase union covering both deposit and spend ops.
@@ -36,8 +36,9 @@ export type ActionPhase = DepositPhase | SpendPhase;
 export interface DepositRequest {
   amount: bigint;
   asset?: bigint;
-  /// Native-ETH deposit. SDK calls `submitIntentNative` (payable) instead
-  /// of the Permit2-pull path. Asset must resolve to the WETH registry id.
+  /// Native-ETH deposit. The SDK calls `submitDepositNative` (payable)
+  /// rather than the Permit2-pull path. Asset must resolve to the WETH
+  /// registry id.
   asEth?: boolean;
   onPhase?: (phase: DepositPhase) => void;
 }

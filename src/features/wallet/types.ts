@@ -1,9 +1,12 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
+import type { ChainEntry } from "@/config/chains";
 
 export type WalletStatus =
   | "disconnected"
   | "connecting"
-  | "wrong-chain"
+  /// Connected, but the wallet's network is not one this deployment serves.
+  /// Blocking: no balance or form would be meaningful on an unknown pool.
+  | "unsupported-chain"
   /// Awaiting EIP-712 signature in the user's wallet.
   | "deriving"
   /// Rebuilding from a cached nsk in sessionStorage — no signature prompt.
@@ -16,9 +19,8 @@ export interface WalletContextValue {
   error?: string;
   wallet?: WalletApi;
   ethAddress?: `0x${string}`;
-  chainOk: boolean;
   connect(): void;
   disconnect(): void;
-  switchChain(): void;
+  switchChain(target: ChainEntry): void;
   refresh(): Promise<void>;
 }

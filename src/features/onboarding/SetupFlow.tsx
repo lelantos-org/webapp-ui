@@ -3,19 +3,22 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { RegisteredAsset } from "@/features/assets/registered-assets";
+import { useTxExplorerUrl } from "@/features/chain/use-explorer-url";
 import { useInvalidateSetupStatus } from "@/features/onboarding/use-setup-status";
 import { useWallet } from "@/features/wallet";
 import {
   defaultAllowanceCap,
   defaultAllowanceExpirationSecs,
   ensurePermit2AuthorizedSetup,
-  type SetupStatus,
   type SetupStep,
+  type SetupStepPhase,
 } from "@/features/wallet/permit2";
-import { classifyError as classifyErrorKind } from "@/shared/lib/errors";
+import { cx } from "@/shared/lib/cx";
 import { formatAmountForAsset } from "@/shared/lib/format";
-import { txExplorerUrl } from "@/shared/lib/toast";
+import { MODAL_EXIT_MS } from "@/shared/lib/motion";
+import { type ReportedError, reportError } from "@/shared/lib/report-error";
 import { Stepper, type StepperItem } from "@/shared/ui/Stepper";
+import { useExitTransition } from "@/shared/ui/use-exit-transition";
 
 type Screen = "intro" | "running" | "done" | "failed";
 
@@ -25,7 +28,7 @@ const ALL_STEPS: { id: SetupStep; label: string }[] = [
   { id: "permitting", label: "submit allowance on-chain" },
 ];
 
-const RUNNING_COPY: Record<SetupStep, Record<SetupStatus, string>> = {
+const RUNNING_COPY: Record<SetupStep, Record<SetupStepPhase, string>> = {
   approving: {
     wallet: "Approving token for Permit2 — confirm in your wallet.",
     confirming: "Approval submitted. Waiting for block confirmation…",
@@ -46,7 +49,7 @@ const DONE_AUTOCLOSE_MS = 1500;
 
 export interface SetupFlowProps {
   asset: RegisteredAsset;
-  /// Live deposit amount (in token base units) — used to size the cap.
+  /// Live deposit amount, in token base units. Sizes the allowance cap.
   pendingAmountBase?: bigint;
   /// True if the ERC20 → Permit2 approve step is still required.
   needsErc20Approve: boolean;
@@ -73,10 +76,11 @@ function SetupModal({
   const [activeStep, setActiveStep] = useState<SetupStep>(
     needsErc20Approve ? "approving" : "signing",
   );
-  const [activeStatus, setActiveStatus] = useState<SetupStatus>("wallet");
+  const [activeStatus, setActiveStatus] = useState<SetupStepPhase>("wallet");
   const [activeTxHash, setActiveTxHash] = useState<string | undefined>(undefined);
-  const [error, setError] = useState<{ kind: "rejected" | "failed"; msg: string } | null>(null);
+  const [error, setError] = useState<ReportedError | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const { exiting, exit } = useExitTransition(MODAL_EXIT_MS);
   const cancelledRef = useRef(false);
   const titleId = useId();
   const descId = useId();
@@ -90,7 +94,14 @@ function SetupModal({
     ? ALL_STEPS
     : ALL_STEPS.filter((s) => s.id !== "approving");
 
-  const dismissable = screen === "intro" || screen === "failed" || screen === "done";
+  // `locked` drives the busy cursor, `dismissable` gates the close paths. They
+  // differ only while the exit plays: the flow is no longer running, but the
+  // modal is on its way out and must not take another dismiss.
+  const locked = !(screen === "intro" || screen === "failed" || screen === "done");
+  const dismissable = !locked && !exiting;
+
+  const requestCancel = useCallback(() => exit(onCancel), [exit, onCancel]);
+  const requestSuccess = useCallback(() => exit(onSuccess), [exit, onSuccess]);
 
   const run = useCallback(async () => {
     if (!wallet) return;
@@ -118,16 +129,16 @@ function SetupModal({
       setScreen("done");
     } catch (e) {
       if (cancelledRef.current) return;
-      setError(classifyError(e));
+      setError(reportError("permit2 setup failed", e));
       setScreen("failed");
     }
   }, [wallet, asset.id, asset.token, cap, expiration, invalidate, needsErc20Approve]);
 
   useEffect(() => {
     if (screen !== "done") return;
-    const t = setTimeout(() => onSuccess(), DONE_AUTOCLOSE_MS);
+    const t = setTimeout(() => requestSuccess(), DONE_AUTOCLOSE_MS);
     return () => clearTimeout(t);
-  }, [screen, onSuccess]);
+  }, [screen, requestSuccess]);
 
   useEffect(
     () => () => {
@@ -140,12 +151,12 @@ function SetupModal({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && dismissable) {
         e.stopPropagation();
-        onCancel();
+        requestCancel();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [dismissable, onCancel]);
+  }, [dismissable, requestCancel]);
 
   // Focus the modal on mount so Tab cycles inside the portal.
   useEffect(() => {
@@ -163,19 +174,27 @@ function SetupModal({
   }, []);
 
   const onBackdrop = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && dismissable) onCancel();
+    if (e.target === e.currentTarget && dismissable) requestCancel();
   };
 
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click paired with Escape-key handler on window for keyboard dismiss
     // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard equivalent is Escape, handled at window level
     <div
-      className={`setup-overlay${dismissable ? "" : " setup-overlay--locked"}`}
+      className={cx(
+        "setup-overlay",
+        locked && "setup-overlay--locked",
+        exiting && "setup-overlay--fade-out",
+      )}
       onClick={onBackdrop}
     >
       <div
         ref={modalRef}
-        className={`setup-modal${screen === "running" ? " setup-modal--running" : ""}`}
+        className={cx(
+          "setup-modal",
+          screen === "running" && "setup-modal--running",
+          exiting && "setup-modal--fade-out",
+        )}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -215,7 +234,7 @@ function SetupModal({
               </p>
             </details>
             <div className="setup-actions">
-              <button type="button" className="btn btn--ghost" onClick={onCancel}>
+              <button type="button" className="btn btn--ghost" onClick={requestCancel}>
                 cancel
               </button>
               <button type="button" className="btn" onClick={run} disabled={!wallet} data-primary>
@@ -243,12 +262,12 @@ function SetupModal({
             <p id={descId} className="setup-copy">
               {error?.kind === "rejected"
                 ? `You cancelled the ${stepLabel(activeStep)} step. Try again when ready.`
-                : "Setup failed. See details below."}
+                : `Setup failed at the ${stepLabel(activeStep)} step.`}
             </p>
             <Stepper steps={visibleSteps} current={activeStep} failed />
-            {error?.kind === "failed" ? <div className="err">{error.msg}</div> : null}
+            {error?.kind === "failed" ? <div className="err">{error.message}</div> : null}
             <div className="setup-actions">
-              <button type="button" className="btn btn--ghost" onClick={onCancel}>
+              <button type="button" className="btn btn--ghost" onClick={requestCancel}>
                 cancel
               </button>
               <button type="button" className="btn" onClick={run} data-primary>
@@ -279,16 +298,8 @@ function stepLabel(step: SetupStep): string {
   return ALL_STEPS.find((s) => s.id === step)?.label ?? step;
 }
 
-function classifyError(e: unknown): { kind: "rejected" | "failed"; msg: string } {
-  const c = classifyErrorKind(e);
-  return {
-    kind: c.kind,
-    msg: c.kind === "failed" ? "Something went wrong. Please try again." : c.raw,
-  };
-}
-
 function TxHashLine({ txHash }: { txHash: string }) {
-  const url = txExplorerUrl(txHash);
+  const url = useTxExplorerUrl()(txHash);
   const short = `${txHash.slice(0, 6)}…${txHash.slice(-4)}`;
   return (
     <p className="setup-tx">

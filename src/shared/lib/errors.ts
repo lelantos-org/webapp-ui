@@ -101,6 +101,19 @@ function describeWalletError(e: WalletError): string {
       return "Proof generation failed. Reload to reset the prover and retry.";
     case "PROVER_ARTIFACTS_MISSING":
       return "Prover artifacts missing. Reload to refetch and retry.";
+    case "PROVER_ARTIFACTS_FAILED":
+      return "Prover artifacts failed to load. Check your connection and reload.";
+    case "WORKER_TIMEOUT":
+      return "A background worker timed out. Reload and retry.";
+    case "WORKER_CRASHED":
+    case "WORKER_FAILED":
+      return "A background worker failed. Reload to restart it and retry.";
+    case "WIRE_FORMAT":
+      return "Unexpected response from the server. Retry shortly.";
+    case "ENVIRONMENT":
+      return `Unsupported browser environment: ${e.message}`;
+    case "X402_PAYMENT":
+      return "Payment required by the service was refused.";
     case "NETWORK_NOT_DEPLOYED":
       return `Network not deployed: ${e.message}`;
     case "PERMIT_REJECTED":
@@ -109,7 +122,9 @@ function describeWalletError(e: WalletError): string {
       return `Wallet adapter cannot satisfy this deposit: ${e.message}`;
     case "TX_MINING":
       return "Transaction did not mine. Retry or check the explorer.";
-    case "SELECTION":
+    // `SELECTION` / `INVALID_ARGUMENT` already carry a user-readable message.
+    // The SDK documents its code list as open, so unknown codes land here too.
+    default:
       return e.message;
   }
 }

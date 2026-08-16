@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { findAsset, type RegisteredAsset } from "@/features/assets/registered-assets";
+import { useTxExplorerUrl } from "@/features/chain/use-explorer-url";
 import { formatAmountForAsset, shortAddr } from "@/shared/lib/format";
-import { txExplorerUrl } from "@/shared/lib/toast";
 
 export function ClaimHero({ subtitle }: { subtitle?: string }) {
   return (
@@ -111,7 +111,7 @@ export function DoneCard({ txHash, asset, amount, assets, destinationAddress }: 
   const a = findAsset(assets, asset);
   const symbol = a?.symbol ?? `asset#${asset.toString()}`;
   const formatted = a ? formatAmountForAsset(amount, a.decimals, a.scale) : amount.toString();
-  const explorer = txExplorerUrl(txHash);
+  const explorer = useTxExplorerUrl()(txHash);
   return (
     <div className="card claim-done">
       <div className="claim-done__check" aria-hidden>

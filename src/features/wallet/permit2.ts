@@ -2,16 +2,21 @@
 // action are split so callers can pre-decide whether to render an
 // "approving" step before kicking off the tx.
 
-import { supportsAllowanceTransfer, type WalletApi } from "@lelantos-org/sdk";
+import {
+  type EvmAddress,
+  supportsAllowanceTransfer,
+  tokenAmount,
+  type WalletApi,
+} from "@lelantos-org/sdk";
 
-const MAX_UINT256 = (1n << 256n) - 1n;
+const MAX_UINT256 = tokenAmount((1n << 256n) - 1n);
 
 /// True when payer's allowance for `token` to Permit2 is below `total`;
 /// false when the chain adapter lacks Permit2 helpers (non-EVM), meaning
 /// no approval step is needed.
 export async function needsPermit2Approval(
   wallet: WalletApi,
-  token: string,
+  token: EvmAddress,
   total: bigint,
 ): Promise<boolean> {
   const chain = wallet.chain;
@@ -23,23 +28,12 @@ export async function needsPermit2Approval(
 
 /// Send a `tokenApprove(MAX)` tx for `token` against Permit2. Caller must
 /// have confirmed the approval is needed via `needsPermit2Approval`.
-export async function approvePermit2(wallet: WalletApi, token: string): Promise<void> {
+export async function approvePermit2(wallet: WalletApi, token: EvmAddress): Promise<void> {
   const chain = wallet.chain;
   if (!chain.tokenApprove || !chain.permit2Address) {
     throw new Error("approvePermit2: chain adapter does not support Permit2");
   }
   await chain.tokenApprove(token, chain.permit2Address(), MAX_UINT256);
-}
-
-/// Approve Permit2 only if the current allowance does not cover `total`.
-export async function ensurePermit2Allowance(
-  wallet: WalletApi,
-  token: string,
-  total: bigint,
-): Promise<void> {
-  if (await needsPermit2Approval(wallet, token, total)) {
-    await approvePermit2(wallet, token);
-  }
 }
 
 // ============================================================================
@@ -56,58 +50,57 @@ export function defaultAllowanceExpirationSecs(): number {
   return Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
 }
 
-const SAFETY_BUFFER_SECS = 60;
+/// Matches `ALLOWANCE_BUFFER_SECS` in the SDK, which decides the same way.
+export const SAFETY_BUFFER_SECS = 60;
 
-/// Returns what (if anything) the user must authorize before a deposit of
-/// `total` can flow through `submitIntentAuthorized`.
-export async function needsPermit2AllowanceRenewal(
+/// Both allowances an AllowanceTransfer deposit depends on.
+export interface Permit2AllowanceState {
+  /// ERC-20 → Permit2, in token base units. Permit2 pulls through this, so a
+  /// signed window is worthless without it.
+  erc20Allowance: bigint;
+  /// Permit2 → MASP window: the cap, its expiry, and the nonce to sign next.
+  window: { amount: bigint; expiration: number; nonce: number };
+}
+
+/// Read both allowances for `token`. Zeroed when the adapter has no
+/// AllowanceTransfer support, which reads as "setup cannot help here".
+///
+/// Deliberately returns raw values rather than a verdict: the amount being
+/// deposited changes per keystroke, while these reads are per (payer, token),
+/// so the caller applies the amount via `evaluateSetup`.
+export async function readPermit2AllowanceState(
   wallet: WalletApi,
-  token: string,
-  total: bigint,
-): Promise<{
-  needsErc20Approve: boolean;
-  needsAllowancePermit: boolean;
-  /// Allowance read reused from the predicate; callers can render status
-  /// without re-reading.
-  current: { amount: bigint; expiration: number; nonce: number };
-}> {
+  token: EvmAddress,
+): Promise<Permit2AllowanceState> {
   const chain = wallet.chain;
   if (!supportsAllowanceTransfer(chain) || !chain.permit2Address || !chain.tokenAllowance) {
-    return {
-      needsErc20Approve: false,
-      needsAllowancePermit: false,
-      current: { amount: 0n, expiration: 0, nonce: 0 },
-    };
+    return { erc20Allowance: 0n, window: { amount: 0n, expiration: 0, nonce: 0 } };
   }
   const owner = await chain.payerAddress();
   const masp = await chain.maspAddress();
-  const [erc20Allow, p2Allow] = await Promise.all([
+  const [erc20Allowance, window] = await Promise.all([
     chain.tokenAllowance(token, owner, chain.permit2Address()),
     chain.permit2Allowance(token, owner, masp),
   ]);
-  const nowSec = Math.floor(Date.now() / 1000);
-  const allowanceCovers =
-    p2Allow.amount >= total && p2Allow.expiration > nowSec + SAFETY_BUFFER_SECS;
-  return {
-    needsErc20Approve: erc20Allow < total,
-    needsAllowancePermit: !allowanceCovers,
-    current: p2Allow,
-  };
+  return { erc20Allowance, window };
 }
 
 export type SetupStep = "approving" | "signing" | "permitting";
-export type SetupStatus = "wallet" | "confirming";
+/// Where a `SetupStep` currently is: awaiting the wallet prompt, or waiting
+/// on the chain. Distinct from `onboarding/use-setup-status`'s `SetupStepPhase`,
+/// which is the allowance probe result — hence the narrower name.
+export type SetupStepPhase = "wallet" | "confirming";
 
 /// One-time-per-window setup allowing future deposits to pull via
-/// `submitIntentAuthorized` with no per-tx Permit2 sig. `onProgress` fires
+/// `submitDepositAuthorized` with no per-tx Permit2 sig. `onProgress` fires
 /// `wallet` before each sub-step (waiting on the wallet popup), then
 /// `confirming` with the broadcast tx hash for the two on-chain steps.
 export async function ensurePermit2AuthorizedSetup(
   wallet: WalletApi,
-  token: string,
+  token: EvmAddress,
   cap: bigint,
   expirationUnixSecs: number,
-  onProgress?: (step: SetupStep, status: SetupStatus, txHash?: string) => void,
+  onProgress?: (step: SetupStep, status: SetupStepPhase, txHash?: string) => void,
 ): Promise<void> {
   const chain = wallet.chain;
   if (

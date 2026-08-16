@@ -1,11 +1,12 @@
 import { toast } from "sonner";
-import { env } from "@/config/env";
-import { classifyError, friendlyMessage } from "@/shared/lib/errors";
+import { reportError } from "@/shared/lib/report-error";
 
-export function txExplorerUrl(txHash: string): string | undefined {
-  if (!env.explorerUrl) return undefined;
-  const base = env.explorerUrl.replace(/\/$/, "");
-  return `${base}/tx/${txHash}`;
+/// Pure: the explorer base is a per-chain fact, so it is passed in rather
+/// than read from a module global. `undefined` when the chain has no explorer
+/// configured, which callers render as plain text instead of a link.
+export function txExplorerUrl(explorerUrl: string | undefined, txHash: string): string | undefined {
+  if (!explorerUrl) return undefined;
+  return `${explorerUrl.replace(/\/$/, "")}/tx/${txHash}`;
 }
 
 export interface TxToastHandle {
@@ -21,8 +22,12 @@ export interface TxToastHandle {
 
 /// Tx toast that emits only on failure or soft timeout; success phases are
 /// shown inline by the form's `Stepper`.
-export function toastTx(label: string, txHash: string): TxToastHandle {
-  const url = txExplorerUrl(txHash);
+export function toastTx(
+  label: string,
+  txHash: string,
+  explorerUrl: string | undefined,
+): TxToastHandle {
+  const url = txExplorerUrl(explorerUrl, txHash);
   const id = `tx:${txHash}`;
   const action = url
     ? {
@@ -39,11 +44,11 @@ export function toastTx(label: string, txHash: string): TxToastHandle {
       // Inline stepper already shows "flushed"; no toast.
     },
     failed(error) {
-      const c = classifyError(error);
-      if (c.kind === "rejected") {
-        toast.warning(`${label} canceled`, { id, description: "Canceled in wallet." });
+      const { kind, message } = reportError(`${label} failed`, error);
+      if (kind === "rejected") {
+        toast.warning(`${label} canceled`, { id, description: message });
       } else {
-        toast.error(`${label} failed`, { id, description: friendlyMessage(error) });
+        toast.error(`${label} failed`, { id, description: message });
       }
     },
     timedOut() {
@@ -57,12 +62,12 @@ export function toastTx(label: string, txHash: string): TxToastHandle {
 }
 
 export function toastError(prefix: string, error: unknown): void {
-  const c = classifyError(error);
-  if (c.kind === "rejected") {
-    toast.warning(`${prefix} canceled`, { description: "Canceled in wallet." });
-  } else {
-    toast.error(prefix, { description: friendlyMessage(error) });
+  const { kind, message } = reportError(prefix, error);
+  if (kind === "rejected") {
+    toast.warning(`${prefix} canceled`, { description: message });
+    return;
   }
+  toast.error(prefix, { description: message });
 }
 
 export function toastInfo(message: string): void {

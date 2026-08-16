@@ -3,15 +3,19 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { ActionForm } from "@/features/actions/ActionForm";
-import { useGenerateLink } from "@/features/actions/mutations";
-import { type GenerateLinkInput, generateLinkSchema } from "@/features/actions/schemas";
-import type { TxPhase } from "@/features/actions/tx-progress";
+import { ActionForm } from "@/features/actions/forms/ActionForm";
+import { type GenerateLinkInput, generateLinkSchema } from "@/features/actions/forms/schemas";
+import type { TxPhase } from "@/features/actions/tx/tx-progress";
 import { AssetSelectField } from "@/features/assets/AssetSelectField";
-import { findAsset, useRegisteredAssets } from "@/features/assets/registered-assets";
-import { ClaimLinkResultCard } from "@/features/claim-link/components/ClaimLinkResultCard";
+import {
+  DEFAULT_ASSET_ID,
+  findAsset,
+  useRegisteredAssets,
+} from "@/features/assets/registered-assets";
+import { ClaimLinkResult } from "@/features/claim-link/components/ClaimLinkResult";
 import { GenerateModal } from "@/features/claim-link/components/GenerateModal";
 import { useClaimLinkStage } from "@/features/claim-link/use-claim-link-stage";
+import { useGenerateLink } from "@/features/claim-link/use-generate-link";
 import { formatAssetAmount, parseAmountForAsset } from "@/shared/lib/format";
 import { TextField } from "@/shared/ui/Field";
 
@@ -23,8 +27,6 @@ const VISIBLE_RUNNING_PHASES: ReadonlySet<TxPhase> = new Set([
   "proving",
   "submitting",
 ]);
-
-const DEFAULT_ASSET = "1";
 
 export function GenerateLinkForm() {
   const { mutation, progress } = useGenerateLink();
@@ -38,12 +40,12 @@ export function GenerateLinkForm() {
     formState: { errors },
   } = useForm<GenerateLinkInput>({
     resolver: zodResolver(generateLinkSchema),
-    defaultValues: { asset: DEFAULT_ASSET, amount: "" },
+    defaultValues: { asset: DEFAULT_ASSET_ID, amount: "" },
   });
 
   const [pending, setPending] = useState<{ amount: bigint; asset: bigint } | null>(null);
 
-  const selected = findAsset(assets.data, watch("asset"));
+  const selected = findAsset(assets, watch("asset"));
   const watchedAmount = watch("amount");
   const visibleSteps = progress.steps.filter((s) => VISIBLE_RUNNING_PHASES.has(s.id));
   const amountLabel = pending && selected ? formatAssetAmount(pending.amount, selected) : "";
@@ -69,28 +71,19 @@ export function GenerateLinkForm() {
   }
 
   function resetAll() {
-    reset({ asset: selected ? selected.id.toString() : DEFAULT_ASSET, amount: "" });
+    reset({ asset: selected ? selected.id.toString() : DEFAULT_ASSET_ID, amount: "" });
     mutation.reset();
     setPending(null);
     stageApi.toForm();
   }
 
   if (stageApi.stage === "result" && mutation.data && selected) {
-    return (
-      <ClaimLinkResultCard
-        url={mutation.data.url}
-        txHash={mutation.data.txHash}
-        ephAddress={mutation.data.ephAddress}
-        amountLabel={amountLabel}
-        onReset={resetAll}
-      />
-    );
+    return <ClaimLinkResult url={mutation.data.url} amountLabel={amountLabel} onReset={resetAll} />;
   }
 
   return (
     <>
       <ActionForm
-        title="new link"
         submitLabel="generate link"
         busy={mutation.isPending}
         error={mutation.error}

@@ -1,7 +1,7 @@
 // React context wiring for the SDK wallet.
 
 import { type ReactNode, useCallback, useMemo } from "react";
-import { env } from "@/config/env";
+import { closeDepositStreams } from "@/features/relayer/deposit-stream";
 import { clearCachedNsk } from "@/features/wallet/nsk-session-cache";
 import type { WalletContextValue } from "@/features/wallet/types";
 import { useBuildWallet } from "@/features/wallet/use-build-wallet";
@@ -14,11 +14,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const conn = useConnection();
   const { wallet, error: deriveError, hasCachedKey } = useBuildWallet(conn);
 
-  const status = deriveWalletStatus({ conn, wallet, deriveError, hasCachedKey });
+  const status = deriveWalletStatus({
+    conn,
+    wallet,
+    deriveError,
+    hasCachedKey,
+  });
   const error = deriveError ?? conn.connectError;
 
   const disconnect = useCallback(() => {
-    if (conn.address) clearCachedNsk(env.chainId, conn.address);
+    if (conn.address) clearCachedNsk(conn.address);
+    // The relayer stream is an open SSE connection held for the wallet's
+    // lifetime; drop it rather than leaving it running for a wallet that is
+    // no longer connected.
+    closeDepositStreams();
     conn.disconnect();
     toastInfo("disconnected");
   }, [conn.disconnect, conn.address]);
@@ -33,23 +42,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       error,
       wallet,
       ethAddress: conn.address,
-      chainOk: conn.chainOk,
       connect: conn.connect,
       disconnect,
       switchChain: conn.switchChain,
       refresh,
     }),
-    [
-      status,
-      error,
-      wallet,
-      conn.address,
-      conn.chainOk,
-      conn.connect,
-      conn.switchChain,
-      disconnect,
-      refresh,
-    ],
+    [status, error, wallet, conn.address, conn.connect, conn.switchChain, disconnect, refresh],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

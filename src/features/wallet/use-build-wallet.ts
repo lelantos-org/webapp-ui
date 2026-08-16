@@ -1,25 +1,27 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { useEffect, useState } from "react";
-import { env } from "@/config/env";
+import { chainKey } from "@/config/chains";
+import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
+import { closeDepositStreamsExcept } from "@/features/relayer/deposit-stream";
 import { getCachedNsk } from "@/features/wallet/nsk-session-cache";
+import { syncProgress } from "@/features/wallet/sync-progress-store";
 import type { Connection } from "@/features/wallet/use-connection";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("wallet:build");
 
-/// Min dwell for the "resuming…" UI on cached-nsk rebuilds — without it,
-/// sub-100ms rebuilds flash the panel as a glitch.
+/// Minimum dwell for the "resuming…" UI on cached-nsk rebuilds. Without it,
+/// sub-100ms rebuilds render the panel as a brief flash.
 const MIN_RESUME_MS = 1000;
 
 const loadBuildWallet = () => import("@/features/wallet/buildWallet").then((m) => m.buildWallet);
 
 // Dedupe concurrent builds for the same `(chainId, addr)` — StrictMode and
-// wallet-store refires can both fire the effect twice, queueing a duplicate
+// EIP-1193 store refires can both fire the effect twice, queueing a duplicate
 // EIP-712 prompt because the second `getCachedNsk` check beats the first
 // `cacheNsk` write.
 const inflight = new Map<string, Promise<WalletApi>>();
-const inflightKey = (chainId: bigint, addr: string) =>
-  `${chainId.toString(16)}:${addr.toLowerCase()}`;
+const inflightKey = (chainId: bigint, addr: string) => `${chainKey(chainId)}:${addr.toLowerCase()}`;
 
 export interface BuildWalletState {
   wallet: WalletApi | undefined;
@@ -29,47 +31,77 @@ export interface BuildWalletState {
   hasCachedKey: boolean;
 }
 
-export function useBuildWallet(conn: Connection): BuildWalletState {
-  const [wallet, setWallet] = useState<WalletApi | undefined>();
-  const [error, setError] = useState<string | undefined>();
+/// A build result together with the chain it belongs to.
+///
+/// Stored as one value so "is this still current?" is a comparison rather than
+/// an effect racing to clear it. Clearing by effect leaves a window — one
+/// render after the chain changes — in which consumers read the previous
+/// chain's balances and Merkle tree, and it puts the invariant somewhere other
+/// than where the value is used.
+interface BuiltFor<T> {
+  chainId: bigint;
+  value: T;
+}
 
+/// `value` when it was produced for `chainId`, otherwise `undefined`.
+function currentFor<T>(built: BuiltFor<T> | undefined, chainId: bigint): T | undefined {
+  return built?.chainId === chainId ? built.value : undefined;
+}
+
+export function useBuildWallet(conn: Connection): BuildWalletState {
+  // Undefined before a wallet connects, and while it sits on a chain this
+  // deployment does not serve. Both mean there is nothing to build.
+  const activeChain = useActiveChainOrUndefined();
+  const chainId = activeChain?.chainId;
+  const [built, setBuilt] = useState<BuiltFor<WalletApi> | undefined>();
+  const [failure, setFailure] = useState<BuiltFor<string> | undefined>();
+
+  // Derived, not cleared: a wallet built for another chain, or built before a
+  // disconnect, is by definition not the current one.
+  const usable = conn.isConnected && chainId !== undefined;
+  const wallet = usable ? currentFor(built, chainId) : undefined;
+  const error = usable ? currentFor(failure, chainId) : undefined;
+
+  // The genuine side effects of a chain change. The previous chain's SSE feed
+  // has no reader left, and its scan counter would otherwise sit on screen as
+  // though a sync were still running.
   useEffect(() => {
-    if (!conn.isConnected) {
-      setWallet(undefined);
-      setError(undefined);
-    }
-  }, [conn.isConnected]);
+    if (chainId === undefined) return;
+    closeDepositStreamsExcept(chainId);
+    syncProgress.finished();
+  }, [chainId]);
 
   useEffect(() => {
     log.debug("effect tick", {
       isConnected: conn.isConnected,
-      chainOk: conn.chainOk,
       hasBundle: !!conn.bundle,
       address: conn.address,
     });
-    if (!conn.isConnected || !conn.chainOk || !conn.bundle || !conn.address) return;
+    // `activeChain` is the chain gate: it is undefined exactly when the wallet
+    // is disconnected or on a network this deployment does not serve, and
+    // neither leaves anything to build against.
+    if (!conn.isConnected || !conn.bundle || !conn.address || !activeChain) return;
 
     const ctrl = new AbortController();
     const addr = conn.address;
-    const fromCache = getCachedNsk(env.chainId, addr) !== undefined;
+    const fromCache = getCachedNsk(addr) !== undefined;
     const t0 = performance.now();
     log.debug("building wallet", { address: addr, fromCache });
-    setError(undefined);
 
     (async () => {
       try {
         const buildWallet = await loadBuildWallet();
         if (!conn.bundle) return;
         const bundle = conn.bundle;
-        const k = inflightKey(env.chainId, addr);
+        const k = inflightKey(activeChain.chainId, addr);
         let p = inflight.get(k);
         if (!p) {
-          p = buildWallet(bundle).finally(() => {
+          p = buildWallet(bundle, activeChain).finally(() => {
             if (inflight.get(k) === p) inflight.delete(k);
           });
           inflight.set(k, p);
         }
-        const built = await p;
+        const walletApi = await p;
         if (ctrl.signal.aborted) {
           log.debug("build superseded; discarding", { address: addr });
           return;
@@ -81,18 +113,21 @@ export function useBuildWallet(conn: Connection): BuildWalletState {
             if (ctrl.signal.aborted) return;
           }
         }
-        setWallet(built);
+        setBuilt({ chainId: activeChain.chainId, value: walletApi });
       } catch (e) {
         if (ctrl.signal.aborted) return;
         log.error("build failed", e);
-        setError(e instanceof Error ? e.message : String(e));
+        setFailure({
+          chainId: activeChain.chainId,
+          value: e instanceof Error ? e.message : String(e),
+        });
       }
     })();
 
     return () => ctrl.abort();
-  }, [conn.isConnected, conn.chainOk, conn.bundle, conn.address]);
+  }, [conn.isConnected, conn.bundle, conn.address, activeChain]);
 
-  const hasCachedKey = conn.address ? getCachedNsk(env.chainId, conn.address) !== undefined : false;
+  const hasCachedKey = conn.address ? getCachedNsk(conn.address) !== undefined : false;
 
   return { wallet, error, hasCachedKey };
 }

@@ -17,7 +17,6 @@ export async function timed<T>(label: string, fn: () => Promise<T>): Promise<T> 
 }
 
 /// Monkey-patch SDK collaborators on `wallet` to log per-call timings.
-/// Mirrors cli/src/commands/transact.ts.
 export function instrumentWallet(wallet: WalletApi): void {
   const wrapMethod = <T extends object, K extends keyof T>(obj: T, key: K, label: string) => {
     const orig = obj[key] as unknown as (...a: unknown[]) => Promise<unknown>;
@@ -29,9 +28,7 @@ export function instrumentWallet(wallet: WalletApi): void {
 
   wrapMethod(wallet.prover, "prove", "prover.prove");
   wrapMethod(wallet.submitter, "submit", "submitter.submit");
-  for (const k of ["spentSet", "listNotes"] as const) {
-    wrapMethod(wallet.noteSource, k, `noteSource.${k}`);
-  }
+  wrapMethod(wallet.noteSource, "listNotes", "noteSource.listNotes");
   for (const k of [
     "fetchAsset",
     "fetchFeeBps",

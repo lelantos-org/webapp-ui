@@ -6,19 +6,19 @@ import { AccountCard } from "@/features/wallet/AccountCard";
 import { Welcome } from "@/features/wallet/Welcome";
 
 const PREFETCH: Record<string, () => Promise<unknown>> = {
-  "/": () => import("@/features/actions/DepositForm"),
-  "/transfer": () => import("@/features/actions/TransferForm"),
-  "/withdraw": () => import("@/features/actions/WithdrawForm"),
+  "/": () => import("@/features/actions/forms/DepositForm"),
+  "/transfer": () => import("@/features/actions/forms/TransferForm"),
+  "/withdraw": () => import("@/features/actions/forms/WithdrawForm"),
   "/swap": () => import("@/features/swaps/SwapForm"),
   "/send-link": () => import("@/features/claim-link/GenerateLinkForm"),
 };
 
 const TABS = [
   { to: "/", label: "deposit", end: true, hidden: false },
-  { to: "/transfer", label: "transfer", end: false, hidden: true },
+  { to: "/transfer", label: "transfer", end: false, hidden: false },
   { to: "/withdraw", label: "withdraw", end: false, hidden: false },
   { to: "/swap", label: "swap", end: false, hidden: false },
-  { to: "/send-link", label: "claim link", end: false, hidden: true },
+  { to: "/send-link", label: "claim link", end: false, hidden: false },
 ] as const;
 
 const TRANSITION_MS = 360;
@@ -37,7 +37,7 @@ export function HomeLayout() {
 
   // Keep <Welcome /> mounted briefly after `ready` flips so CSS opacity can
   // transition out. The connected layout renders simultaneously underneath
-  // (grid-stacked), producing a cross-fade instead of a hard swap.
+  // (grid-stacked), producing a cross-fade rather than a hard swap.
   const [welcomeMounted, setWelcomeMounted] = useState(!ready);
   useEffect(() => {
     if (ready) {

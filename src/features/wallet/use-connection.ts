@@ -1,14 +1,12 @@
-// Thin facade over `walletStore`; all real logic lives in `wallet-store.ts`.
+// Thin facade over `walletStore`; all real logic lives in `features/eip1193`.
 
 import { useCallback, useMemo } from "react";
-import { env } from "@/config/env";
-import type { Eip1193Provider } from "@/features/wallet/wallet-store";
-import { useWalletStore } from "@/features/wallet/use-wallet-store";
-import { walletStore } from "@/features/wallet/wallet-store";
-import { createLogger } from "@/shared/lib/logger";
-import { toastError } from "@/shared/lib/toast";
-
-const log = createLogger("wallet:connection");
+import type { ChainEntry } from "@/config/chains";
+import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
+import type { Eip1193Provider } from "@/features/eip1193/store";
+import { walletStore } from "@/features/eip1193/store";
+import { useWalletStore } from "@/features/eip1193/use-store";
+import { useSwitchChain } from "@/features/eip1193/use-switch-chain";
 
 /// Everything the SDK signer adapter needs in one bag.
 export interface ConnectionBundle {
@@ -19,7 +17,9 @@ export interface ConnectionBundle {
 
 export interface Connection {
   address?: `0x${string}`;
-  chainOk: boolean;
+  /// The wallet is on a chain this deployment serves. Not "matches the app":
+  /// the wallet defines the chain, so the only question is whether we know it.
+  chainSupported: boolean;
   /// Present only when fully ready (connected + has provider + address + chain).
   bundle?: ConnectionBundle;
   isConnected: boolean;
@@ -27,12 +27,13 @@ export interface Connection {
   connectError?: string;
   connect(): void;
   disconnect(): void;
-  switchChain(): void;
+  switchChain(target: ChainEntry): void;
 }
 
-const targetChainId = Number(env.chainId);
-
 export function useConnection(): Connection {
+  // The wallet's own network decides the chain, so there is no target to
+  // compare against — only whether this deployment serves where it already is.
+  const activeChain = useActiveChainOrUndefined();
   const status = useWalletStore((s) => s.status);
   const address = useWalletStore((s) => s.address);
   const chainId = useWalletStore((s) => s.chainId);
@@ -45,26 +46,21 @@ export function useConnection(): Connection {
 
   const disconnect = useCallback(() => walletStore.disconnect(), []);
 
-  const switchChain = useCallback(() => {
-    log.debug("switchChain requested", { to: targetChainId, connected: status === "connected" });
-    void walletStore.switchChain(targetChainId).catch((err) => {
-      log.warn("switchChain failed", err);
-      toastError("network switch failed", err);
-    });
-  }, [status]);
+  const switchChain = useSwitchChain();
 
   const isConnected = status === "connected" && !!address;
-  const chainOk = chainId === targetChainId;
+  const chainSupported = activeChain !== undefined;
   // A fresh bundle object every render aborts `useBuildWallet`'s in-flight
   // build — symptom: UI stuck on "resuming…" forever.
   const bundle = useMemo<ConnectionBundle | undefined>(() => {
     if (!isConnected || !provider || !address || chainId === undefined) return undefined;
-    return { provider, address, chain: { id: chainId, name: env.chainName } };
-  }, [isConnected, provider, address, chainId]);
+    if (!activeChain) return undefined;
+    return { provider, address, chain: { id: chainId, name: activeChain.chainName } };
+  }, [isConnected, provider, address, chainId, activeChain]);
 
   return {
     address,
-    chainOk,
+    chainSupported,
     bundle,
     isConnected,
     isConnecting: status === "connecting",

@@ -8,8 +8,8 @@ describe("requireActions", () => {
   });
 
   it("returns the actions when present", () => {
-    // Sentinel impl — only identity is checked here. Cast through `unknown`
-    // to skirt the per-kind result type without authoring full SDK fixtures.
+    // Sentinel implementation: only object identity is asserted, so the cast
+    // through `unknown` stands in for full per-kind SDK result fixtures.
     const a = {
       deposit: async () => ({ txHash: "x" }),
       transfer: async () => ({ txHash: "x" }),

@@ -1,10 +1,10 @@
 // Centralized logger. `debug` / `info` are off (even in dev) unless
-// `VITE_DEBUG=true`, `?debug=1` in the URL, or `localStorage["sswap:debug"]="1"`.
+// `VITE_DEBUG=true`, `?debug=1` in the URL, or `localStorage["lelantos:debug"]="1"`.
 // `warn` / `error` always fire.
 
 type Level = "debug" | "info" | "warn" | "error";
 
-const DEBUG_KEY = "sswap:debug";
+const DEBUG_KEY = "lelantos:debug";
 
 function readDebugFlag(): boolean {
   if (import.meta.env.VITE_DEBUG === "true" || import.meta.env.VITE_DEBUG === "1") return true;
@@ -35,9 +35,9 @@ function debugEnabled(): boolean {
   return debugCached;
 }
 
-/// Expose runtime toggle for ops / debugging. `window.__sswapDebug(true)`.
+/// Expose runtime toggle for ops / debugging. `window.__lelantosDebug(true)`.
 if (typeof window !== "undefined") {
-  (window as unknown as { __sswapDebug?: (on: boolean) => void }).__sswapDebug = (on) => {
+  (window as unknown as { __lelantosDebug?: (on: boolean) => void }).__lelantosDebug = (on) => {
     debugCached = on;
     try {
       if (on) window.localStorage?.setItem(DEBUG_KEY, "1");
@@ -91,10 +91,11 @@ const NOISY_PREFIXES = ["[WasmProver]", "[worker-perf]", "[rayon-main"];
 let consoleFilterInstalled = false;
 
 /// Idempotent; call once at boot. Re-evaluates the debug flag on every call
-/// so the runtime toggle (`window.__sswapDebug(true)`) applies without reload.
+/// so the runtime toggle (`window.__lelantosDebug(true)`) applies without reload.
 export function installConsoleFilter(): void {
   if (consoleFilterInstalled || typeof console === "undefined") return;
   consoleFilterInstalled = true;
+  // biome-ignore lint/suspicious/noConsole: patching console.log is the point of this filter
   const orig = console.log.bind(console);
   console.log = (...args: unknown[]) => {
     if (!debugEnabled()) {

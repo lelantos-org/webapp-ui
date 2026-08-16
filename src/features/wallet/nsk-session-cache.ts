@@ -1,12 +1,18 @@
-import type { Field } from "@lelantos-org/sdk";
-import { nskFieldFromHex, nskHexFromField } from "@/features/claim-link/codec";
+import type { Field } from "@lelantos-org/sdk/crypto";
+import { nskFieldFromHex, nskHexFromField } from "@/features/wallet/nsk-codec";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("nsk-cache");
-const PREFIX = "sswap:nsk:";
+const PREFIX = "lelantos:nsk:";
 
-function key(chainId: bigint, ethAddr: string): string {
-  return `${PREFIX}${chainId.toString(16)}:${ethAddr.toLowerCase()}`;
+/// Deliberately NOT chain-scoped.
+///
+/// `LELANTOS_NSK_DOMAIN` omits chainId on purpose, so one EIP-712 signature
+/// yields the same nsk (and the same shielded address) on every chain. Keying
+/// this by chain would only make a chain switch re-prompt for a signature
+/// whose result is known to be identical.
+function key(ethAddr: string): string {
+  return `${PREFIX}${ethAddr.toLowerCase()}`;
 }
 
 function store(): Storage | undefined {
@@ -19,14 +25,14 @@ function store(): Storage | undefined {
   }
 }
 
-/// Read a previously-cached nsk for `(chainId, ethAddr)` from sessionStorage.
+/// Read the cached nsk for `ethAddr` from sessionStorage.
 /// Returns `undefined` on miss, malformed entry, or unavailable storage.
-export function getCachedNsk(chainId: bigint, ethAddr: string): Field | undefined {
+export function getCachedNsk(ethAddr: string): Field | undefined {
   const s = store();
   if (!s) return undefined;
   let raw: string | null;
   try {
-    raw = s.getItem(key(chainId, ethAddr));
+    raw = s.getItem(key(ethAddr));
   } catch {
     return undefined;
   }
@@ -37,31 +43,31 @@ export function getCachedNsk(chainId: bigint, ethAddr: string): Field | undefine
   const parsed = nskFieldFromHex(raw);
   if (!parsed.ok) {
     log.warn("malformed cache entry; clearing", parsed.error);
-    clearCachedNsk(chainId, ethAddr);
+    clearCachedNsk(ethAddr);
     return undefined;
   }
   log.debug("hit");
   return parsed.value;
 }
 
-/// Persist `nsk` for `(chainId, ethAddr)`. Best-effort: storage errors
+/// Persist `nsk` for `ethAddr`. Best-effort: storage errors
 /// (quota, privacy mode) are logged and swallowed.
-export function cacheNsk(chainId: bigint, ethAddr: string, nsk: Field): void {
+export function cacheNsk(ethAddr: string, nsk: Field): void {
   const s = store();
   if (!s) return;
   try {
-    s.setItem(key(chainId, ethAddr), nskHexFromField(nsk));
+    s.setItem(key(ethAddr), nskHexFromField(nsk));
     log.debug("stored");
   } catch (e) {
     log.warn("store failed", e);
   }
 }
 
-export function clearCachedNsk(chainId: bigint, ethAddr: string): void {
+export function clearCachedNsk(ethAddr: string): void {
   const s = store();
   if (!s) return;
   try {
-    s.removeItem(key(chainId, ethAddr));
+    s.removeItem(key(ethAddr));
   } catch {
     /* ignore */
   }

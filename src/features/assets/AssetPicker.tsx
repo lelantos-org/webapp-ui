@@ -1,7 +1,12 @@
 // "ETH (native)" is encoded as `asset = WETH.id` plus an `asEth` flag by
 // the Deposit/Withdraw forms.
 
-import { type RegisteredAsset, useRegisteredAssets } from "@/features/assets/registered-assets";
+import {
+  DEFAULT_ASSET_ID,
+  type RegisteredAsset,
+  useRegisteredAssets,
+} from "@/features/assets/registered-assets";
+import { useActiveChain } from "@/features/chain/ChainProvider";
 import { Field } from "@/shared/ui/Field";
 
 export const ETH_OPTION = "eth";
@@ -23,10 +28,14 @@ export function AssetPicker({
   error,
   label = "asset",
 }: AssetPickerProps) {
-  const q = useRegisteredAssets();
-  const list = q.data ?? [];
+  const list = useRegisteredAssets();
+  // Native-ETH deposit and withdraw both run through `NativeAdapter`. A chain
+  // with no adapter deployed has no entry point for them, so the option is
+  // withheld rather than offered and then failed at submit. Read per render
+  // because which chain is active now moves.
+  const nativeEthSupported = useActiveChain().nativeAdapterAddress !== undefined;
   const fallback = list.length === 0;
-  const weth = showEth ? list.find((a) => a.isWeth) : undefined;
+  const weth = showEth && nativeEthSupported ? list.find((a) => a.isWeth) : undefined;
 
   return (
     <Field label={label} error={error}>
@@ -38,7 +47,11 @@ export function AssetPicker({
           value={value}
           onChange={(e) => onChange(e.target.value)}
         >
-          {fallback ? <option value="1">asset 1</option> : renderOptions(list, weth)}
+          {fallback ? (
+            <option value={DEFAULT_ASSET_ID}>asset {DEFAULT_ASSET_ID}</option>
+          ) : (
+            renderOptions(list, weth)
+          )}
         </select>
       )}
     </Field>

@@ -23,7 +23,9 @@ export function PortfolioActions() {
     try {
       const removed = await compact.run();
       toastInfo(
-        removed > 0 ? `pruned ${removed} spent note${removed === 1 ? "" : "s"}` : "nothing to prune",
+        removed > 0
+          ? `pruned ${removed} spent note${removed === 1 ? "" : "s"}`
+          : "nothing to prune",
       );
     } catch (e) {
       toastError("compact failed", e);

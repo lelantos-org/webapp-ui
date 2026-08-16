@@ -2,7 +2,9 @@ import { describe, expect, it, vi } from "vitest";
 import { NSK_HEX_LEN } from "./codec";
 import { readFragmentFromHash, scrubLocationHash } from "./fragment";
 
-const VALID = "a".repeat(NSK_HEX_LEN);
+const NSK = "a".repeat(NSK_HEX_LEN);
+/// Links now carry the chain they were made on; `7a69` is 31337.
+const VALID = `7a69:${NSK}`;
 
 describe("readFragmentFromHash", () => {
   it("returns missing for empty hash", () => {
@@ -20,15 +22,27 @@ describe("readFragmentFromHash", () => {
   it("returns ok for valid fragment", () => {
     const r = readFragmentFromHash(`#${VALID}`);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.value.hex).toBe(VALID);
+    if (r.ok) {
+      expect(r.value.nskHex).toBe(NSK);
+      expect(r.value.chainId).toBe(31337n);
+    }
   });
 
-  it("returns invalid for malformed fragment", () => {
-    const r = readFragmentFromHash("#nothex");
+  it("returns invalid for a bad nsk behind a good chain prefix", () => {
+    const r = readFragmentFromHash("#7a69:nothex");
     expect(r.ok).toBe(false);
     if (!r.ok) {
       expect(r.error.kind).toBe("invalid");
       expect(r.error.message).toMatch(/64 hex/);
+    }
+  });
+
+  it("returns invalid for a link with no chain prefix", () => {
+    const r = readFragmentFromHash(`#${NSK}`);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error.kind).toBe("invalid");
+      expect(r.error.message).toMatch(/chain prefix/);
     }
   });
 });

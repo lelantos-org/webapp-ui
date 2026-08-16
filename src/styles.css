@@ -1,14 +1,15 @@
 :root {
-  /* Soft-neutral light palette. */
-  --bg: #f5f5f4;
+  /* Soft-neutral light palette, biased a few degrees cool so the indigo accent
+     and the ambient backdrop read as part of the same set. */
+  --bg: #f2f3f7;
   --bg-1: #ffffff;
-  --bg-2: #fafaf9;
-  --bg-3: #f0efed;
-  --fg: #1c1917;
-  --fg-dim: #44403c;
-  --fg-mute: #78716c;
-  --line: #e7e5e4;
-  --line-strong: #d6d3d1;
+  --bg-2: #f9fafc;
+  --bg-3: #edeef4;
+  --fg: #191922;
+  --fg-dim: #43434f;
+  --fg-mute: #76768a;
+  --line: #e5e6ee;
+  --line-strong: #d2d4e0;
   --accent: #4f46e5;
   --accent-rgb: 79, 70, 229;
   --accent-2: #6366f1;
@@ -21,6 +22,10 @@
   --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
   --shadow-glow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06);
+  /* Shared motion curves: --ease decelerates into rest (entrances, fades),
+     --ease-soft is symmetric for hover and state swaps. */
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
   --radius: 8px;
   --radius-sm: 6px;
 }
@@ -44,6 +49,12 @@ html, body, #root {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* AMBIENT BACKDROP
+   Three stacked layers, all fixed and inert, all in the accent hue only —
+   mixing hues at this opacity turns to mud behind the opaque cards.
+   1. body::before  light: a wide wash under the header, a cool floor tint.
+   2. .backdrop     canvas: drifting node/link field (see shared/ui/Backdrop).
+   3. body::after   texture: fine lattice + grain, masked away behind content. */
 body::before {
   content: "";
   position: fixed;
@@ -51,8 +62,44 @@ body::before {
   pointer-events: none;
   z-index: 0;
   background:
-    radial-gradient(900px 600px at 90% -10%, rgba(var(--accent-rgb), 0.04), transparent 60%),
-    radial-gradient(700px 500px at -10% 110%, rgba(var(--warn-rgb), 0.03), transparent 60%);
+    radial-gradient(1200px 520px at 50% -12%, rgba(var(--accent-rgb), 0.13), transparent 62%),
+    radial-gradient(800px 600px at 100% 0%, rgba(var(--accent-rgb), 0.06), transparent 60%),
+    linear-gradient(180deg, transparent 45%, rgba(var(--accent-rgb), 0.05) 100%);
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.85;
+  /* Fade the field out under the centre column so card edges stay crisp. */
+  -webkit-mask-image: radial-gradient(72% 60% at 50% 42%, transparent 8%, #000 70%);
+  mask-image: radial-gradient(72% 60% at 50% 42%, transparent 8%, #000 70%);
+  animation: backdrop-in 1200ms var(--ease) both;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(to right, rgba(var(--accent-rgb), 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(var(--accent-rgb), 0.055) 1px, transparent 1px);
+  background-size: 96px 96px, 96px 96px;
+  -webkit-mask-image: radial-gradient(90% 70% at 50% 0%, #000 0%, transparent 72%);
+  mask-image: radial-gradient(90% 70% at 50% 0%, #000 0%, transparent 72%);
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .backdrop { animation: none; }
 }
 
 .app {
@@ -68,16 +115,18 @@ body::before {
   align-items: center;
   gap: 18px;
   padding: 12px 24px;
-  border-bottom: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
   position: sticky;
   top: 0;
   z-index: 10;
 }
 
 .hdr__left { display: flex; align-items: baseline; gap: 10px; }
-.hdr__right { margin-left: auto; display: flex; align-items: center; gap: 18px; }
+.hdr__right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
 .brand {
   color: var(--accent);
@@ -99,7 +148,7 @@ body::before {
   border-radius: 6px;
   font-size: 13px;
   font-weight: 500;
-  transition: color 120ms ease, background 120ms ease;
+  transition: color 120ms var(--ease-soft), background 120ms var(--ease-soft);
 }
 .lnk:hover { color: var(--accent); background: var(--bg-3); }
 .lnk--inline {
@@ -111,12 +160,67 @@ body::before {
 }
 .lnk--inline:hover { color: var(--accent-2); background: none; text-decoration: underline; }
 
+/* HEADER STATUS
+   One pill holding the health dot and the network name. They answer the same
+   question — connected, and to what — and drawing separate chrome for each
+   made the bar read as a row of unrelated widgets. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg-1);
+  white-space: nowrap;
+}
+.hdr__status { gap: 8px; padding: 5px 11px; }
+
+.chain-badge { display: inline-flex; align-items: center; gap: 6px; }
+.chain-badge__label {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+.chain-badge__name { font-size: 13px; font-weight: 600; color: var(--fg); }
+
+/* Address and disconnect as one control. "disconnect" spelled out was the
+   widest thing in the bar, for an action taken about once a session. */
+.account { gap: 4px; padding: 4px 5px 4px 11px; }
+.account__addr { font-size: 13px; color: var(--fg); }
+.account__disconnect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: color 120ms var(--ease-soft), background 120ms var(--ease-soft);
+}
+.account__disconnect:hover { color: var(--err); background: var(--bg-3); }
+
+/* The bar earns its calm by dropping words, not by shrinking them: below this
+   the network label and the address go, leaving the dot, the chain name and
+   the disconnect target. */
+@media (max-width: 640px) {
+  .chain-badge__label { display: none; }
+}
+@media (max-width: 460px) {
+  .account__addr { display: none; }
+  .account { padding: 4px; }
+}
+
 /* UTILITIES */
 .stack { display: grid; gap: 14px; }
 .stack--sm { gap: 8px; }
 .stack--md { gap: 10px; }
 .row { display: flex; gap: 6px; align-items: stretch; }
 .row--center { align-items: center; }
+.row--wrap { flex-wrap: wrap; justify-content: center; }
 .ta-r { text-align: right; }
 .txt-xs { font-size: 11px; }
 .txt-sm { font-size: 12px; }
@@ -134,13 +238,10 @@ body::before {
 .accent { color: var(--accent); }
 .warn { color: var(--warn); }
 
-.status { display: inline-flex; align-items: center; gap: 8px; }
 .dot {
   width: 8px; height: 8px; border-radius: 50%;
   display: inline-block;
 }
-.dot--ok { background: var(--accent); box-shadow: 0 0 12px rgba(var(--accent-rgb),0.9); animation: pulse 2s infinite; }
-.dot--err { background: var(--err); box-shadow: 0 0 8px rgba(var(--err-rgb),0.6); }
 .dot--idle { background: var(--fg-mute); }
 
 @keyframes pulse {
@@ -164,10 +265,13 @@ body::before {
   align-items: stretch;
   padding: 22px 24px;
   margin-bottom: 18px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line);
   background:
-    linear-gradient(135deg, rgba(var(--accent-rgb),0.04), transparent 50%),
-    var(--bg-1);
+    linear-gradient(135deg, rgba(var(--accent-rgb),0.05), transparent 55%),
+    rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-glow);
   border-radius: 8px;
   position: relative;
   overflow: hidden;
@@ -205,13 +309,16 @@ body::before {
   margin-bottom: 18px;
 }
 .kpi {
-  border: 1px solid var(--line-strong);
-  background: var(--bg-1);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-glow);
   border-radius: 8px;
   padding: 14px 16px;
   position: relative;
   overflow: hidden;
-  transition: border-color 150ms ease;
+  transition: border-color 150ms var(--ease-soft);
 }
 .kpi:hover { border-color: var(--accent-dim); }
 .kpi::before {
@@ -243,8 +350,11 @@ body::before {
 
 /* CARDS */
 .card {
-  border: 1px solid var(--line-strong);
-  background: var(--bg-1);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-glow);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 14px;
@@ -320,9 +430,12 @@ body::before {
   font-size: 14px;
   min-width: 160px;
   outline: none;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
+  transition: border-color 120ms var(--ease-soft), box-shadow 120ms var(--ease-soft);
 }
 .fld__inp::placeholder { color: var(--fg-mute); }
+/* Header-sized variant: the base `min-width: 160px` is sized for a form row
+   and would crowd the connect button out of the bar on narrow screens. */
+.fld__inp--compact { min-width: 0; padding: 6px 10px; font-size: 13px; }
 .fld__inp:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb),0.15);
@@ -352,7 +465,7 @@ select.fld__inp {
   font-weight: 500;
   letter-spacing: 0;
   cursor: pointer;
-  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 80ms ease;
+  transition: background 120ms var(--ease-soft), border-color 120ms var(--ease-soft), box-shadow 120ms var(--ease-soft), transform 80ms var(--ease-soft);
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 .btn:hover:not(:disabled) {
@@ -374,6 +487,32 @@ select.fld__inp {
   color: var(--accent);
   border-color: var(--accent);
   box-shadow: none;
+}
+
+/* Inline prompt for an action the form is blocked on (e.g. Permit2 setup). */
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--warn-dim);
+  border-radius: 10px;
+  background: rgba(var(--warn-rgb), 0.07);
+}
+.notice__body {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.notice__body strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--warn);
+}
+.notice .btn {
+  flex: none;
 }
 
 .live {
@@ -418,7 +557,7 @@ select.fld__inp {
   text-transform: none;
   cursor: pointer;
   border-right: 1px solid var(--line-strong);
-  transition: all 120ms ease;
+  transition: all 120ms var(--ease-soft);
 }
 .seg__b:last-child { border-right: none; }
 .seg__b:hover:not(:disabled) { color: var(--fg); background: var(--bg-2); }
@@ -470,16 +609,11 @@ select.fld__inp {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.tbl tbody tr { cursor: pointer; transition: background 80ms ease; }
-.flash {
-  display: inline-block;
-  animation: flash-in 240ms ease-out;
-}
+.tbl tbody tr { cursor: pointer; transition: background 80ms var(--ease-soft); }
 .health {
   position: relative;
   display: inline-flex;
   align-items: center;
-  margin-right: 10px;
   cursor: default;
 }
 .health__dot {
@@ -487,7 +621,7 @@ select.fld__inp {
   height: 8px;
   border-radius: 50%;
   display: inline-block;
-  transition: background 200ms ease, box-shadow 200ms ease;
+  transition: background 200ms var(--ease-soft), box-shadow 200ms var(--ease-soft);
 }
 .health__dot--sm {
   width: 6px;
@@ -526,10 +660,6 @@ select.fld__inp {
   color: var(--muted);
   margin-left: auto;
 }
-@keyframes flash-in {
-  0% { opacity: 0.35; transform: translateY(-2px); }
-  100% { opacity: 1; transform: translateY(0); }
-}
 .tbl tbody tr:last-child td { border-bottom: none; }
 .tbl tbody tr:hover { background: var(--bg-2); }
 .tbl tbody tr.row--on {
@@ -553,14 +683,6 @@ select.fld__inp {
 }
 .warn-banner strong { color: var(--warn); margin-right: 6px; }
 
-.qr-wrap {
-  display: flex;
-  justify-content: center;
-  padding: 14px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-}
 
 .empty {
   display: grid;
@@ -625,7 +747,7 @@ select.fld__inp {
   color: var(--fg-dim);
   border-radius: 8px;
   cursor: pointer;
-  transition: all 120ms ease;
+  transition: all 120ms var(--ease-soft);
 }
 .acct__icon:hover {
   color: var(--accent);
@@ -732,8 +854,11 @@ select.fld__inp {
   gap: 10px;
   justify-items: center;
   padding: 22px 18px;
-  border: 1px solid var(--line-strong);
-  background: var(--bg-1);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-glow);
   border-radius: 8px;
 }
 .welcome__panel h3 {
@@ -849,7 +974,7 @@ select.fld__inp {
   color: var(--fg-dim);
   border-bottom: 1px dotted var(--fg-mute);
   text-decoration: none;
-  transition: color 120ms ease;
+  transition: color 120ms var(--ease-soft);
 }
 .setup-tx a:hover { color: var(--accent); border-color: var(--accent); }
 
@@ -866,6 +991,18 @@ select.fld__inp {
 }
 @keyframes setup-modal-fade {
   to { opacity: 0; transform: translateY(-4px) scale(0.98); }
+}
+
+/* The JS that waits these animations out skips the wait under reduced motion
+   (`animationDelay` / `useExitTransition`), so the stylesheet has to drop them
+   too — otherwise a modal is torn down mid-animation instead of not animating.
+   Must stay after the rules above: a media query adds no specificity, so this
+   only wins on source order. */
+@media (prefers-reduced-motion: reduce) {
+  .setup-overlay,
+  .setup-modal,
+  .setup-overlay--fade-out,
+  .setup-modal--fade-out { animation: none; }
 }
 
 /* CLAIM LINK SUCCESS ANIMATION */
@@ -892,12 +1029,12 @@ select.fld__inp {
 .claim-success__circle {
   stroke-dasharray: 145;
   stroke-dashoffset: 145;
-  animation: claim-success-circle 600ms ease-out forwards;
+  animation: claim-success-circle 600ms var(--ease) forwards;
 }
 .claim-success__tick {
   stroke-dasharray: 50;
   stroke-dashoffset: 50;
-  animation: claim-success-tick 350ms 450ms ease-out forwards;
+  animation: claim-success-tick 350ms 450ms var(--ease) forwards;
 }
 @keyframes claim-success-circle {
   to { stroke-dashoffset: 0; }
@@ -916,32 +1053,101 @@ select.fld__inp {
   cursor: pointer;
 }
 .claim-confirm-check input { accent-color: var(--accent); }
-.claim-amount {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--accent);
-  letter-spacing: 0.06em;
-}
-.claim-result .card__hdr { display: flex; align-items: center; gap: 12px; }
-.claim-url {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-.claim-url .fld__inp {
-  font-family: var(--mono);
-  letter-spacing: 0.02em;
-}
 .claim-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-.claim-adv {
+
+/* Claim-link result: reads what → risk → action → escape hatch. No `.card` —
+   this is the page's content, not something sitting on the page. */
+.claim-result {
   display: grid;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
+
+/* An eyebrow, not a title: the amount below is the thing being announced. */
+.claim-result__t {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.claim-result__amount {
+  margin: -8px 0 0;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+
+.claim-result__warn {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: rgba(var(--accent-rgb), 0.06);
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.claim-result__warn strong { color: var(--fg); font-weight: 600; }
+
+.claim-result__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Holds its width empty so the confirmation cannot reflow the button row. */
+.claim-result__copied {
+  min-width: 6em;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/* Below a rule and in mono at 11px: available for a manual copy or a sanity
+   check, without competing with the button above it. */
+.claim-result__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.claim-result__url {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+}
+
+.claim-result__reset { justify-self: start; }
+
+/* Text-weight action: not a destination, not a primary button. */
+.txt-btn {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dotted var(--fg-mute);
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: color 120ms var(--ease-soft);
+}
+.txt-btn:hover { color: var(--accent); border-color: var(--accent); }
 
 /* STEPPER */
 .stepper {
@@ -961,7 +1167,7 @@ select.fld__inp {
   gap: 10px;
   font-size: 12px;
   letter-spacing: 0.04em;
-  transition: color 200ms ease;
+  transition: color 200ms var(--ease-soft);
 }
 .step__mark {
   width: 18px;
@@ -976,7 +1182,7 @@ select.fld__inp {
   border: 1px solid var(--line-strong);
   background: var(--bg-1);
   color: var(--fg-mute);
-  transition: all 200ms ease;
+  transition: all 200ms var(--ease-soft);
 }
 .step__label { color: var(--fg-dim); }
 .step--pending .step__mark { color: var(--fg-mute); }
@@ -1034,7 +1240,7 @@ select.fld__inp {
   cursor: pointer;
   user-select: all;
   border-bottom: 1px dotted var(--fg-mute);
-  transition: color 120ms ease;
+  transition: color 120ms var(--ease-soft);
 }
 .hex:hover { color: var(--accent); border-color: var(--accent); }
 
@@ -1103,7 +1309,7 @@ select.fld__inp {
   gap: 12px;
   position: relative;
   overflow: hidden;
-  transition: all 150ms ease;
+  transition: all 150ms var(--ease-soft);
 }
 .chain-card::after {
   content: "";
@@ -1112,7 +1318,7 @@ select.fld__inp {
   pointer-events: none;
   background: linear-gradient(135deg, rgba(var(--accent-rgb),0) 0%, rgba(var(--accent-rgb),0.05) 100%);
   opacity: 0;
-  transition: opacity 150ms ease;
+  transition: opacity 150ms var(--ease-soft);
 }
 .chain-card:hover { border-color: var(--accent-dim); transform: translateY(-1px); }
 .chain-card:hover::after { opacity: 1; }
@@ -1219,19 +1425,21 @@ select.fld__inp {
 }
 .home-wrap > * { grid-area: stack; min-width: 0; align-self: start; }
 
-.home--enter { animation: home-rise 360ms ease-out both; }
+.home--enter { animation: home-rise 420ms var(--ease) both; }
 @keyframes home-rise {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 .welcome-fade {
   opacity: 1;
-  transition: opacity 360ms ease-out;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 420ms var(--ease), transform 420ms var(--ease);
   z-index: 2;
 }
 .welcome-fade--out {
   opacity: 0;
+  transform: translate3d(0, -6px, 0);
   pointer-events: none;
 }
 
@@ -1240,12 +1448,25 @@ select.fld__inp {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   padding: 18px 24px;
   border-top: 1px solid var(--line);
   font-size: 13px;
   background: var(--bg-2);
 }
 .ftr__brand { color: var(--accent); font-weight: 600; letter-spacing: 0.02em; }
+.ftr__sep {
+  width: 1px;
+  height: 12px;
+  background: var(--line-strong);
+}
+.ftr__link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--fg-mute);
+  transition: color 0.15s ease;
+}
+.ftr__link:hover { color: var(--accent); }
 
 ::selection { background: rgba(var(--accent-rgb),0.3); color: var(--bg); }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -1425,7 +1646,7 @@ select.fld__inp {
   border: 1px solid var(--line-strong);
   background: var(--bg);
   border-radius: 8px;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition: border-color 160ms var(--ease-soft), box-shadow 160ms var(--ease-soft);
 }
 .claim-row:hover {
   border-color: var(--accent-dim);
@@ -1529,7 +1750,7 @@ select.fld__inp {
   color: var(--fg-dim);
   border-bottom: 1px dotted var(--fg-mute);
   text-decoration: none;
-  transition: color 120ms ease;
+  transition: color 120ms var(--ease-soft);
 }
 .claim-done__txlink:hover { color: var(--accent); border-color: var(--accent); }
 
@@ -1549,7 +1770,7 @@ select.fld__inp {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: border-color 160ms ease;
+  transition: border-color 160ms var(--ease-soft);
 }
 .quote--stale {
   border-color: rgba(var(--warn-rgb), 0.4);
@@ -1589,7 +1810,7 @@ select.fld__inp {
   padding: 2px 10px;
   cursor: pointer;
   font-family: var(--sans);
-  transition: color 120ms ease, border-color 120ms ease, background 120ms ease;
+  transition: color 120ms var(--ease-soft), border-color 120ms var(--ease-soft), background 120ms var(--ease-soft);
 }
 .quote__age:hover:not(:disabled) {
   color: var(--accent);
@@ -1639,11 +1860,13 @@ select.fld__inp {
 
 /* ACTION SHELL: tab nav + form share one card */
 .action-shell {
-  border: 1px solid var(--line-strong);
-  background: var(--bg-1);
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(var(--accent-rgb), 0.07);
 }
 .action-shell__tabs {
   display: flex;
@@ -1665,7 +1888,7 @@ select.fld__inp {
   font-weight: 600;
   text-decoration: none;
   text-align: center;
-  transition: color 120ms ease, background 120ms ease;
+  transition: color 120ms var(--ease-soft), background 120ms var(--ease-soft);
 }
 .action-shell__tabs .seg__b:last-child { border-right: none; }
 .action-shell__tabs .seg__b:hover { color: var(--fg); background: var(--bg-3); }
@@ -1707,6 +1930,7 @@ select.fld__inp {
   gap: 8px;
 }
 .slip__opt {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1718,11 +1942,25 @@ select.fld__inp {
   cursor: pointer;
   font-family: var(--sans);
   color: var(--fg-dim);
-  transition: border-color 120ms ease, background 120ms ease, color 120ms ease, box-shadow 120ms ease;
+  transition: border-color 120ms var(--ease-soft), background 120ms var(--ease-soft), color 120ms var(--ease-soft), box-shadow 120ms var(--ease-soft);
 }
 .slip__opt:hover {
   border-color: var(--accent-dim);
   color: var(--fg);
+}
+/* The radio stays focusable and screen-reader visible; the label is the
+   rendered control, so it carries the focus ring. */
+.slip__radio {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.slip__opt:has(.slip__radio:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .slip__opt--on {
   border-color: var(--accent);
@@ -1744,7 +1982,18 @@ select.fld__inp {
 .slip__hint { line-height: 1.4; }
 
 /* PORTFOLIO BALANCE CELL */
-.bal { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; padding: 6px 0; }
+/* Reserve the settling badge's row even when it is absent. The badge comes and
+   goes on its own as a tx settles; without the reservation every appearance
+   resized the row and nudged the whole table. */
+.bal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 0;
+  min-height: 48px;
+}
 .bal__main { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .bal__settle {
   display: inline-flex;
@@ -1754,6 +2003,11 @@ select.fld__inp {
   font-weight: 500;
   padding: 2px 8px;
   border-radius: 999px;
+  animation: bal-settle-in 200ms var(--ease) both;
+}
+@keyframes bal-settle-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: none; }
 }
 .bal__settle--in { color: var(--accent); background: rgba(var(--accent-rgb), 0.08); }
 .bal__settle--out { color: var(--warn); background: rgba(var(--warn-rgb), 0.1); }
@@ -1779,4 +2033,15 @@ select.fld__inp {
 @keyframes skel-shimmer {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* Global motion opt-out. Transitions collapse to near-zero rather than 0 so
+   state changes still fire transitionend handlers. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

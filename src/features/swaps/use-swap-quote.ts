@@ -2,7 +2,7 @@
 // `mutate` on user click — auto-fetch on every keystroke would hammer
 // MetaQuoter rate limits.
 
-import { fetchSwapQuote, type SwapQuote, type SwapQuoteRequest } from "@lelantos-org/sdk/bundle";
+import { fetchSwapQuote, type SwapQuote, type SwapQuoteRequest } from "@lelantos-org/sdk/quoter";
 import { type UseMutationResult, useMutation } from "@tanstack/react-query";
 import { env } from "@/config/env";
 

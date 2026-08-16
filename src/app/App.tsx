@@ -1,18 +1,19 @@
 import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import { Layout } from "@/shared/ui/Layout";
+import { RouteErrorBoundary } from "@/shared/ui/RouteErrorBoundary";
 
 const HomeLayout = lazy(() =>
   import("@/pages/HomeLayout").then((m) => ({ default: m.HomeLayout })),
 );
 const DepositForm = lazy(() =>
-  import("@/features/actions/DepositForm").then((m) => ({ default: m.DepositForm })),
+  import("@/features/actions/forms/DepositForm").then((m) => ({ default: m.DepositForm })),
 );
 const TransferForm = lazy(() =>
-  import("@/features/actions/TransferForm").then((m) => ({ default: m.TransferForm })),
+  import("@/features/actions/forms/TransferForm").then((m) => ({ default: m.TransferForm })),
 );
 const WithdrawForm = lazy(() =>
-  import("@/features/actions/WithdrawForm").then((m) => ({ default: m.WithdrawForm })),
+  import("@/features/actions/forms/WithdrawForm").then((m) => ({ default: m.WithdrawForm })),
 );
 const GenerateLinkForm = lazy(() =>
   import("@/features/claim-link/GenerateLinkForm").then((m) => ({ default: m.GenerateLinkForm })),
@@ -36,18 +37,20 @@ function PageFallback() {
 export function App() {
   return (
     <Layout>
-      <Suspense fallback={<PageFallback />}>
-        <Routes>
-          <Route path="/" element={<HomeLayout />}>
-            <Route index element={<DepositForm />} />
-            <Route path="transfer" element={<TransferForm />} />
-            <Route path="withdraw" element={<WithdrawForm />} />
-            <Route path="swap" element={<SwapForm />} />
-            <Route path="send-link" element={<GenerateLinkForm />} />
-          </Route>
-          <Route path="/claim" element={<ClaimPage />} />
-        </Routes>
-      </Suspense>
+      <RouteErrorBoundary>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="/" element={<HomeLayout />}>
+              <Route index element={<DepositForm />} />
+              <Route path="transfer" element={<TransferForm />} />
+              <Route path="withdraw" element={<WithdrawForm />} />
+              <Route path="swap" element={<SwapForm />} />
+              <Route path="send-link" element={<GenerateLinkForm />} />
+            </Route>
+            <Route path="/claim" element={<ClaimPage />} />
+          </Routes>
+        </Suspense>
+      </RouteErrorBoundary>
     </Layout>
   );
 }

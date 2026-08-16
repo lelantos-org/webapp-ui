@@ -1,11 +1,12 @@
-import type {
-  DepositResult,
-  SwapResult,
-  TransferResult,
-  WalletApi,
-  WithdrawResult,
+import {
+  type DepositResult,
+  evmAddress,
+  type SwapResult,
+  type TransferResult,
+  type WalletApi,
+  type WithdrawResult,
 } from "@lelantos-org/sdk";
-import { env } from "@/config/env";
+import type { ChainEntry } from "@/config/chains";
 import type { ShieldedActions, WithAsset } from "@/features/actions/port";
 
 /// Adapt the SDK's `WalletApi` to the webapp's `ShieldedActions` port. Pure
@@ -18,7 +19,7 @@ import type { ShieldedActions, WithAsset } from "@/features/actions/port";
 /// but each method only ever produces its corresponding variant at runtime.
 /// Casting back to the variant gives call sites the narrowed shape without
 /// a runtime guard.
-export function createSdkActions(wallet: WalletApi): ShieldedActions {
+export function createSdkActions(wallet: WalletApi, chain: ChainEntry): ShieldedActions {
   return {
     deposit: async (r) => {
       const res = (await wallet.deposit({
@@ -41,7 +42,7 @@ export function createSdkActions(wallet: WalletApi): ShieldedActions {
     },
     withdraw: async (r) => {
       const res = (await wallet.withdraw({
-        to: r.to,
+        to: evmAddress(r.to),
         amount: r.amount,
         asset: r.asset,
         autoConsolidate: true,
@@ -51,7 +52,7 @@ export function createSdkActions(wallet: WalletApi): ShieldedActions {
     },
     withdrawEth: async (r) => {
       const res = (await wallet.withdrawEth({
-        to: r.to,
+        to: evmAddress(r.to),
         amount: r.amount,
         asset: r.asset,
         autoConsolidate: true,
@@ -60,8 +61,10 @@ export function createSdkActions(wallet: WalletApi): ShieldedActions {
       return withAsset(res, r.asset);
     },
     swap: async (r) => {
-      const wrapperAddress = env.swapWrapperAddress;
-      if (!wrapperAddress) throw new Error("VITE_SWAP_WRAPPER_ADDRESS not configured");
+      const wrapperAddress = chain.swapWrapperAddress;
+      if (!wrapperAddress) {
+        throw new Error(`swaps are not available on ${chain.chainName}: no swap wrapper deployed`);
+      }
       const res = (await wallet.swap({
         assetIn: r.assetIn,
         assetOut: r.assetOut,

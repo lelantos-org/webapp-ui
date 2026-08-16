@@ -1,5 +1,5 @@
 import { forwardRef, type SelectHTMLAttributes } from "react";
-import { useRegisteredAssets } from "@/features/assets/registered-assets";
+import { DEFAULT_ASSET_ID, useRegisteredAssets } from "@/features/assets/registered-assets";
 import { Field } from "@/shared/ui/Field";
 
 export type AssetSelectFieldProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "className"> & {
@@ -11,8 +11,7 @@ export type AssetSelectFieldProps = Omit<SelectHTMLAttributes<HTMLSelectElement>
 /// "asset 1" option while the registry is empty or still loading.
 export const AssetSelectField = forwardRef<HTMLSelectElement, AssetSelectFieldProps>(
   function AssetSelectField({ label = "asset", error, ...selectProps }, ref) {
-    const q = useRegisteredAssets();
-    const assets = q.data ?? [];
+    const assets = useRegisteredAssets();
     const fallback = assets.length === 0;
 
     return (
@@ -26,11 +25,11 @@ export const AssetSelectField = forwardRef<HTMLSelectElement, AssetSelectFieldPr
             className="fld__inp"
           >
             {fallback ? (
-              <option value="1">asset 1</option>
+              <option value={DEFAULT_ASSET_ID}>asset {DEFAULT_ASSET_ID}</option>
             ) : (
               assets.map((a) => (
                 <option key={a.id.toString()} value={a.id.toString()}>
-                  {a.symbol} (id {a.id.toString()})
+                  {a.symbol}
                 </option>
               ))
             )}

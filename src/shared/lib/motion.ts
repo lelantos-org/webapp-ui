@@ -1,0 +1,24 @@
+// Motion preferences, and the timings JS shares with the stylesheet.
+//
+// The stylesheet opts out of its own animations through
+// `@media (prefers-reduced-motion: reduce)`. Anything driven by a timer has to
+// make the same check itself, or it keeps the delay after the animation it was
+// waiting on has been disabled.
+
+import { sleep } from "@/shared/lib/timing";
+
+/// Modal enter/exit duration. Must match the `setup-*-fade` animations in
+/// styles.css — every modal that waits out its own fade reads it from here so
+/// there is one number to keep in step with the CSS.
+export const MODAL_EXIT_MS = 240;
+
+/// False when there is no `matchMedia` — SSR and older test environments.
+export function prefersReducedMotion(): boolean {
+  return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+/// Waits out a CSS animation, or returns at once when the user has asked for
+/// reduced motion and there is no animation left to wait for.
+export function animationDelay(ms: number): Promise<void> {
+  return prefersReducedMotion() ? Promise.resolve() : sleep(ms);
+}

@@ -1,18 +1,18 @@
 // Stage machine for the generate-claim-link flow. `closing` keeps the modal
-// mounted with a fade-out class for FADE_OUT_MS so the CSS animation
+// mounted with a fade-out class for `MODAL_EXIT_MS` so the CSS animation
 // completes before unmount.
 
 import { useCallback, useState } from "react";
+import { animationDelay, MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { sleep } from "@/shared/lib/timing";
 
 export type ClaimLinkStage = "form" | "confirm" | "running" | "success" | "closing" | "result";
 
 /// Time the success animation is visible before the modal starts fading.
-/// Aligned with `claim-success` CSS so the tick has time to draw.
+/// Aligned with `claim-success` CSS so the tick has time to draw. Not an
+/// `animationDelay`: this is reading time for the result, which a reduced-motion
+/// user needs just the same.
 export const SUCCESS_DWELL_MS = 1100;
-
-/// Modal fade-out duration. Matches `setup-overlay--fade-out` CSS.
-export const FADE_OUT_MS = 240;
 
 /// Stages during which the modal portal stays mounted.
 const MODAL_STAGES = new Set<ClaimLinkStage>(["confirm", "running", "success", "closing"]);
@@ -41,7 +41,7 @@ export function useClaimLinkStage(): ClaimLinkStageApi {
       setStage("success");
       await sleep(SUCCESS_DWELL_MS);
       setStage("closing");
-      await sleep(FADE_OUT_MS);
+      await animationDelay(MODAL_EXIT_MS);
       setStage("result");
       return r;
     } catch (err) {

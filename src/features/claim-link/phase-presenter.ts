@@ -16,6 +16,27 @@ export interface StepperState {
   done: boolean;
 }
 
+/// The chain the link names, for the phases that still know it.
+///
+/// `undefined` before the fragment is decoded and after the claim settles —
+/// `done` deliberately drops it, since nothing further is chain-scoped. An
+/// exhaustive switch rather than an `in` check so adding a phase is a compile
+/// error here instead of a silently-unlabelled asset list.
+export function linkChainIdOf(phase: Phase): bigint | undefined {
+  switch (phase.kind) {
+    case "need-wallet":
+    case "loading":
+    case "ready":
+    case "sweeping":
+      return phase.chainId;
+    case "reading-fragment":
+    case "bad-link":
+    case "done":
+    case "error":
+      return undefined;
+  }
+}
+
 export function stepperStateFor(phase: Phase): StepperState {
   switch (phase.kind) {
     case "reading-fragment":

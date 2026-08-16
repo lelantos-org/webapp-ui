@@ -3,24 +3,13 @@
 // Cached per (asset, amount, mode) via react-query.
 
 import { useQuery } from "@tanstack/react-query";
+import { fetchAssetFeeInputs } from "@/features/assets/asset-entry";
+import { useActiveChain } from "@/features/chain/ChainProvider";
 import { useWallet } from "@/features/wallet";
+import { type FeeBreakdown, type FeeMode, feeBreakdown } from "@/shared/lib/fees";
 
-export type FeeMode = "deposit" | "withdraw";
-
-export interface FeePreview {
-  /// Asset scale × user amount in base units. For deposits this is what
-  /// the contract escrows; for withdraws it's the gross unshield amount.
-  inAmt: bigint;
-  /// Fee in base units (= inAmt × feeBps / 10_000).
-  fee: bigint;
-  /// User's net cash delta in base units:
-  ///   deposit  → `inAmt + fee` (payer is debited, fee added on top)
-  ///   withdraw → `inAmt - fee` (recipient is credited, fee deducted)
-  total: bigint;
-  /// Raw bps fee from `MASP.feeBps()`.
-  feeBps: bigint;
-  mode: FeeMode;
-}
+export type { FeeMode };
+export type FeePreview = FeeBreakdown;
 
 const DEFAULT_MODE: FeeMode = "deposit";
 
@@ -30,19 +19,24 @@ export function useFeePreview(
   mode: FeeMode = DEFAULT_MODE,
 ) {
   const { wallet } = useWallet();
+  // Asset ids are only unique within a chain, and `feeBps` is read from that
+  // chain's pool, so the same (asset, amount) means different money elsewhere.
+  const { chainId } = useActiveChain();
   return useQuery<FeePreview>({
-    queryKey: ["fee-preview", mode, asset?.toString() ?? null, amount?.toString() ?? null],
+    queryKey: [
+      "fee-preview",
+      chainId.toString(),
+      mode,
+      asset?.toString() ?? null,
+      amount?.toString() ?? null,
+    ],
     enabled: !!wallet && asset !== undefined && amount !== undefined && amount > 0n,
     queryFn: async () => {
       if (!wallet || asset === undefined || amount === undefined) {
         throw new Error("not ready");
       }
-      const entry = await wallet.chain.fetchAsset(asset);
-      const feeBps = await wallet.chain.fetchFeeBps();
-      const inAmt = amount * entry.scale;
-      const fee = (inAmt * feeBps) / 10000n;
-      const total = mode === "deposit" ? inAmt + fee : inAmt - fee;
-      return { inAmt, fee, total, feeBps, mode };
+      const { scale, feeBps } = await fetchAssetFeeInputs(wallet, asset);
+      return feeBreakdown({ amount, scale, feeBps, mode });
     },
     staleTime: 30_000,
   });

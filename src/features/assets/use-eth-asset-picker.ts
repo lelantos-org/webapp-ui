@@ -24,10 +24,10 @@ export function useEthAssetPicker<T extends AssetEthForm>(
   watchedAsEth: boolean,
 ): UseEthAssetPickerResult {
   const assets = useRegisteredAssets();
-  const weth = assets.data?.find((a) => a.isWeth);
+  const weth = assets.find((a) => a.isWeth);
   const onPickerChange = useCallback(
     (next: string) => {
-      // biome-ignore lint/suspicious/noExplicitAny: react-hook-form generic narrowing isn't worth ceremony here
+      // biome-ignore lint/suspicious/noExplicitAny: setValue's path generic cannot express a field name shared across both form schemas
       const set = setValue as any;
       if (next === ETH_OPTION && weth) {
         set("asset", weth.id.toString(), { shouldDirty: true });

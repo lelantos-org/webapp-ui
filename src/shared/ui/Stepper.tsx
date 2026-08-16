@@ -12,8 +12,8 @@ export interface StepperProps {
   current?: string;
   /// Mark the current step as failed (renders `×`).
   failed?: boolean;
-  /// Treat `current` as the last completed step instead of an in-flight
-  /// one. Used after a terminal phase (settled/flushed).
+  /// Treat `current` as the last completed step rather than an in-flight
+  /// one. Set after a terminal phase (settled/flushed).
   done?: boolean;
 }
 

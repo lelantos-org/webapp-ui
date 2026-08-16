@@ -19,11 +19,20 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: "autoUpdate",
+      // "prompt", not "autoUpdate". Under autoUpdate the new worker calls
+      // `skipWaiting()` and activates while the old page is still open, and
+      // `cleanupOutdatedCaches` then deletes the precache that page is still
+      // navigating against. The next `React.lazy` import fetches a hashed
+      // chunk that no longer exists, and the app white-screens.
+      //
+      // Prompting keeps the new worker waiting until the user accepts, so the
+      // old precache stays intact for the life of the old page — which also
+      // makes the cache cleanup safe, since it only runs after the reload.
+      registerType: "prompt",
       includeAssets: ["icon.svg", "icons/*.png"],
       manifest: {
-        name: "SilentSwap Wallet",
-        short_name: "SilentSwap",
+        name: "Lelantos Wallet",
+        short_name: "Lelantos",
         description: "Shielded MASP wallet",
         theme_color: "#ffffff",
         background_color: "#f5f5f4",
@@ -40,15 +49,30 @@ export default defineConfig({
           },
         ],
       },
-      devOptions: { enabled: true, type: "module" },
+      // A real service worker in `npm run dev` is a recurring source of
+      // stale-module confusion, and nothing here needs one to develop
+      // against. Enable temporarily when working on the SW itself.
+      devOptions: { enabled: false, type: "module" },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,png,wasm}"],
-        // wasm-bindgen-rayon's workerHelpers.js is iife-only and ships
-        // inside the SDK's `wasm/prover/pkg/snippets/` snippet dir.
-        // Exclude from PWA precache so Rollup doesn't try to code-split it.
-        globIgnores: ["**/wasm-bindgen-rayon-*/**", "**/pkg/snippets/**"],
-        maximumFileSizeToCacheInBytes: 30 * 1024 * 1024,
-        navigateFallbackDenylist: [/^\/api/, /^\/v1/],
+        // No `wasm`: the circuit wasm is ~4 MB and only the prover reaches
+        // for it, so precaching it makes a first visit pay for a proof the
+        // user may never make. It is fetched and cached on first use instead.
+        globPatterns: ["**/*.{js,css,html,svg,png}"],
+        globIgnores: [
+          // wasm-bindgen-rayon's workerHelpers.js is iife-only and ships
+          // inside the SDK's `wasm/prover/pkg/snippets/` snippet dir.
+          // Exclude from PWA precache so Rollup doesn't try to code-split it.
+          "**/wasm-bindgen-rayon-*/**",
+          "**/pkg/snippets/**",
+          // snarkjs is the fallback prover path; the wasm prover worker
+          // handles every normal proof. Precaching it costs a first visit
+          // ~444 KB for code that usually never runs.
+          "**/snarkjs*",
+        ],
+        // `/fmd`, `/relayer`, `/explorer` and `/quote` are the real API
+        // prefixes — see the dev proxy below. The former `/api` and `/v1`
+        // entries matched no route this app ever issues.
+        navigateFallbackDenylist: [/^\/fmd/, /^\/relayer/, /^\/explorer/, /^\/quote/],
       },
     }),
   ],

@@ -1,3 +1,5 @@
+import { PUBLIC_IN_MAX } from "@lelantos-org/sdk/core";
+
 const AMOUNT_FORMATTER = new Intl.NumberFormat("en-US", {
   useGrouping: true,
   maximumFractionDigits: 0,
@@ -60,9 +62,11 @@ export function isDecimalString(s: string): boolean {
 /// units (`MASP.sol :: PublicInTooLarge` checks the circuit-units value, not
 /// base units). Amounts above this cap must be rejected before submission —
 /// on-chain they fail as an opaque `execution reverted` after gas is paid.
-export const PUBLIC_IN_MAX = (1n << 48n) - 1n;
+///
+/// Re-exported from the SDK, which tracks the contract bound.
+export { PUBLIC_IN_MAX };
 
-export function exceedsPublicInLimit(circuitUnits: bigint, _scale: bigint): boolean {
+export function exceedsPublicInLimit(circuitUnits: bigint): boolean {
   return circuitUnits > PUBLIC_IN_MAX;
 }
 
