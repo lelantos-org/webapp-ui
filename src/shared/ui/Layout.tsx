@@ -43,7 +43,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <footer className="ftr">
           <span className="ftr__brand">Lelantos</span>
           <span className="ftr__sep" aria-hidden="true" />
-          <span className="muted">no cookies 🍪 · no tracking 👁️ · no accounts 👤</span>
+          <span className="ftr__note muted">no cookies 🍪 · no tracking 👁️ · no accounts 👤</span>
           <span className="ftr__sep" aria-hidden="true" />
           {/* Hard-coded like the GitHub link beside it: this is the project's
               own explorer, not a per-deployment service. The `explorerUrl` a

@@ -3,6 +3,7 @@ import type { Step, TxPhase } from "@/features/actions/tx/tx-progress";
 import { useTxExplorerUrl } from "@/features/chain/use-explorer-url";
 import { friendlyMessage } from "@/shared/lib/errors";
 import { Stepper } from "@/shared/ui/Stepper";
+import { TxHash } from "@/shared/ui/TxHash";
 
 export interface ActionFormProps {
   /// Omit when the surrounding nav already names the op.
@@ -61,26 +62,7 @@ export function ActionForm({
         {showStepper && progress ? (
           <Stepper steps={progress.steps} current={stepCurrent} failed={failed} done={done} />
         ) : null}
-        {showTx && txHash ? (
-          <div className="txt-xs muted">
-            tx{" "}
-            {explorer ? (
-              <a
-                href={explorer}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mono lnk"
-                style={{ wordBreak: "break-all" }}
-              >
-                {txHash}
-              </a>
-            ) : (
-              <span className="mono" style={{ wordBreak: "break-all" }}>
-                {txHash}
-              </span>
-            )}
-          </div>
-        ) : null}
+        {showTx && txHash ? <TxHash hash={txHash} url={explorer} /> : null}
         <button className="btn" type="submit" disabled={busy || submitDisabled}>
           {busy ? "submitting…" : submitLabel}
         </button>
