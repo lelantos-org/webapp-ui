@@ -1,0 +1,47 @@
+.ftr {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 18px 24px;
+  border-top: 1px solid var(--line);
+  font-size: 13px;
+  background: var(--bg-2);
+}
+.ftr__brand { color: var(--accent); font-weight: 600; letter-spacing: 0.02em; }
+.ftr__sep {
+  width: 1px;
+  height: 12px;
+  background: var(--line-strong);
+}
+.ftr__link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--fg-mute);
+  /* Needed since this started carrying text as well as an icon: there is no
+     global anchor reset, so the browser default would underline it. */
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.ftr__link:hover { color: var(--accent); }
+
+/* Below this the row cannot hold the privacy note and the links on one line.
+   Left to wrap on its own it broke mid-note and stranded the vertical rules at
+   the start of a line, where they read as stray marks rather than separators.
+   So: note onto its own line via `order` (it sits mid-DOM, between the things
+   that should stay together), rules dropped, gap doing the separating. */
+@media (max-width: 560px) {
+  .ftr {
+    gap: 6px 12px;
+    padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .ftr__sep { display: none; }
+  .ftr__note {
+    order: 2;
+    flex: 1 1 100%;
+    text-align: center;
+    text-wrap: balance;
+    line-height: 1.6;
+  }
+}

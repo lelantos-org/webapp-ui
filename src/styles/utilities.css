@@ -1,0 +1,33 @@
+.stack { display: grid; gap: 14px; }
+.stack--sm { gap: 8px; }
+.stack--md { gap: 10px; }
+.row { display: flex; gap: 6px; align-items: stretch; }
+.row--center { align-items: center; }
+.row--wrap { flex-wrap: wrap; justify-content: center; }
+/* Undoes `row--wrap`'s centring, for a wrapping row inside left-aligned copy. */
+.row--start { justify-content: flex-start; }
+.ta-r { text-align: right; }
+.txt-xs { font-size: 11px; }
+.txt-sm { font-size: 12px; }
+.mt-2 { margin-top: 6px; }
+.mt-3 { margin-top: 8px; }
+.grow { flex: 1; }
+.nowrap { white-space: nowrap; }
+.m-5 { margin: 20px; }
+
+.muted { color: var(--fg-mute); }
+.sep { margin: 0 6px; color: var(--fg-mute); }
+.mono { font-family: var(--mono); }
+.accent { color: var(--accent); }
+.warn { color: var(--warn); }
+
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block;
+}
+.dot--idle { background: var(--fg-mute); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}

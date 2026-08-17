@@ -6,41 +6,47 @@
 // reverts or lands nowhere, so the claim is refused before it is attempted
 // rather than surfaced as an opaque transaction failure.
 
-import { type ChainEntry, findChain } from "@/config/chains";
+import type { ChainEntry } from "@/config/chains";
 
 export interface ChainMismatch {
   /// The chain named by the link, i.e. where the notes are.
   link: ChainEntry;
-  /// The wallet's chain, when this deployment serves it. `undefined` means
-  /// the wallet is on a network outside the registry — there is no name to
-  /// show for it, only the id.
-  wallet: ChainEntry | undefined;
   walletChainId: bigint;
+  /// What to call the wallet's chain on screen — see `chainLabel`.
+  walletLabel: string;
+}
+
+/// A chain's name, falling back to its id.
+///
+/// The fallback is the case that matters: a wallet on a network the
+/// deployment does not serve has no `ChainEntry` anywhere, and "your wallet is
+/// on undefined" is how that reads if the caller forgets.
+export function chainLabel(registry: ChainEntry[], chainId: bigint): string {
+  const known = registry.find((c) => c.chainId === chainId);
+  return known?.chainName ?? `chain ${chainId}`;
 }
 
 /// The mismatch to resolve before claiming, or `undefined` when there is
 /// nothing to resolve *yet*.
 ///
-/// A link naming a chain the registry does not describe is not reported here:
-/// switching cannot fix it, and the flow already fails that link with "this
-/// app does not serve chain N".
-export function claimChainMismatch(
+/// `link` is `undefined` until the fragment is decoded, and stays undefined
+/// for a link naming a chain the registry does not describe — switching
+/// cannot fix that one, and the flow already fails it with "this app does not
+/// serve chain N". `walletChainId` is `undefined` until a wallet connects.
+export function chainMismatch(
   registry: ChainEntry[],
-  linkChainId: bigint | undefined,
+  link: ChainEntry | undefined,
   walletChainId: number | undefined,
 ): ChainMismatch | undefined {
-  if (linkChainId === undefined || walletChainId === undefined) return undefined;
+  if (!link || walletChainId === undefined) return undefined;
+
   const wallet = BigInt(walletChainId);
-  if (wallet === linkChainId) return undefined;
+  if (wallet === link.chainId) return undefined;
 
-  const link = findChain(registry, linkChainId);
-  if (!link) return undefined;
-
-  return { link, wallet: findChain(registry, wallet), walletChainId: wallet };
+  return { link, walletChainId: wallet, walletLabel: chainLabel(registry, wallet) };
 }
 
-/// What to tell the user, in one line, given a mismatch.
-export function describeChainMismatch(m: ChainMismatch): string {
-  const where = m.wallet ? m.wallet.chainName : `chain ${m.walletChainId}`;
-  return `this link holds funds on ${m.link.chainName}; your wallet is on ${where}.`;
+/// One line naming both sides, for a toast or a log.
+export function describeChainMismatch({ link, walletLabel }: ChainMismatch): string {
+  return `this link holds funds on ${link.chainName}; your wallet is on ${walletLabel}.`;
 }

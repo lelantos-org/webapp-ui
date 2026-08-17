@@ -5,15 +5,18 @@ import { connect, deriveKeysFromNsk, type TransferResult, type WalletApi } from 
 import { type Field, randomFr } from "@lelantos-org/sdk/core";
 import type { SpendPhase } from "@lelantos-org/sdk/wallet";
 import { type ChainEntry, chainKey } from "@/config/chains";
+import { env } from "@/config/env";
 import {
   describeClaimError,
   encodeClaimPayload,
   nskFieldFromHex,
   nskHexFromField,
 } from "@/features/claim-link/codec";
+import { resolveSyncStrategy } from "@/features/wallet/fmd-subscription";
 import { networkPreset } from "@/features/wallet/network-preset";
 import { instrumentWallet } from "@/features/wallet/perf";
 import { getProverWorker } from "@/features/wallet/prover/proverWorker";
+import { createScanner } from "@/features/wallet/scanner";
 import { IdbNoteStore } from "@/features/wallet/stores/noteStore";
 import type { ConnectionBundle } from "@/features/wallet/use-connection";
 
@@ -64,6 +67,14 @@ function ephNoteStoreKey(chainId: bigint, nskEphHex: string): string {
   return `notes:eph:${chainKey(chainId)}:${nskEphHex.slice(0, 16)}`;
 }
 
+/// Read the link's notes with a throwaway wallet built from its bearer key.
+///
+/// Carries no `treePersistence` or `nullifierPersistence`: the wallet exists
+/// for one sweep, and persisting its tree would write a second copy of the feed
+/// into IndexedDB under a key never read again. The feed is therefore re-walked
+/// on each visit, which is what the scanner and sync strategy below address.
+///
+/// Callers own the returned wallet and must pass it to `releaseScanner`.
 export async function buildEphemeralWallet(
   nskEphHex: string,
   bundle: ConnectionBundle,
@@ -71,6 +82,22 @@ export async function buildEphemeralWallet(
 ): Promise<WalletApi> {
   const nsk = nskFieldFromHex(nskEphHex);
   if (!nsk.ok) throw new Error(describeClaimError(nsk.error));
+
+  // Both arguments are required to keep the scan off the main thread. Without
+  // a strategy `connect` defaults to `{ kind: "full" }`, trial-decrypting every
+  // note in the pool, and without a `scanner` it defaults to the inline
+  // `LocalScanner`, which runs that work on the calling thread.
+  //
+  // Subscribing discloses to the discovery service that a detection key is
+  // watching this ephemeral address — the same trade the main wallet makes.
+  // `resolveSyncStrategy` declines to subscribe on a pool below the decoy
+  // floor, where the full scan is cheap and disclosing nothing is more private.
+  //
+  // Namespaced under the ephemeral address rather than the connected EOA, so
+  // the token cache entry is separate from the main wallet's.
+  const ephAddress = await deriveEphemeralAddress(nsk.value);
+  const plan = await resolveSyncStrategy(env.fmdUrl, chain.chainId, nsk.value, ephAddress);
+
   const w = await connect({
     network: await networkPreset(chain),
     nsk: nsk.value,
@@ -79,6 +106,10 @@ export async function buildEphemeralWallet(
     rpcUrl: chain.rpcUrl,
     prover: getProverWorker(),
     noteStore: new IdbNoteStore(ephNoteStoreKey(chain.chainId, nskEphHex)),
+    // Below the wallet default: this scans a small window for a single note,
+    // on a short-lived page.
+    scanner: createScanner(2),
+    syncStrategy: plan.strategy,
   });
   instrumentWallet(w);
   return w;

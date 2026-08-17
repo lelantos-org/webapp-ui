@@ -1,0 +1,30 @@
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.seg__b {
+  background: transparent;
+  color: var(--fg);
+  border: none;
+  padding: 8px 14px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+  border-right: 1px solid var(--line-strong);
+  transition: all 120ms var(--ease-soft);
+}
+.seg__b:last-child { border-right: none; }
+.seg__b:hover:not(:disabled) { color: var(--fg); background: var(--bg-2); }
+.seg__b--on {
+  color: var(--bg);
+  background: var(--accent);
+  font-weight: 700;
+  text-shadow: none;
+}
+.seg__b:disabled { opacity: 0.4; cursor: not-allowed; }

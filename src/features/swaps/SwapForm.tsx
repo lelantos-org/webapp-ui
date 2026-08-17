@@ -77,15 +77,22 @@ export function SwapForm() {
     }
   }, [quoteKey, resetQuote]);
 
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  useEffect(() => {
-    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(id);
-  }, []);
-
   const quote = quoteM.data;
+  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const quoteAge = quote ? quoteAgeSecs(quote, now) : undefined;
   const quoteStale = quoteAge !== undefined && quoteAge > QUOTE_STALE_SECS;
+
+  // `now` drives the quote's age counter only, so it ticks only while a quote
+  // exists and is under QUOTE_STALE_SECS. Ungated, this re-renders the whole
+  // form subtree once a second for the lifetime of the route. Resynced on
+  // entry, so a quote arriving after a pause is not measured against a stale
+  // clock.
+  useEffect(() => {
+    if (!quote || quoteStale) return;
+    setNow(Math.floor(Date.now() / 1000));
+    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
+    return () => clearInterval(id);
+  }, [quote, quoteStale]);
 
   const canQuote =
     !!inAsset && !!outAsset && wAssetIn !== wAssetOut && v.valid && !quoteM.isPending;

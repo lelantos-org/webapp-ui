@@ -50,10 +50,16 @@ export function DepositForm() {
   const fee = useFeePreview(selected?.id, parsed);
   // Public wallet balance, not the shielded one: a deposit moves funds in.
   const sourceBalance = useDepositSourceBalance(selected?.id, watchedAsEth);
-  const v = validateDepositAmount(parsed, selected, sourceBalance, fee.data?.total);
+  // The preview is debounced, so between a keystroke and the fetch settling
+  // `fee.data` describes the previous amount. Both readers below gate the
+  // submit button, so a lagging total is treated as absent: the button stays
+  // disabled through the window rather than accepting the fee for a different
+  // amount.
+  const feeTotal = fee.stale ? undefined : fee.data?.total;
+  const v = validateDepositAmount(parsed, selected, sourceBalance, feeTotal);
   const setup = useDepositSetup(selected?.id, {
     asEth: watchedAsEth,
-    total: fee.data?.total,
+    total: feeTotal,
   });
   const submitDisabled = !v.valid || setup.blocked;
   const clearFinished = useClearFinishedOp(m, progress);

@@ -1,0 +1,51 @@
+/* A halted-flow card: circular mark, short title, one line of why, one action.
+   Goes on a `.card`.
+
+   The claim page stops for three reasons — a link that will not parse, a claim
+   that failed, a wallet on the wrong network — and each had grown its own copy
+   of this layout. Tone is the only real difference, so it is the only thing a
+   modifier changes, through two custom properties every rule below reads. In
+   devtools that means one place to look: whatever `--gate-tone` resolves to is
+   what the card is currently saying. */
+.gate {
+  --gate-tone: var(--err);
+  --gate-tone-rgb: var(--err-rgb);
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 16px;
+  align-items: start;
+  border-color: rgba(var(--gate-tone-rgb), 0.35);
+  background: linear-gradient(180deg, rgba(var(--gate-tone-rgb), 0.04), var(--bg-1));
+}
+/* Nothing has gone wrong — the user is standing in the wrong place. */
+.gate--warn {
+  --gate-tone: var(--warn);
+  --gate-tone-rgb: var(--warn-rgb);
+}
+.gate__mark {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gate-tone);
+  border-radius: 50%;
+  color: var(--gate-tone);
+  font-family: var(--mono);
+  font-size: 24px;
+  font-weight: 700;
+  background: rgba(var(--gate-tone-rgb), 0.06);
+  box-shadow: 0 0 18px rgba(var(--gate-tone-rgb), 0.18);
+}
+.gate__t {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gate-tone);
+}
+
+/* The mark's column is the first thing worth spending on a narrow screen. */
+@media (max-width: 560px) {
+  .gate { grid-template-columns: 1fr; }
+  .gate__mark { width: 40px; height: 40px; font-size: 20px; }
+}

@@ -24,6 +24,7 @@ import { type TxProgressApi, useTxProgress } from "@/features/actions/tx/use-tx-
 import { useTxTracker } from "@/features/actions/tx/use-tx-tracker";
 import { requireActions, useShieldedActions } from "@/features/actions/use-shielded-actions";
 import { fetchAssetFeeInputs } from "@/features/assets/asset-entry";
+import { useInvalidateTransparentBalances } from "@/features/assets/transparent-balances";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import { preopenDepositStream } from "@/features/relayer/deposit-stream";
 import { useWallet } from "@/features/wallet";
@@ -59,6 +60,7 @@ export function useDeposit(): ActionMutation<DepositCall> {
   const { wallet } = useWallet();
   const progress = useTxProgress();
   const chain = useActiveChain();
+  const invalidateTransparent = useInvalidateTransparentBalances();
   const mutation = useMutation<WithAsset<DepositResult>, Error, DepositCall>({
     mutationFn: async (i) => {
       if (!wallet) throw new Error("wallet not ready");
@@ -119,8 +121,12 @@ export function useDeposit(): ActionMutation<DepositCall> {
         onPhase: progress.set,
       });
     },
-    onSuccess: (r) =>
-      track({ label: "deposit", kind: "deposit", result: r, onPhase: progress.set }),
+    onSuccess: (r) => {
+      // The funds have left the transparent balance the form validates
+      // against, and that query holds its value for `STALE_MS`.
+      void invalidateTransparent();
+      track({ label: "deposit", kind: "deposit", result: r, onPhase: progress.set });
+    },
     onError: (e) => {
       progress.set("failed");
       toastError("deposit failed", e);

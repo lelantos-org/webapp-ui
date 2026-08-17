@@ -1,9 +1,10 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { chainKey } from "@/config/chains";
 import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
 import { closeDepositStreamsExcept } from "@/features/relayer/deposit-stream";
 import { getCachedNsk } from "@/features/wallet/nsk-session-cache";
+import { releaseScanner } from "@/features/wallet/scanner";
 import { syncProgress } from "@/features/wallet/sync-progress-store";
 import type { Connection } from "@/features/wallet/use-connection";
 import { createLogger } from "@/shared/lib/logger";
@@ -70,6 +71,18 @@ export function useBuildWallet(conn: Connection): BuildWalletState {
     closeDepositStreamsExcept(chainId);
     syncProgress.finished();
   }, [chainId]);
+
+  // Release the superseded build's scanner workers. `built` is replaced rather
+  // than cleared on a chain or account switch, so each switch would otherwise
+  // strand a worker pool, each worker holding a jubjub wasm instance, for the
+  // lifetime of the page. `releaseScanner` is idempotent, and the identity
+  // check prevents StrictMode's double-invoke from releasing a live pool.
+  const prevBuilt = useRef<WalletApi | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevBuilt.current;
+    prevBuilt.current = built?.value;
+    if (prev && prev !== built?.value) releaseScanner(prev);
+  }, [built]);
 
   useEffect(() => {
     log.debug("effect tick", {

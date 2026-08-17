@@ -1,0 +1,77 @@
+/* Cross-cutting breakpoints — rules that retune components defined in several
+   other files. Imported last, so a narrow-screen rule beats the base rule it
+   overrides no matter which file that base lives in. Breakpoints that belong
+   to one component only (header, footer, account, claim gate) stay in that
+   component's file. */
+
+/* MOBILE — tablet & narrower */
+@media (max-width: 720px) {
+  .hdr { padding: 10px 14px; gap: 10px; }
+  .hdr__right { gap: 10px; }
+  .brand__sub { display: none; }
+
+  .main { padding: 18px 14px 40px; }
+
+  .hero { grid-template-columns: 1fr; padding: 18px 18px; margin-bottom: 14px; }
+  .hero__t { font-size: 24px; }
+
+  .card { padding: 14px; margin-bottom: 12px; }
+  .card__hdr { gap: 8px; flex-wrap: wrap; }
+
+  .seg { flex-wrap: wrap; }
+  .seg__b {
+    flex: 1 1 calc(50% - 0px);
+    min-width: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--line-strong);
+  }
+  .seg__b:nth-child(odd) { border-right: 1px solid var(--line-strong); }
+  .seg__b:nth-last-child(-n + 2) { border-bottom: none; }
+
+  .tbl th, .tbl td { padding: 8px 10px; }
+  .tbl { font-size: 11px; }
+
+  .welcome { min-height: 50vh; padding: 18px 8px; }
+  .welcome__t { font-size: 28px; }
+  .welcome__panel { padding: 18px 14px; }
+  .btn--xl { padding: 11px 22px; font-size: 12px; }
+}
+
+/* MOBILE — phones */
+@media (max-width: 480px) {
+  .hdr { padding: 8px 12px; }
+  .brand { font-size: 12px; letter-spacing: 0.04em; }
+  .main { padding: 14px 10px 32px; }
+
+  .hero { padding: 16px 14px; }
+  .hero__t { font-size: 20px; }
+  .hero__sub { font-size: 11px; }
+
+  .welcome__t { font-size: 24px; }
+  .welcome__sub { font-size: 12px; }
+  .welcome__hint { font-size: 10px; }
+
+  .seg__b { font-size: 10px; padding: 6px 8px; letter-spacing: 0.05em; }
+
+  /* CopyField row stacks: input full width on top, button below. */
+  .row { flex-wrap: wrap; }
+  .row > .grow { flex: 1 1 100%; min-width: 0; }
+  .row > .btn { flex: 1 1 100%; }
+
+  /* Padding keeps the safe-area term from the footer's own breakpoint —
+     dropping it here would put the links under the iOS home indicator. */
+  .ftr {
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
+    font-size: 12px;
+  }
+  .ftr__note { font-size: 11px; }
+
+  .btn--ghost { padding: 6px 10px; font-size: 11px; }
+
+  /* Decorative background overlay is heavy on tiny screens — drop it. */
+  body::before { display: none; }
+
+  .claim-row { grid-template-columns: 38px 1fr auto; grid-template-areas: "g m a" "g s c" "x x c"; }
+  .claim-row__cta { grid-area: c; }
+  .claim-done__num { font-size: 36px; }
+}

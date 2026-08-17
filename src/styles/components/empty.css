@@ -1,0 +1,21 @@
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  text-align: center;
+  color: var(--fg-mute);
+  padding: 36px 22px;
+}
+.empty__icon {
+  font-size: 36px;
+  color: var(--accent-dim);
+  line-height: 1;
+}
+.empty__title { color: var(--fg); font-size: 14px; }
+.empty__sub { font-size: 12px; max-width: 320px; }
+/* empty title — sibling for `.empty` */
+.empty__t {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--fg-dim);
+}

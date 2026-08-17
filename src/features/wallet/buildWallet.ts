@@ -8,10 +8,7 @@ import {
 import { ViemChainAdapter } from "@lelantos-org/sdk/chain";
 import { requestPersistentStorage } from "@lelantos-org/sdk/core";
 import type { Field } from "@lelantos-org/sdk/crypto";
-import { WorkerPoolScanner } from "@lelantos-org/sdk/sync";
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
-import jubjubWasmUrl from "@lelantos-org/sdk/wasm/jubjub/wasm?url";
-import jubjubModuleUrl from "@lelantos-org/sdk/wasm/jubjub?url";
 import { toast } from "sonner";
 import { type ChainEntry, chainKey } from "@/config/chains";
 import { env } from "@/config/env";
@@ -19,23 +16,15 @@ import { resolveSyncStrategy } from "@/features/wallet/fmd-subscription";
 import { networkPreset } from "@/features/wallet/network-preset";
 import { cacheNsk, getCachedNsk } from "@/features/wallet/nsk-session-cache";
 import { instrumentWallet, timed } from "@/features/wallet/perf";
-import { getProverWorker, preloadProverWorker } from "@/features/wallet/prover/proverWorker";
+import { getProverWorker } from "@/features/wallet/prover/proverWorker";
+import { createScanner } from "@/features/wallet/scanner";
 import { IdbNoteStore } from "@/features/wallet/stores/noteStore";
 import { IdbNullifierPersistence } from "@/features/wallet/stores/nullifierStore";
 import { IdbTreePersistence } from "@/features/wallet/stores/treeStore";
 import type { ConnectionBundle } from "@/features/wallet/use-connection";
 import { createLogger } from "@/shared/lib/logger";
-import { asSdkWorker } from "@/shared/lib/worker";
 
 const log = createLogger("wallet:build");
-
-/// Off-main-thread FMD note scanning. The `new Worker(new URL(…))` literal
-/// must stay inline here; see `asSdkWorker`.
-function scannerWorker() {
-  return asSdkWorker(
-    new Worker(new URL("@lelantos-org/sdk/scanner-worker", import.meta.url), { type: "module" }),
-  );
-}
 
 /// Resolve the shielded spending key for `ethAddr`.
 ///
@@ -140,16 +129,14 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
       nullifierPersistence: new IdbNullifierPersistence(
         storeKey("nullifiers", chain.chainId, ethAddr),
       ),
-      scanner: new WorkerPoolScanner({
-        factory: scannerWorker,
-        wasm: { jubjubModuleUrl, jubjubWasmUrl },
-      }),
+      scanner: createScanner(),
       syncStrategy,
     }),
   );
 
   instrumentWallet(wallet);
   log.info("ready", wallet.address);
-  void preloadProverWorker();
+  // The prover is not warmed here; it is warmed on intent to transact. See
+  // `preloadProverWorker`.
   return wallet;
 }

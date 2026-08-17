@@ -1,0 +1,20 @@
+/* A bordered capsule. Three places wanted one and each drew its own: the
+   header status, the supported-network chips on the splash, and the two chain
+   names in the claim page's network gate. Same shape, so: one class, with the
+   size the only thing that varies. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg-1);
+  white-space: nowrap;
+}
+/* Label-sized: used in runs, where the header pill's padding would crowd. */
+.pill--sm {
+  padding: 5px 10px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--fg);
+}

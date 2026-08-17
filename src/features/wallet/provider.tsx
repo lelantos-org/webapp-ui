@@ -3,6 +3,8 @@
 import { type ReactNode, useCallback, useMemo } from "react";
 import { closeDepositStreams } from "@/features/relayer/deposit-stream";
 import { clearCachedNsk } from "@/features/wallet/nsk-session-cache";
+import { disposeProverWorker } from "@/features/wallet/prover/proverWorker";
+import { releaseScanner } from "@/features/wallet/scanner";
 import type { WalletContextValue } from "@/features/wallet/types";
 import { useBuildWallet } from "@/features/wallet/use-build-wallet";
 import { useConnection } from "@/features/wallet/use-connection";
@@ -28,9 +30,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // lifetime; drop it rather than leaving it running for a wallet that is
     // no longer connected.
     closeDepositStreams();
+    // Same for the two worker pools, which between them hold the ~49 MB zkey,
+    // the circuit wasm, a rayon pool and one jubjub wasm instance per scanner
+    // worker. None of it is reachable from a disconnected wallet, and any
+    // subsequent prove follows a fresh connect.
+    disposeProverWorker();
+    releaseScanner(wallet);
     conn.disconnect();
     toastInfo("disconnected");
-  }, [conn.disconnect, conn.address]);
+  }, [conn.disconnect, conn.address, wallet]);
 
   const refresh = useCallback(async () => {
     if (wallet) await wallet.sync({ limit: 500 });

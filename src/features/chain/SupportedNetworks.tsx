@@ -20,7 +20,7 @@ export function SupportedNetworks() {
         {registry.map((c: ChainEntry) => (
           <span
             key={c.chainId.toString()}
-            className="networks__chip"
+            className="pill pill--sm"
             title={`chain id ${c.chainId}`}
           >
             {c.chainName}

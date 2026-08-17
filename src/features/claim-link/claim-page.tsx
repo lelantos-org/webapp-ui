@@ -1,5 +1,5 @@
-import { findChain } from "@/config/chains";
-import { useChainRegistry } from "@/features/chain/ChainProvider";
+import type { RegisteredAsset } from "@/features/assets/registered-assets";
+import type { ChainMismatch } from "@/features/claim-link/chain-guard";
 import { BalancesCard } from "@/features/claim-link/components/BalancesCard";
 import { ConnectGate } from "@/features/claim-link/components/ConnectGate";
 import { NetworkGateCard } from "@/features/claim-link/components/NetworkGateCard";
@@ -11,30 +11,22 @@ import {
   ReadingFragmentCard,
   ScanningCard,
 } from "@/features/claim-link/components/StatusCards";
+import type { Phase } from "@/features/claim-link/phase-machine";
 import {
   CLAIM_STEPS,
   heroSubtitleFor,
-  linkChainIdOf,
   stepperStateFor,
 } from "@/features/claim-link/phase-presenter";
 import { useClaimFlow } from "@/features/claim-link/use-claim-flow";
 import { useWallet } from "@/features/wallet";
+import type { WalletStatus } from "@/features/wallet/types";
 import { Stepper } from "@/shared/ui/Stepper";
 
 export function ClaimPage() {
   const { wallet, status, connect } = useWallet();
-  const { phase, mismatch, claim } = useClaimFlow();
-  const registry = useChainRegistry();
+  const { phase, linkChain, mismatch, claim } = useClaimFlow();
   const blocked = mismatch !== undefined;
   const { current, failed, done } = stepperStateFor(phase, blocked);
-
-  // The link names its own chain, and the notes live only there. Labelling
-  // them with the active chain's tokens — which is what a plain
-  // `useRegisteredAssets()` gives — mislabels every asset whenever the wallet
-  // is somewhere else.
-  const linkChainId = linkChainIdOf(phase);
-  const linkChain = linkChainId === undefined ? undefined : findChain(registry, linkChainId);
-  const assets = linkChain?.tokens ?? [];
 
   return (
     <div className="stack claim-page">
@@ -42,39 +34,91 @@ export function ClaimPage() {
 
       <Stepper steps={CLAIM_STEPS} current={current} failed={failed} done={done} />
 
-      {phase.kind === "reading-fragment" ? <ReadingFragmentCard /> : null}
-      {phase.kind === "bad-link" ? <BadLinkCard error={phase.error} /> : null}
-      {/* On a mismatch the switch card is the only thing to do next, so it
-          replaces the connect gate rather than sitting under it — a wallet on
-          an unsupported network otherwise reads as "not connected". */}
-      {phase.kind === "need-wallet" && !mismatch ? (
-        <ConnectGate status={status} onConnect={connect} />
-      ) : null}
-      {phase.kind === "loading" && !mismatch ? <ScanningCard /> : null}
       {mismatch ? <NetworkGateCard mismatch={mismatch} /> : null}
-      {phase.kind === "ready" || phase.kind === "sweeping" ? (
+
+      <PhaseCard
+        phase={phase}
+        mismatch={mismatch}
+        status={status}
+        onConnect={connect}
+        // The link names its own chain, and the notes live only there, so the
+        // labels come from it rather than from whatever chain the wallet is on.
+        assets={linkChain?.tokens ?? []}
+        destinationAddress={wallet?.address}
+        onClaim={claim}
+      />
+    </div>
+  );
+}
+
+interface PhaseCardProps {
+  phase: Phase;
+  mismatch: ChainMismatch | undefined;
+  status: WalletStatus;
+  assets: readonly RegisteredAsset[];
+  destinationAddress?: string;
+  onConnect(): void;
+  onClaim(asset: bigint): void;
+}
+
+/// The one card that belongs to the current phase.
+///
+/// A switch rather than a run of `phase.kind === …` lines: it returns on every
+/// phase, so adding one to the machine is a compile error here instead of a
+/// screen that silently renders nothing.
+function PhaseCard({
+  phase,
+  mismatch,
+  status,
+  assets,
+  destinationAddress,
+  onConnect,
+  onClaim,
+}: PhaseCardProps) {
+  switch (phase.kind) {
+    case "reading-fragment":
+      return <ReadingFragmentCard />;
+
+    case "bad-link":
+      return <BadLinkCard error={phase.error} />;
+
+    // Both wait on the network gate, which is already on screen saying so. A
+    // second card under it would read as a second, separate problem — and a
+    // wallet parked on an unsupported network would be asked to connect one.
+    case "need-wallet":
+      return mismatch ? null : <ConnectGate status={status} onConnect={onConnect} />;
+
+    case "loading":
+      return mismatch ? null : <ScanningCard />;
+
+    case "ready":
+    case "sweeping":
+      return (
         <BalancesCard
           balances={phase.balances}
           assets={assets}
-          destinationAddress={wallet?.address}
+          destinationAddress={destinationAddress}
           busy={phase.kind === "sweeping"}
           busyAsset={phase.kind === "sweeping" ? phase.asset : undefined}
-          // A switch mid-flow is the only way to arrive here blocked; the gate
-          // card above already explains it, so the buttons only go quiet.
+          // Switching mid-flow is the only way to arrive here blocked; the
+          // gate card explains it, so the buttons only go quiet.
           claimDisabled={mismatch !== undefined}
-          onClaim={claim}
+          onClaim={onClaim}
         />
-      ) : null}
-      {phase.kind === "done" ? (
+      );
+
+    case "done":
+      return (
         <DoneCard
           txHash={phase.txHash}
           asset={phase.asset}
           amount={phase.amount}
           assets={assets}
-          destinationAddress={wallet?.address}
+          destinationAddress={destinationAddress}
         />
-      ) : null}
-      {phase.kind === "error" ? <ErrorCard message={phase.message} /> : null}
-    </div>
-  );
+      );
+
+    case "error":
+      return <ErrorCard message={phase.message} />;
+  }
 }

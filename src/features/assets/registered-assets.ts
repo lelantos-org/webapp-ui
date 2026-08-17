@@ -26,8 +26,13 @@ export const DEFAULT_ASSET_ID = "1";
 /// Empty means either the indexer has not caught up or there is no active
 /// chain — the claim page renders before a wallet connects. Callers that know
 /// which chain they mean should read `ChainEntry.tokens` directly instead.
+/// Shared empty result. A literal `[]` would produce a new array identity on
+/// every render while there is no active chain, invalidating any downstream
+/// `useMemo` or `useEffect` that lists `assets` as a dependency.
+const NO_ASSETS: RegisteredAsset[] = [];
+
 export function useRegisteredAssets(): RegisteredAsset[] {
-  return useActiveChainOrUndefined()?.tokens ?? [];
+  return useActiveChainOrUndefined()?.tokens ?? NO_ASSETS;
 }
 
 /// Resolve a `RegisteredAsset` from a form-style asset id (decimal string or

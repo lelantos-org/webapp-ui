@@ -1,0 +1,29 @@
+/* HOME LAYOUT — cross-fade between Welcome panel and connected view. Both
+   children of `.home-wrap` occupy the same grid cell so they overlap during
+   transition without layout shift. */
+.home-wrap {
+  display: grid;
+  grid-template-areas: "stack";
+  /* Lock the row height to whichever child is taller so the layout doesn't
+     shrink when Welcome unmounts after the cross-fade. */
+  min-height: 60vh;
+}
+.home-wrap > * { grid-area: stack; min-width: 0; align-self: start; }
+
+.home--enter { animation: home-rise 420ms var(--ease) both; }
+@keyframes home-rise {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+.welcome-fade {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 420ms var(--ease), transform 420ms var(--ease);
+  z-index: 2;
+}
+.welcome-fade--out {
+  opacity: 0;
+  transform: translate3d(0, -6px, 0);
+  pointer-events: none;
+}

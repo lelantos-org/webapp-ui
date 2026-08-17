@@ -1,0 +1,9 @@
+.hex {
+  font-family: var(--mono);
+  color: var(--fg-dim);
+  cursor: pointer;
+  user-select: all;
+  border-bottom: 1px dotted var(--fg-mute);
+  transition: color 120ms var(--ease-soft);
+}
+.hex:hover { color: var(--accent); border-color: var(--accent); }

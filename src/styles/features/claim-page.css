@@ -1,0 +1,190 @@
+.claim-page { gap: 16px; }
+
+.claim-hero {
+  position: relative;
+  overflow: hidden;
+}
+.claim-hero__glyph {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 56px;
+  line-height: 1;
+  color: var(--accent);
+  text-shadow: none;
+  letter-spacing: -0.04em;
+  user-select: none;
+}
+.claim-hero__bracket { color: var(--accent-dim); }
+.claim-hero__core { animation: pulse 2.4s ease-in-out infinite; }
+
+/* status cards: reading-fragment + scanning */
+.claim-state { display: grid; gap: 12px; }
+.claim-state__row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.claim-state__grow { flex: 1; }
+.claim-state__t {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--fg);
+}
+.claim-skel {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+/* "wallet is here → notes are there", inside the network `.gate`. Both names
+   are `.pill`s; this block only says which one is being left behind.
+   The bad-link and failed-claim cards add nothing to `.gate` at all. */
+.claim-hop {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.claim-hop__from { color: var(--fg-mute); text-decoration: line-through; }
+.claim-hop__to {
+  border-color: var(--warn);
+  background: rgba(var(--warn-rgb), 0.06);
+}
+.claim-hop__arrow { color: var(--fg-mute); font-family: var(--mono); }
+
+/* found / claimable list */
+.claim-found .card__hdr {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+.claim-dest {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  border: 1px dashed var(--line-strong);
+  background: var(--bg);
+  border-radius: 8px;
+}
+.claim-rows { display: grid; gap: 10px; }
+.claim-row {
+  display: grid;
+  grid-template-columns: 44px 1fr auto auto;
+  grid-template-areas: "g m a c";
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  border-radius: 8px;
+  transition: border-color 160ms var(--ease-soft), box-shadow 160ms var(--ease-soft);
+}
+.claim-row:hover {
+  border-color: var(--accent-dim);
+  box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.08);
+}
+.claim-row__glyph {
+  grid-area: g;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  border: 1px solid var(--accent-dim);
+  background: rgba(var(--accent-rgb), 0.05);
+  border-radius: 8px;
+}
+.claim-row__main { grid-area: m; display: grid; gap: 2px; }
+.claim-row__sym {
+  font-size: 14px;
+  color: var(--fg);
+  letter-spacing: 0.02em;
+}
+.claim-row__sub { font-size: 11px; }
+.claim-row__amt {
+  grid-area: a;
+  text-align: right;
+  display: grid;
+  gap: 2px;
+}
+.claim-row__num { font-size: 18px; line-height: 1.1; }
+.claim-row__unit { font-size: 10px; letter-spacing: 0.06em; }
+.claim-row__cta {
+  grid-area: c;
+  min-width: 120px;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* done */
+.claim-done {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 14px;
+  padding: 28px 20px 24px;
+  border-color: var(--accent-dim);
+  background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.04), var(--bg-1));
+}
+.claim-done__check {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--accent);
+  font-size: 32px;
+  font-weight: 700;
+  border: 1px solid var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
+  box-shadow: 0 0 32px rgba(var(--accent-rgb), 0.35);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+.claim-done__eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-dim);
+}
+.claim-done__amt {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.claim-done__num {
+  font-size: 44px;
+  line-height: 1;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+}
+.claim-done__sym {
+  font-size: 14px;
+  color: var(--fg-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.claim-done__meta {
+  display: grid;
+  gap: 4px;
+  font-family: var(--mono);
+}
+.claim-done__txlink {
+  color: var(--fg-dim);
+  border-bottom: 1px dotted var(--fg-mute);
+  text-decoration: none;
+  transition: color 120ms var(--ease-soft);
+}
+.claim-done__txlink:hover { color: var(--accent); border-color: var(--accent); }

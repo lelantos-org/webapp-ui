@@ -1,9 +1,80 @@
+import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gzipSync } from "node:zlib";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const r = (p: string) => fileURLToPath(new URL(`./node_modules/${p}`, import.meta.url));
+
+// Extensions worth precompressing. The prover artifacts dominate: the ~49 MB
+// `.zkey` gzips to ~14 MB and the ~3.9 MB circuit `.wasm` to ~1.2 MB. nginx
+// would not gzip the zkey at all on its own (it is `application/octet-stream`,
+// not in `gzip_types`), and gzipping 49 MB per request would be absurd anyway.
+const COMPRESSIBLE = new Set([
+  ".js",
+  ".css",
+  ".html",
+  ".svg",
+  ".json",
+  ".wasm",
+  ".zkey",
+  ".webmanifest",
+]);
+
+// Below this, the gzip header costs more than the saving, and nginx's own
+// `gzip_min_length` is 1024 — keep the two thresholds aligned.
+const MIN_SIZE = 1024;
+
+/// Emits `<file>.gz` next to every compressible build artifact, for nginx
+/// `gzip_static`. `.map` files are deliberately skipped: `build.sourcemap` is
+/// "hidden" and the Dockerfile strips them, so they never reach the image.
+///
+/// Runs in `closeBundle` with `enforce: "post"` and sits last in `plugins` so
+/// it observes the files VitePWA writes in its own `closeBundle` (`sw.js`,
+/// `workbox-*.js`) rather than racing them.
+function precompress(): Plugin {
+  let outDir = "dist";
+  return {
+    name: "precompress-gzip",
+    apply: "build",
+    enforce: "post",
+    configResolved(config) {
+      outDir = config.build.outDir;
+    },
+    closeBundle() {
+      let files = 0;
+      let before = 0;
+      let after = 0;
+
+      const walk = (dir: string) => {
+        for (const entry of readdirSync(dir, { withFileTypes: true })) {
+          const full = join(dir, entry.name);
+          if (entry.isDirectory()) {
+            walk(full);
+            continue;
+          }
+          const dot = entry.name.lastIndexOf(".");
+          if (dot < 0 || !COMPRESSIBLE.has(entry.name.slice(dot))) continue;
+          const size = statSync(full).size;
+          if (size < MIN_SIZE) continue;
+          const gz = gzipSync(readFileSync(full), { level: 9 });
+          // A `.gz` larger than the source would make gzip_static a pessimism.
+          if (gz.length >= size) continue;
+          writeFileSync(`${full}.gz`, gz);
+          files += 1;
+          before += size;
+          after += gz.length;
+        }
+      };
+
+      walk(outDir);
+      const mb = (n: number) => (n / 1024 / 1024).toFixed(1);
+      this.info(`precompressed ${files} files: ${mb(before)} MB -> ${mb(after)} MB gzip`);
+    },
+  };
+}
 
 export default defineConfig({
   resolve: {
@@ -75,6 +146,8 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/fmd/, /^\/relayer/, /^\/explorer/, /^\/quote/],
       },
     }),
+    // Last on purpose — see the note on `precompress`.
+    precompress(),
   ],
   optimizeDeps: {
     include: ["@lelantos-org/sdk", "assert"],
@@ -84,6 +157,17 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
+    // "hidden": maps are emitted but no `//# sourceMappingURL` comment is
+    // appended, so browsers never request them. They exist for symbolicating a
+    // production stack trace after the fact; the Dockerfile deletes them from
+    // the runtime image so nothing ships to users.
+    sourcemap: "hidden",
+    // Vite gzips every chunk purely to print a size column. Real compression
+    // now happens in `precompress`, so this is wasted CI time.
+    reportCompressedSize: false,
+    // The ~300 KB noteStore chunk (viem + idb + SDK stores) is deliberate and
+    // route-lazy; 500 KB default just warns on it every build.
+    chunkSizeWarningLimit: 1000,
     commonjsOptions: {
       include: [/sdk/, /node_modules/],
       transformMixedEsModules: true,
@@ -99,7 +183,11 @@ export default defineConfig({
           if (id.includes("/react/") || id.includes("react-router")) return "vendor-react";
           if (id.includes("@tanstack")) return "vendor-query";
           if (id.includes("react-hook-form") || id.includes("@hookform")) return "vendor-forms";
-          if (id.includes("zod")) return "vendor-forms";
+          // zod must NOT share a chunk with react-hook-form. `config/env.ts`
+          // and `config/chains.ts` import zod eagerly, so grouping them made
+          // the entry chunk pull in react-hook-form + resolvers — code only
+          // the lazy route components ever touch.
+          if (id.includes("zod")) return "vendor-zod";
           if (id.includes("sonner")) return "vendor-ui";
           return undefined;
         },

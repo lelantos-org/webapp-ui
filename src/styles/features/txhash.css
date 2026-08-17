@@ -1,0 +1,40 @@
+/* TX HASH ROW
+   Flush left with the fields above it, on one line. The hash is truncated
+   rather than wrapped: a wrapped 66-char hash pushed its tail under the "tx"
+   label and made the whole block read as misaligned. */
+.txhash {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--fg-mute);
+}
+.txhash__label {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--fg-mute);
+}
+.txhash__val {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--fg-dim);
+}
+.txhash__act {
+  flex: none;
+  padding: 0;
+  border: none;
+  border-bottom: 1px dotted var(--fg-mute);
+  border-radius: 0;
+  background: none;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--fg-dim);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 120ms var(--ease-soft), border-color 120ms var(--ease-soft);
+}
+.txhash__act:hover { color: var(--accent); border-color: var(--accent); }

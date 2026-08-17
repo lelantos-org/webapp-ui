@@ -1,0 +1,104 @@
+.acct {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  padding: 18px 20px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line-strong);
+  background:
+    linear-gradient(135deg, rgba(var(--accent-rgb), 0.04), transparent 60%),
+    var(--bg-1);
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+.acct::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.55;
+}
+.acct__main { display: grid; gap: 8px; min-width: 0; }
+.acct__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.acct__lbl {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent-dim);
+}
+.acct__actions { display: flex; gap: 4px; }
+.acct__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  color: var(--fg-dim);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 120ms var(--ease-soft);
+}
+.acct__icon:hover {
+  color: var(--accent);
+  border-color: var(--accent-dim);
+  background: rgba(var(--accent-rgb), 0.06);
+}
+.acct__icon:active { transform: scale(0.95); }
+
+.acct__addr {
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  word-break: break-all;
+  line-height: 1.35;
+  text-shadow: none;
+}
+.acct__eth {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--line);
+  font-size: 11px;
+}
+.acct__eth-lbl {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+.acct__eth-val {
+  background: transparent;
+  border: none;
+  border-bottom: 1px dotted var(--fg-mute);
+  color: var(--fg-dim);
+  font-size: 11px;
+  padding: 0;
+  cursor: pointer;
+}
+.acct__eth-val:hover { color: var(--accent); border-color: var(--accent); }
+
+.acct__qr {
+  display: grid;
+  gap: 6px;
+  justify-items: center;
+  align-content: center;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.acct__qr p { margin: 0; max-width: 120px; text-align: center; }
+
+@media (max-width: 720px) {
+  .acct { grid-template-columns: 1fr; padding: 16px; }
+  .acct__qr { justify-self: stretch; }
+}

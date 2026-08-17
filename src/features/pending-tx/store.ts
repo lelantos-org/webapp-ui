@@ -36,6 +36,21 @@ export interface PendingEntry extends PendingShape {
   chainId: bigint;
   /// Originating tx hash. Multiple entries may share this (multi-asset tx).
   txHash: string;
+  /// Wall-clock deadline, set only on watermark-bound entries. See
+  /// `WATERMARK_TTL_MS`.
+  expiresAt?: number;
+}
+
+/// Lifetime of a watermark-bound entry.
+///
+/// A watermark clears only by observing the balance cross it, so an output the
+/// relayer never flushes would keep its entry, and the faster resync cadence it
+/// drives, alive for the rest of the session. Past this the entry is dropped
+/// and the display falls back to what the wallet has decrypted.
+const WATERMARK_TTL_MS = 10 * 60_000;
+
+function expiryOf(shape: PendingShape): number | undefined {
+  return shape.clearWhenBalanceAtLeast === undefined ? undefined : Date.now() + WATERMARK_TTL_MS;
 }
 
 const entries = new Map<string, PendingEntry>();
@@ -62,7 +77,7 @@ export function pendingKey(chainId: bigint, txHash: string, asset: bigint): stri
 
 export function addPending(chainId: bigint, txHash: string, shape: PendingShape): void {
   const id = pendingKey(chainId, txHash, shape.asset);
-  entries.set(id, { id, chainId, txHash, ...shape });
+  entries.set(id, { id, chainId, txHash, ...shape, expiresAt: expiryOf(shape) });
   bump();
 }
 
@@ -71,7 +86,7 @@ export function addPendingMany(chainId: bigint, txHash: string, shapes: PendingS
   if (shapes.length === 0) return;
   for (const s of shapes) {
     const id = pendingKey(chainId, txHash, s.asset);
-    entries.set(id, { id, chainId, txHash, ...s });
+    entries.set(id, { id, chainId, txHash, ...s, expiresAt: expiryOf(s) });
   }
   bump();
 }
@@ -105,6 +120,21 @@ export function pruneByBalances(chainId: bigint, balanceOf: (asset: bigint) => b
       entries.delete(k);
       removed = true;
     }
+  }
+  if (removed) bump();
+}
+
+/// Drop watermark-bound entries past their `expiresAt`.
+///
+/// Counterpart to `pruneByBalances`, which clears entries the wallet has
+/// confirmed. Called from the settling poll, so the poll an entry keeps alive
+/// is also what retires it.
+export function pruneExpired(now: number = Date.now()): void {
+  let removed = false;
+  for (const [k, e] of entries) {
+    if (e.expiresAt === undefined || e.expiresAt > now) continue;
+    entries.delete(k);
+    removed = true;
   }
   if (removed) bump();
 }

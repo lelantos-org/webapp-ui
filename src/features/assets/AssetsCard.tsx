@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { memo, useMemo } from "react";
 import { PortfolioActions } from "@/features/assets/PortfolioActions";
 import { type RegisteredAsset, useRegisteredAssets } from "@/features/assets/registered-assets";
 import { useBalances } from "@/features/assets/use-balances";
@@ -10,17 +10,14 @@ export function AssetsCard() {
   const shielded = useBalances();
   const assets = useRegisteredAssets();
 
-  // Tick to keep relative time fresh inside `PortfolioActions`.
-  const [, force] = useState(0);
-  useEffect(() => {
-    const id = setInterval(() => force((n) => n + 1), 10_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const labelFor = (id: bigint): string => {
-    const a = assets.find((r) => r.id === id);
-    return a ? a.symbol : `#${id.toString()}`;
-  };
+  // Single index, replacing a linear `assets.find` per row per render. Also
+  // gives the rows stable prop identities, which is what makes memoizing them
+  // effective.
+  const byId = useMemo(() => {
+    const m = new Map<bigint, RegisteredAsset>();
+    for (const a of assets) m.set(a.id, a);
+    return m;
+  }, [assets]);
 
   const err = shielded.error;
 
@@ -37,11 +34,7 @@ export function AssetsCard() {
           <SyncProgressLine />
         </>
       ) : (
-        <ShieldedTable
-          rows={shielded.data?.balances ?? []}
-          labelFor={labelFor}
-          metaFor={(id) => assets.find((r) => r.id === id)}
-        />
+        <ShieldedTable rows={shielded.data?.balances ?? EMPTY_ROWS} byId={byId} />
       )}
 
       {err ? <div className="err mt-3">{describeError(err)}</div> : null}
@@ -57,14 +50,15 @@ interface ShieldedRow {
   outflow: bigint;
 }
 
+/// Stable identity for the no-data case; see `NO_ASSETS`.
+const EMPTY_ROWS: ShieldedRow[] = [];
+
 function ShieldedTable({
   rows,
-  labelFor,
-  metaFor,
+  byId,
 }: {
   rows: ShieldedRow[];
-  labelFor: (id: bigint) => string;
-  metaFor: (id: bigint) => RegisteredAsset | undefined;
+  byId: ReadonlyMap<bigint, RegisteredAsset>;
 }) {
   if (rows.length === 0) {
     return (
@@ -89,14 +83,17 @@ function ShieldedTable({
           </tr>
         </thead>
         <tbody>
-          {rows.map((r) => (
-            <ShieldedRowView
-              key={r.asset.toString()}
-              row={r}
-              label={labelFor(r.asset)}
-              meta={metaFor(r.asset)}
-            />
-          ))}
+          {rows.map((r) => {
+            const meta = byId.get(r.asset);
+            return (
+              <ShieldedRowView
+                key={r.asset.toString()}
+                row={r}
+                label={meta ? meta.symbol : `#${r.asset.toString()}`}
+                meta={meta}
+              />
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -108,7 +105,11 @@ function ShieldedTable({
 /// The figure is updated in place rather than keyed on its own value: keying on
 /// the balance remounted the element on every change, which replayed its
 /// entrance animation each time a tx settled in stages.
-function ShieldedRowView({
+///
+/// Memoized: `row` identities are stable while the balances query is
+/// unchanged, so a re-render of the card for an unrelated reason does not
+/// re-render the table.
+const ShieldedRowView = memo(function ShieldedRowView({
   row,
   label,
   meta,
@@ -137,7 +138,7 @@ function ShieldedRowView({
       </td>
     </tr>
   );
-}
+});
 
 /// Counts from the in-flight sync, so the first load is not a bare spinner.
 /// A cold sync scans the whole note feed and can run for minutes; without a

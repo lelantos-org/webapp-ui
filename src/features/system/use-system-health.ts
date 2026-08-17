@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { env } from "@/config/env";
+import { IDLE_POLL_FACTOR, useIsIdle } from "@/shared/lib/activity";
 
 export type ServiceState = "up" | "down" | "unknown";
 
@@ -13,6 +14,7 @@ export interface SystemHealth {
 const POLL_MS = 15_000;
 
 export function useSystemHealth() {
+  const idle = useIsIdle();
   return useQuery<SystemHealth>({
     queryKey: ["system-health"],
     queryFn: async () => {
@@ -22,7 +24,9 @@ export function useSystemHealth() {
       ]);
       return { relayer, fmd };
     },
-    refetchInterval: POLL_MS,
+    // `refetchIntervalInBackground: false` handles a hidden tab; the idle
+    // factor handles a visible one nobody is looking at.
+    refetchInterval: idle ? POLL_MS * IDLE_POLL_FACTOR : POLL_MS,
     refetchIntervalInBackground: false,
     staleTime: POLL_MS,
   });

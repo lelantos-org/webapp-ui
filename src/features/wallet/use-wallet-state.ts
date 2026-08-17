@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import { useWallet } from "@/features/wallet";
 import { syncProgress } from "@/features/wallet/sync-progress-store";
+import { IDLE_POLL_FACTOR, useIsIdle } from "@/shared/lib/activity";
 
 /// Confirmed holdings for one asset: what the wallet has actually decrypted.
 ///
@@ -60,6 +61,7 @@ function computeBalances(wallet: WalletApi): AssetBalance[] {
 export function useWalletState(): UseQueryResult<WalletState> {
   const { wallet } = useWallet();
   const { chainId } = useActiveChain();
+  const idle = useIsIdle();
   return useQuery<WalletState>({
     queryKey: walletStateKey(chainId, wallet?.address),
     enabled: !!wallet,
@@ -79,7 +81,11 @@ export function useWalletState(): UseQueryResult<WalletState> {
       }
       return { balances: computeBalances(wallet), syncedAt: Date.now() };
     },
-    refetchInterval: POLL_MS,
+    // The most expensive poll in the app — a full `syncNotes` plus a balance
+    // recompute over every unspent note, on the main thread. Slowed on an
+    // unattended tab, which `refetchIntervalInBackground: false` does not
+    // cover because that tab is still visible.
+    refetchInterval: idle ? POLL_MS * IDLE_POLL_FACTOR : POLL_MS,
     refetchIntervalInBackground: false,
     // Several components reach this query. At `staleTime: 0` every mount —
     // so every route change into a form — refetches, firing a redundant

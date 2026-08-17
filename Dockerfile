@@ -29,6 +29,11 @@ RUN npm run build
 
 FROM nginx:1.27-alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=builder /app/dist /usr/share/nginx/html
+# build.sourcemap is "hidden", so the maps are emitted but never referenced by
+# the shipped JS. Keep them out of the runtime image entirely — recover them
+# from the builder stage if a production trace ever needs symbolicating.
+RUN find /usr/share/nginx/html -name '*.map' -delete
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

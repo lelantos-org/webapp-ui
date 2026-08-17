@@ -6,6 +6,10 @@ export interface ChainSwitchButtonsProps {
   /// Restrict the offer to one chain — used when a claim link names the chain
   /// it belongs to. Omitted, every chain the deployment serves is offered.
   only?: bigint;
+  /// Centred for the full-screen Welcome panel; `"start"` to line the buttons
+  /// up with the text of a card body. Asked for here rather than overridden
+  /// from the outside, so this component still owns its own layout.
+  align?: "center" | "start";
 }
 
 /// Buttons that move the *wallet* to a supported chain.
@@ -17,7 +21,7 @@ export interface ChainSwitchButtonsProps {
 ///
 /// The chain the wallet is already on is omitted rather than disabled: an
 /// inert button invites a click that does nothing.
-export function ChainSwitchButtons({ only }: ChainSwitchButtonsProps) {
+export function ChainSwitchButtons({ only, align = "center" }: ChainSwitchButtonsProps) {
   const registry = useChainRegistry();
   const switchChain = useSwitchChain();
   // `undefined` on an unsupported network, which is exactly when every chain
@@ -30,7 +34,7 @@ export function ChainSwitchButtons({ only }: ChainSwitchButtonsProps) {
   if (offered.length === 0) return null;
 
   return (
-    <div className="row row--center row--wrap">
+    <div className={`row row--center row--wrap${align === "start" ? " row--start" : ""}`}>
       {offered.map((c: ChainEntry) => (
         <button
           key={c.chainId.toString()}

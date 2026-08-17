@@ -60,12 +60,12 @@ export function ScanningCard() {
 
 export function BadLinkCard({ error }: { error: string }) {
   return (
-    <div className="card claim-bad">
-      <div className="claim-bad__mark" aria-hidden>
+    <div className="card gate">
+      <div className="gate__mark" aria-hidden>
         ×
       </div>
       <div className="stack stack--sm">
-        <div className="claim-bad__t">bad link</div>
+        <div className="gate__t">bad link</div>
         <div className="muted txt-sm">{error}</div>
         <div className="muted txt-xs">
           ask the sender to regenerate. each claim link is single-use and bearer-only.
@@ -82,12 +82,12 @@ export function BadLinkCard({ error }: { error: string }) {
 
 export function ErrorCard({ message }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="card claim-bad">
-      <div className="claim-bad__mark" aria-hidden>
+    <div className="card gate">
+      <div className="gate__mark" aria-hidden>
         !
       </div>
       <div className="stack stack--sm">
-        <div className="claim-bad__t">claim failed</div>
+        <div className="gate__t">claim failed</div>
         <div className="err">{message}</div>
         <div className="row">
           <Link to="/" className="btn">

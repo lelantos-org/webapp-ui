@@ -9,6 +9,7 @@
 import "fake-indexeddb/auto";
 import type { MerkleNode, TreeStoreState } from "@lelantos-org/sdk/wallet";
 import { beforeEach, describe, expect, it } from "vitest";
+import { TREE_STORE, walletDb } from "./db";
 import { IdbTreePersistence } from "./treeStore";
 
 const DEPTH = 10;
@@ -114,5 +115,40 @@ describe("IdbTreePersistence", () => {
 
     expect(got?.leaves).toEqual(leaves(1200));
     expect(sorted(got?.nodes ?? [])).toEqual(sorted(nodes(1200)));
+  });
+
+  // The two gap cases below pin behaviour that is sensitive to the shape of the
+  // read path: a per-record loop stops at the first missing record, while a
+  // range read skips it. Neither failure throws — one yields a short leaf
+  // array, the other a node set containing a hole — and both surface later as a
+  // wrong root.
+
+  it("returns null when a leaf chunk in the middle is missing", async () => {
+    await new IdbTreePersistence(key).save(state(2500));
+
+    const db = await walletDb();
+    await db.delete(TREE_STORE, `${key}:leaves:1`);
+
+    // Neither the truncated prefix nor the records either side of the hole
+    // joined together: both are well-formed trees that are not this one.
+    expect(await new IdbTreePersistence(key).load()).toBeNull();
+  });
+
+  it("stops at the first gap within a node level and keeps deeper levels", async () => {
+    // 8192 leaves places 2048 nodes on level 1, spanning two NODE_BUCKET
+    // records, so a bucket 1 exists to remove.
+    await new IdbTreePersistence(key).save(state(8192));
+
+    const db = await walletDb();
+    await db.delete(TREE_STORE, `${key}:nodes:1:1`);
+
+    const got = await new IdbTreePersistence(key).load();
+    const byLevel = (lvl: number) => (got?.nodes ?? []).filter((n) => n.level === lvl);
+
+    // Buckets are written from 0 upwards and never removed, so a gap ends the
+    // level: everything at or past it is dropped rather than skipped over.
+    expect(byLevel(1).map((n) => n.index)).toEqual(Array.from({ length: 1024 }, (_, i) => i));
+    // Levels below the damaged one are read independently and stay whole.
+    expect(sorted(byLevel(2))).toEqual(sorted(nodes(8192).filter((n) => n.level === 2)));
   });
 });

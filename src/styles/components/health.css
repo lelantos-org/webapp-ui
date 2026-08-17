@@ -1,0 +1,50 @@
+.health {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
+.health__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  transition: background 200ms var(--ease-soft), box-shadow 200ms var(--ease-soft);
+}
+.health__dot--sm {
+  width: 6px;
+  height: 6px;
+}
+.health__tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  background: var(--bg-2, #111);
+  border: 1px solid var(--border, var(--line));
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  white-space: nowrap;
+  font-size: 12px;
+  pointer-events: none;
+}
+.health:hover .health__tooltip,
+.health:focus-within .health__tooltip {
+  display: flex;
+}
+.health__row {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.health__label {
+  color: var(--fg, #eee);
+}
+.health__state {
+  color: var(--fg-mute);
+  margin-left: auto;
+}

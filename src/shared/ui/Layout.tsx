@@ -19,7 +19,10 @@ export function Layout({ children }: { children: ReactNode }) {
   const minimal = pathname === "/claim";
   return (
     <>
-      <Backdrop />
+      {/* Omitted on /claim: that route builds an ephemeral wallet and syncs,
+          the heaviest main-thread work in the app, and carries its own
+          gradient backdrop. */}
+      {minimal ? null : <Backdrop />}
       <div className="app">
         <header className="hdr">
           <div className="hdr__left">

@@ -17,6 +17,7 @@ import { useActiveChain } from "@/features/chain/ChainProvider";
 import {
   type PendingTotals,
   pruneByBalances,
+  pruneExpired,
   usePending,
   usePendingByAsset,
 } from "@/features/pending-tx/store";
@@ -28,12 +29,16 @@ import {
   type WalletState,
 } from "@/features/wallet/use-wallet-state";
 
-/// How often to nudge a resync while a watermark-bound entry is outstanding.
+/// How soon to nudge a resync after a watermark-bound entry appears.
 ///
 /// Swap B-notes are flushed asynchronously by the relayer, so the only way to
 /// see them land is to look again. Without this the balance sits on the
 /// wallet's 30s cadence and the "settling" hint appears to stall.
 const SETTLING_POLL_MS = 5_000;
+
+/// Ceiling for the backoff below, matching the wallet query's own cadence so
+/// the settling poll adds no further requests at that point.
+const SETTLING_POLL_MAX_MS = 30_000;
 
 /// A confirmed balance plus the in-flight value attached to it.
 export interface AssetBalanceView extends AssetBalance {
@@ -80,10 +85,23 @@ export function useBalances(): UseQueryResult<BalancesState> {
     pruneByBalances(chainId, (asset) => wallet.balance(asset));
   }, [wallet, chainId, syncedAt]);
 
+  // Backs off rather than holding at 5s: the note is either flushed within a
+  // few seconds or not at all, and an unflushed one would otherwise run a full
+  // `syncNotes` every 5s for the rest of the session. `pruneExpired` is the
+  // hard stop — once it drops the last watermark entry `hasWatermarkPending`
+  // goes false and this effect clears the timer.
   useEffect(() => {
     if (!hasWatermarkPending) return;
-    const id = setInterval(() => void invalidate(), SETTLING_POLL_MS);
-    return () => clearInterval(id);
+    let delay = SETTLING_POLL_MS;
+    let id: ReturnType<typeof setTimeout>;
+    const tick = () => {
+      pruneExpired();
+      void invalidate();
+      delay = Math.min(delay * 2, SETTLING_POLL_MAX_MS);
+      id = setTimeout(tick, delay);
+    };
+    id = setTimeout(tick, delay);
+    return () => clearTimeout(id);
   }, [hasWatermarkPending, invalidate]);
 
   const data = query.data;

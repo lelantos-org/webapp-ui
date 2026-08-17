@@ -54,6 +54,10 @@ class WalletStore {
   /// Detaches the active provider's event handlers; prevents listener leaks
   /// on switch/disconnect.
   private detach: (() => void) | null = null;
+  /// EIP-6963 discovery state. Held on the instance so repeat calls to
+  /// `startDiscovery` re-issue the request event rather than re-registering.
+  private discoveryWired = false;
+  private seen = new Map<string, Eip6963ProviderDetail>();
 
   getState = (): ConnectionState => this.state;
 
@@ -70,21 +74,29 @@ class WalletStore {
   /// Run EIP-6963 discovery and merge results into `discovered`. Wallets can
   /// announce at any later time too, so the listener stays wired for the
   /// lifetime of the page.
+  ///
+  /// Safe to call repeatedly: boot reaches it from `WalletBoot`, from
+  /// `resumeFromStorage` and from `connect`. Only the request event repeats.
+  /// Registering the handler once keeps a single announce from producing one
+  /// store notification per call.
   startDiscovery(): void {
     if (typeof window === "undefined") return;
-    const seen = new Map<string, Eip6963ProviderDetail>();
-    for (const d of this.state.discovered) seen.set(d.info.uuid, d);
-    const onAnnounce = (e: Event) => {
-      const detail = (e as CustomEvent<Eip6963ProviderDetail>).detail;
-      if (!detail?.info?.uuid) return;
-      if (seen.has(detail.info.uuid)) return;
-      seen.set(detail.info.uuid, detail);
-      this.set({ discovered: Array.from(seen.values()) });
-      log.debug("discovered", detail.info.rdns, detail.info.name);
-    };
-    window.addEventListener("eip6963:announceProvider", onAnnounce);
+    if (!this.discoveryWired) {
+      this.discoveryWired = true;
+      for (const d of this.state.discovered) this.seen.set(d.info.uuid, d);
+      window.addEventListener("eip6963:announceProvider", this.onAnnounce);
+    }
     window.dispatchEvent(new Event("eip6963:requestProvider"));
   }
+
+  private onAnnounce = (e: Event): void => {
+    const detail = (e as CustomEvent<Eip6963ProviderDetail>).detail;
+    if (!detail?.info?.uuid) return;
+    if (this.seen.has(detail.info.uuid)) return;
+    this.seen.set(detail.info.uuid, detail);
+    this.set({ discovered: Array.from(this.seen.values()) });
+    log.debug("discovered", detail.info.rdns, detail.info.name);
+  };
 
   /// Find an announced provider by rdns, falling back to MetaMask, then the
   /// first provider seen.

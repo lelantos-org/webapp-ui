@@ -1,0 +1,130 @@
+/* Generating a claim link: the drawn success check, then the result panel the
+   sender copies the URL out of. The claim *page* — the receiving side — is
+   `features/claim-page.css`. */
+.claim-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 0 8px;
+}
+.claim-success__check {
+  width: 72px;
+  height: 72px;
+  display: block;
+}
+.claim-success__circle,
+.claim-success__tick {
+  fill: none;
+  stroke: var(--accent, #2ecc71);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.claim-success__circle {
+  stroke-dasharray: 145;
+  stroke-dashoffset: 145;
+  animation: claim-success-circle 600ms var(--ease) forwards;
+}
+.claim-success__tick {
+  stroke-dasharray: 50;
+  stroke-dashoffset: 50;
+  animation: claim-success-tick 350ms 450ms var(--ease) forwards;
+}
+@keyframes claim-success-circle {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes claim-success-tick {
+  to { stroke-dashoffset: 0; }
+}
+
+/* CLAIM LINK RESULT */
+.claim-confirm-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  user-select: none;
+  cursor: pointer;
+}
+.claim-confirm-check input { accent-color: var(--accent); }
+.claim-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Claim-link result: reads what → risk → action → escape hatch. No `.card` —
+   this is the page's content, not something sitting on the page. */
+.claim-result {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+/* An eyebrow, not a title: the amount below is the thing being announced. */
+.claim-result__t {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.claim-result__amount {
+  margin: -8px 0 0;
+  font-size: 30px;
+  line-height: 1.1;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+}
+
+.claim-result__warn {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: rgba(var(--accent-rgb), 0.06);
+  color: var(--fg-dim);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.claim-result__warn strong { color: var(--fg); font-weight: 600; }
+
+.claim-result__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Holds its width empty so the confirmation cannot reflow the button row. */
+.claim-result__copied {
+  min-width: 6em;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/* Below a rule and in mono at 11px: available for a manual copy or a sanity
+   check, without competing with the button above it. */
+.claim-result__link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.claim-result__url {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+}
+
+.claim-result__reset { justify-self: start; }

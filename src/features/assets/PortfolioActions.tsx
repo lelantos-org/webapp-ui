@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useCompactNotes,
   useHardRefresh,
@@ -36,7 +36,7 @@ export function PortfolioActions() {
 
   return (
     <span className="muted txt-xs">
-      {syncing ? "syncing…" : syncedAt ? `synced ${relativeTime(syncedAt)}` : "not synced"}
+      {syncing ? "syncing…" : syncedAt ? <SyncedAgo at={syncedAt} /> : "not synced"}
       <Sep />
       <InlineAction disabled={syncing} onClick={() => shielded.refetch()} label="refresh" />
       <Sep />
@@ -68,6 +68,20 @@ export function PortfolioActions() {
       />
     </span>
   );
+}
+
+/// "synced 2m ago". Owns its own tick so the 10s refresh re-renders this span
+/// alone rather than the balance table above it.
+///
+/// Mounted only while there is a `syncedAt` and no sync in flight, so the timer
+/// stops as soon as either changes.
+function SyncedAgo({ at }: { at: number }) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => force((n) => n + 1), 10_000);
+    return () => clearInterval(id);
+  }, []);
+  return <>synced {relativeTime(at)}</>;
 }
 
 function Sep() {

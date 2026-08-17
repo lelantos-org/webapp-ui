@@ -1,0 +1,37 @@
+/* Reserve the settling badge's row even when it is absent. The badge comes and
+   goes on its own as a tx settles; without the reservation every appearance
+   resized the row and nudged the whole table. */
+.bal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 0;
+  min-height: 48px;
+}
+.bal__main { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bal__settle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  animation: bal-settle-in 200ms var(--ease) both;
+}
+@keyframes bal-settle-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to { opacity: 1; transform: none; }
+}
+.bal__settle--in { color: var(--accent); background: rgba(var(--accent-rgb), 0.08); }
+.bal__settle--out { color: var(--warn); background: rgba(var(--warn-rgb), 0.1); }
+.bal__spin {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  animation: bal-spin 800ms linear infinite;
+}
+@keyframes bal-spin { to { transform: rotate(360deg); } }

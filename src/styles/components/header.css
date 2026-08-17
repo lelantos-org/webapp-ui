@@ -1,0 +1,109 @@
+.hdr {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 24px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.62);
+  backdrop-filter: blur(14px) saturate(150%);
+  -webkit-backdrop-filter: blur(14px) saturate(150%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7) inset;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.hdr__left { display: flex; align-items: baseline; gap: 10px; }
+.hdr__right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.brand {
+  color: var(--accent);
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  text-shadow: none;
+}
+.brand__sub {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 10px;
+}
+
+.lnk {
+  color: var(--fg-dim);
+  text-decoration: none;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  transition: color 120ms var(--ease-soft), background 120ms var(--ease-soft);
+}
+.lnk:hover { color: var(--accent); background: var(--bg-3); }
+.lnk--inline {
+  padding: 0;
+  border: none;
+  font-weight: 500;
+  color: var(--accent);
+  background: none;
+}
+.lnk--inline:hover { color: var(--accent-2); background: none; text-decoration: underline; }
+
+/* HEADER STATUS
+   One `.pill` holding the health dot and the network name. They answer the
+   same question — connected, and to what — and drawing separate chrome for
+   each made the bar read as a row of unrelated widgets. */
+/* 8px, not the 5px this was: the tightened line boxes below cut 6px of leading
+   out of the pill, and the padding buys it back so the bar keeps its height. */
+.hdr__status { gap: 8px; padding: 8px 11px; }
+
+/* Both spans carry line-height: 1 so their boxes are whole pixels. Inherited
+   1.5 gave the name a 19.5px box, and a half-pixel box cannot be centred — it
+   rounded a pixel short at the top. */
+.chain-badge { display: inline-flex; align-items: center; gap: 6px; }
+.chain-badge__label {
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  /* Tracking is applied after the last letter too, which pushed the name a
+     fifth of a space to the right of the gap it was meant to have. */
+  margin-right: -0.12em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+.chain-badge__name {
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* Address and disconnect as one control. "disconnect" spelled out was the
+   widest thing in the bar, for an action taken about once a session. */
+.account { gap: 4px; padding: 4px 5px 4px 11px; }
+.account__addr { font-size: 13px; color: var(--fg); }
+.account__disconnect {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: none;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: color 120ms var(--ease-soft), background 120ms var(--ease-soft);
+}
+.account__disconnect:hover { color: var(--err); background: var(--bg-3); }
+
+/* The bar earns its calm by dropping words, not by shrinking them: below this
+   the network label and the address go, leaving the dot, the chain name and
+   the disconnect target. */
+@media (max-width: 640px) {
+  .chain-badge__label { display: none; }
+}
+@media (max-width: 460px) {
+  .account__addr { display: none; }
+  .account { padding: 4px; }
+}

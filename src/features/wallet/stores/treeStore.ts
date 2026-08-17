@@ -9,6 +9,111 @@ const LEAF_CHUNK = 1024;
 const NODE_BUCKET = 1024;
 /// Merkle arity — a node at `level` spans `ARITY ** level` leaves.
 const ARITY = 4;
+/// Stored records to deserialize between yields back to the event loop.
+///
+/// A full tree requires ~1M leaf parses plus ~350K node parses. Yielding does
+/// not reduce that cost; it prevents it forming a single multi-second task
+/// blocking paint and input for the duration of a wallet build.
+const PARSE_YIELD_EVERY = 64;
+
+/// Hand the event loop a turn. Prefers the scheduler API where it exists; the
+/// `setTimeout` fallback is the same idea with a worse priority.
+function yieldToMain(): Promise<void> {
+  const scheduler = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler;
+  if (scheduler?.yield) return scheduler.yield();
+  return new Promise((resolve) => {
+    setTimeout(resolve, 0);
+  });
+}
+
+/// Counter that yields every `PARSE_YIELD_EVERY` calls and is otherwise a
+/// no-op. Awaited per record, so call sites read as a straight loop.
+function pacer(): () => Promise<void> {
+  let since = 0;
+  return async () => {
+    if (++since < PARSE_YIELD_EVERY) return;
+    since = 0;
+    await yieldToMain();
+  };
+}
+
+/// Every record under `prefix`, as `[suffix, value]` pairs.
+///
+/// One `getAllKeys` + one `getAll` rather than a `get` per record. A 1M-leaf
+/// tree holds ~1000 leaf records and a comparable number of node buckets, and
+/// each individual `get` costs its own transaction and structured-clone hop —
+/// so a per-record read blocks a wallet build for ~1000 event-loop turns.
+///
+/// The bound is safe against neighbouring keys: a longer store key sharing this
+/// one's prefix continues with a hex digit where the range expects `:`, which
+/// sorts above the upper bound. The `:hdr` and `:nodes:` records fall outside a
+/// `:leaves:` range for the same reason.
+///
+/// Both calls walk the same range in the same order, so the arrays line up
+/// index-for-index. That order is IndexedDB's lexicographic key order and is
+/// *not* numeric — `:10` sorts before `:2` — so callers must key off the parsed
+/// suffix rather than trusting the sequence.
+async function readRange<T>(
+  db: IDBPDatabase<WalletSchema>,
+  prefix: string,
+): Promise<[string, T][]> {
+  const range = IDBKeyRange.bound(prefix, `${prefix}￿`);
+  const [keys, values] = await Promise.all([
+    db.getAllKeys(TREE_STORE, range),
+    db.getAll(TREE_STORE, range),
+  ]);
+  return keys.map((k, i) => [String(k).slice(prefix.length), values[i] as T]);
+}
+
+/// Records from index 0 up to the first missing one.
+///
+/// Chunks and buckets are written from 0 upwards and never removed, so a hole
+/// marks the end of the run rather than something to read past.
+///
+/// A range read cannot express this: `getAll` returns the records on either
+/// side of a hole with nothing to mark it, so walking its result directly
+/// joins across the gap and yields a tree that appears whole. The result
+/// surfaces later as a wrong Merkle root and a rejected spend, not as an
+/// error.
+function* contiguousFrom<T>(
+  indexed: ReadonlyMap<number, T>,
+  limit = Number.POSITIVE_INFINITY,
+): Generator<T> {
+  for (let i = 0; i < limit; i++) {
+    const rec = indexed.get(i);
+    if (rec === undefined) return;
+    yield rec;
+  }
+}
+
+/// `"<chunk>"` suffixes to their records. Non-numeric suffixes belong to other
+/// key families falling inside the range and are skipped.
+function byChunk<T>(records: readonly (readonly [string, T])[]): Map<number, T> {
+  const out = new Map<number, T>();
+  for (const [suffix, rec] of records) {
+    const chunk = Number(suffix);
+    if (Number.isInteger(chunk)) out.set(chunk, rec);
+  }
+  return out;
+}
+
+/// `"<level>:<bucket>"` suffixes to their records, grouped by level.
+function byLevelAndBucket<T>(
+  records: readonly (readonly [string, T])[],
+): Map<number, Map<number, T>> {
+  const out = new Map<number, Map<number, T>>();
+  for (const [suffix, rec] of records) {
+    const [level, bucket] = suffix.split(":").map(Number);
+    if (!Number.isInteger(level) || !Number.isInteger(bucket)) continue;
+    let buckets = out.get(level);
+    if (!buckets) {
+      buckets = new Map();
+      out.set(level, buckets);
+    }
+    buckets.set(bucket, rec);
+  }
+  return out;
+}
 
 /// Header record: everything needed to find the chunks belonging to a key.
 interface Header {
@@ -65,18 +170,8 @@ export class IdbTreePersistence implements TreePersistence {
     const hdr = (await db.get(TREE_STORE, this.hdrKey())) as Header | undefined;
     if (!hdr) return null;
 
-    const leaves: bigint[] = [];
-    const chunks = Math.ceil(hdr.leafCount / LEAF_CHUNK);
-    for (let c = 0; c < chunks; c++) {
-      const rec = (await db.get(TREE_STORE, this.leafKey(c))) as string[] | undefined;
-      if (!rec) break;
-      for (const s of rec) leaves.push(BigInt(s));
-    }
-
-    // A short read means a record went missing — a partially cleared store.
-    // Returning the truncated prefix would present a valid-looking but wrong
-    // tree, so treat it as no state and resync.
-    if (leaves.length !== hdr.leafCount) return null;
+    const leaves = await this.loadLeaves(db, hdr.leafCount);
+    if (leaves === null) return null;
 
     this.persistedCount = hdr.syncedCount;
 
@@ -88,17 +183,37 @@ export class IdbTreePersistence implements TreePersistence {
     return state;
   }
 
-  /// Buckets are written from 0 upwards and never removed, so the first gap at
-  /// a level is the end of that level.
+  /// Leaves in order, or `null` if the stored records do not account for all
+  /// `leafCount` of them — a partially cleared store. Returning the truncated
+  /// prefix would present a valid-looking but wrong tree.
+  private async loadLeaves(
+    db: IDBPDatabase<WalletSchema>,
+    leafCount: number,
+  ): Promise<bigint[] | null> {
+    const chunks = byChunk(await readRange<string[]>(db, `${this.key}:leaves:`));
+    const pace = pacer();
+
+    const out: bigint[] = [];
+    for (const rec of contiguousFrom(chunks, Math.ceil(leafCount / LEAF_CHUNK))) {
+      for (const s of rec) out.push(BigInt(s));
+      await pace();
+    }
+    return out.length === leafCount ? out : null;
+  }
+
+  /// Every memoised node, level by level. Levels are read independently, so a
+  /// gap in one does not truncate the others.
   private async loadNodes(db: IDBPDatabase<WalletSchema>, depth: number): Promise<MerkleNode[]> {
+    const levels = byLevelAndBucket(await readRange<StoredNode[]>(db, `${this.key}:nodes:`));
+    const pace = pacer();
+
     const out: MerkleNode[] = [];
     for (let level = 1; level <= depth; level++) {
-      for (let bucket = 0; ; bucket++) {
-        const rec = (await db.get(TREE_STORE, this.nodeKey(level, bucket))) as
-          | StoredNode[]
-          | undefined;
-        if (!rec) break;
+      const buckets = levels.get(level);
+      if (!buckets) continue;
+      for (const rec of contiguousFrom(buckets)) {
         for (const [index, value] of rec) out.push({ level, index, value: BigInt(value) });
+        await pace();
       }
     }
     return out;

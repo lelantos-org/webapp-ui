@@ -3,6 +3,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { AssetsCard } from "@/features/assets/AssetsCard";
 import { useWallet } from "@/features/wallet";
 import { AccountCard } from "@/features/wallet/AccountCard";
+import { preloadProverWorker } from "@/features/wallet/prover/proverWorker";
 import { Welcome } from "@/features/wallet/Welcome";
 
 const PREFETCH: Record<string, () => Promise<unknown>> = {
@@ -22,6 +23,15 @@ const TABS = [
 ] as const;
 
 const TRANSITION_MS = 360;
+
+/// Warms the route chunk and the prover together: reaching for a tab is the
+/// first observable intent to transact, and every tab leads to a form ending in
+/// a proof. Both calls are idempotent, so repeated hovers cost nothing. On
+/// touch devices `pointerenter` fires on tap.
+function warmTab(to: string): void {
+  PREFETCH[to]?.();
+  void preloadProverWorker();
+}
 
 function FormFallback() {
   return (
@@ -74,8 +84,8 @@ export function HomeLayout() {
                   key={t.to}
                   to={t.to}
                   end={t.end}
-                  onPointerEnter={() => PREFETCH[t.to]?.()}
-                  onFocus={() => PREFETCH[t.to]?.()}
+                  onPointerEnter={() => warmTab(t.to)}
+                  onFocus={() => warmTab(t.to)}
                   className={({ isActive }) => `seg__b ${isActive ? "seg__b--on" : ""}`}
                 >
                   {t.label}

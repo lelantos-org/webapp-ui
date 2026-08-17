@@ -5,6 +5,7 @@ import {
   formatBalance,
   pickAmountError,
 } from "@/features/actions/forms/amount-field";
+import { preloadProverWorker } from "@/features/wallet/prover/proverWorker";
 import { TextField } from "@/shared/ui/Field";
 
 export interface AmountFieldProps {
@@ -33,6 +34,9 @@ export function AmountField({
       placeholder={selected ? `1.0 ${selected.symbol ?? ""}`.trim() : "1.0"}
       inputMode="decimal"
       autoComplete="off"
+      // Backstop for the tab-hover warm in `HomeLayout`: keyboard navigation
+      // reaches this field without hovering a tab. Idempotent.
+      onFocus={() => void preloadProverWorker()}
       error={pickAmountError(formError, validation)}
       hint={hint}
       trailing={

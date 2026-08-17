@@ -1,0 +1,41 @@
+/* ACTION SHELL: tab nav + form share one card */
+.action-shell {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.94);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 10px 30px rgba(var(--accent-rgb), 0.07);
+}
+.action-shell__tabs {
+  display: flex;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--bg-2);
+  padding: 0;
+  gap: 0;
+}
+.action-shell__tabs .seg__b {
+  flex: 1;
+  border: none;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  padding: 12px 14px;
+  background: transparent;
+  color: var(--fg);
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  transition: color 120ms var(--ease-soft), background 120ms var(--ease-soft);
+}
+.action-shell__tabs .seg__b:last-child { border-right: none; }
+.action-shell__tabs .seg__b:hover { color: var(--fg); background: var(--bg-3); }
+.action-shell__tabs .seg__b--on {
+  color: var(--accent);
+  background: var(--bg-1);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.action-shell__body { padding: 18px; }
+.action-form { margin: 0; }
+.action-shell__body .action-form { margin: 0; padding: 0; border: none; background: none; }
+

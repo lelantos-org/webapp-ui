@@ -1,0 +1,63 @@
+.btn {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  cursor: pointer;
+  transition: background 120ms var(--ease-soft), border-color 120ms var(--ease-soft), box-shadow 120ms var(--ease-soft), transform 80ms var(--ease-soft);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.btn:hover:not(:disabled) {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  box-shadow: 0 2px 6px rgba(var(--accent-rgb),0.25);
+}
+.btn:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn--ghost {
+  background: transparent;
+  color: var(--fg);
+  border-color: var(--line-strong);
+  box-shadow: none;
+  font-weight: 600;
+}
+.btn--ghost:hover:not(:disabled) {
+  background: var(--bg-3);
+  color: var(--accent);
+  border-color: var(--accent);
+  box-shadow: none;
+}
+.btn--xl {
+  padding: 14px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn--xl:hover:not(:disabled) {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+  box-shadow: 0 4px 12px rgba(var(--accent-rgb), 0.3);
+}
+/* Text-weight action: not a destination, not a primary button. */
+.txt-btn {
+  padding: 0;
+  border: 0;
+  border-bottom: 1px dotted var(--fg-mute);
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: color 120ms var(--ease-soft);
+}
+.txt-btn:hover { color: var(--accent); border-color: var(--accent); }

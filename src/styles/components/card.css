@@ -1,0 +1,31 @@
+/* No `backdrop-filter` on the centre-column panels (.card, .hero,
+   .welcome__panel, .action-shell). The ambient canvas is masked fully
+   transparent under this region (see `.backdrop`), leaving only a static
+   gradient to blur while costing a gaussian pass per panel on every canvas
+   frame. Background alpha is raised in its place. `.hdr` retains its blur: it
+   is sticky, with content scrolling beneath. */
+.card {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.93);
+  box-shadow: var(--shadow-glow);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 14px;
+  position: relative;
+}
+.card__hdr {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+.card__t {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--fg);
+}
+.card__t::first-letter { text-transform: uppercase; }
