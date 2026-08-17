@@ -37,7 +37,7 @@ export const walletStateKey = (chainId?: bigint, address?: string) =>
 
 function computeBalances(wallet: WalletApi): AssetBalance[] {
   const byAsset = new Map<bigint, { balance: bigint; notes: number }>();
-  for (const n of wallet.allNotes({ spent: false })) {
+  for (const n of wallet.notes({ spent: false })) {
     const cur = byAsset.get(n.asset) ?? { balance: 0n, notes: 0 };
     cur.balance += n.value;
     cur.notes += 1;

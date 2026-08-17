@@ -56,6 +56,16 @@ describe("describeError", () => {
   });
 });
 
+describe("notes tied up in an earlier spend", () => {
+  it("reads as a wait, not as an empty wallet", () => {
+    const err = new SelectionError(
+      "no spendable notes for asset 1 (3 in store: 2 awaiting an earlier spend, 1 spent)",
+      { asset: 1n },
+    );
+    expect(friendlyMessage(err)).toMatch(/tied up in an earlier spend/);
+  });
+});
+
 describe("duplicate spend", () => {
   it("tells a spend still in flight apart from one already landed", () => {
     expect(describeError(spendConflict("nullifier in flight: chain 1"))).toMatch(/Wait for it/);

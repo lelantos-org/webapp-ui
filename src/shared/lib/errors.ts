@@ -27,6 +27,12 @@ export function friendlyMessage(e: unknown): string {
   if (c.kind === "rejected") return "Canceled in wallet.";
   const raw = c.raw;
   const lower = raw.toLowerCase();
+  // The selector's wording for notes reserved by a spend whose outcome the
+  // wallet never learned (SDK ≥ 0.17). They come back on their own, so this is
+  // a wait rather than the "insufficient balance" it would otherwise read as.
+  if (lower.includes("awaiting an earlier spend")) {
+    return "Some notes are still tied up in an earlier spend. Retry in a few minutes.";
+  }
   if (lower.includes("insufficient cover") || lower.includes("insufficient balance")) {
     return "Insufficient balance for this amount.";
   }
