@@ -1689,6 +1689,67 @@ select.fld__inp {
   color: var(--err);
 }
 
+/* wrong-network gate: same shape as claim-bad, warn tone — the link is fine,
+   only the wallet is in the wrong place */
+.claim-net {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 16px;
+  align-items: start;
+  border-color: rgba(var(--warn-rgb), 0.35);
+  background: linear-gradient(180deg, rgba(var(--warn-rgb), 0.05), var(--bg-1));
+}
+.claim-net__mark {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--warn);
+  border-radius: 50%;
+  color: var(--warn);
+  font-family: var(--mono);
+  font-size: 22px;
+  background: rgba(var(--warn-rgb), 0.06);
+  box-shadow: 0 0 18px rgba(var(--warn-rgb), 0.15);
+}
+.claim-net__t {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--warn);
+}
+.claim-net__hop {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+}
+.claim-net__from,
+.claim-net__to {
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg);
+}
+.claim-net__from { color: var(--fg-mute); text-decoration: line-through; }
+.claim-net__to {
+  color: var(--fg);
+  font-weight: 600;
+  border-color: var(--warn);
+  background: rgba(var(--warn-rgb), 0.06);
+}
+.claim-net__arrow { color: var(--fg-mute); font-family: var(--mono); }
+/* ChainSwitchButtons centres itself for the full-screen Welcome panel; here it
+   sits in a left-aligned card body. */
+.claim-net .row--center { justify-content: flex-start; margin-top: 4px; }
+
+@media (max-width: 560px) {
+  .claim-net { grid-template-columns: 1fr; }
+  .claim-net__mark { width: 40px; height: 40px; font-size: 18px; }
+}
+
 /* found / claimable list */
 .claim-found .card__hdr {
   display: flex;

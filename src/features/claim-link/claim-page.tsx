@@ -1,9 +1,8 @@
 import { findChain } from "@/config/chains";
 import { useChainRegistry } from "@/features/chain/ChainProvider";
-import { ChainSwitchButtons } from "@/features/chain/ChainSwitchButtons";
-import { describeChainMismatch } from "@/features/claim-link/chain-guard";
 import { BalancesCard } from "@/features/claim-link/components/BalancesCard";
 import { ConnectGate } from "@/features/claim-link/components/ConnectGate";
+import { NetworkGateCard } from "@/features/claim-link/components/NetworkGateCard";
 import {
   BadLinkCard,
   ClaimHero,
@@ -51,16 +50,8 @@ export function ClaimPage() {
       {phase.kind === "need-wallet" && !mismatch ? (
         <ConnectGate status={status} onConnect={connect} />
       ) : null}
-      {phase.kind === "loading" ? <ScanningCard /> : null}
-      {mismatch ? (
-        <div className="card stack stack--sm">
-          <p className="muted txt-sm">{describeChainMismatch(mismatch)}</p>
-          <p className="muted txt-xs">
-            switch to {mismatch.link.chainName} to claim — the notes can only be spent there.
-          </p>
-          <ChainSwitchButtons only={mismatch.link.chainId} />
-        </div>
-      ) : null}
+      {phase.kind === "loading" && !mismatch ? <ScanningCard /> : null}
+      {mismatch ? <NetworkGateCard mismatch={mismatch} /> : null}
       {phase.kind === "ready" || phase.kind === "sweeping" ? (
         <BalancesCard
           balances={phase.balances}
@@ -68,7 +59,9 @@ export function ClaimPage() {
           destinationAddress={wallet?.address}
           busy={phase.kind === "sweeping"}
           busyAsset={phase.kind === "sweeping" ? phase.asset : undefined}
-          blockedReason={mismatch ? `switch to ${mismatch.link.chainName} first` : undefined}
+          // A switch mid-flow is the only way to arrive here blocked; the gate
+          // card above already explains it, so the buttons only go quiet.
+          claimDisabled={mismatch !== undefined}
           onClaim={claim}
         />
       ) : null}

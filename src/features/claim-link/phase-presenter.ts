@@ -6,7 +6,7 @@ import type { StepperItem } from "@/shared/ui/Stepper";
 export const CLAIM_STEPS: StepperItem[] = [
   { id: "link", label: "decode link" },
   { id: "connect", label: "connect wallet" },
-  { id: "network", label: "match network" },
+  { id: "network", label: "network" },
   { id: "scan", label: "scan for note" },
   { id: "claim", label: "claim" },
 ];
@@ -66,10 +66,11 @@ export function stepperStateFor(phase: Phase, blocked = false): StepperState {
   }
 }
 
+/// `blocked` drops the phase's own line rather than replacing it: the network
+/// gate card names both chains and offers the switch, and a hero repeating
+/// that in different words reads as two separate problems.
 export function heroSubtitleFor(phase: Phase, blocked = false): string | undefined {
-  if (blocked && phase.kind !== "done" && phase.kind !== "error") {
-    return "switch your wallet to the link's network to continue.";
-  }
+  if (blocked && phase.kind !== "done" && phase.kind !== "error") return undefined;
   switch (phase.kind) {
     case "reading-fragment":
       return "reading the bearer secret from the URL fragment.";
