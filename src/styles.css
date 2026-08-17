@@ -881,6 +881,32 @@ select.fld__inp {
   letter-spacing: 0.06em;
 }
 .welcome__panel p { margin: 0; font-size: 12px; line-height: 1.5; }
+.networks {
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+.networks__label {
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.networks__list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.networks__chip {
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 600;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--fg);
+}
 .welcome__rule {
   width: 60%;
   height: 1px;

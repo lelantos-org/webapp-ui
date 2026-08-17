@@ -1,4 +1,5 @@
 import { ChainSwitchButtons } from "@/features/chain/ChainSwitchButtons";
+import { SupportedNetworks } from "@/features/chain/SupportedNetworks";
 import { useWallet } from "@/features/wallet";
 
 export interface WelcomeProps {
@@ -24,6 +25,7 @@ export function Welcome({
             <button type="button" className="btn btn--xl" onClick={connect}>
               connect wallet
             </button>
+            <SupportedNetworks />
             <p className="welcome__hint muted">
               no funds move — just an EIP-712 signature to derive your shielded keys.
             </p>
