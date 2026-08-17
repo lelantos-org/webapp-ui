@@ -30,6 +30,7 @@
 @import "./styles/components/skeleton.css";
 @import "./styles/components/hex.css";
 @import "./styles/components/modal.css";
+@import "./styles/components/toast.css";
 
 /* One file per feature surface; each may lean on the components above. */
 @import "./styles/features/hero.css";

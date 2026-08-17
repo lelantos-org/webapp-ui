@@ -40,7 +40,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
           </ChainProvider>
         </BrowserRouter>
       </QueryClientProvider>
-      <Toaster position="bottom-right" theme="dark" richColors closeButton />
+      <Toaster position="bottom-right" theme="light" richColors closeButton />
       <PwaUpdatePrompt />
     </ErrorBoundary>
   );

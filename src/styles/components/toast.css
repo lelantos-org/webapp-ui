@@ -1,0 +1,79 @@
+/* Sonner toasts, repainted in the app's tokens.
+ *
+ * Sonner ships its own light/dark palettes and injects that stylesheet at
+ * runtime, so import order cannot be relied on: every rule here is written a
+ * notch more specific than the one it replaces (`:root` in front of sonner's
+ * own `[data-sonner-toaster][data-theme='light']`) and wins on specificity
+ * instead.
+ *
+ * The palette follows the inline surfaces (`.notice`, `.err`, `.slip__tag`):
+ * a tinted background at the same alpha, a matching border, and the semantic
+ * token as the text colour. There is no green in the token set — `.slip__tag--ok`
+ * already reads "fine" as indigo — so success and info both take the accent.
+ */
+:root [data-sonner-toaster][data-theme="light"] {
+  --normal-bg: var(--bg-1);
+  --normal-border: var(--line-strong);
+  --normal-text: var(--fg);
+
+  --success-bg: rgba(var(--accent-rgb), 0.07);
+  --success-border: var(--accent-dim);
+  --success-text: var(--accent);
+
+  --info-bg: rgba(var(--accent-rgb), 0.07);
+  --info-border: var(--accent-dim);
+  --info-text: var(--accent);
+
+  --warning-bg: rgba(var(--warn-rgb), 0.07);
+  --warning-border: var(--warn-dim);
+  --warning-text: var(--warn);
+
+  --error-bg: rgba(var(--err-rgb), 0.07);
+  --error-border: rgba(var(--err-rgb), 0.25);
+  --error-text: var(--err);
+
+  --border-radius: var(--radius);
+}
+
+/* Panel finish: the card shadow and the app's sans, which sonner otherwise
+   leaves to its own stack. */
+:root [data-sonner-toaster] [data-sonner-toast] {
+  font-family: var(--sans);
+  box-shadow: var(--shadow-glow);
+}
+:root [data-sonner-toaster] [data-sonner-toast] [data-title] {
+  font-size: 13px;
+  font-weight: 600;
+}
+:root [data-sonner-toaster] [data-sonner-toast] [data-description] {
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
+
+/* Close button. Sonner's rich-colour rules already tint it per type; this only
+   covers the untyped toast, which would otherwise keep sonner's own greys. */
+:root [data-sonner-toaster] [data-sonner-toast] [data-close-button] {
+  background: var(--bg-1);
+  border-color: var(--line-strong);
+  color: var(--fg-mute);
+}
+:root [data-sonner-toaster] [data-sonner-toast] [data-close-button]:hover {
+  color: var(--fg);
+}
+
+/* The action ("view") button, sized to match `.btn--sm` rather than sonner's
+   default pill. Colour is inherited from the toast type so it stays tinted. */
+:root [data-sonner-toaster] [data-sonner-toast] [data-button] {
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 120ms var(--ease-soft);
+}
+:root [data-sonner-toaster] [data-sonner-toast] [data-button]:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
