@@ -6,6 +6,7 @@ import type { StepperItem } from "@/shared/ui/Stepper";
 export const CLAIM_STEPS: StepperItem[] = [
   { id: "link", label: "decode link" },
   { id: "connect", label: "connect wallet" },
+  { id: "network", label: "match network" },
   { id: "scan", label: "scan for note" },
   { id: "claim", label: "claim" },
 ];
@@ -37,7 +38,15 @@ export function linkChainIdOf(phase: Phase): bigint | undefined {
   }
 }
 
-export function stepperStateFor(phase: Phase): StepperState {
+/// `blocked` is the wallet being on a chain other than the link's.
+///
+/// It outranks the phase because the flow genuinely stops there: nothing is
+/// scanned and nothing can be spent until the wallet moves, so showing "scan
+/// for note" in progress would describe work that is not happening.
+export function stepperStateFor(phase: Phase, blocked = false): StepperState {
+  if (blocked && phase.kind !== "done" && phase.kind !== "error") {
+    return { current: "network", failed: false, done: false };
+  }
   switch (phase.kind) {
     case "reading-fragment":
       return { current: "link", failed: false, done: false };
@@ -57,7 +66,10 @@ export function stepperStateFor(phase: Phase): StepperState {
   }
 }
 
-export function heroSubtitleFor(phase: Phase): string | undefined {
+export function heroSubtitleFor(phase: Phase, blocked = false): string | undefined {
+  if (blocked && phase.kind !== "done" && phase.kind !== "error") {
+    return "switch your wallet to the link's network to continue.";
+  }
   switch (phase.kind) {
     case "reading-fragment":
       return "reading the bearer secret from the URL fragment.";

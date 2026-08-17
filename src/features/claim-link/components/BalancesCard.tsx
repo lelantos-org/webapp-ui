@@ -9,6 +9,10 @@ export interface BalancesCardProps {
   destinationAddress?: string;
   busy: boolean;
   busyAsset?: bigint;
+  /// Why claiming is unavailable right now — currently a wallet on the wrong
+  /// chain. Present, every claim button is disabled and says so, so the
+  /// reason travels with the button instead of only living in a card above it.
+  blockedReason?: string;
   onClaim(asset: bigint): void;
 }
 
@@ -18,6 +22,7 @@ export function BalancesCard({
   destinationAddress,
   busy,
   busyAsset,
+  blockedReason,
   onClaim,
 }: BalancesCardProps) {
   if (balances.length === 0) {
@@ -78,7 +83,8 @@ export function BalancesCard({
               <button
                 type="button"
                 className="btn btn--xl claim-row__cta"
-                disabled={busy}
+                disabled={busy || blockedReason !== undefined}
+                title={blockedReason}
                 onClick={() => onClaim(b.asset)}
               >
                 {isBusy ? (
@@ -86,7 +92,7 @@ export function BalancesCard({
                     <span className="spinner" aria-hidden /> claiming…
                   </>
                 ) : (
-                  "claim"
+                  (blockedReason ?? "claim")
                 )}
               </button>
             </div>

@@ -1,6 +1,7 @@
 import { findChain } from "@/config/chains";
-import { useActiveChainOrUndefined, useChainRegistry } from "@/features/chain/ChainProvider";
+import { useChainRegistry } from "@/features/chain/ChainProvider";
 import { ChainSwitchButtons } from "@/features/chain/ChainSwitchButtons";
+import { describeChainMismatch } from "@/features/claim-link/chain-guard";
 import { BalancesCard } from "@/features/claim-link/components/BalancesCard";
 import { ConnectGate } from "@/features/claim-link/components/ConnectGate";
 import {
@@ -23,10 +24,10 @@ import { Stepper } from "@/shared/ui/Stepper";
 
 export function ClaimPage() {
   const { wallet, status, connect } = useWallet();
-  const { phase, claim } = useClaimFlow();
+  const { phase, mismatch, claim } = useClaimFlow();
   const registry = useChainRegistry();
-  const active = useActiveChainOrUndefined();
-  const { current, failed, done } = stepperStateFor(phase);
+  const blocked = mismatch !== undefined;
+  const { current, failed, done } = stepperStateFor(phase, blocked);
 
   // The link names its own chain, and the notes live only there. Labelling
   // them with the active chain's tokens — which is what a plain
@@ -36,26 +37,28 @@ export function ClaimPage() {
   const linkChain = linkChainId === undefined ? undefined : findChain(registry, linkChainId);
   const assets = linkChain?.tokens ?? [];
 
-  // Sweeping signs against the link's chain, so the wallet has to be on it.
-  const needsSwitch =
-    linkChain !== undefined && active !== undefined && active.chainId !== linkChain.chainId;
-
   return (
     <div className="stack claim-page">
-      <ClaimHero subtitle={heroSubtitleFor(phase)} />
+      <ClaimHero subtitle={heroSubtitleFor(phase, blocked)} />
 
       <Stepper steps={CLAIM_STEPS} current={current} failed={failed} done={done} />
 
       {phase.kind === "reading-fragment" ? <ReadingFragmentCard /> : null}
       {phase.kind === "bad-link" ? <BadLinkCard error={phase.error} /> : null}
-      {phase.kind === "need-wallet" ? <ConnectGate status={status} onConnect={connect} /> : null}
+      {/* On a mismatch the switch card is the only thing to do next, so it
+          replaces the connect gate rather than sitting under it — a wallet on
+          an unsupported network otherwise reads as "not connected". */}
+      {phase.kind === "need-wallet" && !mismatch ? (
+        <ConnectGate status={status} onConnect={connect} />
+      ) : null}
       {phase.kind === "loading" ? <ScanningCard /> : null}
-      {needsSwitch && linkChain ? (
+      {mismatch ? (
         <div className="card stack stack--sm">
-          <p className="muted txt-sm">
-            this link holds funds on {linkChain.chainName}; your wallet is on {active?.chainName}.
+          <p className="muted txt-sm">{describeChainMismatch(mismatch)}</p>
+          <p className="muted txt-xs">
+            switch to {mismatch.link.chainName} to claim — the notes can only be spent there.
           </p>
-          <ChainSwitchButtons only={linkChain.chainId} />
+          <ChainSwitchButtons only={mismatch.link.chainId} />
         </div>
       ) : null}
       {phase.kind === "ready" || phase.kind === "sweeping" ? (
@@ -65,6 +68,7 @@ export function ClaimPage() {
           destinationAddress={wallet?.address}
           busy={phase.kind === "sweeping"}
           busyAsset={phase.kind === "sweeping" ? phase.asset : undefined}
+          blockedReason={mismatch ? `switch to ${mismatch.link.chainName} first` : undefined}
           onClaim={claim}
         />
       ) : null}
