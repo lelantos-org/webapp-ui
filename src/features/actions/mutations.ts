@@ -11,6 +11,7 @@ import {
   type WithdrawResult,
 } from "@lelantos-org/sdk";
 import { type UseMutationResult, useMutation } from "@tanstack/react-query";
+import { useCallback } from "react";
 import type {
   DepositCall,
   SwapCall,
@@ -29,8 +30,13 @@ import { useActiveChain } from "@/features/chain/ChainProvider";
 import { preopenDepositStream } from "@/features/relayer/deposit-stream";
 import { useWallet } from "@/features/wallet";
 import { approvePermit2, needsPermit2Approval } from "@/features/wallet/permit2";
+import { useInvalidateWalletState } from "@/features/wallet/use-wallet-state";
+import { isDuplicateSpend } from "@/shared/lib/errors";
 import { feeBreakdown } from "@/shared/lib/fees";
+import { createLogger } from "@/shared/lib/logger";
 import { toastError } from "@/shared/lib/toast";
+
+const log = createLogger("actions:spend");
 
 /// The slice of `TxProgressApi` a form needs: enough to render the stepper,
 /// plus the `reset` that clears it. `set`/`start` stay with the mutation —
@@ -52,6 +58,32 @@ export function progressView(p: TxProgressApi): ProgressView {
 export interface ActionMutation<I, R = TxResult> {
   mutation: UseMutationResult<R, Error, I>;
   progress: ProgressView;
+}
+
+/// Failure path shared by the three ops that spend notes.
+///
+/// A duplicate-spend rejection is the one failure that says something about
+/// local state rather than about the request: the relayer refuses it because
+/// the notes are already spent or in flight, which means the note store still
+/// lists notes the chain has consumed. Resyncing drops them, so the user's
+/// next attempt selects live notes instead of being refused again. Notes only
+/// in flight are not on-chain yet and survive the sync — the message tells
+/// the user to wait for those.
+function useSpendFailed(): (label: string, progress: TxProgressApi, e: unknown) => void {
+  const invalidateWallet = useInvalidateWalletState();
+  return useCallback(
+    (label, progress, e) => {
+      progress.set("failed");
+      if (isDuplicateSpend(e)) {
+        log.warn(`${label}: notes already spent or in flight, resyncing`, e.body);
+        // Fire-and-forget: the toast is the user's answer, and a sync failing
+        // must not replace the error that explains what actually happened.
+        void invalidateWallet();
+      }
+      toastError(`${label} failed`, e);
+    },
+    [invalidateWallet],
+  );
 }
 
 export function useDeposit(): ActionMutation<DepositCall> {
@@ -140,6 +172,7 @@ export function useTransfer(): ActionMutation<TransferCall> {
   const track = useTxTracker();
   const { wallet } = useWallet();
   const progress = useTxProgress();
+  const spendFailed = useSpendFailed();
   const mutation = useMutation<WithAsset<TransferResult>, Error, TransferCall>({
     mutationFn: async (i) => {
       const a = requireActions(actions);
@@ -159,10 +192,7 @@ export function useTransfer(): ActionMutation<TransferCall> {
         isSelfTransfer: !!wallet && i.to === wallet.address,
         onPhase: progress.set,
       }),
-    onError: (e) => {
-      progress.set("failed");
-      toastError("transfer failed", e);
-    },
+    onError: (e) => spendFailed("transfer", progress, e),
   });
   return { mutation, progress: progressView(progress) };
 }
@@ -171,6 +201,7 @@ export function useWithdraw(): ActionMutation<WithdrawCall> {
   const actions = useShieldedActions();
   const track = useTxTracker();
   const progress = useTxProgress();
+  const spendFailed = useSpendFailed();
   const mutation = useMutation<WithAsset<WithdrawResult>, Error, WithdrawCall>({
     mutationFn: async (i) => {
       const a = requireActions(actions);
@@ -196,10 +227,7 @@ export function useWithdraw(): ActionMutation<WithdrawCall> {
         result: r,
         onPhase: progress.set,
       }),
-    onError: (e) => {
-      progress.set("failed");
-      toastError("withdraw failed", e);
-    },
+    onError: (e, i) => spendFailed(i.asEth ? "withdraw eth" : "withdraw", progress, e),
   });
   return { mutation, progress: progressView(progress) };
 }
@@ -208,6 +236,7 @@ export function useSwap(): ActionMutation<SwapCall> {
   const actions = useShieldedActions();
   const track = useTxTracker();
   const progress = useTxProgress();
+  const spendFailed = useSpendFailed();
   const mutation = useMutation<WithAsset<SwapResult>, Error, SwapCall>({
     mutationFn: async (i) => {
       const a = requireActions(actions);
@@ -222,10 +251,7 @@ export function useSwap(): ActionMutation<SwapCall> {
     },
     onSuccess: (r, i) =>
       track({ label: "swap", kind: "swap", result: r, swap: i, onPhase: progress.set }),
-    onError: (e) => {
-      progress.set("failed");
-      toastError("swap failed", e);
-    },
+    onError: (e) => spendFailed("swap", progress, e),
   });
   return { mutation, progress: progressView(progress) };
 }

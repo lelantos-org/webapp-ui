@@ -1,10 +1,21 @@
-import { InsufficientCoverError, WalletError } from "@lelantos-org/sdk/errors";
+import { InsufficientCoverError, NetworkError, WalletError } from "@lelantos-org/sdk/errors";
 
 /// Map a thrown value to a short, user-facing string.
 export function describeError(e: unknown): string {
   if (e instanceof WalletError) return describeWalletError(e);
   if (e instanceof Error) return e.message;
   return String(e);
+}
+
+/// A spend the relayer refused because one of its nullifiers is already spent
+/// or in flight — the only thing it answers 409 to.
+///
+/// Worth singling out because it is the one failure the local note store can
+/// be wrong about: it still lists notes the chain has already consumed, so
+/// every retry re-selects them and is refused again until a resync drops
+/// them. Callers act on it rather than only reporting it.
+export function isDuplicateSpend(e: unknown): e is NetworkError {
+  return e instanceof NetworkError && e.status === 409;
 }
 
 export type ErrorKind = "rejected" | "failed";
@@ -75,6 +86,18 @@ export function classifyError(e: unknown): { kind: ErrorKind; raw: string } {
   return { kind: "failed", raw };
 }
 
+/// What the relayer refused, in the user's terms.
+///
+/// The two 409s need different advice — one is a wait, the other is a resync —
+/// and the distinction only exists in the response body, so it is read rather
+/// than flattened into "relayer rejected the request".
+function describeDuplicateSpend(e: NetworkError): string {
+  const inFlight = e.body?.toLowerCase().includes("in flight") ?? false;
+  return inFlight
+    ? "Another spend of these notes is still being processed. Wait for it to finish, then retry."
+    : "These notes were already spent. Resyncing — check the chain before retrying.";
+}
+
 function describeWalletError(e: WalletError): string {
   switch (e.code) {
     case "INSUFFICIENT_COVER": {
@@ -92,7 +115,9 @@ function describeWalletError(e: WalletError): string {
     case "RELAYER_TIMEOUT":
       return "Relayer timed out. Retry shortly.";
     case "RELAYER_FAILED":
-      return "Relayer rejected the request. Check the relayer logs or your network.";
+      return isDuplicateSpend(e)
+        ? describeDuplicateSpend(e)
+        : "Relayer rejected the request. Check the relayer logs or your network.";
     case "FMD_TIMEOUT":
       return "Note discovery (FMD) timed out. Retry shortly.";
     case "FMD_FAILED":
