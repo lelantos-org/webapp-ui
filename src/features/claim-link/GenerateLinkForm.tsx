@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { ActionForm } from "@/features/actions/forms/ActionForm";
+import { parseAmountSafe, validateAmount } from "@/features/actions/forms/amount-field";
 import { type GenerateLinkInput, generateLinkSchema } from "@/features/actions/forms/schemas";
 import type { TxPhase } from "@/features/actions/tx/tx-progress";
 import { AssetSelectField } from "@/features/assets/AssetSelectField";
@@ -59,6 +60,15 @@ export function GenerateLinkForm() {
 
   const selected = findAsset(assets, watch("asset"));
   const watchedAmount = watch("amount");
+  // No balance argument: the sender's shielded balance is not read on this
+  // form, so `insufficient` would be a claim it cannot make. This gates on
+  // what "a valid amount" means on its own terms — present, non-zero, within
+  // the asset's granularity, under the cap.
+  const amountValid = validateAmount(
+    parseAmountSafe(watchedAmount, selected),
+    selected,
+    undefined,
+  ).valid;
   const visibleSteps = progress.steps.filter((s) => VISIBLE_RUNNING_PHASES.has(s.id));
   const amountLabel = pending ? formatAssetAmount(pending.amount, pending.asset) : "";
 
@@ -120,7 +130,7 @@ export function GenerateLinkForm() {
         busy={mutation.isPending}
         error={mutation.error}
         onSubmit={onSubmit}
-        submitDisabled={!selected}
+        submitDisabled={!selected || !amountValid}
         progress={stageApi.stage === "running" ? undefined : progress}
       >
         <AssetSelectField error={errors.asset?.message} {...register("asset")} />
