@@ -44,6 +44,15 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # The footer names the build on screen. The image build cannot read it
+      # itself — `.git` is dockerignored — so it is resolved here and passed in
+      # as a build arg. Without this the Dockerfile's `ARG VITE_COMMIT` stays
+      # empty, the in-image `git rev-parse` fails, and the footer reports "dev".
+      # Short form: the footer has room for a ref, not a full sha.
+      - name: Resolve build commit
+        id: commit
+        run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -79,6 +88,7 @@ jobs:
             VITE_RELAYER_URL=${{ env.VITE_RELAYER_URL }}
             VITE_FMD_URL=${{ env.VITE_FMD_URL }}
             VITE_METAQUOTER_URL=${{ env.VITE_METAQUOTER_URL }}
+            VITE_COMMIT=${{ steps.commit.outputs.short }}
           secrets: |
             npm_token=${{ secrets.GITHUB_TOKEN }}
           cache-from: type=gha,scope=webapp-ui
