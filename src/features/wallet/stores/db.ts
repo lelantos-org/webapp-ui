@@ -6,7 +6,13 @@ import { type IDBPDatabase, openDB } from "idb";
 /// Centralised because `openDB` calls that disagree on the version deadlock:
 /// the lower-version connection blocks the higher-version upgrade and the
 /// promise never settles, with no error. Keeping one version and one upgrade
-/// function makes that impossible rather than merely documented.
+/// function rules that out *within* a tab.
+///
+/// Across tabs it cannot: an older tab still holding the previous version
+/// blocks this tab's upgrade just the same. That is what `blocked` and
+/// `blocking` below are for — without them the identical deadlock reappears,
+/// one connection removed, as a wallet build that hangs on `deriving` forever
+/// with nothing logged.
 const DB_NAME = "lelantos-wallet";
 
 /// Bump on any schema change. History:
@@ -31,9 +37,41 @@ export interface WalletSchema {
 
 let dbp: Promise<IDBPDatabase<WalletSchema>> | undefined;
 
+/// Reported when another tab is holding the database at an older version.
+///
+/// A distinct error type because the fix is the user's, not a retry's: the
+/// other tab has to close before this one can open.
+export class DatabaseBlockedError extends Error {
+  constructor() {
+    super("Another tab is using an older version of this wallet. Close it and reload.");
+    this.name = "DatabaseBlockedError";
+  }
+}
+
 /// The shared connection, opened once per tab.
 export function walletDb(): Promise<IDBPDatabase<WalletSchema>> {
-  dbp ??= openDB<WalletSchema>(DB_NAME, VERSION, {
+  if (dbp) return dbp;
+  const opening = openDB<WalletSchema>(DB_NAME, VERSION, {
+    /// This tab holds an *older* connection and is standing in the way of a
+    /// newer tab's upgrade. Yield: close and reload onto the new build. Doing
+    /// nothing here is what strands the other tab indefinitely.
+    blocking(_current, _blocked, event) {
+      (event.target as IDBPDatabase<WalletSchema> | null)?.close();
+      dbp = undefined;
+      if (typeof location !== "undefined") location.reload();
+    },
+    /// The mirror case: *another* tab is holding an older connection, so this
+    /// upgrade cannot proceed. Surfacing it as a rejection is the whole point —
+    /// left alone the promise simply never settles.
+    blocked() {
+      throw new DatabaseBlockedError();
+    },
+    /// The browser killed the connection out from under us (memory pressure,
+    /// Safari's background eviction). Drop the memoised handle so the next call
+    /// reopens rather than reusing a dead one.
+    terminated() {
+      dbp = undefined;
+    },
     upgrade(db, oldVersion) {
       // Reaching v5 from anything earlier discards the stores rather than
       // migrating them.
@@ -62,6 +100,14 @@ export function walletDb(): Promise<IDBPDatabase<WalletSchema>> {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name);
       }
     },
+  });
+  // A rejected promise must not be memoised. `dbp ??=` cached one, so a single
+  // transient failure — a blocked upgrade, a browser that killed the connection
+  // — poisoned every later call for the life of the tab, with each one
+  // re-rejecting on an error that had long since passed.
+  dbp = opening.catch((e: unknown) => {
+    dbp = undefined;
+    throw e;
   });
   return dbp;
 }

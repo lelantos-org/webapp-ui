@@ -1,6 +1,14 @@
 // Centralized logger. `debug` / `info` are off (even in dev) unless
 // `VITE_DEBUG=true`, `?debug=1` in the URL, or `localStorage["lelantos:debug"]="1"`.
 // `warn` / `error` always fire.
+//
+// `?debug=1` holds for the tab only. It used to be persisted to localStorage,
+// which meant anyone who could get a user to open one link — a claim link with
+// `?debug=1` appended, say — turned verbose logging on permanently for that
+// origin, and the query string is stripped from the address bar immediately
+// afterwards, so the URL looked clean while the flag was already set. The
+// explicit `window.__lelantosDebug(true)` toggle still persists, because there
+// the user asked for it.
 
 type Level = "debug" | "info" | "warn" | "error";
 
@@ -11,17 +19,12 @@ function readDebugFlag(): boolean {
   if (typeof window === "undefined") return false;
   try {
     const url = new URLSearchParams(window.location.search).get("debug");
-    if (url === "1" || url === "true") {
-      try {
-        window.localStorage?.setItem(DEBUG_KEY, "1");
-      } catch {
-        // private mode — ignore
-      }
-      return true;
-    }
+    if (url === "1" || url === "true") return true;
   } catch {
     // ignore URL parse errors
   }
+  // Read directly rather than through `shared/lib/storage`, which logs through
+  // this module — the import would be a cycle.
   try {
     return window.localStorage?.getItem(DEBUG_KEY) === "1";
   } catch {
@@ -29,6 +32,8 @@ function readDebugFlag(): boolean {
   }
 }
 
+/// Memoised after the first read; `window.__lelantosDebug` is the only thing
+/// that changes it afterwards.
 let debugCached: boolean | undefined;
 function debugEnabled(): boolean {
   if (debugCached === undefined) debugCached = readDebugFlag();

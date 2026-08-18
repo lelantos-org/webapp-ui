@@ -8,7 +8,7 @@
 
 import "fake-indexeddb/auto";
 import type { MerkleNode, TreeStoreState } from "@lelantos-org/sdk/wallet";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TREE_STORE, walletDb } from "./db";
 import { IdbTreePersistence } from "./treeStore";
 
@@ -150,5 +150,36 @@ describe("IdbTreePersistence", () => {
     expect(byLevel(1).map((n) => n.index)).toEqual(Array.from({ length: 1024 }, (_, i) => i));
     // Levels below the damaged one are read independently and stay whole.
     expect(sorted(byLevel(2))).toEqual(sorted(nodes(8192).filter((n) => n.level === 2)));
+  });
+});
+
+describe("readRange transaction scope", () => {
+  it("reads keys and values in a single transaction", async () => {
+    // `db.getAllKeys` and `db.getAll` each open their own transaction. Between
+    // them another tab's `save()` can commit a new leaf chunk, after which the
+    // two arrays differ in length and every pair past the insertion point is
+    // mismatched — a plausible tree with wrong leaves, i.e. a wrong root and a
+    // rejected spend, with nothing thrown.
+    //
+    // Asserting the shortcuts go unused pins the fix at the point it can
+    // regress; interleaving two real transactions is not deterministic.
+    const p = new IdbTreePersistence("tx-scope");
+    await p.save({ leaves: leaves(2048), syncedCount: 2048, nodes: nodes(2048) });
+
+    const db = await walletDb();
+    const dbGetAll = vi.spyOn(db, "getAll");
+    const dbGetAllKeys = vi.spyOn(db, "getAllKeys");
+    const transaction = vi.spyOn(db, "transaction");
+
+    const loaded = await p.load();
+
+    expect(loaded?.leaves).toHaveLength(2048);
+    expect(dbGetAll).not.toHaveBeenCalled();
+    expect(dbGetAllKeys).not.toHaveBeenCalled();
+    expect(transaction).toHaveBeenCalled();
+
+    dbGetAll.mockRestore();
+    dbGetAllKeys.mockRestore();
+    transaction.mockRestore();
   });
 });

@@ -15,6 +15,7 @@ import { useTxProgress } from "@/features/actions/tx/use-tx-progress";
 import { useTxTracker } from "@/features/actions/tx/use-tx-tracker";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import { type GenerateClaimLinkResult, generateClaimLink } from "@/features/claim-link/claimLink";
+import { currentWalletChainId } from "@/features/eip1193/store";
 import { useWallet } from "@/features/wallet";
 import { useInvalidateWalletState } from "@/features/wallet/use-wallet-state";
 import { toastError } from "@/shared/lib/toast";
@@ -29,10 +30,17 @@ export function useGenerateLink(): ActionMutation<GenerateLinkCall, GenerateClai
     mutationFn: async (i) => {
       if (!wallet) throw new Error("wallet not ready");
       progress.start(stepsFor("transfer"));
+      // `chain` is read at render, but the transfer lands seconds later, after
+      // proving. `currentChainId` lets `generateClaimLink` confirm the wallet
+      // has not moved before it spends — otherwise the link is stamped with one
+      // chain and the funds land on another, and the claimer scans the wrong
+      // pool and is told "nothing to claim", which is indistinguishable from an
+      // already-claimed link.
       return generateClaimLink(wallet, {
         amount: i.amount,
         asset: i.asset,
         chainId: chain.chainId,
+        currentChainId: currentWalletChainId,
         onPhase: progress.set,
       });
     },

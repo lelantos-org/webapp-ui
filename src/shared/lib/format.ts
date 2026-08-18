@@ -69,7 +69,16 @@ export function formatDecimalCompact(value: bigint, decimals: number, maxFrac = 
 export function parseDecimal(input: string, decimals: number): bigint {
   const t = input.replaceAll(",", "").replaceAll("_", "").trim();
   if (!/^\d+(\.\d+)?$/.test(t)) throw new Error("amount must be a non-negative number");
-  if (decimals <= 0) return BigInt(t.split(".")[0] ?? "0");
+  if (decimals <= 0) {
+    // Every other precision-loss path in this module throws; this one used to
+    // drop the fractional digits on the floor. It is reachable: `decimals`
+    // falls back to `scaleToDecimals(scale)` when the registry omits it, which
+    // is 0 for `scale === 1n`. Zod only checks the string is decimal-shaped, so
+    // "1.9" passed validation and submitted as 1 with nothing on screen to say
+    // so.
+    if (t.includes(".")) throw new Error("this asset has no fractional units");
+    return BigInt(t);
+  }
   const [whole, frac = ""] = t.split(".");
   if (frac.length > decimals) {
     throw new Error(`too many fractional digits (max ${decimals})`);

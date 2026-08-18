@@ -1,7 +1,54 @@
+import type { Field } from "@lelantos-org/sdk/crypto";
 import { FMD_DEFAULT_GAMMA } from "@lelantos-org/sdk/fmd";
 import { GAMMA_MAX, GAMMA_MIN } from "@lelantos-org/sdk/fmd-server";
-import { describe, expect, it } from "vitest";
-import { maxDetectionGamma } from "./fmd-subscription";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { maxDetectionGamma, resolveSyncStrategy } from "./fmd-subscription";
+
+// Server responses the strategy resolver reads, driven per test.
+let treeState = { leafCount: 1_000_000 };
+let subscription = { gamma: 3, active: true, created: true };
+let createCalls = 0;
+
+vi.mock("@lelantos-org/sdk/fmd-server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@lelantos-org/sdk/fmd-server")>();
+  return {
+    ...actual,
+    FmdClient: class {
+      fetchTreeState() {
+        return Promise.resolve(treeState);
+      }
+      createSubscription() {
+        createCalls += 1;
+        return Promise.resolve(subscription);
+      }
+    },
+  };
+});
+
+vi.mock("@lelantos-org/sdk/crypto", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@lelantos-org/sdk/crypto")>();
+  return {
+    ...actual,
+    cryptoContext: () => Promise.resolve({ P: {}, J: {} }),
+    deriveSubscriptionToken: () => new Uint8Array(32),
+  };
+});
+
+vi.mock("@lelantos-org/sdk/fmd", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@lelantos-org/sdk/fmd")>();
+  return {
+    ...actual,
+    // The real encoders validate their argument shapes; the strategy resolver
+    // only passes their output through to the server, so stub the hex.
+    subscriptionTokenToHex: () => "aa".repeat(32),
+    detectionKeyToHex: () => "bb".repeat(32),
+  };
+});
+
+vi.mock("@lelantos-org/sdk/keys", () => ({
+  deriveKeysFromNsk: () => Promise.resolve({ keys: { ivk: {} } }),
+  detectionKeyFor: () => new Uint8Array(32),
+}));
 
 // A γ is acceptable while its expected false-positive count
 // (`noteCount * 2^-γ`) stays at or above 64 decoys.
@@ -70,5 +117,85 @@ describe("maxDetectionGamma", () => {
         DECOY_FLOOR,
       );
     }
+  });
+});
+
+describe("resolveSyncStrategy", () => {
+  const nsk = 1n as unknown as Field;
+  const ADDR = "0xabcdefabcdefabcdefabcdefabcdefabcdefabc1";
+
+  beforeEach(() => {
+    localStorage.clear();
+    treeState = { leafCount: 1_000_000 };
+    subscription = { gamma: 3, active: true, created: true };
+    createCalls = 0;
+  });
+
+  it("uses server-side matching when the subscription is active", async () => {
+    const plan = await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+
+    expect(plan.strategy.kind).toBe("matches");
+    expect(plan.fallback).toBeUndefined();
+  });
+
+  it("falls back to the firehose when the server reports the subscription inactive", async () => {
+    // `active: false` used to be logged and ignored. The resulting sync does
+    // not error: `listNotes` returns an empty page, the run reports
+    // `exhausted` with zero hits, and the user is shown a healthy
+    // "synced just now" beside a zero balance — permanently, since the token
+    // stayed in localStorage across reloads.
+    subscription = { gamma: 3, active: false, created: true };
+
+    const plan = await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+
+    expect(plan.strategy.kind).toBe("full");
+    expect(plan.fallback).toBe("unavailable");
+  });
+
+  it("does not cache a token whose subscription came back inactive", async () => {
+    subscription = { gamma: 3, active: false, created: true };
+    await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+
+    subscription = { gamma: 3, active: true, created: false };
+    const plan = await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+
+    expect(plan.strategy.kind).toBe("matches");
+    expect(createCalls).toBe(2);
+  });
+
+  it("reuses a freshly confirmed token without re-registering", async () => {
+    await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+    await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+
+    expect(createCalls).toBe(1);
+  });
+
+  it("re-confirms a token once the cache entry ages out", async () => {
+    // A token is a pure function of the wallet key and never changes, but the
+    // subscription it addresses can expire server-side — so the cache is a
+    // hint with a TTL, not a permanent answer.
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01"));
+      await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+      expect(createCalls).toBe(1);
+
+      vi.setSystemTime(new Date("2026-01-03"));
+      await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+
+      expect(createCalls).toBe(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("takes the firehose without subscribing when the pool is below the decoy floor", async () => {
+    treeState = { leafCount: 10 };
+
+    const plan = await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+
+    expect(plan.strategy.kind).toBe("full");
+    expect(plan.fallback).toBe("poolTooSmall");
+    expect(createCalls).toBe(0);
   });
 });

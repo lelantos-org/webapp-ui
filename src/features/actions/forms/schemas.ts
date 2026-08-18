@@ -37,7 +37,14 @@ const asset = z.string().refine(isPositiveIntegerString, "must be a positive int
 /// (`MASP.withdrawEth`). Only valid when the selected asset is the
 /// chain's WETH; the form layer hides the toggle otherwise. Deposits
 /// have no equivalent — users wrap ETH→WETH off-pool before depositing.
-const asEth = z.coerce.boolean().default(false);
+/// `z.boolean()`, not `z.coerce.boolean()`. Coercion is `Boolean(x)`, so every
+/// non-empty string is `true` — including the string `"false"`. The field is
+/// bound to a hidden input, and it survives today only because react-hook-form
+/// resolves from `_formValues` rather than the DOM node. The failure mode if
+/// that ever stops holding is a native-ETH deposit for an ERC-20 selection,
+/// i.e. the user sends real ETH; that is not worth resting on a library
+/// implementation detail.
+const asEth = z.boolean().default(false);
 
 export const depositSchema = z.object({ amount, asset, asEth });
 export type DepositInput = z.infer<typeof depositSchema>;

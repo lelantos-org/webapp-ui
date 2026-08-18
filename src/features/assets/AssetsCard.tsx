@@ -118,21 +118,28 @@ const ShieldedRowView = memo(function ShieldedRowView({
   label: string;
   meta: RegisteredAsset | undefined;
 }) {
-  const settling = row.outflow > 0n || row.pending > 0n;
   const fmt = (v: bigint) =>
     meta ? formatAmountForAsset(v, meta.decimals, meta.scale) : v.toString();
+
+  // Both directions, not one or the other. A single ternary on `outflow`
+  // hid an incoming amount whenever something was also on its way out, so a
+  // swap — which has both legs in flight at once — reported only the debit.
+  const settling = [
+    row.outflow > 0n ? `−${fmt(row.outflow)}` : undefined,
+    row.pending > 0n ? `+${fmt(row.pending)}` : undefined,
+  ].filter((s): s is string => s !== undefined);
 
   return (
     <tr>
       <td className="mono">{label}</td>
       <td className="bal ta-r">
         <span className="bal__main mono accent">{fmt(row.balance + row.pending)}</span>
-        {settling ? (
+        {settling.length > 0 ? (
           <span
             className={`bal__settle ${row.outflow > 0n ? "bal__settle--out" : "bal__settle--in"}`}
           >
             <span className="bal__spin" aria-hidden />
-            {row.outflow > 0n ? `−${fmt(row.outflow)}` : `+${fmt(row.pending)}`} settling
+            {settling.join(" ")} settling
           </span>
         ) : null}
       </td>

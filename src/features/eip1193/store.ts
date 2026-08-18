@@ -4,7 +4,15 @@
 // and boot resumes silently via `eth_accounts` (no popup).
 
 import type { ChainEntry } from "@/config/chains";
+import {
+  type Eip6963ProviderDetail,
+  type Eip6963ProviderInfo,
+  ProviderRegistry,
+} from "@/features/eip1193/discovery";
 import { createLogger } from "@/shared/lib/logger";
+import { localStore } from "@/shared/lib/storage";
+
+export type { Eip6963ProviderDetail, Eip6963ProviderInfo };
 
 /// Minimal EIP-1193 contract.
 export interface Eip1193Provider {
@@ -15,16 +23,26 @@ const log = createLogger("eip1193");
 
 const STORAGE_KEY = "lelantos:wallet:rdns";
 
-export interface Eip6963ProviderInfo {
-  uuid: string;
-  name: string;
-  icon: string;
-  rdns: string;
-}
+/// How long to wait for the wanted wallet to announce before giving up.
+///
+/// Replaces the fixed sleeps this module used to do. Extensions announce on
+/// their own schedule, and the previous 60/120ms sleeps decided the outcome by
+/// whoever won that race rather than by what the user picked.
+const ANNOUNCE_WAIT_MS = 400;
 
-export interface Eip6963ProviderDetail {
-  info: Eip6963ProviderInfo;
-  provider: Eip1193Provider;
+/// Parse a chain id off an EIP-1193 event or RPC result.
+///
+/// The spec says `chainChanged` carries a `0x`-prefixed hex string, but wallets
+/// in the wild also emit bare decimal. Assuming radix 16 turns `"137"` into
+/// `311`, which drops the whole app to `unsupported-chain` with no diagnostic —
+/// so branch on the prefix instead.
+export function parseChainId(value: unknown): number | undefined {
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value !== "string") return undefined;
+  const t = value.trim();
+  if (!t) return undefined;
+  const n = /^0x/i.test(t) ? Number.parseInt(t.slice(2), 16) : Number(t);
+  return Number.isFinite(n) ? n : undefined;
 }
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
@@ -54,10 +72,15 @@ class WalletStore {
   /// Detaches the active provider's event handlers; prevents listener leaks
   /// on switch/disconnect.
   private detach: (() => void) | null = null;
-  /// EIP-6963 discovery state. Held on the instance so repeat calls to
-  /// `startDiscovery` re-issue the request event rather than re-registering.
-  private discoveryWired = false;
-  private seen = new Map<string, Eip6963ProviderDetail>();
+  private readonly registry = new ProviderRegistry();
+  /// Guards `connect` against re-entry; see the note there.
+  private connecting = false;
+
+  constructor() {
+    // Mirror announcements into `discovered` so React subscribers see them
+    // through the one store they already read.
+    this.registry.subscribe(() => this.set({ discovered: this.registry.list() }));
+  }
 
   getState = (): ConnectionState => this.state;
 
@@ -71,69 +94,47 @@ class WalletStore {
     for (const l of this.listeners) l();
   }
 
-  /// Run EIP-6963 discovery and merge results into `discovered`. Wallets can
-  /// announce at any later time too, so the listener stays wired for the
-  /// lifetime of the page.
-  ///
-  /// Safe to call repeatedly: boot reaches it from `WalletBoot`, from
-  /// `resumeFromStorage` and from `connect`. Only the request event repeats.
-  /// Registering the handler once keeps a single announce from producing one
-  /// store notification per call.
+  /// Ask wallets to announce themselves. Safe to call repeatedly.
   startDiscovery(): void {
-    if (typeof window === "undefined") return;
-    if (!this.discoveryWired) {
-      this.discoveryWired = true;
-      for (const d of this.state.discovered) this.seen.set(d.info.uuid, d);
-      window.addEventListener("eip6963:announceProvider", this.onAnnounce);
-    }
-    window.dispatchEvent(new Event("eip6963:requestProvider"));
+    this.registry.start();
   }
 
-  private onAnnounce = (e: Event): void => {
-    const detail = (e as CustomEvent<Eip6963ProviderDetail>).detail;
-    if (!detail?.info?.uuid) return;
-    if (this.seen.has(detail.info.uuid)) return;
-    this.seen.set(detail.info.uuid, detail);
-    this.set({ discovered: Array.from(this.seen.values()) });
-    log.debug("discovered", detail.info.rdns, detail.info.name);
-  };
-
-  /// Find an announced provider by rdns, falling back to MetaMask, then the
-  /// first provider seen.
+  /// Find an announced provider; see `ProviderRegistry.pick`.
   pickProvider(rdns?: string): Eip6963ProviderDetail | undefined {
-    const list = this.state.discovered;
-    if (rdns) {
-      const exact = list.find((d) => d.info.rdns.toLowerCase() === rdns.toLowerCase());
-      if (exact) return exact;
-    }
-    return (
-      list.find((d) => d.info.rdns === "io.metamask") ??
-      list.find((d) => /metamask/i.test(d.info.name)) ??
-      list[0]
-    );
+    return this.registry.pick(rdns);
   }
 
   /// Pop the wallet's connect prompt for the given (or default) provider
   /// and latch it as the active one. Persists rdns so reloads stay connected.
   connect = async (rdns?: string): Promise<void> => {
     if (typeof window === "undefined") return;
-    if (this.state.discovered.length === 0) this.startDiscovery();
-    // Some wallets announce on the next tick after a request event.
-    await new Promise((r) => setTimeout(r, 60));
-    const pick = this.pickProvider(rdns);
-    if (!pick) {
-      this.set({ status: "error", error: "No wallet detected. Install MetaMask." });
-      return;
-    }
+    // Re-entrancy guard. Without it a double-click issued two
+    // `eth_requestAccounts` prompts and two `attach()` calls for one intent.
+    if (this.connecting) return;
+    this.connecting = true;
+    // Set before the announce wait, not after it. The connect button reads
+    // `status`, and this used to sit on `idle` for the whole discovery window,
+    // rendering as though the click had done nothing.
     this.set({ status: "connecting", error: undefined });
     try {
+      if (this.registry.list().length === 0) this.startDiscovery();
+      const pick = await this.registry.waitFor(() => this.registry.pick(rdns), ANNOUNCE_WAIT_MS);
+      if (!pick) {
+        this.set({
+          status: "error",
+          error: rdns
+            ? `${rdns} did not respond. Is it installed and unlocked?`
+            : "No wallet detected. Install MetaMask.",
+        });
+        return;
+      }
       const accounts = (await pick.provider.request({
         method: "eth_requestAccounts",
       })) as string[];
       const address = (accounts[0] ?? "").toLowerCase() as `0x${string}`;
       if (!address) throw new Error("Wallet returned no accounts.");
-      const chainIdHex = (await pick.provider.request({ method: "eth_chainId" })) as string;
-      const chainId = Number.parseInt(chainIdHex, 16);
+      const chainId = parseChainId(await pick.provider.request({ method: "eth_chainId" }));
+      if (chainId === undefined) throw new Error("Wallet returned no chain id.");
       this.attach(pick, address, chainId);
       this.persistRdns(pick.info.rdns);
       log.info("connected", { rdns: pick.info.rdns, address, chainId });
@@ -143,6 +144,8 @@ class WalletStore {
         status: "error",
         error: err instanceof Error ? err.message : String(err),
       });
+    } finally {
+      this.connecting = false;
     }
   };
 
@@ -151,17 +154,12 @@ class WalletStore {
   resumeFromStorage = async (): Promise<void> => {
     if (typeof window === "undefined") return;
     this.startDiscovery();
-    const rdns = (() => {
-      try {
-        return window.localStorage?.getItem(STORAGE_KEY) ?? undefined;
-      } catch {
-        return undefined;
-      }
-    })();
+    const rdns = localStore.get(STORAGE_KEY);
     if (!rdns) return;
-    // Wait briefly for the wallet extension to announce.
-    await new Promise((r) => setTimeout(r, 120));
-    const pick = this.pickProvider(rdns);
+    // Wait for *this* wallet to announce. `pickProvider` no longer substitutes,
+    // so a late announce costs a wait rather than silently resuming into
+    // whichever other wallet happened to be quicker.
+    const pick = await this.registry.waitFor(() => this.registry.pick(rdns), ANNOUNCE_WAIT_MS);
     if (!pick) {
       log.debug("resume: no announced provider matched stored rdns", rdns);
       return;
@@ -173,8 +171,18 @@ class WalletStore {
         log.debug("resume: wallet has no authorised account; staying idle");
         return;
       }
-      const chainIdHex = (await pick.provider.request({ method: "eth_chainId" })) as string;
-      const chainId = Number.parseInt(chainIdHex, 16);
+      const chainId = parseChainId(await pick.provider.request({ method: "eth_chainId" }));
+      if (chainId === undefined) {
+        log.debug("resume: wallet returned no chain id; staying idle");
+        return;
+      }
+      // A resume that finishes after an explicit connect must not clobber it:
+      // `attach` overwrites address and chainId wholesale, and the stored rdns
+      // reflects the *previous* session, not the one the user just chose.
+      if (this.connecting || this.state.status === "connected") {
+        log.debug("resume: superseded by an explicit connect; discarding");
+        return;
+      }
       this.attach(pick, address, chainId);
       log.info("resumed", { rdns, address, chainId });
     } catch (err) {
@@ -231,11 +239,7 @@ class WalletStore {
   disconnect = (): void => {
     this.detach?.();
     this.detach = null;
-    try {
-      window.localStorage?.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
+    localStore.remove(STORAGE_KEY);
     this.set({
       status: "idle",
       provider: undefined,
@@ -263,10 +267,11 @@ class WalletStore {
       }
       this.set({ address: next });
     };
-    const onChainChanged = (hexId: unknown) => {
-      const id = typeof hexId === "string" ? Number.parseInt(hexId, 16) : Number(hexId);
+    const onChainChanged = (raw: unknown) => {
+      const id = parseChainId(raw);
       log.debug("chainChanged", id);
-      if (Number.isFinite(id)) this.set({ chainId: id });
+      if (id !== undefined) this.set({ chainId: id });
+      else log.warn("chainChanged with unparseable id", raw);
     };
     const onDisconnect = () => {
       log.debug("provider emitted disconnect");
@@ -295,13 +300,37 @@ class WalletStore {
     });
   }
 
+  /// Restore the store to its boot state.
+  ///
+  /// Exists for tests: this module exports a singleton, so without a reset each
+  /// case inherits the previous one's `discovered` list and `seen` map, and the
+  /// assertions only hold in file order.
+  resetForTest = (): void => {
+    this.detach?.();
+    this.detach = null;
+    this.connecting = false;
+    this.registry.reset();
+    this.state = { status: "idle", discovered: [] };
+    for (const l of this.listeners) l();
+  };
+
   private persistRdns(rdns: string): void {
-    try {
-      window.localStorage?.setItem(STORAGE_KEY, rdns);
-    } catch {
-      // ignore (private mode, etc)
-    }
+    localStore.set(STORAGE_KEY, rdns);
   }
 }
 
 export const walletStore = new WalletStore();
+
+/// The wallet's current chain, read at call time rather than at render.
+///
+/// For the last-moment checks before a spend. A component's `useActiveChain()`
+/// is a render-time snapshot, and proof generation plus relayer submission take
+/// many seconds — long enough for a wallet-initiated `chainChanged` to land in
+/// between and put the transaction on a chain the notes do not live on.
+///
+/// `bigint` because that is what the chain registry and every call site use;
+/// the store holds a `number` only because that is what EIP-1193 reports.
+export function currentWalletChainId(): bigint | undefined {
+  const id = walletStore.getState().chainId;
+  return id === undefined ? undefined : BigInt(id);
+}

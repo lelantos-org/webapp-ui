@@ -6,7 +6,7 @@ import type { Hex32 } from "@lelantos-org/sdk";
 import type { FlushWait } from "@lelantos-org/sdk/relayer";
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import type { ChainEntry } from "@/config/chains";
-import type { TxPhase } from "@/features/actions/tx/tx-progress";
+import { isTerminal, type TxPhase } from "@/features/actions/tx/tx-progress";
 import { depositStream, preopenDepositStream } from "@/features/relayer/deposit-stream";
 import { createLogger } from "@/shared/lib/logger";
 import { toastTx } from "@/shared/lib/toast";
@@ -69,17 +69,41 @@ export async function trackTxLifecycle(opts: TrackOpts): Promise<void> {
   // can't publish flush before the listener is attached.
   if (depositId !== undefined) preopenDepositStream(opts.chain.chainId);
   let settled = false;
-  const settle = (_reason: string) => {
+  /// Whether a terminal phase has already reached the form.
+  ///
+  /// `settle` fills the gap when one has not. Three exits used to settle
+  /// without ever emitting a phase — the hard timeout, an adapter with no
+  /// `waitTxReceipt`, and the `ok` path when there was nothing to wait for —
+  /// which left `useTxProgress.done` false forever. The stepper then span on a
+  /// mid-list step with no way to clear it, because `useClearFinishedOp` is
+  /// gated on `done`; only a page reload got rid of it.
+  let emittedTerminal = false;
+  const phase = (p: TxPhase) => {
+    if (isTerminal(p)) emittedTerminal = true;
+    try {
+      opts.onPhase?.(p);
+    } catch {
+      // ignore
+    }
+  };
+  const settle = (reason: string, fallback: TxPhase) => {
     if (settled) return;
     settled = true;
     clearTimeout(hardTimer);
+    if (!emittedTerminal) phase(fallback);
+    log.debug("settled", { reason, txHash: opts.txHash });
     try {
       opts.onSettled?.();
     } catch {
       // ignore
     }
   };
-  const hardTimer = setTimeout(() => settle("hard-timeout"), LIFECYCLE_HARD_TIMEOUT_MS);
+  const hardTimer = setTimeout(() => {
+    // The tx was broadcast and we simply stopped watching. Say so rather than
+    // leaving the toast silent and the stepper mid-flight.
+    t.timedOut();
+    settle("hard-timeout", "unknown");
+  }, LIFECYCLE_HARD_TIMEOUT_MS);
   const tick = () => {
     try {
       opts.onProgress?.();
@@ -87,24 +111,18 @@ export async function trackTxLifecycle(opts: TrackOpts): Promise<void> {
       // ignore
     }
   };
-  const phase = (p: TxPhase) => {
-    try {
-      opts.onPhase?.(p);
-    } catch {
-      // ignore
-    }
-  };
 
   try {
     if (!opts.wallet.chain.waitTxReceipt) {
-      settle("no-receipt-adapter");
+      // Nothing was ever observed, so the outcome is genuinely unknown.
+      settle("no-receipt-adapter", "unknown");
       return;
     }
     const receipt = await opts.wallet.chain.waitTxReceipt(opts.txHash);
     if (receipt.status === 0) {
       t.failed(new Error(`tx reverted at block ${receipt.blockNumber}`));
       phase("failed");
-      settle("reverted");
+      settle("reverted", "failed");
       return;
     }
     t.mined(receipt.blockNumber);
@@ -116,13 +134,15 @@ export async function trackTxLifecycle(opts: TrackOpts): Promise<void> {
         depositStream(opts.chain.chainId).awaitFlush(depositId, { signal }),
       );
       // The tx is already mined by this point, so an unobserved flush is not
-      // a failed deposit. Only the timeout is worth surfacing; a dead feed
-      // (a relayer that does not serve the endpoint) falls through to the
-      // scanner wait, which settles the balance either way.
+      // a failed deposit — and `phase("failed")` used to sit right here,
+      // painting the stepper red under a toast that correctly called it a
+      // warning. `unknown` is the honest terminal: done watching, outcome not
+      // observed, explorer link in the toast. A dead feed (a relayer that does
+      // not serve the endpoint) falls through to the scanner wait, which
+      // settles the balance either way.
       if (wait.kind === "aborted") {
         t.timedOut();
-        phase("failed");
-        settle("flush-timeout");
+        settle("flush-timeout", "unknown");
         return;
       }
       if (wait.kind === "closed") {
@@ -145,10 +165,13 @@ export async function trackTxLifecycle(opts: TrackOpts): Promise<void> {
         // Best-effort — pending overlay falls back to react-query polling.
       }
     }
-    settle("ok");
+    // Mined and nothing left to wait for. `settled` rather than `unknown`:
+    // block inclusion was observed, so the scanner catching up is a matter of
+    // time rather than an open question.
+    settle("ok", "settled");
   } catch (err) {
     t.failed(err);
     phase("failed");
-    settle("error");
+    settle("error", "failed");
   }
 }

@@ -1,7 +1,7 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
 import { shortAddr } from "@/shared/lib/format";
-import { toast } from "@/shared/lib/toast";
+import { copyWithToast } from "@/shared/lib/use-copy";
 
 export interface AccountCardProps {
   shielded: string;
@@ -30,7 +30,7 @@ export function AccountCard({ shielded, eth }: AccountCardProps) {
               type="button"
               className="acct__icon"
               aria-label="copy shielded address"
-              onClick={() => copy(shielded)}
+              onClick={() => void copyWithToast(shielded, "address copied")}
             >
               <CopyIcon />
             </button>
@@ -44,7 +44,7 @@ export function AccountCard({ shielded, eth }: AccountCardProps) {
             <button
               type="button"
               className="acct__eth-val mono"
-              onClick={() => copy(eth)}
+              onClick={() => void copyWithToast(eth, "address copied")}
               title={eth}
             >
               {shortAddr(eth, 8)}
@@ -61,15 +61,6 @@ export function AccountCard({ shielded, eth }: AccountCardProps) {
       ) : null}
     </div>
   );
-}
-
-async function copy(value: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(value);
-    toast.success("address copied");
-  } catch {
-    toast.error("clipboard unavailable");
-  }
 }
 
 function CopyIcon() {

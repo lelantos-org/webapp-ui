@@ -60,7 +60,7 @@ describe("pendingShapesFor", () => {
       expect(pendingShapesFor(ctx)).toEqual([{ asset: 1n, pendingIn: 10n, outflow: 90n }]);
     });
 
-    it("derives the leg-B inflow as minOut * BPS / (scaleOut * (BPS + feeBps))", () => {
+    it("sizes the leg-B inflow the way the SDK sizes the B-note", () => {
       const ctx = {
         kind: "swap",
         result: result({ asset: 1n, ownInflow: 10n, sent: 90n }),
@@ -71,16 +71,18 @@ describe("pendingShapesFor", () => {
           feeBps: 50n,
         },
       } as unknown as PendingContext;
-      // 10_050 * 10_000 / (1 * 10_050) == 10_000
+      // 10_000 * 1 + 50bps = 10_050, exactly covering minOut.
       expect(pendingShapesFor(ctx)).toEqual([
         { asset: 1n, pendingIn: 10n, outflow: 90n },
         {
           asset: 2n,
           pendingIn: 10_000n,
           outflow: 0n,
-          // Floored at baseline+1 so a pre-existing balance equal to the
-          // baseline cannot self-clear the entry before any sync runs.
-          clearWhenBalanceAtLeast: 8n,
+          // The balance this note will actually produce. `baseline + 1` was
+          // satisfied by any unrelated inflow on `assetOut` — an inbound
+          // transfer, a concurrent deposit — and dropped the overlay while the
+          // swap was still settling.
+          clearWhenBalanceAtLeast: 10_007n,
         },
       ]);
     });
@@ -96,13 +98,17 @@ describe("pendingShapesFor", () => {
           feeBps: 0n,
         },
       } as unknown as PendingContext;
-      // 10_000_000 * 10_000 / (1_000 * 10_000) == 10_000
+      // 10_000 * 1_000 == 10_000_000, and a zero fee adds nothing.
       expect(pendingShapesFor(ctx)).toEqual([
-        { asset: 2n, pendingIn: 10_000n, outflow: 0n, clearWhenBalanceAtLeast: 1n },
+        { asset: 2n, pendingIn: 10_000n, outflow: 0n, clearWhenBalanceAtLeast: 10_000n },
       ]);
     });
 
-    it("drops the leg-B entry when the derived value rounds to zero", () => {
+    it("rounds a sub-unit minOut up to the one unit that actually gets minted", () => {
+      // The closed form floors this to zero, and the old code dropped the entry
+      // — but the SDK walks up until the pull covers `minOut`, so a note of one
+      // circuit unit is what is really minted. Dropping it hid an inflow the
+      // wallet was about to receive.
       const ctx = {
         kind: "swap",
         result: result({ asset: 1n, ownInflow: 0n, sent: 0n }),
@@ -110,6 +116,22 @@ describe("pendingShapesFor", () => {
           swap: swapCall(2n, 1n),
           assetOutBaseline: 0n,
           scaleOut: 10n ** 18n,
+          feeBps: 0n,
+        },
+      } as unknown as PendingContext;
+      expect(pendingShapesFor(ctx)).toEqual([
+        { asset: 2n, pendingIn: 1n, outflow: 0n, clearWhenBalanceAtLeast: 1n },
+      ]);
+    });
+
+    it("drops the leg-B entry when the output scale is degenerate", () => {
+      const ctx = {
+        kind: "swap",
+        result: result({ asset: 1n, ownInflow: 0n, sent: 0n }),
+        legB: {
+          swap: swapCall(2n, 1_000n),
+          assetOutBaseline: 0n,
+          scaleOut: 0n,
           feeBps: 0n,
         },
       } as unknown as PendingContext;

@@ -67,3 +67,23 @@ export function useFeePreview(
 
   return useMemo(() => ({ ...query, stale }) as FeePreviewResult, [query, stale]);
 }
+
+/// The pool's protocol fee, in basis points.
+///
+/// Chain-wide rather than per-asset (`MASP.feeBps()`), so it is keyed on the
+/// chain alone and shared by every consumer. Separate from `useFeePreview`,
+/// which is about one amount and is debounced against the amount field.
+export function useFeeBps(): bigint | undefined {
+  const { wallet } = useWallet();
+  const { chainId } = useActiveChain();
+  const { data } = useQuery<bigint>({
+    queryKey: ["fee-bps", chainId.toString()],
+    enabled: !!wallet,
+    queryFn: async () => {
+      if (!wallet) throw new Error("not ready");
+      return wallet.chain.fetchFeeBps();
+    },
+    staleTime: 5 * 60_000,
+  });
+  return data;
+}

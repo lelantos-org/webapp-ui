@@ -158,7 +158,14 @@ function SetupModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [dismissable, requestCancel]);
 
-  // Focus the modal on mount so Tab cycles inside the portal.
+  // Focus the modal on mount *and* whenever the screen changes.
+  //
+  // With `[]` deps this ran once. Clicking "begin setup" unmounts the button it
+  // had focused, so focus falls back to `<body>` — and `trapFocus` keys off
+  // `document.activeElement` being the first or last focusable inside the
+  // modal, so from there it traps nothing and Tab walks out into the locked
+  // page behind.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `screen` is the re-run trigger, not a value the effect reads
   useEffect(() => {
     const root = modalRef.current;
     if (!root) return;
@@ -171,7 +178,7 @@ function SetupModal({
       "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
     );
     focusables[0]?.focus();
-  }, []);
+  }, [screen]);
 
   const onBackdrop = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget && dismissable) requestCancel();

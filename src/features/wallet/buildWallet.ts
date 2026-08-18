@@ -69,9 +69,14 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
   // ~49 MB zkey land in storage that is already exempt from eviction. Not
   // awaited: Chrome decides on an engagement heuristic and Safari may prompt,
   // and neither outcome should hold up the wallet.
-  void requestPersistentStorage().then((granted: boolean) => {
-    if (!granted) log.info("storage persistence not granted; caches may be evicted");
-  });
+  // `.catch`, not just `void`: `void` silences the lint, not the rejection, and
+  // `navigator.storage.persist()` throws outright in some sandboxed and
+  // privacy-mode contexts.
+  void requestPersistentStorage()
+    .then((granted: boolean) => {
+      if (!granted) log.info("storage persistence not granted; caches may be evicted");
+    })
+    .catch((e: unknown) => log.info("storage persistence request failed", e));
 
   const nsk = await resolveNsk(signer, ethAddr);
 
@@ -118,21 +123,35 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
     nativeAdapterAddress: chain.nativeAdapterAddress,
   });
 
-  const wallet = await timed("connect", () =>
-    connect({
-      network,
-      nsk,
-      chain: chainAdapter,
-      prover: getProverWorker(),
-      noteStore: new IdbNoteStore(storeKey("notes", chain.chainId, ethAddr)),
-      treePersistence: new IdbTreePersistence(storeKey("tree", chain.chainId, ethAddr)),
-      nullifierPersistence: new IdbNullifierPersistence(
-        storeKey("nullifiers", chain.chainId, ethAddr),
-      ),
-      scanner: createScanner(),
-      syncStrategy,
-    }),
-  );
+  // Hoisted out of the `connect` argument list, and disposed if `connect`
+  // throws. The pool spawns eagerly, so its workers exist before `connect` is
+  // entered; passed inline, a rejection (bad RPC, relayer 500, a tree-cache
+  // load that throws) left them with no reference and no owner. `useBuildWallet`
+  // retries on the next connection change, so that leaked a pool per attempt.
+  const scanner = createScanner();
+  let wallet: WalletApi;
+  try {
+    wallet = await timed("connect", () =>
+      connect({
+        network,
+        nsk,
+        chain: chainAdapter,
+        prover: getProverWorker(),
+        noteStore: new IdbNoteStore(storeKey("notes", chain.chainId, ethAddr)),
+        treePersistence: new IdbTreePersistence(storeKey("tree", chain.chainId, ethAddr)),
+        nullifierPersistence: new IdbNullifierPersistence(
+          storeKey("nullifiers", chain.chainId, ethAddr),
+        ),
+        scanner,
+        syncStrategy,
+      }),
+    );
+  } catch (e) {
+    await Promise.resolve()
+      .then(() => scanner.dispose?.())
+      .catch((disposeErr: unknown) => log.warn("scanner dispose failed", disposeErr));
+    throw e;
+  }
 
   instrumentWallet(wallet);
   log.info("ready", wallet.address);

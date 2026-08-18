@@ -49,3 +49,31 @@ describe("env Schema", () => {
     expect(() => Schema.parse(raw)).toThrow();
   });
 });
+
+describe("service URL validation", () => {
+  it("rejects a value that does not resolve to an http(s) URL", () => {
+    // `z.string().min(1)` accepted these. Both resolve against the page origin
+    // without complaint and then fail every call at runtime, surfacing deep in
+    // the app instead of at boot where the misconfiguration actually is.
+    expect(Schema.safeParse({ relayerUrl: "htp://relayer", fmdUrl: "/fmd" }).success).toBe(false);
+    expect(Schema.safeParse({ relayerUrl: " ", fmdUrl: "/fmd" }).success).toBe(false);
+  });
+
+  it("still accepts page-relative paths, which deployments use", () => {
+    const parsed = Schema.parse({ relayerUrl: "/relayer", fmdUrl: "/fmd" });
+    expect(parsed.relayerUrl).toMatch(/^https?:\/\//);
+  });
+
+  it("rejects a malformed optional URL rather than silently disabling the feature", () => {
+    expect(
+      Schema.safeParse({ relayerUrl: "/relayer", fmdUrl: "/fmd", metaquoterUrl: "nope://x" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("treats a blank optional as absent", () => {
+    expect(
+      Schema.parse({ relayerUrl: "/relayer", fmdUrl: "/fmd", metaquoterUrl: "" }).metaquoterUrl,
+    ).toBeUndefined();
+  });
+});

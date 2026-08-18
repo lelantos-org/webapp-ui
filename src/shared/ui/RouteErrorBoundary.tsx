@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { describeError } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
@@ -53,15 +54,20 @@ function markReloaded(): void {
 ///
 /// A stale chunk after a deploy is the common case and is fixed by a reload,
 /// so that is done once, automatically.
+///
+/// Keyed on the location, so navigating away clears a latched error. `<Routes>`
+/// lives inside this boundary: without the key, a failed `/swap` chunk kept the
+/// error card on screen after the user clicked "transfer" — the URL changed and
+/// the page did not. `reset()` alone cannot fix that, because it re-renders the
+/// very subtree that threw.
 export function RouteErrorBoundary({ children }: { children: ReactNode }) {
+  const { key } = useLocation();
   return (
     <ErrorBoundary
+      key={key}
       fallback={({ error, reset }) => {
         if (isChunkLoadError(error) && !alreadyReloaded()) {
-          log.info("stale route chunk; reloading once", error);
-          markReloaded();
-          window.location.reload();
-          return null;
+          return <ChunkReload error={error} />;
         }
         return (
           <div className="card m-5">
@@ -86,4 +92,19 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
       {children}
     </ErrorBoundary>
   );
+}
+
+/// Reloads once for a stale chunk, from an effect.
+///
+/// The reload used to run inline in the fallback's render. React 18's
+/// StrictMode double-invokes render and throws the first result away, so the
+/// discarded pass still wrote the `alreadyReloaded` flag — spending the single
+/// retry the guard exists to ration. Side effects belong after commit.
+function ChunkReload({ error }: { error: unknown }) {
+  useEffect(() => {
+    log.info("stale route chunk; reloading once", error);
+    markReloaded();
+    window.location.reload();
+  }, [error]);
+  return null;
 }

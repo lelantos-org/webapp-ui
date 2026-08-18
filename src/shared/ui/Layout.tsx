@@ -61,6 +61,12 @@ export function Layout({ children }: { children: ReactNode }) {
             explorer
           </a>
           <span className="ftr__sep" aria-hidden="true" />
+          {/* Which build is on screen — the first thing worth knowing about a
+              bug report, and unanswerable from a hashed asset filename. */}
+          <span className="ftr__ver mono muted" title="build commit">
+            {__COMMIT__}
+          </span>
+          <span className="ftr__sep" aria-hidden="true" />
           <a
             className="ftr__link"
             href="https://github.com/lelantos-org"

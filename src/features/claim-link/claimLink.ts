@@ -1,4 +1,3 @@
-// TODO(v2): persist nsk_eph in localStorage keyed by claim_id for sender self-refund.
 // TODO(v2): optional password-encrypted fragment (XChaCha20-Poly1305 + Argon2id).
 
 import { connect, deriveKeysFromNsk, type TransferResult, type WalletApi } from "@lelantos-org/sdk";
@@ -12,7 +11,8 @@ import {
   nskFieldFromHex,
   nskHexFromField,
 } from "@/features/claim-link/codec";
-import { resolveSyncStrategy } from "@/features/wallet/fmd-subscription";
+import { markClaimLinkBroadcast, rememberClaimLink } from "@/features/claim-link/link-vault";
+import { clearCachedSubscription, resolveSyncStrategy } from "@/features/wallet/fmd-subscription";
 import { networkPreset } from "@/features/wallet/network-preset";
 import { instrumentWallet } from "@/features/wallet/perf";
 import { getProverWorker } from "@/features/wallet/prover/proverWorker";
@@ -31,6 +31,15 @@ export interface GenerateClaimLinkArgs {
   /// Stamped into the link so the claimer knows which pool holds the notes.
   chainId: bigint;
   onPhase?: (phase: SpendPhase) => void;
+  /// Last-moment check that the wallet is still on `chainId`.
+  ///
+  /// Read immediately before the transfer rather than at render: the caller's
+  /// `useActiveChain()` is seconds stale by the time proving finishes, and a
+  /// `chainChanged` in that window produced a link stamped with chain A for a
+  /// transfer that landed on chain B — the exact mismatch `codec.ts` says the
+  /// chain field exists to prevent, where the claimer scans the wrong pool and
+  /// is told "nothing to claim".
+  currentChainId?: () => bigint | undefined;
 }
 
 export interface GenerateClaimLinkResult {
@@ -41,6 +50,9 @@ export interface GenerateClaimLinkResult {
   tx: TransferResult;
   nskEphHex: string;
   ephAddress: string;
+  /// Handle into `link-vault`, so the UI can forget the record once the user
+  /// says the link has been handed over.
+  recordId: string;
 }
 
 export async function generateClaimLink(
@@ -49,6 +61,26 @@ export async function generateClaimLink(
 ): Promise<GenerateClaimLinkResult> {
   const nskEph = randomFr();
   const ephAddress = await deriveEphemeralAddress(nskEph);
+  const nskEphHex = nskHexFromField(nskEph);
+  const url = `${window.location.origin}/claim#${encodeClaimPayload(args.chainId, nskEphHex)}`;
+
+  // Persisted *before* the broadcast. After it, the only copy of this key was
+  // React state that any chain or account switch discards — and the funds are
+  // already gone by then. See `link-vault`.
+  const recordId = rememberClaimLink({
+    url,
+    chainId: args.chainId,
+    assetId: args.asset ?? 0n,
+    amount: args.amount,
+  });
+
+  const stillHere = args.currentChainId?.();
+  if (stillHere !== undefined && stillHere !== args.chainId) {
+    throw new Error(
+      `wallet switched to chain ${stillHere} while preparing a link for chain ${args.chainId}`,
+    );
+  }
+
   // `WalletApi.transfer` types the return as the union; transfer always
   // produces the TransferResult variant at runtime.
   const tx = (await senderWallet.transfer({
@@ -58,13 +90,25 @@ export async function generateClaimLink(
     autoConsolidate: true,
     onPhase: args.onPhase,
   })) as TransferResult;
-  const nskEphHex = nskHexFromField(nskEph);
-  const url = `${window.location.origin}/claim#${encodeClaimPayload(args.chainId, nskEphHex)}`;
-  return { url, txHash: tx.txHash, tx, nskEphHex, ephAddress };
+
+  markClaimLinkBroadcast(recordId, tx.txHash);
+  return { url, txHash: tx.txHash, tx, nskEphHex, ephAddress, recordId };
 }
 
-function ephNoteStoreKey(chainId: bigint, nskEphHex: string): string {
-  return `notes:eph:${chainKey(chainId)}:${nskEphHex.slice(0, 16)}`;
+/// Namespace for one link's ephemeral note store.
+///
+/// The suffix is a digest of the bearer key, never the key itself. This used to
+/// be `nskEphHex.slice(0, 16)` — 8 bytes of the spending key written verbatim
+/// as an IndexedDB record name, on a page whose entire design (see
+/// `scrubLocationHash`) is about keeping that value out of persistence. It also
+/// leaked onto the screen: `describeError` passes short raw messages straight
+/// through, so an idb failure naming the store rendered the fragment in the
+/// error card.
+async function ephNoteStoreKey(chainId: bigint, nskEphHex: string): Promise<string> {
+  const bytes = new TextEncoder().encode(nskEphHex);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
+  const suffix = Array.from(digest.slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
+  return `notes:eph:${chainKey(chainId)}:${suffix}`;
 }
 
 /// Read the link's notes with a throwaway wallet built from its bearer key.
@@ -105,7 +149,7 @@ export async function buildEphemeralWallet(
     address: bundle.address,
     rpcUrl: chain.rpcUrl,
     prover: getProverWorker(),
-    noteStore: new IdbNoteStore(ephNoteStoreKey(chain.chainId, nskEphHex)),
+    noteStore: new IdbNoteStore(await ephNoteStoreKey(chain.chainId, nskEphHex)),
     // Below the wallet default: this scans a small window for a single note,
     // on a short-lived page.
     scanner: createScanner(2),
@@ -151,9 +195,18 @@ export async function sweepEphemeral(
   return txHash;
 }
 
+/// Drop everything this link left behind once it has been swept.
+///
+/// Deletes the record rather than blanking it. Overwriting with an empty file
+/// left the key in place indefinitely; the store is a cache of one spent link
+/// and there is nothing to keep. The FMD subscription token registered for the
+/// ephemeral address goes too — a one-shot link should not leave a permanent
+/// entry tying that address to this browser.
 export async function clearEphemeralStore(chainId: bigint, nskEphHex: string): Promise<void> {
-  // IdbNoteStore writes into the shared `lelantos-wallet` DB under per-key entries;
-  // overwrite ours with an empty file rather than deleting the DB so other wallets stay intact.
-  const store = new IdbNoteStore(ephNoteStoreKey(chainId, nskEphHex));
-  await store.save({ version: 2, notes: [] });
+  const nsk = nskFieldFromHex(nskEphHex);
+  if (nsk.ok) clearCachedSubscription(chainId, await deriveEphemeralAddress(nsk.value));
+  // IdbNoteStore writes into the shared `lelantos-wallet` DB under per-key
+  // entries, so removing ours leaves every other wallet intact.
+  const store = new IdbNoteStore(await ephNoteStoreKey(chainId, nskEphHex));
+  await store.destroy();
 }

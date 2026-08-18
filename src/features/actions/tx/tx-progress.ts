@@ -18,7 +18,12 @@ export type TxPhase =
   | "mined"
   | "flushed"
   | "settled"
-  | "failed";
+  | "failed"
+  /// The lifecycle stopped without ever learning the outcome — the adapter
+  /// cannot read receipts, or a timeout fired. Terminal, so the stepper stops
+  /// spinning, but deliberately not `failed`: the tx may well be fine, and the
+  /// accompanying toast points at the explorer.
+  | "unknown";
 
 export interface Step {
   id: TxPhase;
@@ -48,6 +53,7 @@ const LABELS: Record<TxPhase, string> = {
   flushed: "flushed by relayer",
   settled: "scanner caught up",
   failed: "failed",
+  unknown: "status unknown",
 };
 
 function step(id: TxPhase): Step {
@@ -103,7 +109,7 @@ export function stepsFor(kind: ShieldedKind, opts: StepsOpts = {}): Step[] {
 }
 
 export function isTerminal(phase: TxPhase | undefined): boolean {
-  return phase === "flushed" || phase === "settled" || phase === "failed";
+  return phase === "flushed" || phase === "settled" || phase === "failed" || phase === "unknown";
 }
 
 /// Phase that closes out the stepper for a given op. For deposits the

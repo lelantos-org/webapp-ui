@@ -22,7 +22,7 @@ import type {
 } from "@/features/actions/port";
 import { stepsFor, terminalFor } from "@/features/actions/tx/tx-progress";
 import { type TxProgressApi, useTxProgress } from "@/features/actions/tx/use-tx-progress";
-import { useTxTracker } from "@/features/actions/tx/use-tx-tracker";
+import { type TrackTxArgs, useTxTracker } from "@/features/actions/tx/use-tx-tracker";
 import { requireActions, useShieldedActions } from "@/features/actions/use-shielded-actions";
 import { fetchAssetFeeInputs } from "@/features/assets/asset-entry";
 import { useInvalidateTransparentBalances } from "@/features/assets/transparent-balances";
@@ -37,6 +37,19 @@ import { createLogger } from "@/shared/lib/logger";
 import { toastError } from "@/shared/lib/toast";
 
 const log = createLogger("actions:spend");
+
+/// One policy for post-submit bookkeeping across all four mutations.
+///
+/// Not returned to react-query. A returned promise is awaited inside
+/// react-query's own `try`, so a rejection flips an already-broadcast tx to
+/// `error`: red stepper, "failed" toast, `m.data` discarded (hence no explorer
+/// link), no pending overlay and no lifecycle watch. The deposit hook had the
+/// mirror bug — it floated the same call, so a rejection became an unhandled
+/// rejection and the stepper stuck on "sign transaction" forever. `useTxTracker`
+/// no longer rejects; this keeps the boundary explicit either way.
+function trackPostSubmit(track: (args: TrackTxArgs) => Promise<void>, args: TrackTxArgs): void {
+  void track(args).catch((e: unknown) => log.warn("post-submit tracking failed", e));
+}
 
 /// The slice of `TxProgressApi` a form needs: enough to render the stepper,
 /// plus the `reset` that clears it. `set`/`start` stay with the mutation —
@@ -157,7 +170,13 @@ export function useDeposit(): ActionMutation<DepositCall> {
       // The funds have left the transparent balance the form validates
       // against, and that query holds its value for `STALE_MS`.
       void invalidateTransparent();
-      track({ label: "deposit", kind: "deposit", result: r, onPhase: progress.set });
+      // Deliberately not returned — see `trackPostSubmit`.
+      trackPostSubmit(track, {
+        label: "deposit",
+        kind: "deposit",
+        result: r,
+        onPhase: progress.set,
+      });
     },
     onError: (e) => {
       progress.set("failed");
@@ -184,14 +203,15 @@ export function useTransfer(): ActionMutation<TransferCall> {
         onPhase: progress.set,
       });
     },
-    onSuccess: (r, i) =>
-      track({
+    onSuccess: (r, i) => {
+      trackPostSubmit(track, {
         label: "transfer",
         kind: "transfer",
         result: r,
         isSelfTransfer: !!wallet && i.to === wallet.address,
         onPhase: progress.set,
-      }),
+      });
+    },
     onError: (e) => spendFailed("transfer", progress, e),
   });
   return { mutation, progress: progressView(progress) };
@@ -220,13 +240,14 @@ export function useWithdraw(): ActionMutation<WithdrawCall> {
             onPhase: progress.set,
           });
     },
-    onSuccess: (r, i) =>
-      track({
+    onSuccess: (r, i) => {
+      trackPostSubmit(track, {
         label: i.asEth ? "withdraw eth" : "withdraw",
         kind: i.asEth ? "withdrawEth" : "withdraw",
         result: r,
         onPhase: progress.set,
-      }),
+      });
+    },
     onError: (e, i) => spendFailed(i.asEth ? "withdraw eth" : "withdraw", progress, e),
   });
   return { mutation, progress: progressView(progress) };
@@ -249,8 +270,15 @@ export function useSwap(): ActionMutation<SwapCall> {
         onPhase: progress.set,
       });
     },
-    onSuccess: (r, i) =>
-      track({ label: "swap", kind: "swap", result: r, swap: i, onPhase: progress.set }),
+    onSuccess: (r, i) => {
+      trackPostSubmit(track, {
+        label: "swap",
+        kind: "swap",
+        result: r,
+        swap: i,
+        onPhase: progress.set,
+      });
+    },
     onError: (e) => spendFailed("swap", progress, e),
   });
   return { mutation, progress: progressView(progress) };

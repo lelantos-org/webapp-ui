@@ -22,13 +22,26 @@ describe("linkChainIdOf", () => {
     expect(linkChainIdOf(phase)).toBe(CHAIN);
   });
 
-  // Before the fragment is decoded there is no chain to know, and `done`
-  // deliberately drops it — nothing after the sweep is chain-scoped.
+  // `done` keeps the chain too: the success card names the asset, and the
+  // symbol and decimals come from that chain's token list. Dropping it made
+  // every successful claim read `1000000000000000000 asset#5`.
+  it("keeps the link's chain after the sweep settles", () => {
+    expect(
+      linkChainIdOf({ kind: "done", txHash: "0x1", chainId: CHAIN, asset: 1n, amount: 5n }),
+    ).toBe(CHAIN);
+  });
+
+  it("keeps the link's chain on a failure that can be retried", () => {
+    expect(linkChainIdOf({ kind: "error", message: "boom", nskHex: "ab", chainId: CHAIN })).toBe(
+      CHAIN,
+    );
+  });
+
+  // Before the fragment is decoded there is no chain to know.
   it.each<[string, Phase]>([
     ["reading-fragment", { kind: "reading-fragment" }],
     ["bad-link", { kind: "bad-link", error: "nope" }],
-    ["done", { kind: "done", txHash: "0x1", asset: 1n, amount: 5n }],
-    ["error", { kind: "error", message: "boom" }],
+    ["error with nothing retained", { kind: "error", message: "boom" }],
   ])("has no chain during %s", (_label, phase) => {
     expect(linkChainIdOf(phase)).toBeUndefined();
   });
@@ -60,7 +73,7 @@ describe("stepperStateFor", () => {
   // Settled phases keep their own state: a claim that already landed is not
   // undone by the user switching networks afterwards.
   it.each<[string, Phase, boolean]>([
-    ["done", { kind: "done", txHash: "0x1", asset: 1n, amount: 5n }, true],
+    ["done", { kind: "done", txHash: "0x1", chainId: CHAIN, asset: 1n, amount: 5n }, true],
     ["error", { kind: "error", message: "boom" }, false],
   ])("keeps %s terminal even when blocked", (_label, phase, done) => {
     expect(stepperStateFor(phase, true)).toEqual({ current: "claim", failed: !done, done });

@@ -69,15 +69,18 @@ export function useWalletState(): UseQueryResult<WalletState> {
       if (!wallet) throw new Error("wallet not ready");
       // `SYNC_LIMIT` is the page size, not a cap: `syncNotes` pages the feed
       // to exhaustion from its persisted cursor.
+      // Names this sync, so a superseded run finishing late releases the
+      // counter only if it still owns it.
+      const token = `${chainId}:${wallet.address}`;
       try {
         await wallet.syncNotes({
           limit: SYNC_LIMIT,
-          onProgress: (p) => syncProgress.scanning(p.fetched, p.hits),
+          onProgress: (p) => syncProgress.scanning(token, p.fetched, p.hits),
         });
       } finally {
         // Also on failure: a stalled counter left on screen would read as a
         // sync still running.
-        syncProgress.finished();
+        syncProgress.finished(token);
       }
       return { balances: computeBalances(wallet), syncedAt: Date.now() };
     },
@@ -114,19 +117,30 @@ export function useInvalidateWalletState(): () => Promise<void> {
 /// next sync restarts from the beginning of the feed rather than resuming.
 export function useHardRefresh(): { run(): Promise<void>; busy: boolean } {
   const { wallet } = useWallet();
+  const { chainId } = useActiveChain();
+  const qc = useQueryClient();
   const invalidate = useInvalidateWalletState();
   const [busy, setBusy] = useState(false);
+  const address = wallet?.address;
   const run = useCallback(async () => {
     if (!wallet) return;
     setBusy(true);
     try {
+      // The wipe has to be serialised against any sync already running.
+      // `syncNotes` loads the notes file once at entry, mutates it for the
+      // whole run and re-saves it in a `finally` — so an in-flight poll would
+      // write the pre-wipe notes *and* its stale cursor straight back over
+      // this, and "wipe + resync" would report success having changed nothing.
+      // The `disabled={syncing}` guard in the UI cannot cover it: that reflects
+      // `isFetching` at render time, not a refetch starting one tick later.
+      await qc.cancelQueries({ queryKey: walletStateKey(chainId, address) });
       await wallet.noteStore.save({ version: 2, notes: [] });
       await wallet.refresh();
       await invalidate();
     } finally {
       setBusy(false);
     }
-  }, [wallet, invalidate]);
+  }, [wallet, invalidate, qc, chainId, address]);
   return { run, busy };
 }
 

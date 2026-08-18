@@ -5,7 +5,7 @@
 // re-rendering every `useWalletStore` subscriber that many times.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { type Eip6963ProviderDetail, walletStore } from "./store";
+import { type Eip6963ProviderDetail, parseChainId, walletStore } from "./store";
 
 function detail(uuid: string, rdns: string): Eip6963ProviderDetail {
   return {
@@ -23,6 +23,10 @@ describe("startDiscovery", () => {
   let unsubscribe: () => void;
 
   beforeEach(() => {
+    // The store is a module singleton, so without a reset each case inherits
+    // the previous one's `discovered` list and `seen` map — the length
+    // assertions below then only hold in file order.
+    walletStore.resetForTest();
     notifies = 0;
     unsubscribe?.();
     unsubscribe = walletStore.subscribe(() => {
@@ -60,5 +64,55 @@ describe("startDiscovery", () => {
     const after = notifies;
     announce(d);
     expect(notifies).toBe(after);
+  });
+});
+
+describe("pickProvider", () => {
+  beforeEach(() => {
+    walletStore.resetForTest();
+    walletStore.startDiscovery();
+  });
+
+  it("never substitutes another wallet for a named one", () => {
+    // The stored wallet has not announced; only MetaMask has. Substituting it
+    // would silently attach a different EOA — hence a different nsk and a
+    // different shielded address — without the user choosing it.
+    announce(detail("uuid-mm", "io.metamask"));
+
+    expect(walletStore.pickProvider("com.rainbow")).toBeUndefined();
+  });
+
+  it("matches a named wallet case-insensitively once it announces", () => {
+    announce(detail("uuid-rb", "com.rainbow"));
+
+    expect(walletStore.pickProvider("COM.RAINBOW")?.info.rdns).toBe("com.rainbow");
+  });
+
+  it("prefers MetaMask only when no wallet was named", () => {
+    announce(detail("uuid-ph", "app.phantom"));
+    announce(detail("uuid-mm2", "io.metamask"));
+
+    expect(walletStore.pickProvider()?.info.rdns).toBe("io.metamask");
+  });
+});
+
+describe("parseChainId", () => {
+  it("reads the hex form the spec mandates", () => {
+    expect(parseChainId("0x89")).toBe(137);
+    expect(parseChainId("0X89")).toBe(137);
+  });
+
+  it("reads the bare decimal form wallets emit in practice", () => {
+    // `parseInt("137", 16)` is 311, which resolves to no known chain and drops
+    // the whole app to `unsupported-chain` with no diagnostic.
+    expect(parseChainId("137")).toBe(137);
+  });
+
+  it("accepts a number and rejects anything unparseable", () => {
+    expect(parseChainId(137)).toBe(137);
+    expect(parseChainId("")).toBeUndefined();
+    expect(parseChainId("zzz")).toBeUndefined();
+    expect(parseChainId(null)).toBeUndefined();
+    expect(parseChainId(Number.NaN)).toBeUndefined();
   });
 });

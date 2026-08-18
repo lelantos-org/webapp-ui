@@ -7,10 +7,13 @@
     <meta name="referrer" content="no-referrer" />
     <!--
       CSP via meta is partial: `frame-ancestors`, `sandbox`, `report-uri` are ignored here
-      and must be set as HTTP response headers in production. SDK uses `new Function`
-      (jubjub-wasm) which requires 'unsafe-eval'; Vite dev injects inline bootstrap
-      scripts which require 'unsafe-inline'. This baseline blocks third-party origins;
-      tighten further at the deployment edge with proper headers.
+      and must be set as HTTP response headers in production (see security-headers.conf).
+
+      This is the *development* policy. The SDK uses `new Function` (jubjub-wasm), which
+      needs 'unsafe-eval' everywhere; `@vitejs/plugin-react` injects an inline Fast Refresh
+      preamble, which needs 'unsafe-inline' in dev only. `tightenCsp` in vite.config.ts
+      rewrites both `script-src` and `connect-src` for the built app — a production build
+      emits no inline script, so do not add one without revisiting that plugin.
     -->
     <meta
       http-equiv="Content-Security-Policy"

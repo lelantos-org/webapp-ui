@@ -8,6 +8,7 @@ import {
 } from "@/features/actions/forms/amount-field";
 import { type DepositInput, depositSchema } from "@/features/actions/forms/schemas";
 import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
+import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
 import { useDeposit } from "@/features/actions/mutations";
 import { useFeePreview } from "@/features/actions/use-fee-preview";
 import { AssetPicker } from "@/features/assets/AssetPicker";
@@ -33,6 +34,7 @@ export function DepositForm() {
     register,
     handleSubmit,
     reset,
+    getValues,
     setValue,
     watch,
     formState: { errors },
@@ -51,10 +53,11 @@ export function DepositForm() {
   // Public wallet balance, not the shielded one: a deposit moves funds in.
   const sourceBalance = useDepositSourceBalance(selected?.id, watchedAsEth);
   // The preview is debounced, so between a keystroke and the fetch settling
-  // `fee.data` describes the previous amount. Both readers below gate the
-  // submit button, so a lagging total is treated as absent: the button stays
-  // disabled through the window rather than accepting the fee for a different
-  // amount.
+  // `fee.data` describes the previous amount — treated as absent so the fee for
+  // one amount is never applied to another. `validateDepositAmount` now reports
+  // that absence as `feeUnknown` and refuses to validate, which is what
+  // actually keeps the button disabled through the window; it previously fell
+  // back to checking the bare amount and stayed live.
   const feeTotal = fee.stale ? undefined : fee.data?.total;
   const v = validateDepositAmount(parsed, selected, sourceBalance, feeTotal);
   const setup = useDepositSetup(selected?.id, {
@@ -65,13 +68,21 @@ export function DepositForm() {
   const clearFinished = useClearFinishedOp(m, progress);
   const pendingAmountBase = selected && parsed !== undefined ? parsed * selected.scale : undefined;
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (!selected) return;
-    const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
-    await m.mutateAsync({ amount, asset: selected.id, asEth: values.asEth });
-    // Amount only — see `WithdrawForm` for why the asset and `asEth` stay.
-    reset({ ...values, amount: "" });
-  });
+  const onSubmit = handleSubmit(
+    useSubmitOnce(async (values) => {
+      if (!selected) return;
+      const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
+      await m.mutateAsync({ amount, asset: selected.id, asEth: values.asEth });
+      // Amount only — see `WithdrawForm` for why the asset and `asEth` stay.
+      //
+      // From `getValues()`, not the submitted `values`: nothing disables the
+      // asset picker while the tx is in flight, and that window is long (proof
+      // generation, then the post-submit bookkeeping). Resetting from the
+      // submit-time snapshot silently rolled back an asset — or `asEth` — the
+      // user had changed in the meantime, moving the picker under their cursor.
+      reset({ ...getValues(), amount: "" });
+    }),
+  );
 
   return (
     <ActionForm

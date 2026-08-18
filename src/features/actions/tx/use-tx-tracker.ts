@@ -12,6 +12,9 @@ import { useActiveChain } from "@/features/chain/ChainProvider";
 import { addPendingMany, clearPending } from "@/features/pending-tx/store";
 import { useWallet } from "@/features/wallet";
 import { useInvalidateWalletState } from "@/features/wallet/use-wallet-state";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("tx:tracker");
 
 /// Caller request — minus per-kind enrichment that the tracker can derive
 /// itself (swap leg-B watermark anchor + chain reads).
@@ -30,6 +33,15 @@ export type TrackTxArgs = TrackTxRequest & {
   onPhase?: (phase: TxPhase) => void;
 };
 
+/// Post-submit bookkeeping for a broadcast tx.
+///
+/// Never rejects. This runs from a mutation's `onSuccess`, *after* the tx is
+/// already on its way, so a failure here says nothing about the transaction —
+/// but react-query awaits whatever `onSuccess` returns inside its own `try` and
+/// routes a rejection to `onError`. A single flaky `fetchFeeBps` therefore used
+/// to turn a perfectly good swap into a red stepper, a "swap failed" toast, no
+/// pending overlay, no explorer link and no lifecycle watch at all, while the
+/// tx settled on chain regardless. Everything here degrades instead.
 export function useTxTracker(): (args: TrackTxArgs) => Promise<void> {
   const invalidate = useInvalidateWalletState();
   const { wallet } = useWallet();
@@ -42,8 +54,9 @@ export function useTxTracker(): (args: TrackTxArgs) => Promise<void> {
       const ctx = await prepareCtx(args, wallet);
 
       // Refetch so balance reflects local markSpent before the pending
-      // overlay is spliced (avoids a one-frame flicker).
-      await invalidate();
+      // overlay is spliced (avoids a one-frame flicker). A failed refetch is
+      // cosmetic — the poll picks it up — and must not skip the steps below.
+      await invalidate().catch((e: unknown) => log.warn("post-submit invalidate failed", e));
 
       addPendingMany(chain.chainId, args.result.txHash, pendingShapesFor(ctx));
 
@@ -64,26 +77,36 @@ export function useTxTracker(): (args: TrackTxArgs) => Promise<void> {
   );
 }
 
+/// Enrich the pending context with what only a chain read can supply.
+///
+/// Degrades to the `legB`-less shape — the same one used when there is no
+/// wallet — rather than propagating. Losing `legB` costs the swap its
+/// leg-2 "settling" overlay; propagating cost the user a tx reported as failed.
 async function prepareCtx(
   args: TrackTxRequest,
   wallet: WalletApi | undefined,
 ): Promise<PendingContext> {
   if (args.kind !== "swap") return args;
   if (!wallet) return { kind: "swap", result: args.result };
-  const [entryOut, feeBps] = await Promise.all([
-    fetchAssetEntry(wallet, args.swap.assetOut),
-    wallet.chain.fetchFeeBps(),
-  ]);
-  return {
-    kind: "swap",
-    result: args.result,
-    legB: {
-      swap: args.swap,
-      assetOutBaseline: wallet.balance(args.swap.assetOut),
-      scaleOut: entryOut.scale,
-      feeBps,
-    },
-  };
+  try {
+    const [entryOut, feeBps] = await Promise.all([
+      fetchAssetEntry(wallet, args.swap.assetOut),
+      wallet.chain.fetchFeeBps(),
+    ]);
+    return {
+      kind: "swap",
+      result: args.result,
+      legB: {
+        swap: args.swap,
+        assetOutBaseline: wallet.balance(args.swap.assetOut),
+        scaleOut: entryOut.scale,
+        feeBps,
+      },
+    };
+  } catch (e) {
+    log.warn("swap leg-B context unavailable; overlay will omit it", e);
+    return { kind: "swap", result: args.result };
+  }
 }
 
 /// Only deposit + swap surface an on-chain deposit id — the same value the

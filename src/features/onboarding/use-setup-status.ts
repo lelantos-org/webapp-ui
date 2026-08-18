@@ -54,6 +54,11 @@ export const NO_SETUP_NEEDS: SetupNeeds = {
 /// with nothing approved at all still needs setup — zero covers no amount. The
 /// probe then behaves as an existence check and tightens to the exact total as
 /// soon as the fee preview resolves.
+/// `undefined` status means the probe could not answer — this chain has no
+/// Permit2 to authorize against — so there is nothing for setup to do. That is
+/// the opposite of the all-zero reading it used to receive in that case, which
+/// says "nothing is approved yet" and puts the deposit behind a setup flow that
+/// cannot succeed.
 export function evaluateSetup(
   status: SetupStatus | undefined,
   total: bigint | undefined,
@@ -97,6 +102,12 @@ export function useSetupStatus(
 }
 
 /// Invalidator hook used by the setup modal on success.
+///
+/// With no asset, invalidates every asset for this (chain, payer). The key is
+/// always four elements, so passing `undefined` produced `[…, null]` — which is
+/// not a *prefix* of `[…, "5"]`, so React Query matched nothing and the call
+/// silently did no work. Dropping the trailing element makes the no-asset form
+/// a real prefix, which is what the optional parameter implies.
 export function useInvalidateSetupStatus(): (asset?: bigint) => Promise<void> {
   const { wallet } = useWallet();
   const { chainId } = useActiveChain();
@@ -104,8 +115,9 @@ export function useInvalidateSetupStatus(): (asset?: bigint) => Promise<void> {
   const payer = wallet?.address;
   return useCallback(
     async (asset?: bigint) => {
+      const key = setupStatusKey(chainId, payer, asset);
       await qc.invalidateQueries({
-        queryKey: setupStatusKey(chainId, payer, asset),
+        queryKey: asset === undefined ? key.slice(0, -1) : key,
       });
     },
     [qc, chainId, payer],

@@ -99,3 +99,35 @@ describe("toChainEntry", () => {
     expect(entry(rest).chainName).toBe("chain 8453");
   });
 });
+
+describe("toChainEntry with unparseable fields", () => {
+  const good = {
+    chainId: 1,
+    rpcUrl: "http://rpc",
+    maspAddress: "0x1111111111111111111111111111111111111111",
+    relayerAddress: "0x2222222222222222222222222222222222222222",
+    treeDepth: 20,
+  };
+
+  it("skips a row with a malformed address instead of throwing", () => {
+    // `evmAddress` throws, and this mapping runs outside the fetch's try — so
+    // one chain publishing a bad address used to reject the whole registry and
+    // show "no chains available" for *every* chain.
+    const result = toChainEntry({ ...good, maspAddress: "not-an-address" } as never);
+    expect(result.ok).toBe(false);
+  });
+
+  it("skips a row whose token scale is not an integer", () => {
+    // zod's `z.string()` does not check that `scale` is numeric, and
+    // `BigInt("1.5")` is a SyntaxError.
+    const result = toChainEntry({
+      ...good,
+      tokens: [{ assetId: "1", token: good.maspAddress, scale: "1.5" }],
+    } as never);
+    expect(result.ok).toBe(false);
+  });
+
+  it("still accepts a well-formed row", () => {
+    expect(toChainEntry(good as never).ok).toBe(true);
+  });
+});

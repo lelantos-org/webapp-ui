@@ -8,6 +8,7 @@ import { balanceHint } from "@/features/actions/forms/balance-hint";
 import { RecipientField } from "@/features/actions/forms/RecipientField";
 import { type TransferInput, transferSchema } from "@/features/actions/forms/schemas";
 import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
+import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
 import { useTransfer } from "@/features/actions/mutations";
 import { AssetSelectField } from "@/features/assets/AssetSelectField";
 import {
@@ -26,6 +27,7 @@ export function TransferForm() {
     register,
     handleSubmit,
     reset,
+    getValues,
     setValue,
     watch,
     formState: { errors },
@@ -48,13 +50,18 @@ export function TransferForm() {
   const clearFinished = useClearFinishedOp(m, progress);
   const assetField = register("asset");
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (!selected) return;
-    const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
-    await m.mutateAsync({ amount, asset: selected.id, to: values.to });
-    // Amount only — see `WithdrawForm` for why the asset and recipient stay.
-    reset({ ...values, amount: "" });
-  });
+  const onSubmit = handleSubmit(
+    useSubmitOnce(async (values) => {
+      if (!selected) return;
+      const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
+      await m.mutateAsync({ amount, asset: selected.id, to: values.to });
+      // Amount only — see `WithdrawForm` for why the asset and recipient stay.
+      // From `getValues()` rather than the submitted snapshot: neither field is
+      // disabled while the tx is in flight, and rolling back an edit made
+      // during that window is not a reset the user asked for.
+      reset({ ...getValues(), amount: "" });
+    }),
+  );
 
   return (
     <ActionForm
@@ -64,6 +71,7 @@ export function TransferForm() {
       onSubmit={onSubmit}
       submitDisabled={submitDisabled}
       progress={progress}
+      txHash={m.data?.txHash}
     >
       <SyncErrorNotice />
       <AssetSelectField

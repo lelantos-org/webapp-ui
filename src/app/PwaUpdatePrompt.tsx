@@ -1,9 +1,12 @@
 import { useRegisterSW } from "virtual:pwa-register/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("pwa");
+
+/// How long a dismissal holds before the prompt is offered again.
+const SNOOZE_MS = 30 * 60_000;
 
 /// Offers a reload when a new build is waiting.
 ///
@@ -17,7 +20,7 @@ const log = createLogger("pwa");
 /// deciding when the page reloads.
 export function PwaUpdatePrompt() {
   const {
-    needRefresh: [needRefresh, setNeedRefresh],
+    needRefresh: [needRefresh],
     updateServiceWorker,
   } = useRegisterSW({
     onRegisteredSW(url) {
@@ -28,8 +31,18 @@ export function PwaUpdatePrompt() {
     },
   });
 
+  // Dismissing hides the toast for a while rather than for good. `setNeedRefresh(false)`
+  // was permanent: nothing re-raised it, so one accidental swipe on mobile left
+  // the waiting worker waiting and pinned the user to the old build until every
+  // tab was closed.
+  const [snoozedAt, setSnoozedAt] = useState<number | undefined>(undefined);
+
   useEffect(() => {
     if (!needRefresh) return;
+    if (snoozedAt !== undefined) {
+      const id = setTimeout(() => setSnoozedAt(undefined), SNOOZE_MS);
+      return () => clearTimeout(id);
+    }
     const id = toast("A new version is available.", {
       duration: Number.POSITIVE_INFINITY,
       action: {
@@ -38,12 +51,12 @@ export function PwaUpdatePrompt() {
           void updateServiceWorker(true);
         },
       },
-      onDismiss: () => setNeedRefresh(false),
+      onDismiss: () => setSnoozedAt(Date.now()),
     });
     return () => {
       toast.dismiss(id);
     };
-  }, [needRefresh, setNeedRefresh, updateServiceWorker]);
+  }, [needRefresh, snoozedAt, updateServiceWorker]);
 
   return null;
 }

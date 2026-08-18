@@ -2,7 +2,7 @@
 // mounted with a fade-out class for `MODAL_EXIT_MS` so the CSS animation
 // completes before unmount.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { animationDelay, MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { sleep } from "@/shared/lib/timing";
 
@@ -31,24 +31,43 @@ export interface ClaimLinkStageApi {
 export function useClaimLinkStage(): ClaimLinkStageApi {
   const [stage, setStage] = useState<ClaimLinkStage>("form");
 
+  // The dwell below runs for over a second after the transfer resolves, and it
+  // used to keep setting state regardless of whether the component was still
+  // mounted. That window is precisely when the link is most at risk of being
+  // lost, so it is worth not fighting React over it.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const setStageIfMounted = useCallback((next: ClaimLinkStage) => {
+    if (mounted.current) setStage(next);
+  }, []);
+
   const toForm = useCallback(() => setStage("form"), []);
   const toConfirm = useCallback(() => setStage("confirm"), []);
 
-  const runWith = useCallback(async <T>(work: () => Promise<T>): Promise<T> => {
-    setStage("running");
-    try {
-      const r = await work();
-      setStage("success");
-      await sleep(SUCCESS_DWELL_MS);
-      setStage("closing");
-      await animationDelay(MODAL_EXIT_MS);
-      setStage("result");
-      return r;
-    } catch (err) {
-      setStage("form");
-      throw err;
-    }
-  }, []);
+  const runWith = useCallback(
+    async <T>(work: () => Promise<T>): Promise<T> => {
+      setStage("running");
+      try {
+        const r = await work();
+        setStageIfMounted("success");
+        await sleep(SUCCESS_DWELL_MS);
+        setStageIfMounted("closing");
+        await animationDelay(MODAL_EXIT_MS);
+        setStageIfMounted("result");
+        return r;
+      } catch (err) {
+        setStageIfMounted("form");
+        throw err;
+      }
+    },
+    [setStageIfMounted],
+  );
 
   return {
     stage,

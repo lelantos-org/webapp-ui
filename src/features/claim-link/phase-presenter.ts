@@ -17,23 +17,26 @@ export interface StepperState {
   done: boolean;
 }
 
-/// The chain the link names, for the phases that still know it.
+/// The chain the link names, for the phases that know it.
 ///
-/// `undefined` before the fragment is decoded and after the claim settles —
-/// `done` deliberately drops it, since nothing further is chain-scoped. An
-/// exhaustive switch rather than an `in` check so adding a phase is a compile
-/// error here instead of a silently-unlabelled asset list.
+/// `undefined` only before the fragment is decoded, or when it could not be.
+/// `done` and `error` keep it: the asset symbol and decimals come from that
+/// chain's token list, so dropping it on `done` made the success card — the
+/// common path, not an edge case — read `1000000000000000000 asset#5` in place
+/// of `1.0 WETH`. An exhaustive switch rather than an `in` check, so adding a
+/// phase is a compile error here instead of a silently-unlabelled asset list.
 export function linkChainIdOf(phase: Phase): bigint | undefined {
   switch (phase.kind) {
     case "need-wallet":
     case "loading":
     case "ready":
     case "sweeping":
+    case "done":
+      return phase.chainId;
+    case "error":
       return phase.chainId;
     case "reading-fragment":
     case "bad-link":
-    case "done":
-    case "error":
       return undefined;
   }
 }
@@ -62,7 +65,9 @@ export function stepperStateFor(phase: Phase, blocked = false): StepperState {
     case "done":
       return { current: "claim", failed: false, done: true };
     case "error":
-      return { current: "claim", failed: true, done: false };
+      // A scan that failed did not reach the claim step, and marking the wrong
+      // one red tells the user the spend was attempted when it was not.
+      return { current: phase.from === "scan" ? "scan" : "claim", failed: true, done: false };
   }
 }
 

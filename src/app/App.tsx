@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { Route, Routes } from "react-router-dom";
+import { Link, Route, Routes } from "react-router-dom";
 import { Layout } from "@/shared/ui/Layout";
 import { RouteErrorBoundary } from "@/shared/ui/RouteErrorBoundary";
 
@@ -25,6 +25,22 @@ const ClaimPage = lazy(() =>
   import("@/features/claim-link/claim-page").then((m) => ({ default: m.ClaimPage })),
 );
 
+function NotFound() {
+  return (
+    <div className="card m-5">
+      <div className="card__hdr">
+        <h3 className="card__t">page not found</h3>
+      </div>
+      <div className="stack stack--md">
+        <p className="muted">Nothing lives at this address.</p>
+        <Link to="/" className="btn">
+          go to the wallet
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 function PageFallback() {
   return (
     <div role="status" aria-busy="true" aria-label="loading">
@@ -48,6 +64,9 @@ export function App() {
               <Route path="send-link" element={<GenerateLinkForm />} />
             </Route>
             <Route path="/claim" element={<ClaimPage />} />
+            {/* Without this an unknown path rendered `<Layout>` around nothing,
+                which reads as the app having failed rather than as a bad URL. */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </RouteErrorBoundary>

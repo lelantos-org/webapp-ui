@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,6 +8,26 @@ import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 const r = (p: string) => fileURLToPath(new URL(`./node_modules/${p}`, import.meta.url));
+
+/// Short commit the bundle was built from, for the footer.
+///
+/// `VITE_COMMIT` first because `.git` is in `.dockerignore`: the image build
+/// has no repository to ask, so CI passes the value in as a build arg. The
+/// `git` call is the local-dev path, and `"dev"` is what an unversioned build
+/// (a tarball, a fresh `npm create`) honestly reports rather than guessing.
+function commitRef(): string {
+  const fromEnv = process.env.VITE_COMMIT?.trim();
+  if (fromEnv) return fromEnv;
+  try {
+    return execFileSync("git", ["rev-parse", "--short", "HEAD"], {
+      stdio: ["ignore", "pipe", "ignore"],
+    })
+      .toString()
+      .trim();
+  } catch {
+    return "dev";
+  }
+}
 
 // Extensions worth precompressing. The prover artifacts dominate: the ~49 MB
 // `.zkey` gzips to ~14 MB and the ~3.9 MB circuit `.wasm` to ~1.2 MB. nginx
@@ -76,7 +97,40 @@ function precompress(): Plugin {
   };
 }
 
+/// Tightens the `index.html` CSP for the built app.
+///
+/// One HTML file serves both `vite dev` and the production image, so its meta
+/// policy has to be the union of what both need — and the dev half is the loose
+/// half. `@vitejs/plugin-react` injects an inline Fast Refresh preamble, which
+/// forces `script-src 'unsafe-inline'`; a production build emits no inline
+/// script at all (verified against `dist/index.html`), so shipping that
+/// allowance only widens what an HTML injection could do on a page that handles
+/// a bearer key.
+///
+/// `connect-src` drops `http:` and `ws:` for the same reason: the app requires
+/// a secure context anyway (`crossOriginIsolated` for the wasm prover), so
+/// plaintext destinations are only useful to an exfiltrator. `https:`/`wss:`
+/// stay broad because chain RPC URLs come from the relayer's `/chains` at
+/// runtime and cannot be enumerated at build time.
+function tightenCsp(): Plugin {
+  return {
+    name: "tighten-csp",
+    apply: "build",
+    transformIndexHtml(html) {
+      return html
+        .replace(
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'",
+          "script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'",
+        )
+        .replace("connect-src 'self' http: https: ws: wss:", "connect-src 'self' https: wss:");
+    },
+  };
+}
+
 export default defineConfig({
+  define: {
+    __COMMIT__: JSON.stringify(commitRef()),
+  },
   resolve: {
     preserveSymlinks: false,
     alias: {
@@ -146,6 +200,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/fmd/, /^\/relayer/, /^\/explorer/, /^\/quote/],
       },
     }),
+    tightenCsp(),
     // Last on purpose — see the note on `precompress`.
     precompress(),
   ],

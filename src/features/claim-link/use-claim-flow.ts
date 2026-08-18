@@ -1,4 +1,3 @@
-import type { WalletApi } from "@lelantos-org/sdk";
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { type ChainEntry, findChain } from "@/config/chains";
 import { useChainRegistry } from "@/features/chain/ChainProvider";
@@ -16,11 +15,12 @@ import {
 import { readFragmentFromHash, scrubLocationHash } from "@/features/claim-link/fragment";
 import { type Event, initial, type Phase, reduce } from "@/features/claim-link/phase-machine";
 import { linkChainIdOf } from "@/features/claim-link/phase-presenter";
+import { currentWalletChainId } from "@/features/eip1193/store";
 import { useWalletStore } from "@/features/eip1193/use-store";
 import { useWallet } from "@/features/wallet";
-import { releaseScanner } from "@/features/wallet/scanner";
 import type { ConnectionBundle } from "@/features/wallet/use-connection";
 import { useConnection } from "@/features/wallet/use-connection";
+import { useScannerOwner } from "@/features/wallet/use-scanner-owner";
 import { describeError } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
 import { toastError } from "@/shared/lib/toast";
@@ -42,6 +42,10 @@ export interface ClaimFlow {
   /// the sweep both wait for it to clear.
   mismatch: ChainMismatch | undefined;
   claim(asset: bigint): Promise<void>;
+  /// Re-attempt after a failure. `error` used to be terminal, so a transient
+  /// RPC blip during the scan ended the claim for good — and reloading could
+  /// not help, because the fragment is scrubbed by then.
+  retry(): void;
 }
 
 /// Read the link's notes into an ephemeral wallet.
@@ -66,6 +70,10 @@ async function scanForNotes(
 
 /// Sweep one asset to the connected shielded address, clearing the ephemeral
 /// note store behind it so a reload does not rescan a spent link.
+///
+/// Does not dispose the wallet: the caller owns it (see `useScannerOwner`), and
+/// having two places decide that is what previously stranded a worker pool on
+/// the failure path.
 async function sweepToWallet(
   phase: Extract<Phase, { kind: "ready" }>,
   destination: string,
@@ -77,8 +85,6 @@ async function sweepToWallet(
       // Cosmetic: the notes are spent on-chain either way.
       log.warn("clearing ephemeral store failed", err);
     });
-    // The link is spent; nothing will scan with this wallet again.
-    releaseScanner(phase.eph);
     return { t: "sweep-success", txHash };
   } catch (err) {
     log.error("sweep failed", err);
@@ -109,12 +115,11 @@ export function useClaimFlow(): ClaimFlow {
   );
 
   // The ephemeral wallet lives in reducer state, which React discards on
-  // unmount along with the only reference to its scanner workers. Mirrored into
-  // a ref so the teardown below can reach it.
-  const ephRef = useRef<WalletApi | undefined>(undefined);
-  useEffect(() => {
-    ephRef.current = phase.kind === "ready" ? phase.eph : undefined;
-  }, [phase]);
+  // unmount — along with the only reference to its scanner workers. The owner
+  // holds it independently of the phase, so it survives the phases that drop
+  // `eph` (notably the `error` that follows a failed sweep) and is released
+  // exactly once.
+  const scanner = useScannerOwner();
 
   // Results that arrive after the page is gone are dropped rather than
   // dispatched into an unmounted reducer.
@@ -123,7 +128,6 @@ export function useClaimFlow(): ClaimFlow {
     mounted.current = true;
     return () => {
       mounted.current = false;
-      releaseScanner(ephRef.current);
     };
   }, []);
 
@@ -132,15 +136,23 @@ export function useClaimFlow(): ClaimFlow {
   }, []);
 
   // Decode the bearer secret out of the URL, then scrub it from history.
+  //
+  // Scrubbed unconditionally, before the result is even inspected. The failure
+  // branch used to `return` first, so a link whose *chain prefix* was mangled —
+  // by a chat client, a stray character, anything — kept its intact 64-hex
+  // bearer key in the address bar indefinitely, on the very screen the user is
+  // most likely to screenshot when asking why it does not work. `parseClaimFragment`
+  // rejects the chain part before it ever looks at the nsk, so "invalid link"
+  // very often means "the secret is fine".
   useEffect(() => {
     const read = readFragmentFromHash(window.location.hash);
+    scrubLocationHash(window.location, window.history);
     if (!read.ok) {
       if (read.error.kind === "missing") dispatch({ t: "fragment-missing" });
       else dispatch({ t: "fragment-bad", error: read.error.message });
       return;
     }
     dispatch({ t: "fragment-good", nskHex: read.value.nskHex, chainId: read.value.chainId });
-    scrubLocationHash(window.location, window.history);
   }, []);
 
   // Scan, once, as soon as every precondition holds. `phase.kind` moving off
@@ -169,12 +181,16 @@ export function useClaimFlow(): ClaimFlow {
     dispatch({ t: "load-start" });
     void scanForNotes(phase.nskHex, bundle, linkChain).then((e) => {
       scanning.current = false;
-      // A scan completing after unmount has still built a wallet holding live
-      // workers. The reducer never receives it, so it is released here.
-      if (!mounted.current && e.t === "load-success") releaseScanner(e.eph);
+      if (e.t === "load-success") {
+        // A scan that lands after unmount still built a wallet holding live
+        // workers, and the reducer will never receive it — so it is discarded
+        // rather than held.
+        if (mounted.current) scanner.hold(e.eph);
+        else scanner.discard(e.eph);
+      }
       dispatchIfMounted(e);
     });
-  }, [phase, status, wallet, bundle, linkChain, mismatch, dispatchIfMounted]);
+  }, [phase, status, wallet, bundle, linkChain, mismatch, dispatchIfMounted, scanner]);
 
   const claim = useCallback(
     async (asset: bigint): Promise<void> => {
@@ -191,10 +207,33 @@ export function useClaimFlow(): ClaimFlow {
       if (!row) return;
 
       dispatch({ t: "sweep-start", asset, amount: row.amount });
-      dispatchIfMounted(await sweepToWallet(phase, wallet.address, asset));
+      // Re-read the wallet's chain immediately before the spend, not just at
+      // click time. `sweepEphemeral` generates a proof and submits to the
+      // relayer, which takes many seconds; a wallet-initiated `chainChanged`
+      // in that window (a dapp prompt from another tab, an auto-switch) would
+      // otherwise put the spend on a chain the notes do not live on. The
+      // `mismatch` check above is what makes the disabled button a rule; this
+      // is what makes it hold for the duration of the spend.
+      if (currentWalletChainId() !== phase.chainId) {
+        toastError("wrong network", new Error("the wallet moved to another network"));
+        dispatchIfMounted({ t: "sweep-failure", message: "the wallet moved to another network" });
+        return;
+      }
+      const outcome = await sweepToWallet(phase, wallet.address, asset);
+      // Spent or failed, the link is finished with either way: nothing will
+      // scan with this wallet again, and the phase it moves to may not carry
+      // `eph` at all.
+      scanner.release();
+      dispatchIfMounted(outcome);
     },
-    [phase, wallet, mismatch, dispatchIfMounted],
+    [phase, wallet, mismatch, dispatchIfMounted, scanner],
   );
 
-  return { phase, linkChain, mismatch, claim };
+  /// Re-attempt a claim that failed. See the `retry` transition.
+  const retry = useCallback(() => {
+    scanning.current = false;
+    dispatch({ t: "retry" });
+  }, []);
+
+  return { phase, linkChain, mismatch, claim, retry };
 }

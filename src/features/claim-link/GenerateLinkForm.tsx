@@ -10,12 +10,17 @@ import { AssetSelectField } from "@/features/assets/AssetSelectField";
 import {
   DEFAULT_ASSET_ID,
   findAsset,
+  type RegisteredAsset,
   useRegisteredAssets,
 } from "@/features/assets/registered-assets";
+import { useActiveChain } from "@/features/chain/ChainProvider";
 import { ClaimLinkResult } from "@/features/claim-link/components/ClaimLinkResult";
 import { GenerateModal } from "@/features/claim-link/components/GenerateModal";
+import { UnclaimedLinks } from "@/features/claim-link/components/UnclaimedLinks";
+import { forgetClaimLink } from "@/features/claim-link/link-vault";
 import { useClaimLinkStage } from "@/features/claim-link/use-claim-link-stage";
 import { useGenerateLink } from "@/features/claim-link/use-generate-link";
+import { describeError } from "@/shared/lib/errors";
 import { formatAssetAmount, parseAmountForAsset } from "@/shared/lib/format";
 import { TextField } from "@/shared/ui/Field";
 
@@ -31,40 +36,56 @@ const VISIBLE_RUNNING_PHASES: ReadonlySet<TxPhase> = new Set([
 export function GenerateLinkForm() {
   const { mutation, progress } = useGenerateLink();
   const assets = useRegisteredAssets();
+  const chain = useActiveChain();
   const stageApi = useClaimLinkStage();
   const {
     register,
     handleSubmit,
     watch,
     reset,
+    setError,
     formState: { errors },
   } = useForm<GenerateLinkInput>({
     resolver: zodResolver(generateLinkSchema),
     defaultValues: { asset: DEFAULT_ASSET_ID, amount: "" },
   });
 
-  const [pending, setPending] = useState<{ amount: bigint; asset: bigint } | null>(null);
+  // The asset is snapshotted alongside the amount, not re-read from the live
+  // `<select>`. `pending.amount` is parsed with the asset's decimals and scale,
+  // and nothing disables the form behind the confirm modal — so formatting it
+  // through whatever asset is selected *now* could state a different token, and
+  // a different quantity, on the very screen carrying the "share this only
+  // through a private channel" attestation.
+  const [pending, setPending] = useState<{ amount: bigint; asset: RegisteredAsset } | null>(null);
 
   const selected = findAsset(assets, watch("asset"));
   const watchedAmount = watch("amount");
   const visibleSteps = progress.steps.filter((s) => VISIBLE_RUNNING_PHASES.has(s.id));
-  const amountLabel = pending && selected ? formatAssetAmount(pending.amount, selected) : "";
+  const amountLabel = pending ? formatAssetAmount(pending.amount, pending.asset) : "";
 
   const onSubmit = handleSubmit((values) => {
     if (!selected) return;
     try {
       const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
-      setPending({ amount, asset: selected.id });
+      setPending({ amount, asset: selected });
       stageApi.toConfirm();
-    } catch {
-      // zod surfaces parse errors via errors.amount
+    } catch (e) {
+      // Zod does *not* cover this. `generateLinkSchema`'s `amount` only runs
+      // `isDecimalString`; `parseAmountForAsset` additionally rejects a value
+      // finer than the asset's granularity, which zod never checks. Swallowing
+      // it meant that on a `scale > 1` asset, typing `1.000001` and clicking
+      // "generate link" did nothing at all — no modal, no error, no toast, and
+      // no way to find out why.
+      setError("amount", { message: describeError(e) });
     }
   });
 
   async function submitConfirmed() {
     if (!pending) return;
     try {
-      await stageApi.runWith(() => mutation.mutateAsync(pending));
+      await stageApi.runWith(() =>
+        mutation.mutateAsync({ amount: pending.amount, asset: pending.asset.id }),
+      );
     } catch {
       // stageApi.runWith already reset to "form" on throw
     }
@@ -72,12 +93,21 @@ export function GenerateLinkForm() {
 
   function resetAll() {
     reset({ asset: selected ? selected.id.toString() : DEFAULT_ASSET_ID, amount: "" });
+    // Only now is the persisted copy dropped: the user has seen the link and
+    // said they are done with it. See `link-vault`.
+    if (mutation.data) forgetClaimLink(mutation.data.recordId);
     mutation.reset();
     setPending(null);
     stageApi.toForm();
   }
 
-  if (stageApi.stage === "result" && mutation.data && selected) {
+  // No `&& selected` here. That guard could fail while `mutation.data` held the
+  // only copy of a bearer key for funds that had already left the wallet — a
+  // chain whose token list differs makes `findAsset` return undefined, and the
+  // component then fell through to an empty form with the link never rendered.
+  // `amountLabel` comes from the snapshot, so it does not need `selected`
+  // either.
+  if (stageApi.stage === "result" && mutation.data) {
     return <ClaimLinkResult url={mutation.data.url} amountLabel={amountLabel} onReset={resetAll} />;
   }
 
@@ -101,7 +131,9 @@ export function GenerateLinkForm() {
         />
       </ActionForm>
 
-      {stageApi.modalOpen && pending && selected ? (
+      <UnclaimedLinks chainId={chain.chainId} assets={assets} />
+
+      {stageApi.modalOpen && pending ? (
         <GenerateModal
           screen={modalScreen(stageApi.stage)}
           closing={stageApi.closing}

@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { shortAddr } from "@/shared/lib/format";
+import { useCopy } from "@/shared/lib/use-copy";
 
 export interface TxHashProps {
   hash: string;
@@ -13,17 +13,7 @@ export interface TxHashProps {
 /// nobody transcribes one by eye anyway — the copy button is the real action,
 /// and the untruncated value stays reachable via `title` and the clipboard.
 export function TxHash({ hash, url }: TxHashProps) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(hash);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setCopied(false);
-    }
-  }
+  const { copy, copied } = useCopy(hash);
 
   return (
     <div className="txhash">
@@ -31,7 +21,7 @@ export function TxHash({ hash, url }: TxHashProps) {
       <span className="txhash__val mono" title={hash}>
         {shortAddr(hash, 8)}
       </span>
-      <button type="button" className="txhash__act" onClick={copy}>
+      <button type="button" className="txhash__act" onClick={() => void copy()}>
         {copied ? "copied" : "copy"}
       </button>
       {url ? (

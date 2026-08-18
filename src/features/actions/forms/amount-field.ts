@@ -33,7 +33,12 @@ export interface AmountValidation {
   tooLarge: boolean;
   /// Spend ops only — `parsed > balance`.
   insufficient: boolean;
-  /// Convenience: form has a non-zero, in-range, balance-covered amount.
+  /// Deposits only — an amount is entered but the protocol fee is not known
+  /// yet, so `amount + fee` cannot be checked against the balance. Distinct
+  /// from `insufficient`, which is a statement about the user's funds.
+  feeUnknown: boolean;
+  /// Convenience: form has a non-zero, in-range, balance-covered amount whose
+  /// total cost is known.
   valid: boolean;
 }
 
@@ -43,11 +48,11 @@ export function validateAmount(
   balance: bigint | undefined,
 ): AmountValidation {
   if (!selected || parsed === undefined || parsed <= 0n) {
-    return { tooLarge: false, insufficient: false, valid: false };
+    return { tooLarge: false, insufficient: false, feeUnknown: false, valid: false };
   }
   const tooLarge = exceedsPublicInLimit(parsed);
   const insufficient = balance !== undefined && parsed > balance;
-  return { tooLarge, insufficient, valid: !tooLarge && !insufficient };
+  return { tooLarge, insufficient, feeUnknown: false, valid: !tooLarge && !insufficient };
 }
 
 /// Deposit's balance check, which differs from a spend's in two ways.
@@ -59,8 +64,16 @@ export function validateAmount(
 /// (`total = inAmt + fee`), so validating the amount alone would accept a
 /// deposit of the entire balance and let it fail at submit.
 ///
-/// Falls back to the un-feed amount while the fee preview is in flight, and
-/// skips the check entirely until the balance is known.
+/// Skips the check entirely until the balance is known, and reports an unknown
+/// fee as `feeUnknown` rather than validating the bare amount.
+///
+/// The fallback to the un-feed amount was the bug: `total ?? amountBase` made
+/// the whole balance a valid deposit for the 300ms debounce plus the RPC — and
+/// permanently, if the fee query errored, since `fee.data` then stays
+/// `undefined` forever. Clicking through cost a Permit2 signature and a
+/// `transferFrom` that reverts for `amount + fee`. `setup.blocked` did not
+/// cover it either: `evaluateSetup` falls back to `target = total ?? 1n`, so
+/// any non-zero allowance reads as "no setup needed".
 export function validateDepositAmount(
   parsed: bigint | undefined,
   selected: AssetMeta | undefined,
@@ -68,13 +81,11 @@ export function validateDepositAmount(
   totalBase: bigint | undefined,
 ): AmountValidation {
   const v = validateAmount(parsed, selected, undefined);
-  if (!v.valid || balanceBase === undefined) return v;
+  if (!v.valid) return v;
+  if (totalBase === undefined) return { ...v, feeUnknown: true, valid: false };
+  if (balanceBase === undefined) return v;
 
-  const amountBase = selected && parsed !== undefined ? parsed * selected.scale : undefined;
-  const spend = totalBase ?? amountBase;
-  if (spend === undefined) return v;
-
-  const insufficient = spend > balanceBase;
+  const insufficient = totalBase > balanceBase;
   return { ...v, insufficient, valid: !insufficient };
 }
 
@@ -87,6 +98,8 @@ export function pickAmountError(
   if (formErr) return formErr;
   if (v.tooLarge) return "amount exceeds asset cap";
   if (v.insufficient) return "exceeds available balance";
+  // Not an error the user can act on, and it clears on its own within a few
+  // hundred ms — the disabled submit button is the whole signal.
   return undefined;
 }
 

@@ -1,7 +1,31 @@
 import { toAbsoluteUrl } from "@lelantos-org/sdk/core";
 import { z } from "zod";
 
-const url = z.string().min(1, "required");
+/// A service URL, checked for shape as well as presence.
+///
+/// `min(1)` alone accepted `" "` and `htp://relayer`: both resolve against the
+/// page origin without complaint and then 404 every call at runtime, which
+/// surfaces as a confusing failure deep in the app rather than as a
+/// misconfiguration at boot. The refine runs *after* `toAbsoluteUrl`, so a
+/// legitimate page-relative value like `/relayer` still passes.
+/// `.trim()` first: `min(1)` accepted `" "`, which `toAbsoluteUrl` then resolves
+/// to the page origin — a perfectly valid URL pointing at the app itself, so
+/// every service call 404s at runtime instead of failing at boot.
+const url = z
+  .string()
+  .transform((v) => v.trim())
+  .pipe(z.string().min(1, "required"));
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+const HTTP_URL_MESSAGE = "must resolve to an http(s) URL";
 
 // An unset Docker build arg or CI variable reaches Vite as an empty string
 // rather than as `undefined`. Blank therefore has to mean "absent", or
@@ -10,7 +34,10 @@ const url = z.string().min(1, "required");
 const blankAsAbsent = z
   .string()
   .optional()
-  .transform((v) => (v && v.length > 0 ? v : undefined));
+  .transform((v) => {
+    const t = v?.trim();
+    return t ? t : undefined;
+  });
 
 /// Optional setting: absent, or valid per `schema`.
 function opt<T extends z.ZodTypeAny>(schema: T) {
@@ -21,8 +48,8 @@ function opt<T extends z.ZodTypeAny>(schema: T) {
 // nginx proxy paths (`/fmd`, `/relayer`), but the SDK's HTTP client and viem
 // both build requests with `new URL(base + path)`, which throws on a
 // page-relative base. Resolve against the page origin so both spellings work.
-const serviceUrl = url.transform(toAbsoluteUrl);
-const optServiceUrl = opt(z.string().transform(toAbsoluteUrl));
+const serviceUrl = url.transform(toAbsoluteUrl).refine(isHttpUrl, HTTP_URL_MESSAGE);
+const optServiceUrl = opt(z.string().transform(toAbsoluteUrl).refine(isHttpUrl, HTTP_URL_MESSAGE));
 
 /// Exported for tests; `env` below is the parsed singleton.
 /// Only what is global to the deployment.
@@ -42,6 +69,15 @@ export const Schema = z.object({
 
 export type Env = z.infer<typeof Schema>;
 
+/// Thrown when the deployment is misconfigured. Named so `main` can tell it
+/// apart from a genuine crash and say something useful.
+export class EnvConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EnvConfigError";
+  }
+}
+
 function parseEnv(): Env {
   const raw = {
     relayerUrl: import.meta.env.VITE_RELAYER_URL,
@@ -50,10 +86,16 @@ function parseEnv(): Env {
   };
   const result = Schema.safeParse(raw);
   if (!result.success) {
+    // `i.path[0]` is empty for an issue raised inside a piped optional schema,
+    // which produced a bare `VITE_:` label naming nothing.
     const issues = result.error.issues
-      .map((i) => `  VITE_${camelToScreaming(String(i.path[0] ?? ""))}: ${i.message}`)
+      .map((i) => {
+        const field = String(i.path[0] ?? "");
+        const name = field ? `VITE_${camelToScreaming(field)}` : "configuration";
+        return `  ${name}: ${i.message}`;
+      })
       .join("\n");
-    throw new Error(`Invalid environment configuration:\n${issues}`);
+    throw new EnvConfigError(`Invalid environment configuration:\n${issues}`);
   }
   return Object.freeze(result.data);
 }

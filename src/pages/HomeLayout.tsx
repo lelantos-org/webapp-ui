@@ -1,6 +1,8 @@
-import { Suspense, useEffect, useState } from "react";
+import { Fragment, Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
+import { chainKey } from "@/config/chains";
 import { AssetsCard } from "@/features/assets/AssetsCard";
+import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
 import { useWallet } from "@/features/wallet";
 import { AccountCard } from "@/features/wallet/AccountCard";
 import { preloadProverWorker } from "@/features/wallet/prover/proverWorker";
@@ -43,6 +45,7 @@ function FormFallback() {
 
 export function HomeLayout() {
   const { wallet, status, ethAddress } = useWallet();
+  const chainId = useActiveChainOrUndefined()?.chainId;
   const ready = status === "ready" && !!wallet;
 
   // Keep <Welcome /> mounted briefly after `ready` flips so CSS opacity can
@@ -94,7 +97,18 @@ export function HomeLayout() {
             </nav>
             <div className="action-shell__body">
               <Suspense fallback={<FormFallback />}>
-                <Outlet />
+                {/* Keyed on the chain so a network switch recreates the form's
+                    react-hook-form state instead of carrying it across.
+                    Asset ids are only unique *within* a chain, so a retained
+                    `asset` silently rebinds: id 3 as USDC (6dp) on one chain
+                    becomes WBTC (8dp) on the next, and `findAsset` resolves it
+                    happily. `asEth` is worse — it survives to a chain with no
+                    `nativeAdapterAddress`, where `AssetPicker` renders no eth
+                    option at all, so the select shows the first token while the
+                    form still holds `asEth: true`. */}
+                <Fragment key={chainId === undefined ? "no-chain" : chainKey(chainId)}>
+                  <Outlet />
+                </Fragment>
               </Suspense>
             </div>
           </div>

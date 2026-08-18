@@ -15,10 +15,14 @@ ARG VITE_RELAYER_URL
 ARG VITE_FMD_URL
 # Swap tab stays inert unless this is set.
 ARG VITE_METAQUOTER_URL
+# `.git` is dockerignored, so the build cannot read the commit itself; CI
+# passes it. Absent, the footer reads "dev".
+ARG VITE_COMMIT
 
 ENV VITE_RELAYER_URL=$VITE_RELAYER_URL \
     VITE_FMD_URL=$VITE_FMD_URL \
-    VITE_METAQUOTER_URL=$VITE_METAQUOTER_URL
+    VITE_METAQUOTER_URL=$VITE_METAQUOTER_URL \
+    VITE_COMMIT=$VITE_COMMIT
 
 COPY package.json package-lock.json .npmrc ./
 RUN --mount=type=secret,id=npm_token \

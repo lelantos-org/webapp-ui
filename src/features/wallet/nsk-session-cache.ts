@@ -1,6 +1,7 @@
 import type { Field } from "@lelantos-org/sdk/crypto";
 import { nskFieldFromHex, nskHexFromField } from "@/features/wallet/nsk-codec";
 import { createLogger } from "@/shared/lib/logger";
+import { sessionStore } from "@/shared/lib/storage";
 
 const log = createLogger("nsk-cache");
 const PREFIX = "lelantos:nsk:";
@@ -15,28 +16,11 @@ function key(ethAddr: string): string {
   return `${PREFIX}${ethAddr.toLowerCase()}`;
 }
 
-function store(): Storage | undefined {
-  try {
-    return typeof sessionStorage === "undefined" ? undefined : sessionStorage;
-  } catch {
-    // Some browsers throw on `sessionStorage` access in privacy/sandboxed
-    // contexts; treat as absent.
-    return undefined;
-  }
-}
-
-/// Read the cached nsk for `ethAddr` from sessionStorage.
+/// Read the cached nsk for `ethAddr`.
 /// Returns `undefined` on miss, malformed entry, or unavailable storage.
 export function getCachedNsk(ethAddr: string): Field | undefined {
-  const s = store();
-  if (!s) return undefined;
-  let raw: string | null;
-  try {
-    raw = s.getItem(key(ethAddr));
-  } catch {
-    return undefined;
-  }
-  if (!raw) {
+  const raw = sessionStore.get(key(ethAddr));
+  if (raw === undefined) {
     log.debug("miss");
     return undefined;
   }
@@ -50,41 +34,21 @@ export function getCachedNsk(ethAddr: string): Field | undefined {
   return parsed.value;
 }
 
-/// Persist `nsk` for `ethAddr`. Best-effort: storage errors
-/// (quota, privacy mode) are logged and swallowed.
+/// Persist `nsk` for `ethAddr`. Best-effort: a storage failure costs one extra
+/// EIP-712 prompt later, which is not worth failing a wallet build over.
 export function cacheNsk(ethAddr: string, nsk: Field): void {
-  const s = store();
-  if (!s) return;
-  try {
-    s.setItem(key(ethAddr), nskHexFromField(nsk));
-    log.debug("stored");
-  } catch (e) {
-    log.warn("store failed", e);
-  }
+  if (sessionStore.set(key(ethAddr), nskHexFromField(nsk))) log.debug("stored");
 }
 
 export function clearCachedNsk(ethAddr: string): void {
-  const s = store();
-  if (!s) return;
-  try {
-    s.removeItem(key(ethAddr));
-  } catch {
-    /* ignore */
-  }
+  sessionStore.remove(key(ethAddr));
 }
 
-/// Clear every cached nsk in this tab's sessionStorage.
+/// Clear every cached nsk in this tab.
+///
+/// Not just the connected address: a session that touched several accounts
+/// holds one raw spending key per account, and "disconnect" has to revoke all
+/// of them to mean what it says.
 export function clearAllCachedNsk(): void {
-  const s = store();
-  if (!s) return;
-  try {
-    const victims: string[] = [];
-    for (let i = 0; i < s.length; i++) {
-      const k = s.key(i);
-      if (k?.startsWith(PREFIX)) victims.push(k);
-    }
-    for (const k of victims) s.removeItem(k);
-  } catch {
-    /* ignore */
-  }
+  sessionStore.removePrefix(PREFIX);
 }

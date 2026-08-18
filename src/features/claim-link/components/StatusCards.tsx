@@ -80,7 +80,11 @@ export function BadLinkCard({ error }: { error: string }) {
   );
 }
 
-export function ErrorCard({ message }: { message: string; onRetry?: () => void }) {
+/// `onRetry` was declared here and never rendered, which made every failure
+/// terminal: the URL fragment is scrubbed on mount, so reloading destroys the
+/// secret rather than recovering it, and a transient RPC error during the scan
+/// ended the claim for good.
+export function ErrorCard({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="card gate">
       <div className="gate__mark" aria-hidden>
@@ -90,6 +94,11 @@ export function ErrorCard({ message }: { message: string; onRetry?: () => void }
         <div className="gate__t">claim failed</div>
         <div className="err">{message}</div>
         <div className="row">
+          {onRetry ? (
+            <button type="button" className="btn" onClick={onRetry}>
+              try again
+            </button>
+          ) : null}
           <Link to="/" className="btn">
             home
           </Link>

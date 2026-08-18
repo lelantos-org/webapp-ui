@@ -45,12 +45,18 @@ describe("phase-machine", () => {
     expect(next).toEqual({ kind: "ready", nskHex: "x", chainId: CHAIN, eph: stubWallet, balances });
   });
 
-  it("load-failure carries nskHex", () => {
+  it("load-failure carries everything a retry needs", () => {
     const next = reduce(
       { kind: "loading", nskHex: "x", chainId: CHAIN },
       { t: "load-failure", message: "boom" },
     );
-    expect(next).toEqual({ kind: "error", message: "boom", nskHex: "x" });
+    expect(next).toEqual({
+      kind: "error",
+      message: "boom",
+      nskHex: "x",
+      chainId: CHAIN,
+      from: "scan",
+    });
   });
 
   it("sweep-start → sweeping carries asset+amount", () => {
@@ -77,7 +83,13 @@ describe("phase-machine", () => {
       amount: 100n,
     };
     const next = reduce(sweeping, { t: "sweep-success", txHash: "0xabc" });
-    expect(next).toEqual({ kind: "done", txHash: "0xabc", asset: 1n, amount: 100n });
+    expect(next).toEqual({
+      kind: "done",
+      txHash: "0xabc",
+      chainId: CHAIN,
+      asset: 1n,
+      amount: 100n,
+    });
   });
 
   it("sweep-failure → error", () => {
@@ -91,7 +103,13 @@ describe("phase-machine", () => {
       amount: 100n,
     };
     const next = reduce(sweeping, { t: "sweep-failure", message: "rip" });
-    expect(next).toEqual({ kind: "error", message: "rip", nskHex: "x" });
+    expect(next).toEqual({
+      kind: "error",
+      message: "rip",
+      nskHex: "x",
+      chainId: CHAIN,
+      from: "sweep",
+    });
   });
 
   it("fragment-missing from need-wallet is a no-op (StrictMode replay)", () => {
@@ -111,8 +129,61 @@ describe("phase-machine", () => {
   });
 
   it("illegal transitions are no-ops", () => {
-    const done: Phase = { kind: "done", txHash: "h", asset: 1n, amount: 100n };
+    const done: Phase = { kind: "done", txHash: "h", chainId: CHAIN, asset: 1n, amount: 100n };
     expect(reduce(done, { t: "sweep-start", asset: 1n, amount: 100n })).toBe(done);
     expect(reduce(done, { t: "load-start" })).toBe(done);
+  });
+});
+
+describe("retry", () => {
+  const failed = (over: Partial<Extract<Phase, { kind: "error" }>> = {}): Phase => ({
+    kind: "error",
+    message: "rpc blew up",
+    nskHex: "ab",
+    chainId: CHAIN,
+    ...over,
+  });
+
+  it("goes back to need-wallet with the secret it retained", () => {
+    // `error` used to be terminal, and the URL fragment is scrubbed on mount —
+    // so a transient RPC failure during the scan ended the claim for good, and
+    // reloading destroyed the secret rather than recovering it.
+    expect(reduce(failed(), { t: "retry" })).toEqual({
+      kind: "need-wallet",
+      nskHex: "ab",
+      chainId: CHAIN,
+    });
+  });
+
+  it("is a no-op when the machine kept nothing to retry with", () => {
+    const bare: Phase = { kind: "error", message: "boom" };
+    expect(reduce(bare, { t: "retry" })).toBe(bare);
+  });
+
+  it("is illegal from any phase that has not failed", () => {
+    const ready: Phase = { kind: "loading", nskHex: "ab", chainId: CHAIN };
+    expect(reduce(ready, { t: "retry" })).toBe(ready);
+  });
+});
+
+describe("failure origin", () => {
+  it("records that a scan failed, not a claim", () => {
+    const loading: Phase = { kind: "loading", nskHex: "ab", chainId: CHAIN };
+    const next = reduce(loading, { t: "load-failure", message: "nope" });
+    expect(next).toMatchObject({ kind: "error", from: "scan", chainId: CHAIN });
+  });
+
+  it("records a sweep failure separately", () => {
+    const sweeping: Phase = {
+      kind: "sweeping",
+      nskHex: "ab",
+      chainId: CHAIN,
+      eph: stubWallet,
+      balances,
+      asset: 1n,
+      amount: 100n,
+    };
+    const next = reduce(sweeping, { t: "sweep-failure", message: "nope" });
+    expect(next).toMatchObject({ kind: "error", from: "sweep", chainId: CHAIN });
   });
 });

@@ -24,7 +24,7 @@ import { Stepper } from "@/shared/ui/Stepper";
 
 export function ClaimPage() {
   const { wallet, status, connect } = useWallet();
-  const { phase, linkChain, mismatch, claim } = useClaimFlow();
+  const { phase, linkChain, mismatch, claim, retry } = useClaimFlow();
   const blocked = mismatch !== undefined;
   const { current, failed, done } = stepperStateFor(phase, blocked);
 
@@ -46,6 +46,7 @@ export function ClaimPage() {
         assets={linkChain?.tokens ?? []}
         destinationAddress={wallet?.address}
         onClaim={claim}
+        onRetry={retry}
       />
     </div>
   );
@@ -59,6 +60,7 @@ interface PhaseCardProps {
   destinationAddress?: string;
   onConnect(): void;
   onClaim(asset: bigint): void;
+  onRetry(): void;
 }
 
 /// The one card that belongs to the current phase.
@@ -74,6 +76,7 @@ function PhaseCard({
   destinationAddress,
   onConnect,
   onClaim,
+  onRetry,
 }: PhaseCardProps) {
   switch (phase.kind) {
     case "reading-fragment":
@@ -119,6 +122,14 @@ function PhaseCard({
       );
 
     case "error":
-      return <ErrorCard message={phase.message} />;
+      // Retry is offered only when the machine kept enough to make another
+      // attempt; `reduce` ignores the event otherwise, and a dead button is
+      // worse than none.
+      return (
+        <ErrorCard
+          message={phase.message}
+          onRetry={phase.nskHex !== undefined && phase.chainId !== undefined ? onRetry : undefined}
+        />
+      );
   }
 }

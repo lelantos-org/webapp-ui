@@ -74,3 +74,24 @@ describe("scrubLocationHash", () => {
     expect(replace).not.toHaveBeenCalled();
   });
 });
+
+describe("scrubLocationHash with a trailing slash", () => {
+  it("scrubs /claim/ as well as /claim", () => {
+    // React Router routes `/claim/` to the same component, but an exact
+    // `=== "/claim"` test did not match it — so any link written with a
+    // trailing slash kept its bearer secret in the address bar indefinitely.
+    const history = { replaceState: vi.fn() } as unknown as History;
+    const loc = { pathname: "/claim/", hash: "#secret" } as Location;
+
+    scrubLocationHash(loc, history);
+
+    expect(history.replaceState).toHaveBeenCalledWith(null, "", "/claim/");
+  });
+
+  it("leaves unrelated paths alone", () => {
+    const history = { replaceState: vi.fn() } as unknown as History;
+    scrubLocationHash({ pathname: "/transfer", hash: "#x" } as Location, history);
+
+    expect(history.replaceState).not.toHaveBeenCalled();
+  });
+});

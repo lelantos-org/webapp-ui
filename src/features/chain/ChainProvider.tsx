@@ -37,6 +37,10 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     // The set of deployed chains does not move under a running tab, and every
     // wallet-facing read depends on it, so refetching only churns.
     staleTime: Number.POSITIVE_INFINITY,
+    // The whole app is behind this. A single failed attempt should not require
+    // a page reload to get past, and the retry button below covers what these
+    // do not.
+    retry: 2,
   });
   const walletChainId = useWalletStore((s) => s.chainId);
 
@@ -52,11 +56,22 @@ export function ChainProvider({ children }: { children: ReactNode }) {
   // supported chain from an unsupported one, so rendering the app would mean
   // guessing.
   if (registryQuery.isPending) return <ChainNotice>loading chains…</ChainNotice>;
+  // Unreachable and empty are different facts and used to be reported as the
+  // same one: `loadChainRegistry` swallowed its error and resolved `[]`, so a
+  // 502 told the user "the registry is empty" and left them nothing to do but
+  // reload the page by hand.
+  if (registryQuery.error) {
+    return (
+      <ChainNotice tone="err" onRetry={() => void registryQuery.refetch()}>
+        Could not reach the relayer to find out which networks are available.{" "}
+        {registryQuery.error.message}
+      </ChainNotice>
+    );
+  }
   if (registry.length === 0) {
     return (
-      <ChainNotice tone="err">
-        No chains available.{" "}
-        {registryQuery.error ? registryQuery.error.message : "The registry is empty."}
+      <ChainNotice tone="err" onRetry={() => void registryQuery.refetch()}>
+        The relayer is not serving any network this app can use.
       </ChainNotice>
     );
   }
@@ -65,10 +80,23 @@ export function ChainProvider({ children }: { children: ReactNode }) {
 
 /// Stands in for the entire app while the registry is unavailable, so it gets
 /// enough layout not to read as a rendering failure.
-function ChainNotice({ children, tone }: { children: ReactNode; tone?: "err" }) {
+function ChainNotice({
+  children,
+  tone,
+  onRetry,
+}: {
+  children: ReactNode;
+  tone?: "err";
+  onRetry?: () => void;
+}) {
   return (
     <div className="main">
       <div className={tone === "err" ? "err" : "muted txt-sm"}>{children}</div>
+      {onRetry ? (
+        <button type="button" className="btn mt-3" onClick={onRetry}>
+          try again
+        </button>
+      ) : null}
     </div>
   );
 }

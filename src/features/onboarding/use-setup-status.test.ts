@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateSetup, type SetupStatus } from "./use-setup-status";
+import { evaluateSetup, NO_SETUP_NEEDS, type SetupStatus } from "./use-setup-status";
 
 const NOW = 1_700_000_000;
 const FAR = NOW + 30 * 24 * 3600;
@@ -69,5 +69,22 @@ describe("evaluateSetup", () => {
 
   it("stays quiet before an amount when an allowance already exists", () => {
     expect(evaluateSetup(state(10_000n, 10_000n), undefined, NOW).needsSetup).toBe(false);
+  });
+});
+
+describe("evaluateSetup on a chain that cannot answer", () => {
+  it("asks for no setup when the probe returned nothing", () => {
+    // `readPermit2AllowanceState` returns `undefined` when the chain has no
+    // AllowanceTransfer support or the registry row omits `permit2Address`. It
+    // used to return all-zero allowances instead, which read as "nothing is
+    // approved" — so the form demanded a setup flow that could not possibly
+    // succeed, failed, and demanded it again. ERC-20 deposits were unusable on
+    // that chain, and the screen blamed a missing approval.
+    expect(evaluateSetup(undefined, 1_000n)).toEqual(NO_SETUP_NEEDS);
+  });
+
+  it("still demands setup for a real all-zero reading", () => {
+    const zeroed = { erc20Allowance: 0n, window: { amount: 0n, expiration: 0, nonce: 0 } };
+    expect(evaluateSetup(zeroed, 1_000n).needsSetup).toBe(true);
   });
 });

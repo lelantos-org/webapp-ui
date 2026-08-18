@@ -16,8 +16,12 @@ export type Phase =
       asset: bigint;
       amount: bigint;
     }
-  | { kind: "done"; txHash: string; asset: bigint; amount: bigint }
-  | { kind: "error"; message: string; nskHex?: string };
+  | { kind: "done"; txHash: string; chainId: bigint; asset: bigint; amount: bigint }
+  /// `nskHex`/`chainId` are retained so `retry` can go back for another attempt.
+  /// The URL fragment is already scrubbed by the time anything can fail, so
+  /// without them a transient RPC blip during the scan stranded the claim
+  /// permanently — and reloading destroyed the secret outright.
+  | { kind: "error"; message: string; nskHex?: string; chainId?: bigint; from?: "scan" | "sweep" };
 
 export type Event =
   | { t: "fragment-good"; nskHex: string; chainId: bigint }
@@ -28,7 +32,8 @@ export type Event =
   | { t: "load-failure"; message: string }
   | { t: "sweep-start"; asset: bigint; amount: bigint }
   | { t: "sweep-success"; txHash: string }
-  | { t: "sweep-failure"; message: string };
+  | { t: "sweep-failure"; message: string }
+  | { t: "retry" };
 
 export const initial: Phase = { kind: "reading-fragment" };
 
@@ -58,7 +63,8 @@ export function reduce(s: Phase, e: Event): Phase {
         ? {
             kind: "error",
             message: e.message,
-            ...("nskHex" in s ? { nskHex: s.nskHex } : {}),
+            from: "scan",
+            ...("nskHex" in s ? { nskHex: s.nskHex, chainId: s.chainId } : {}),
           }
         : s;
     case "sweep-start":
@@ -75,9 +81,32 @@ export function reduce(s: Phase, e: Event): Phase {
         : s;
     case "sweep-success":
       return s.kind === "sweeping"
-        ? { kind: "done", txHash: e.txHash, asset: s.asset, amount: s.amount }
+        ? {
+            kind: "done",
+            txHash: e.txHash,
+            // Retained: the asset labels are chain-scoped, and dropping the id
+            // here left the success card rendering `1000000000000000000
+            // asset#5` instead of `1.0 WETH` on every successful claim.
+            chainId: s.chainId,
+            asset: s.asset,
+            amount: s.amount,
+          }
         : s;
     case "sweep-failure":
-      return s.kind === "sweeping" ? { kind: "error", message: e.message, nskHex: s.nskHex } : s;
+      return s.kind === "sweeping"
+        ? {
+            kind: "error",
+            message: e.message,
+            nskHex: s.nskHex,
+            chainId: s.chainId,
+            from: "sweep",
+          }
+        : s;
+    case "retry":
+      // The only way out of `error`. Without it the phase was terminal, so a
+      // transient failure during the scan ended the claim for good.
+      return s.kind === "error" && s.nskHex !== undefined && s.chainId !== undefined
+        ? { kind: "need-wallet", nskHex: s.nskHex, chainId: s.chainId }
+        : s;
   }
 }

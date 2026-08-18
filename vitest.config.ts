@@ -18,7 +18,13 @@ export default mergeConfig(
         provider: "v8",
         reporter: ["text", "html"],
         include: ["src/**/*.{ts,tsx}"],
-        exclude: ["src/**/*.{test,spec}.{ts,tsx}", "src/**/*.d.ts", "src/app/main.tsx"],
+        exclude: [
+          "src/**/*.{test,spec}.{ts,tsx}",
+          "src/**/*.d.ts",
+          "src/app/main.tsx",
+          // Test-only scaffolding.
+          "src/test/**",
+        ],
       },
     },
   }),

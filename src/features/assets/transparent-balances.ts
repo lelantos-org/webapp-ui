@@ -5,6 +5,9 @@ import { useCallback } from "react";
 import { useRegisteredAssets } from "@/features/assets/registered-assets";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import { useWallet } from "@/features/wallet";
+import { createLogger } from "@/shared/lib/logger";
+
+const log = createLogger("balances:transparent");
 
 const POLL_MS = 30_000;
 
@@ -32,25 +35,38 @@ const sourceBalanceKey = (
     asEth ? "native" : (assetId?.toString() ?? null),
   ] as const;
 
-/// Chain reads, both falling back to `0n`.
+/// Chain reads, both reporting an unavailable balance as `undefined`.
 ///
-/// An adapter lacking the entrypoint, or a read that fails, is reported as a
-/// zero balance rather than a query error: failing the query would blank a
-/// balance the form is validating an amount against.
+/// Not `0n`. The rest of this module — and `validateDepositAmount`, which skips
+/// the check entirely on `undefined` — is built on "undefined means not known".
+/// Collapsing a failed read to zero instead asserts the user holds nothing, so
+/// every amount came back "exceeds available balance" and the deposit button
+/// stayed dead until the poll recovered, blaming the balance rather than the
+/// read. It also hid a genuinely missing adapter entrypoint.
 type Chain = WalletApi["chain"];
 /// Derived from the adapter signature, so a change to it surfaces here rather
 /// than at the call site.
 type TokenRef = Parameters<NonNullable<Chain["tokenBalanceOf"]>>[0];
 
-function readNative(chain: Chain, account: EvmAddress): Promise<bigint> {
-  if (!chain.nativeBalance) return Promise.resolve(0n);
-  return chain.nativeBalance(account).catch(() => 0n);
+/// `null`, not `undefined`: React Query rejects an `undefined` query result
+/// outright. The hook maps it back to `undefined` at its boundary, which is the
+/// spelling the rest of the app uses for "not known".
+function readNative(chain: Chain, account: EvmAddress): Promise<bigint | null> {
+  const read = chain.nativeBalance;
+  if (!read) return Promise.resolve(null);
+  return read.call(chain, account).catch((e: unknown) => {
+    log.warn("native balance read failed", e);
+    return null;
+  });
 }
 
-function readToken(chain: Chain, token: TokenRef, account: EvmAddress): Promise<bigint> {
+function readToken(chain: Chain, token: TokenRef, account: EvmAddress): Promise<bigint | null> {
   const read = chain.tokenBalanceOf;
-  if (!read) return Promise.resolve(0n);
-  return read.call(chain, token, account).catch(() => 0n);
+  if (!read) return Promise.resolve(null);
+  return read.call(chain, token, account).catch((e: unknown) => {
+    log.warn("token balance read failed", e);
+    return null;
+  });
 }
 
 /// The balance a deposit of this asset draws on, in token base units.
@@ -60,8 +76,9 @@ function readToken(chain: Chain, token: TokenRef, account: EvmAddress): Promise<
 /// the WETH balance there would validate against funds the user is not
 /// spending.
 ///
-/// `undefined` while the read is in flight, so callers can distinguish "not yet
-/// known" from "zero" and avoid rejecting an amount before the balance loads.
+/// `undefined` while the read is in flight, and also when it failed or the
+/// adapter cannot answer — callers distinguish "not yet known" from "zero" and
+/// avoid rejecting an amount against a balance they do not have.
 ///
 /// Reads only the balance it returns, keyed per asset: selecting a different
 /// asset costs one cold read and is cached thereafter.
@@ -74,7 +91,7 @@ export function useDepositSourceBalance(
   const assets = useRegisteredAssets();
   const token = asEth ? undefined : assets.find((a) => a.id === assetId)?.token;
 
-  const { data } = useQuery<bigint>({
+  const { data } = useQuery<bigint | null>({
     queryKey: sourceBalanceKey(wallet ? chainId : undefined, ethAddress, assetId, asEth),
     enabled: !!wallet && !!ethAddress && (asEth || token !== undefined),
     queryFn: async () => {
@@ -89,7 +106,7 @@ export function useDepositSourceBalance(
     staleTime: STALE_MS,
   });
 
-  return data;
+  return data ?? undefined;
 }
 
 /// Drop every cached source balance for the active wallet.

@@ -40,6 +40,63 @@ const SETTLING_POLL_MS = 5_000;
 /// the settling poll adds no further requests at that point.
 const SETTLING_POLL_MAX_MS = 30_000;
 
+/// One settling poll per page, shared by every `useBalances` caller.
+///
+/// `useBalances` is called by every consumer of a balance — `AssetsCard` and
+/// whichever form is mounted, at least — and each one used to own its own
+/// timer. Every tick runs a full `syncNotes` on the main thread, so two
+/// consumers meant two of the most expensive operation in the app on
+/// overlapping schedules, each with its own independent backoff.
+///
+/// A closure rather than loose module-level mutables: the timer, its backoff
+/// and its subscriber count are one piece of state with one invariant (the
+/// timer runs exactly while `refs > 0`), and keeping them together is what
+/// makes that checkable.
+function createSettlingPoll() {
+  let refs = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let delay = SETTLING_POLL_MS;
+  /// The most recently registered invalidator; they are equivalent, all closing
+  /// over the same query key.
+  let invalidate: (() => Promise<void>) | undefined;
+
+  const schedule = () => {
+    timer = setTimeout(() => {
+      pruneExpired();
+      void invalidate?.();
+      delay = Math.min(delay * 2, SETTLING_POLL_MAX_MS);
+      schedule();
+    }, delay);
+  };
+
+  return {
+    /// Join the poll; returns the leave function.
+    ///
+    /// Backs off rather than holding at 5s: the note is either flushed within a
+    /// few seconds or not at all, and an unflushed one would otherwise run a
+    /// full `syncNotes` every 5s for the rest of the session. `pruneExpired` is
+    /// the hard stop — once it drops the last watermark entry the callers
+    /// unsubscribe and the timer is cleared.
+    join(next: () => Promise<void>): () => void {
+      invalidate = next;
+      refs += 1;
+      if (timer === undefined) {
+        delay = SETTLING_POLL_MS;
+        schedule();
+      }
+      return () => {
+        refs -= 1;
+        if (refs > 0) return;
+        clearTimeout(timer);
+        timer = undefined;
+        invalidate = undefined;
+      };
+    },
+  };
+}
+
+const settlingPoll = createSettlingPoll();
+
 /// A confirmed balance plus the in-flight value attached to it.
 export interface AssetBalanceView extends AssetBalance {
   /// Value expected once an in-flight tx's outputs are scanned. Added to the
@@ -85,23 +142,11 @@ export function useBalances(): UseQueryResult<BalancesState> {
     pruneByBalances(chainId, (asset) => wallet.balance(asset));
   }, [wallet, chainId, syncedAt]);
 
-  // Backs off rather than holding at 5s: the note is either flushed within a
-  // few seconds or not at all, and an unflushed one would otherwise run a full
-  // `syncNotes` every 5s for the rest of the session. `pruneExpired` is the
-  // hard stop — once it drops the last watermark entry `hasWatermarkPending`
-  // goes false and this effect clears the timer.
+  // Joins the shared poll rather than starting one: see `joinSettlingPoll`.
+  // `hasWatermarkPending` going false is the hard stop, as before.
   useEffect(() => {
     if (!hasWatermarkPending) return;
-    let delay = SETTLING_POLL_MS;
-    let id: ReturnType<typeof setTimeout>;
-    const tick = () => {
-      pruneExpired();
-      void invalidate();
-      delay = Math.min(delay * 2, SETTLING_POLL_MAX_MS);
-      id = setTimeout(tick, delay);
-    };
-    id = setTimeout(tick, delay);
-    return () => clearTimeout(id);
+    return settlingPoll.join(invalidate);
   }, [hasWatermarkPending, invalidate]);
 
   const data = query.data;
@@ -112,14 +157,30 @@ export function useBalances(): UseQueryResult<BalancesState> {
   );
 }
 
-/// The display row for one asset, or `undefined` when there is nothing to show
-/// — which is also what a failed or still-running sync looks like, so callers
-/// must read "no row" as "unknown", not "zero". `SyncErrorNotice` is what
-/// tells the two apart on screen.
+/// The display row for one asset.
+///
+/// `undefined` means the balance is genuinely unknown — no sync has succeeded
+/// yet, or the last one failed; `SyncErrorNotice` is what says so on screen.
+///
+/// Once a sync *has* succeeded, an asset with no row is a zero balance and is
+/// reported as one. Returning `undefined` there conflated the two: `computeBalances`
+/// only emits assets holding unspent notes, so for a token the user holds none
+/// of, `validateAmount` skipped the balance check entirely, the submit button
+/// stayed live, the hint line vanished and the `max` button disappeared with no
+/// explanation — and the first feedback was the SDK's `InsufficientCoverError`
+/// after a proof had already been generated.
 export function useAssetBalance(assetId: bigint | undefined): AssetBalanceView | undefined {
-  const balances = useBalances().data?.balances;
-  if (assetId === undefined) return undefined;
-  return balances?.find((b) => b.asset === assetId);
+  const data = useBalances().data;
+  if (assetId === undefined || !data) return undefined;
+  return (
+    data.balances.find((b) => b.asset === assetId) ?? {
+      asset: assetId,
+      balance: 0n,
+      notes: 0,
+      pending: 0n,
+      outflow: 0n,
+    }
+  );
 }
 
 /// An asset with only in-flight value still needs a row, or a first deposit

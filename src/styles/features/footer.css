@@ -45,3 +45,13 @@
     line-height: 1.6;
   }
 }
+
+/* Present but recessive: wanted when reporting a bug, noise the rest of the
+   time. Dropped on narrow screens, where the row has no space to spare. */
+.ftr__ver {
+  font-size: 12px;
+  opacity: 0.7;
+}
+@media (max-width: 560px) {
+  .ftr__ver { display: none; }
+}

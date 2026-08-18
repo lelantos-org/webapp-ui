@@ -62,8 +62,16 @@ export interface Permit2AllowanceState {
   window: { amount: bigint; expiration: number; nonce: number };
 }
 
-/// Read both allowances for `token`. Zeroed when the adapter has no
-/// AllowanceTransfer support, which reads as "setup cannot help here".
+/// Read both allowances for `token`, or `undefined` when this chain cannot
+/// answer — no AllowanceTransfer support, or a registry row with no
+/// `permit2Address` (the field is optional).
+///
+/// `undefined`, not zeros. Zeros are a real reading meaning "nothing is
+/// approved", and `evaluateSetup` correctly treats them as "setup required" —
+/// so returning them for a chain where setup *cannot run* produced a closed
+/// loop: `SetupNotice` prompts, the setup fails for want of a Permit2 address,
+/// the notice comes back. ERC-20 deposits on that chain were unusable, and the
+/// screen blamed a missing approval.
 ///
 /// Deliberately returns raw values rather than a verdict: the amount being
 /// deposited changes per keystroke, while these reads are per (payer, token),
@@ -71,10 +79,10 @@ export interface Permit2AllowanceState {
 export async function readPermit2AllowanceState(
   wallet: WalletApi,
   token: EvmAddress,
-): Promise<Permit2AllowanceState> {
+): Promise<Permit2AllowanceState | undefined> {
   const chain = wallet.chain;
   if (!supportsAllowanceTransfer(chain) || !chain.permit2Address || !chain.tokenAllowance) {
-    return { erc20Allowance: 0n, window: { amount: 0n, expiration: 0, nonce: 0 } };
+    return undefined;
   }
   const owner = await chain.payerAddress();
   const masp = await chain.maspAddress();

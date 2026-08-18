@@ -153,3 +153,19 @@ describe("relativeTime", () => {
     expect(relativeTime(now - 2 * 86_400_000, now)).toMatch(/2 days/);
   });
 });
+
+describe("parseDecimal with no fractional units", () => {
+  it("rejects a fraction rather than truncating it", () => {
+    // `decimals` falls back to `scaleToDecimals(scale)`, which is 0 for
+    // `scale === 1n`. Zod only checks the string is decimal-shaped, so "1.9"
+    // reached this and came back as 1n — the user submitted 1 unit instead of
+    // 1.9, with no error anywhere.
+    expect(() => parseDecimal("1.9", 0)).toThrow(/no fractional units/);
+    expect(() => parseDecimal("1.0", 0)).toThrow(/no fractional units/);
+  });
+
+  it("still accepts whole numbers", () => {
+    expect(parseDecimal("19", 0)).toBe(19n);
+    expect(parseDecimal("1,234", 0)).toBe(1234n);
+  });
+});

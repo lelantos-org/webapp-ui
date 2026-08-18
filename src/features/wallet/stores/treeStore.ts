@@ -49,18 +49,26 @@ function pacer(): () => Promise<void> {
 /// sorts above the upper bound. The `:hdr` and `:nodes:` records fall outside a
 /// `:leaves:` range for the same reason.
 ///
-/// Both calls walk the same range in the same order, so the arrays line up
-/// index-for-index. That order is IndexedDB's lexicographic key order and is
-/// *not* numeric — `:10` sorts before `:2` — so callers must key off the parsed
-/// suffix rather than trusting the sequence.
+/// Both calls run in **one** transaction, so the arrays line up index-for-index.
+/// `db.getAllKeys` / `db.getAll` each open their own transaction, which left a
+/// window for another tab's `save()` to add a record between them: the arrays
+/// then differ in length and every entry past the insertion point is paired
+/// with the wrong value. That surfaces as a plausible-looking tree with wrong
+/// leaves — a wrong root and a rejected spend — rather than as an error.
+///
+/// The order is IndexedDB's lexicographic key order and is *not* numeric —
+/// `:10` sorts before `:2` — so callers must key off the parsed suffix rather
+/// than trusting the sequence.
 async function readRange<T>(
   db: IDBPDatabase<WalletSchema>,
   prefix: string,
 ): Promise<[string, T][]> {
   const range = IDBKeyRange.bound(prefix, `${prefix}￿`);
+  const tx = db.transaction(TREE_STORE, "readonly");
   const [keys, values] = await Promise.all([
-    db.getAllKeys(TREE_STORE, range),
-    db.getAll(TREE_STORE, range),
+    tx.store.getAllKeys(range),
+    tx.store.getAll(range),
+    tx.done,
   ]);
   return keys.map((k, i) => [String(k).slice(prefix.length), values[i] as T]);
 }

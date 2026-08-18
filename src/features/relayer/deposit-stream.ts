@@ -17,6 +17,10 @@ const streams = new Map<bigint, DepositStream>();
 export function depositStream(chainId: bigint): DepositStream {
   const open = streams.get(chainId);
   if (open && !open.isClosed) return open;
+  // Closed here means "gave up retrying", which does not guarantee the
+  // underlying `EventSource` was torn down. Dropping the reference without
+  // closing it left an orphaned connection per replacement.
+  open?.close();
   const fresh = new DepositStream(env.relayerUrl, chainId);
   streams.set(chainId, fresh);
   return fresh;

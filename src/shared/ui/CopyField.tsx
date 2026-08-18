@@ -1,17 +1,7 @@
-import { useState } from "react";
+import { useCopy } from "@/shared/lib/use-copy";
 
 export function CopyField({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(value);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setCopied(false);
-    }
-  }
+  const { copy, copied } = useCopy(value);
 
   return (
     <div className="row">
@@ -21,7 +11,7 @@ export function CopyField({ value }: { value: string }) {
         value={value}
         onFocus={(e) => e.currentTarget.select()}
       />
-      <button type="button" className="btn nowrap" onClick={copy}>
+      <button type="button" className="btn nowrap" onClick={() => void copy()}>
         {copied ? "copied" : "copy"}
       </button>
     </div>

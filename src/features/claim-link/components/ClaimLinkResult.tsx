@@ -7,9 +7,12 @@
 // weight (as the old card did) spent the page's focus on nothing.
 
 import { useId, useState } from "react";
+import { createLogger } from "@/shared/lib/logger";
+import { useCopy } from "@/shared/lib/use-copy";
+
+const log = createLogger("claim-link:result");
 
 const MASK_LENGTH = 24;
-const COPY_FEEDBACK_MS = 1500;
 
 export interface ClaimLinkResultProps {
   url: string;
@@ -19,28 +22,20 @@ export interface ClaimLinkResultProps {
 
 export function ClaimLinkResult({ url, amountLabel, onReset }: ClaimLinkResultProps) {
   const [revealed, setRevealed] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const { copy, copied } = useCopy(url);
   const titleId = useId();
 
   const masked = url.replace(/#.*$/, `#${"•".repeat(MASK_LENGTH)}`);
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
-  async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), COPY_FEEDBACK_MS);
-    } catch {
-      setCopied(false);
-    }
-  }
-
   async function shareLink() {
     if (!canShare) return;
     try {
       await navigator.share({ url, title: "claim link", text: `claim ${amountLabel}` });
-    } catch {
-      // user cancelled — no-op
+    } catch (e) {
+      // Cancelling the share sheet rejects, and is the common case — so this is
+      // not reported to the user, only recorded.
+      log.debug("share dismissed", e);
     }
   }
 
@@ -60,11 +55,11 @@ export function ClaimLinkResult({ url, amountLabel, onReset }: ClaimLinkResultPr
       </p>
 
       <div className="claim-result__actions">
-        <button type="button" className="btn" onClick={copyLink}>
+        <button type="button" className="btn" onClick={() => void copy()}>
           copy link
         </button>
         {canShare ? (
-          <button type="button" className="btn btn--ghost" onClick={shareLink}>
+          <button type="button" className="btn btn--ghost" onClick={() => void shareLink()}>
             share…
           </button>
         ) : null}

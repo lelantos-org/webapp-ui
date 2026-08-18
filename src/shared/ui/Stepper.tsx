@@ -52,7 +52,11 @@ interface Flags {
 }
 
 function stateAt(i: number, currentIdx: number, { failed, done }: Flags): StepState {
-  if (currentIdx === -1) return "pending";
+  if (currentIdx === -1) {
+    // A failure before any step reported in still has to show as one; this used
+    // to render every step as merely pending, so the op looked idle.
+    return failed && i === 0 ? "failed" : "pending";
+  }
   if (i < currentIdx) return "done";
   if (i > currentIdx) return "pending";
   if (failed) return "failed";

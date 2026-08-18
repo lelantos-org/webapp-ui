@@ -154,6 +154,32 @@ export type ChainEntryResult =
 /// fine while actually running on stale baked-in addresses — and it kept ten
 /// `VITE_*` vars alive to describe something the relayer already publishes.
 export function toChainEntry(row: ChainRow): ChainEntryResult {
+  try {
+    return parseChainRow(row);
+  } catch (e) {
+    // `evmAddress` and `BigInt` both throw on malformed input, and zod does not
+    // catch either: `z.string()` does not check that `scale` is numeric, and
+    // `z.number()` does not reject a float — `BigInt(1.5)` is a `RangeError`.
+    // This mapping used to run outside the caller's try, so one chain
+    // publishing a bad token address rejected `loadChainRegistry` outright and
+    // showed "no chains available" for *every* chain. The per-row result type
+    // exists precisely so one bad row is skipped; a throw bypassed it.
+    log.warn("unparseable chain row", { chainId: row.chainId, error: e });
+    return { ok: false, reason: { chainId: safeChainId(row.chainId), missing: ["unparseable"] } };
+  }
+}
+
+/// Best-effort id for reporting a row that could not be parsed at all.
+///
+/// `chainId` is `z.number()`, so it is already numeric by the time a row gets
+/// here — but a non-integer would still make `BigInt` throw, and this runs on
+/// the path that exists to stop one bad row taking down the registry.
+/// `Number.isInteger` keeps that from becoming a throw inside the error handler.
+function safeChainId(raw: number): bigint {
+  return Number.isInteger(raw) ? BigInt(raw) : 0n;
+}
+
+function parseChainRow(row: ChainRow): ChainEntryResult {
   const chainId = BigInt(row.chainId);
   const { rpcUrl, maspAddress, relayerAddress, treeDepth } = row;
 
@@ -195,20 +221,25 @@ export function toChainEntry(row: ChainRow): ChainEntryResult {
   };
 }
 
+/// How long to wait on the relayer before giving up on the registry.
+///
+/// Without a bound, a relayer that accepts the connection and then stalls
+/// leaves the query pending forever — and `ChainProvider` renders "loading
+/// chains…" in place of the entire app while it does.
+const REGISTRY_TIMEOUT_MS = 10_000;
+
 /// The chains this deployment can talk to.
 ///
-/// A relayer that is unreachable or serves nothing usable falls back to the
-/// single chain this bundle was built for, so a registry outage degrades to
-/// the previous single-chain behaviour instead of an app that cannot render.
+/// Throws when the registry cannot be read. That is the point: swallowing the
+/// error and resolving `[]` made an unreachable relayer indistinguishable from
+/// one serving an empty list, so a 502 was reported to the user as "the
+/// registry is empty" — with no retry, since there was no error to retry from.
 export async function loadChainRegistry(): Promise<ChainEntry[]> {
-  let rows: ChainRow[] = [];
-  try {
-    const r = await fetch(`${env.relayerUrl}/chains`);
-    if (!r.ok) throw new Error(`relayer /chains ${r.status}`);
-    rows = chainsResponse.parse(await r.json()).chains;
-  } catch (e) {
-    log.warn("chain registry unavailable; falling back to build-time config", e);
-  }
+  const r = await fetch(`${env.relayerUrl}/chains`, {
+    signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
+  });
+  if (!r.ok) throw new Error(`relayer /chains responded ${r.status}`);
+  const rows: ChainRow[] = chainsResponse.parse(await r.json()).chains;
 
   const results = rows.map(toChainEntry);
   const skipped = results.filter((r) => !r.ok).map((r) => r.reason);
@@ -222,10 +253,8 @@ export async function loadChainRegistry(): Promise<ChainEntry[]> {
     .filter((r) => r.ok)
     .map((r) => r.entry)
     .sort((a, b) => (a.chainId < b.chainId ? -1 : a.chainId > b.chainId ? 1 : 0));
-  if (entries.length > 0) return entries;
-
-  // Nothing usable: the caller renders "no chains available". There is no
-  // build-time chain to fall back to any more, and inventing one would mean
-  // pointing a wallet at addresses nobody confirmed are still deployed.
-  return [];
+  // An empty result is a real answer — the relayer replied, and nothing it
+  // serves is usable here. Distinct from the throw above, which means we never
+  // got an answer at all; the provider words the two differently.
+  return entries;
 }

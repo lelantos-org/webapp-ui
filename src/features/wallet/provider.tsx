@@ -1,8 +1,8 @@
 // React context wiring for the SDK wallet.
 
-import { type ReactNode, useCallback, useMemo } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { closeDepositStreams } from "@/features/relayer/deposit-stream";
-import { clearCachedNsk } from "@/features/wallet/nsk-session-cache";
+import { clearAllCachedNsk, clearCachedNsk } from "@/features/wallet/nsk-session-cache";
 import { disposeProverWorker } from "@/features/wallet/prover/proverWorker";
 import { releaseScanner } from "@/features/wallet/scanner";
 import type { WalletContextValue } from "@/features/wallet/types";
@@ -24,8 +24,26 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   });
   const error = deriveError ?? conn.connectError;
 
+  // Drop the outgoing account's nsk when the wallet rotates accounts.
+  //
+  // The cache is keyed by address and survives for the tab's life, so a session
+  // that touched several accounts used to accumulate one raw spending key per
+  // account in `sessionStorage` — every one of them readable by any script on
+  // the origin, long after the user had moved on. Switching back re-prompts for
+  // a signature, which is the correct price for not leaving spend authority
+  // lying around for accounts that are no longer in use.
+  const prevAddress = useRef<string | undefined>(conn.address);
+  useEffect(() => {
+    const prev = prevAddress.current;
+    prevAddress.current = conn.address;
+    if (prev && prev !== conn.address) clearCachedNsk(prev);
+  }, [conn.address]);
+
   const disconnect = useCallback(() => {
-    if (conn.address) clearCachedNsk(conn.address);
+    // Every entry, not just the connected address: `clearCachedNsk(address)`
+    // left behind the keys of any account used earlier in the session, so
+    // "disconnect" did not actually revoke what it appeared to.
+    clearAllCachedNsk();
     // The relayer stream is an open SSE connection held for the wallet's
     // lifetime; drop it rather than leaving it running for a wallet that is
     // no longer connected.
@@ -38,7 +56,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     releaseScanner(wallet);
     conn.disconnect();
     toastInfo("disconnected");
-  }, [conn.disconnect, conn.address, wallet]);
+  }, [conn.disconnect, wallet]);
 
   const refresh = useCallback(async () => {
     if (wallet) await wallet.sync({ limit: 500 });

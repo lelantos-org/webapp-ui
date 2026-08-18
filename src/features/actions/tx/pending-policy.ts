@@ -3,13 +3,13 @@
 // `useTxTracker` resolves any per-kind async data (chain reads, baseline
 // snapshots) up-front and threads the values into `PendingContext`.
 
-import { BPS_DENOMINATOR } from "@lelantos-org/sdk/core";
 import type {
   DepositResult,
   SwapResult,
   TransferResult,
   WithdrawResult,
 } from "@lelantos-org/sdk/wallet";
+import { sizeBNote } from "@lelantos-org/sdk/wallet";
 import type { SwapCall, WithAsset } from "@/features/actions/port";
 import type { ShieldedKind } from "@/features/actions/tx/tx-progress";
 import type { PendingShape } from "@/features/pending-tx/store";
@@ -72,21 +72,26 @@ function shape(asset: bigint, pendingIn: bigint, outflow: bigint): PendingShape[
   return [{ asset, pendingIn, outflow }];
 }
 
-/// Leg-2 B-note inflow on `assetOut`. Mirrors SDK's bValue derivation:
-/// `minOut · BPS / (scaleOut · (BPS + feeBps))`.
+/// Leg-2 B-note inflow on `assetOut`.
+///
+/// `sizeBNote` is the SDK's own sizing — the same call `executeSwap` makes to
+/// set the deposit leg's `publicIn` — so this is exactly what lands in the
+/// wallet. The closed form this used to inline is only the lower bound that
+/// sizing starts from, and under-reports whenever the division is inexact.
 function swapLegB(d: SwapLegBData): PendingShape[] {
-  const denom = d.scaleOut * (BPS_DENOMINATOR + d.feeBps);
-  if (denom === 0n) return [];
-  const bValue = (d.swap.quote.minOut * BPS_DENOMINATOR) / denom;
+  if (d.scaleOut <= 0n) return [];
+  const bValue = sizeBNote(d.swap.quote.minOut, d.scaleOut, d.feeBps);
   if (bValue <= 0n) return [];
   return [
     {
       asset: d.swap.assetOut,
       pendingIn: bValue,
       outflow: 0n,
-      // Floor at baseline+1: a pre-existing balance equal to baseline
-      // must not trigger an immediate self-clear before any sync runs.
-      clearWhenBalanceAtLeast: d.assetOutBaseline + 1n,
+      // The watermark is the balance this note will actually produce, not
+      // `baseline + 1`. Any unrelated inflow on `assetOut` — an inbound
+      // transfer, a concurrent deposit — satisfied `+1` and dropped the
+      // overlay while the swap was still settling.
+      clearWhenBalanceAtLeast: d.assetOutBaseline + bValue,
     },
   ];
 }

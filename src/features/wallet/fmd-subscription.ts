@@ -8,6 +8,7 @@ import {
 import { FmdClient, GAMMA_MIN } from "@lelantos-org/sdk/fmd-server";
 import { deriveKeysFromNsk, detectionKeyFor } from "@lelantos-org/sdk/keys";
 import { createLogger } from "@/shared/lib/logger";
+import { localStore, readJson, writeJson } from "@/shared/lib/storage";
 
 const log = createLogger("fmd-sub");
 // Namespaced by cache format: entries hold the capability token that
@@ -26,24 +27,60 @@ const PREFIX = "lelantos:fmd-sub:v2:";
 /// telling it nothing and taking the firehose. See `maxDetectionGamma`.
 const DECOY_FLOOR = 64;
 
-function key(chainId: bigint, ethAddr: string): string {
-  return `${PREFIX}${chainId.toString(16)}:${ethAddr.toLowerCase()}`;
+/// Per-(chain, address) memo of the subscription token last confirmed with the
+/// server, and when.
+///
+/// The token itself is a pure function of the wallet key and never changes; the
+/// *subscription* it addresses can expire or be revoked server-side. So this is
+/// a hint with an expiry, not an answer: past the TTL the token is re-confirmed
+/// through the idempotent create call. Trusting it indefinitely turned an
+/// expired subscription into a permanent, silent zero balance, because an
+/// inactive subscription answers `listNotes` with an empty page rather than an
+/// error.
+///
+/// Grouped into one object so the value key and its timestamp key cannot drift
+/// apart — they are written, read and cleared together or not at all.
+const tokenCache = {
+  key: (chainId: bigint, ethAddr: string) =>
+    `${PREFIX}${chainId.toString(16)}:${ethAddr.toLowerCase()}`,
+
+  /// The cached token, or `undefined` if absent or past the TTL.
+  get(chainId: bigint, ethAddr: string, now = Date.now()): string | undefined {
+    const entry = readJson(localStore, this.key(chainId, ethAddr), isCacheEntry);
+    if (!entry) return undefined;
+    return now - entry.confirmedAt < CACHE_TTL_MS ? entry.token : undefined;
+  },
+
+  set(chainId: bigint, ethAddr: string, token: string): void {
+    writeJson(localStore, this.key(chainId, ethAddr), { token, confirmedAt: Date.now() });
+  },
+
+  clear(chainId: bigint, ethAddr: string): void {
+    localStore.remove(this.key(chainId, ethAddr));
+  },
+};
+
+/// How long a cached token is trusted without re-confirming it with the server.
+/// Re-confirming costs one idempotent POST per day.
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface CacheEntry {
+  token: string;
+  confirmedAt: number;
 }
 
-function readCached(chainId: bigint, ethAddr: string): string | undefined {
-  try {
-    return localStorage.getItem(key(chainId, ethAddr)) ?? undefined;
-  } catch {
-    return undefined;
-  }
+function isCacheEntry(value: unknown): value is CacheEntry {
+  if (typeof value !== "object" || value === null) return false;
+  const r = value as Record<string, unknown>;
+  return typeof r.token === "string" && typeof r.confirmedAt === "number";
 }
 
-function writeCached(chainId: bigint, ethAddr: string, token: string): void {
-  try {
-    localStorage.setItem(key(chainId, ethAddr), token);
-  } catch (e) {
-    log.warn("persist failed", e);
-  }
+/// Forget the subscription registered for `ethAddr`.
+///
+/// Exported for the claim flow: a one-shot link should not leave a permanent
+/// entry tying its ephemeral address to this browser.
+export function clearCachedSubscription(chainId: bigint, ethAddr: string): void {
+  tokenCache.clear(chainId, ethAddr);
 }
 
 /// Largest γ keeping `noteCount` above the decoy floor, capped at the sender's
@@ -121,7 +158,7 @@ async function ensureFmdSubscription(
   const { keys } = await deriveKeysFromNsk(nsk, { P, J });
   const tokenHex = subscriptionTokenToHex(deriveSubscriptionToken(P, keys.ivk));
 
-  if (readCached(chainId, ethAddr) === tokenHex) {
+  if (tokenCache.get(chainId, ethAddr) === tokenHex) {
     log.debug("cache hit");
     return tokenHex;
   }
@@ -147,6 +184,15 @@ async function ensureFmdSubscription(
     active: sub.active,
     leafCount,
   });
-  writeCached(chainId, ethAddr, tokenHex);
+  // An inactive subscription is not usable, and — unlike an unreachable server
+  // — it fails silently: `listNotes` returns an empty page, the sync reports
+  // `exhausted` with zero hits, and the user is shown a healthy "synced just
+  // now" beside a zero balance. Throwing routes it to the `unavailable`
+  // fallback, which takes the firehose and warns.
+  if (!sub.active) {
+    tokenCache.clear(chainId, ethAddr);
+    throw new Error("FMD subscription is not active");
+  }
+  tokenCache.set(chainId, ethAddr, tokenHex);
   return tokenHex;
 }
