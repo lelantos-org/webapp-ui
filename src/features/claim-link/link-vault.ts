@@ -19,8 +19,19 @@
 // wired to the UI so it can be dropped the moment it has been handed over. The
 // alternative — a key that exists in exactly one place, on screen, for a few
 // seconds — loses money.
+//
+// Layout, top to bottom: the stored shape and its validator, pure helpers over
+// a record list, the module's mutable cache, the subscription, the single write
+// path, and the exported API. Everything above `cache` is pure and testable in
+// isolation; everything that mutates is in one block.
 
+import { createLogger } from "@/shared/lib/logger";
 import { localStore, readJson, writeJson } from "@/shared/lib/storage";
+
+/// Never given a record's `url`: that string *is* the bearer secret, and this
+/// logger writes to a console that gets screenshotted and pasted into issues.
+/// Ids, counts and tx hashes only.
+const log = createLogger("claim-links");
 
 const KEY = "lelantos:claim-links:v1";
 
@@ -51,36 +62,69 @@ export interface StoredClaimLink {
   txHash?: string;
 }
 
-/// The three `bigint`-as-string fields, checked shape-first.
-///
-/// Not cosmetic: the row renderer calls `BigInt(record.amount)` while React is
-/// rendering, and `BigInt` throws a `SyntaxError` on anything that is not a
-/// numeric literal. A single hand-edited or half-written entry therefore took
-/// down the whole send-link tab — including the list that is the only remaining
-/// copy of every *other* link's key. Rejecting it at the boundary keeps the bad
-/// record out instead of letting it reach a render.
-const DIGITS = /^\d+$/;
+// ---------------------------------------------------------------------------
+// Validation
+// ---------------------------------------------------------------------------
 
+const DECIMAL = /^\d+$/;
+
+/// A `bigint` field in its stored form.
+///
+/// The digit check is not cosmetic: the row renderer calls `BigInt(amount)`
+/// while React is rendering, and `BigInt` throws `SyntaxError` on anything that
+/// is not a numeric literal. A single hand-edited or half-written entry took
+/// down the whole send-link tab — including the list that is the only remaining
+/// copy of every *other* link's key.
+function isDecimalString(value: unknown): value is string {
+  return typeof value === "string" && DECIMAL.test(value);
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+/// One check per line, each with its own early return, so a breakpoint here
+/// lands on the field that actually failed. A single chained `&&` expression
+/// could only tell you that *something* was wrong.
 function isRecord(value: unknown): value is StoredClaimLink {
   if (typeof value !== "object" || value === null) return false;
   const r = value as Record<string, unknown>;
-  return (
-    typeof r.id === "string" &&
-    typeof r.url === "string" &&
-    typeof r.chainId === "string" &&
-    DIGITS.test(r.chainId) &&
-    typeof r.assetId === "string" &&
-    DIGITS.test(r.assetId) &&
-    typeof r.amount === "string" &&
-    DIGITS.test(r.amount) &&
-    typeof r.createdAt === "number" &&
-    Number.isFinite(r.createdAt) &&
-    (r.txHash === undefined || typeof r.txHash === "string")
-  );
+
+  if (!isNonEmptyString(r.id)) return false;
+  if (!isNonEmptyString(r.url)) return false;
+  if (!isDecimalString(r.chainId)) return false;
+  if (!isDecimalString(r.assetId)) return false;
+  if (!isDecimalString(r.amount)) return false;
+  if (typeof r.createdAt !== "number" || !Number.isFinite(r.createdAt)) return false;
+  return r.txHash === undefined || typeof r.txHash === "string";
 }
 
 function isRecordArray(value: unknown): value is StoredClaimLink[] {
   return Array.isArray(value) && value.every(isRecord);
+}
+
+// ---------------------------------------------------------------------------
+// Pure helpers over a record list
+// ---------------------------------------------------------------------------
+
+/// Within the retention window. The one place the TTL comparison is written.
+function isLive(record: StoredClaimLink, now: number): boolean {
+  return now - record.createdAt < TTL_MS;
+}
+
+function newestFirst(a: StoredClaimLink, b: StoredClaimLink): number {
+  return b.createdAt - a.createdAt;
+}
+
+/// The canonical stored form: live records only, newest first, capped.
+///
+/// Applied on every write and reused by `pruneExpiredClaimLinks`, so "what is
+/// on disk" has exactly one definition.
+function normalize(records: readonly StoredClaimLink[], now: number): StoredClaimLink[] {
+  return records
+    .filter((r) => isLive(r, now))
+    .sort(newestFirst)
+    .slice(0, MAX_RECORDS);
 }
 
 /// Parse the stored payload, newest first.
@@ -95,14 +139,64 @@ function isRecordArray(value: unknown): value is StoredClaimLink[] {
 /// from the URL the user already holds, so there is nothing to reconstruct
 /// element-wise.
 function parse(): StoredClaimLink[] {
-  const raw = readJson(localStore, KEY, isRecordArray);
-  return raw ? [...raw].sort((a, b) => b.createdAt - a.createdAt) : [];
+  const stored = readJson(localStore, KEY, isRecordArray);
+  if (!stored) {
+    // Distinguished from "no key at all", which is the ordinary first-run case
+    // and says nothing. `readJson` already logs a JSON syntax error; this is
+    // the schema rejection it cannot see.
+    if (localStore.get(KEY) !== undefined) {
+      log.warn("stored claim links failed validation; treating the store as empty");
+    }
+    return [];
+  }
+  return [...stored].sort(newestFirst);
 }
 
+// ---------------------------------------------------------------------------
+// Mutable state
+//
+// All of it, in one object, so a `console.log(cache)` in the devtools tells the
+// whole story of what this module currently believes.
+// ---------------------------------------------------------------------------
+
+interface Cache {
+  /// The raw stored string `records` was parsed from. `useSyncExternalStore`
+  /// compares snapshots by identity and re-renders whenever one changes, so
+  /// returning a freshly-parsed array on every call would loop forever. Keying
+  /// on the raw string rather than on our own writes keeps the cache correct no
+  /// matter who wrote last — another tab, a devtools edit, a test clearing
+  /// storage — with no separate invalidation path to keep in step.
+  raw: string | undefined;
+  /// Stable identity between changes; handed straight to React.
+  records: StoredClaimLink[];
+  /// Set once a write has failed to reach `localStorage`, cleared once one
+  /// lands.
+  ///
+  /// `SafeStorage` swallows the two ways a write fails — Safari private mode
+  /// and a spent quota — and reports `false`. `persist` used to ignore that and
+  /// publish anyway, so the next snapshot re-read storage, found the *old*
+  /// string still there, and handed back the records from before the write. The
+  /// visible result was the worst one this module has: `rememberClaimLink`
+  /// returned normally, the transfer went out, and the only copy of the bearer
+  /// key never appeared in the recovery list.
+  ///
+  /// While set, storage is not consulted: `records` is the only copy there is,
+  /// and re-reading would discard it. Records then live no longer than the tab
+  /// — a real loss, but a list that dies with the tab beats an empty one while
+  /// the funds are already gone.
+  mirrorOnly: boolean;
+}
+
+const cache: Cache = { raw: undefined, records: [], mirrorOnly: false };
+
+// ---------------------------------------------------------------------------
+// Subscription
+//
 // `localStorage` fires no event for same-document writes, so the vault
 // publishes its own. Without it every reader needs a "something might have
 // changed" signal threaded down as a prop — noisy, and easy to forget at a new
 // call site.
+// ---------------------------------------------------------------------------
 
 const listeners = new Set<() => void>();
 
@@ -117,57 +211,7 @@ export function subscribeClaimLinks(listener: () => void): () => void {
   };
 }
 
-/// Cached parse, keyed on the raw stored string.
-///
-/// `useSyncExternalStore` compares snapshots by identity and re-renders
-/// whenever it changes, so returning a freshly-parsed array on every call would
-/// loop forever. Invalidating on the raw string rather than on our own writes
-/// keeps the cache correct no matter who wrote last — another tab, a devtools
-/// edit, a test clearing storage — with no separate invalidation path to keep
-/// in step.
-let cachedRaw: string | undefined;
-let cachedRecords: StoredClaimLink[] = [];
-
-/// Set once a write has failed to reach `localStorage`.
-///
-/// `SafeStorage` swallows the two ways that happens — Safari private mode and a
-/// spent quota — and reports `false`. `write` used to ignore that and notify
-/// anyway, so the next `claimLinksSnapshot` re-read storage, found the *old*
-/// string still there, and handed back the records from before the write. The
-/// visible result was the worst one this module has: `rememberClaimLink`
-/// returned normally, the transfer went out, and the only copy of the bearer
-/// key never appeared in the recovery list.
-///
-/// After a failed write the in-memory copy is the only copy, so storage stops
-/// being consulted. Records then live no longer than the tab, which is a real
-/// loss — but a visible list that dies with the tab beats an empty one while
-/// the funds are already gone.
-let mirrorOnly = false;
-
-/// Persist `records`, dropping expired ones and capping the total.
-function write(records: StoredClaimLink[], now = Date.now()): void {
-  const kept = records
-    .filter((r) => now - r.createdAt < TTL_MS)
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .slice(0, MAX_RECORDS);
-
-  // The cache is updated from `kept` directly rather than by re-reading, so the
-  // snapshot is right even when the write below does not land.
-  cachedRecords = kept;
-  if (writeJson(localStore, KEY, kept)) {
-    cachedRaw = localStore.get(KEY);
-    // Cleared on success, not latched forever: a quota can be freed by another
-    // origin's eviction, and staying in mirror mode after that would keep
-    // discarding records at the end of the tab's life for no reason.
-    mirrorOnly = false;
-  } else {
-    mirrorOnly = true;
-  }
-
-  notify();
-}
-
-// Another tab writing the same key does not run our `write`, so it has to be
+// Another tab writing the same key does not run our `persist`, so it has to be
 // observed. This matters here more than for a typical cache: a second tab can
 // add a link whose key exists nowhere else.
 if (typeof window !== "undefined") {
@@ -176,15 +220,103 @@ if (typeof window !== "undefined") {
   });
 }
 
+// ---------------------------------------------------------------------------
+// The write path
+// ---------------------------------------------------------------------------
+
+/// Normalize, store, and publish. The only function in the module that mutates
+/// `cache` or writes to `localStorage`.
+function persist(records: readonly StoredClaimLink[], now: number): void {
+  const kept = normalize(records, now);
+
+  // The cache is set from `kept` directly rather than by re-reading, so the
+  // snapshot is right even when the store below refuses the write.
+  cache.records = kept;
+
+  if (writeJson(localStore, KEY, kept)) {
+    cache.raw = localStore.get(KEY);
+    // Cleared on success, not latched forever: a quota can be freed by another
+    // origin's eviction, and staying in mirror mode past that would keep
+    // discarding records at the end of the tab's life for no reason.
+    if (cache.mirrorOnly) log.info("localStorage writable again; claim links persist once more");
+    cache.mirrorOnly = false;
+  } else if (!cache.mirrorOnly) {
+    // Loud, and once per outage rather than once per write: these records are
+    // the only copy of a spending key, and they now die with the tab.
+    log.warn(
+      `localStorage refused the write — ${kept.length} claim link(s) are held in memory only ` +
+        "and will not survive this tab",
+    );
+    cache.mirrorOnly = true;
+  }
+
+  notify();
+}
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
 /// Every stored record, newest first, with a stable identity between changes.
 export function claimLinksSnapshot(): StoredClaimLink[] {
-  if (mirrorOnly) return cachedRecords;
+  if (cache.mirrorOnly) return cache.records;
+
   const raw = localStore.get(KEY);
-  if (raw !== cachedRaw) {
-    cachedRaw = raw;
-    cachedRecords = parse();
+  if (raw !== cache.raw) {
+    cache.raw = raw;
+    cache.records = parse();
   }
-  return cachedRecords;
+  return cache.records;
+}
+
+export interface RememberClaimLinkInput {
+  url: string;
+  chainId: bigint;
+  assetId: bigint;
+  amount: bigint;
+}
+
+/// Persist a link and return its id. Call **before** broadcasting.
+export function rememberClaimLink(input: RememberClaimLinkInput, now = Date.now()): string {
+  const record: StoredClaimLink = {
+    id: crypto.randomUUID(),
+    url: input.url,
+    chainId: input.chainId.toString(),
+    assetId: input.assetId.toString(),
+    amount: input.amount.toString(),
+    createdAt: now,
+  };
+
+  persist([record, ...claimLinksSnapshot()], now);
+  log.debug("remembered claim link", record.id, `chain=${record.chainId}`);
+  return record.id;
+}
+
+/// Attach the tx hash once the transfer is out.
+export function markClaimLinkBroadcast(id: string, txHash: string, now = Date.now()): void {
+  const records = claimLinksSnapshot();
+  if (!records.some((r) => r.id === id)) {
+    // Reachable: the record can have been pruned, evicted by `MAX_RECORDS`, or
+    // forgotten in another tab between the write and the broadcast. Nothing to
+    // repair — the link is already on screen — but worth seeing.
+    log.warn("no stored claim link to mark broadcast", id);
+    return;
+  }
+
+  persist(
+    records.map((r) => (r.id === id ? { ...r, txHash } : r)),
+    now,
+  );
+  log.debug("claim link broadcast", id, txHash);
+}
+
+/// Drop one record. The user's way of saying the link has been handed over.
+export function forgetClaimLink(id: string, now = Date.now()): void {
+  persist(
+    claimLinksSnapshot().filter((r) => r.id !== id),
+    now,
+  );
+  log.debug("forgot claim link", id);
 }
 
 /// Drop records past the TTL, and report whether any went.
@@ -197,47 +329,22 @@ export function claimLinksSnapshot(): StoredClaimLink[] {
 /// a problem in the first place.
 export function pruneExpiredClaimLinks(now = Date.now()): boolean {
   const records = claimLinksSnapshot();
-  const kept = records.filter((r) => now - r.createdAt < TTL_MS);
-  // Writing unconditionally would notify on every mount, and `write` hands back
-  // a fresh array each time — a new snapshot identity, so `useSyncExternalStore`
-  // re-renders, and the effect that called this runs again.
+  const kept = normalize(records, now);
+
+  // Writing unconditionally would publish on every mount, and `persist` hands
+  // back a fresh array each time — a new snapshot identity, so
+  // `useSyncExternalStore` re-renders and the effect that called this runs
+  // again.
   if (kept.length === records.length) return false;
-  write(kept, now);
+
+  persist(kept, now);
+  log.debug(`pruned ${records.length - kept.length} expired claim link(s)`);
   return true;
 }
 
-export interface RememberClaimLinkInput {
-  url: string;
-  chainId: bigint;
-  assetId: bigint;
-  amount: bigint;
-}
-
-/// Persist a link and return its id. Call **before** broadcasting.
-export function rememberClaimLink(input: RememberClaimLinkInput): string {
-  const record: StoredClaimLink = {
-    id: crypto.randomUUID(),
-    url: input.url,
-    chainId: input.chainId.toString(),
-    assetId: input.assetId.toString(),
-    amount: input.amount.toString(),
-    createdAt: Date.now(),
-  };
-  write([record, ...claimLinksSnapshot()]);
-  return record.id;
-}
-
-/// Attach the tx hash once the transfer is out.
-export function markClaimLinkBroadcast(id: string, txHash: string): void {
-  const records = [...claimLinksSnapshot()];
-  const i = records.findIndex((r) => r.id === id);
-  if (i < 0) return;
-  records[i] = { ...records[i], txHash };
-  write(records);
-}
-
 /// Links generated on `chainId`, newest first. Expired records are filtered out
-/// of the answer; they are removed from storage by the next write.
+/// of the answer; they leave storage via `pruneExpiredClaimLinks` or the next
+/// write.
 export function listClaimLinks(chainId: bigint, now = Date.now()): StoredClaimLink[] {
   return selectClaimLinks(claimLinksSnapshot(), chainId, now);
 }
@@ -249,10 +356,5 @@ export function selectClaimLinks(
   now = Date.now(),
 ): StoredClaimLink[] {
   const wanted = chainId.toString();
-  return records.filter((r) => r.chainId === wanted && now - r.createdAt < TTL_MS);
-}
-
-/// Drop one record. The user's way of saying the link has been handed over.
-export function forgetClaimLink(id: string): void {
-  write(claimLinksSnapshot().filter((r) => r.id !== id));
+  return records.filter((r) => r.chainId === wanted && isLive(r, now));
 }

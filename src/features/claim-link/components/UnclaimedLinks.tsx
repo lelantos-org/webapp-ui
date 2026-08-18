@@ -20,8 +20,27 @@ import {
   selectClaimLinks,
   subscribeClaimLinks,
 } from "@/features/claim-link/link-vault";
-import { formatAmountForAsset } from "@/shared/lib/format";
+import { formatAssetAmount } from "@/shared/lib/format";
 import { copyWithToast } from "@/shared/lib/use-copy";
+
+/// Label for a stored record's amount.
+///
+/// Exported for the test that pins the unregistered-asset branch: `amount` is
+/// in circuit units, and without a registered asset there is nothing to scale
+/// it by. Printing the raw figure bare put a number that could be six orders of
+/// magnitude off right next to properly denominated ones, indistinguishable.
+///
+/// `BigInt` cannot throw here — `link-vault` rejects any record whose `amount`
+/// is not a digit string, precisely so this runs safely inside a render.
+export function describeStoredAmount(
+  link: StoredClaimLink,
+  assets: readonly RegisteredAsset[],
+): string {
+  const asset = findAsset(assets, link.assetId);
+  return asset
+    ? formatAssetAmount(BigInt(link.amount), asset)
+    : `${link.amount} (asset #${link.assetId})`;
+}
 
 export interface UnclaimedLinksProps {
   chainId: bigint;
@@ -29,22 +48,10 @@ export interface UnclaimedLinksProps {
 }
 
 export function UnclaimedLinks({ chainId, assets }: UnclaimedLinksProps) {
-  const all = useSyncExternalStore(subscribeClaimLinks, claimLinksSnapshot, claimLinksSnapshot);
+  const stored = useSyncExternalStore(subscribeClaimLinks, claimLinksSnapshot, claimLinksSnapshot);
+  const links = useMemo(() => selectClaimLinks(stored, chainId), [stored, chainId]);
 
-  // Expiry is enforced on write, so a wallet that sent one link and stopped
-  // kept that record — and its spending key — on disk forever, invisible behind
-  // `selectClaimLinks`' filter. Sweeping from an effect keeps the write out of
-  // the render pass, which is what made the old prune-inside-the-read a
-  // problem.
-  //
-  // Mount-only is the whole job: every later change to the store goes through
-  // `write`, which prunes on the way past. Keying this on the snapshot instead
-  // would re-run it for each of those writes to find nothing.
-  useEffect(() => {
-    pruneExpiredClaimLinks();
-  }, []);
-
-  const links = useMemo(() => selectClaimLinks(all, chainId), [all, chainId]);
+  usePruneOnMount();
 
   if (links.length === 0) return null;
 
@@ -56,28 +63,46 @@ export function UnclaimedLinks({ chainId, assets }: UnclaimedLinksProps) {
         the recipient has it — anyone holding the link can claim the funds.
       </p>
       <ul className="link-vault__list">
-        {links.map((l) => (
-          <LinkRow key={l.id} link={l} assets={assets} />
+        {links.map((link) => (
+          <LinkRow key={link.id} link={link} assets={assets} />
         ))}
       </ul>
     </section>
   );
 }
 
-function LinkRow({ link, assets }: { link: StoredClaimLink; assets: readonly RegisteredAsset[] }) {
+/// Sweep records past the TTL out of storage, once per mount.
+///
+/// Expiry is otherwise only enforced on write, so a wallet that sent one link
+/// and stopped kept that record — and its spending key — on disk indefinitely,
+/// invisible behind `selectClaimLinks`' filter. Running it from an effect keeps
+/// the write out of the render pass, which is what made the old
+/// prune-inside-the-read a problem.
+///
+/// Mount-only is the whole job: every later change to the store goes through
+/// the vault's write path, which prunes on the way past.
+function usePruneOnMount(): void {
+  useEffect(() => {
+    pruneExpiredClaimLinks();
+  }, []);
+}
+
+interface LinkRowProps {
+  link: StoredClaimLink;
+  assets: readonly RegisteredAsset[];
+}
+
+function LinkRow({ link, assets }: LinkRowProps) {
   const [confirming, setConfirming] = useState(false);
-  const asset = findAsset(assets, link.assetId);
+  const amount = describeStoredAmount(link, assets);
 
-  // `link.amount` is in circuit units. Without a registered asset there is no
-  // way to scale it, so the raw figure is labelled as such rather than printed
-  // bare next to amounts that *are* denominated — the two differ by orders of
-  // magnitude and looked identical. `BigInt` is safe here: `link-vault` rejects
-  // any record whose amount is not a digit string.
-  const amount = asset
-    ? `${formatAmountForAsset(BigInt(link.amount), asset.decimals, asset.scale)} ${asset.symbol}`
-    : `${link.amount} (asset #${link.assetId})`;
+  const copy = useCallback(() => {
+    void copyWithToast(link.url, "link copied");
+  }, [link.url]);
 
-  const forget = useCallback(() => forgetClaimLink(link.id), [link.id]);
+  const forget = useCallback(() => {
+    forgetClaimLink(link.id);
+  }, [link.id]);
 
   return (
     <li className="link-vault__row">
@@ -92,42 +117,62 @@ function LinkRow({ link, assets }: { link: StoredClaimLink; assets: readonly Reg
       )}
       <div className="link-vault__actions">
         {confirming ? (
-          <>
-            <button
-              type="button"
-              className="link-vault__act link-vault__act--warn"
-              onClick={forget}
-            >
-              forget it?
-            </button>
-            <button
-              type="button"
-              className="link-vault__act link-vault__act--mute"
-              onClick={() => setConfirming(false)}
-            >
-              cancel
-            </button>
-          </>
+          <ConfirmForgetActions onConfirm={forget} onCancel={() => setConfirming(false)} />
         ) : (
-          <>
-            <button
-              type="button"
-              className="link-vault__act"
-              onClick={() => void copyWithToast(link.url, "link copied")}
-              aria-label={`copy claim link for ${amount}`}
-            >
-              copy
-            </button>
-            <button
-              type="button"
-              className="link-vault__act link-vault__act--mute"
-              onClick={() => setConfirming(true)}
-            >
-              done with this
-            </button>
-          </>
+          <DefaultActions amount={amount} onCopy={copy} onStartForget={() => setConfirming(true)} />
         )}
       </div>
     </li>
+  );
+}
+
+interface DefaultActionsProps {
+  amount: string;
+  onCopy(): void;
+  onStartForget(): void;
+}
+
+function DefaultActions({ amount, onCopy, onStartForget }: DefaultActionsProps) {
+  return (
+    <>
+      <button
+        type="button"
+        className="link-vault__act"
+        onClick={onCopy}
+        // Every row's button reads "copy"; the amount is what distinguishes
+        // them, and it is in a sibling element the button does not name.
+        aria-label={`copy claim link for ${amount}`}
+      >
+        copy
+      </button>
+      <button
+        type="button"
+        className="link-vault__act link-vault__act--mute"
+        onClick={onStartForget}
+      >
+        done with this
+      </button>
+    </>
+  );
+}
+
+interface ConfirmForgetActionsProps {
+  onConfirm(): void;
+  onCancel(): void;
+}
+
+/// Second step of the two-step delete. Deliberately holds the same two slots as
+/// `DefaultActions` — `.link-vault__actions` reserves the width, so confirming
+/// on one row cannot shift the rows below it.
+function ConfirmForgetActions({ onConfirm, onCancel }: ConfirmForgetActionsProps) {
+  return (
+    <>
+      <button type="button" className="link-vault__act link-vault__act--warn" onClick={onConfirm}>
+        forget it?
+      </button>
+      <button type="button" className="link-vault__act link-vault__act--mute" onClick={onCancel}>
+        cancel
+      </button>
+    </>
   );
 }

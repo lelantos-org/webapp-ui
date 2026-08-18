@@ -11,6 +11,11 @@ export default mergeConfig(
     test: {
       environment: "jsdom",
       globals: true,
+      // A spy installed in one test used to stay installed for the next one in
+      // the same file — `link-vault`'s "storage refuses the write" case left
+      // `Storage.prototype.setItem` throwing for everything after it. Restoring
+      // between tests makes a spy the concern of the test that created it.
+      restoreMocks: true,
       setupFiles: ["./vitest.setup.ts"],
       css: false,
       include: ["src/**/*.{test,spec}.{ts,tsx}"],
