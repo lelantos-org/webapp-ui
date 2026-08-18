@@ -30,8 +30,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        {/* Router above `ChainProvider` so `RouteErrorBoundary` — which keys on
-            the location — and any future route-driven chain selection have one.
+        {/* Router above `ChainProvider` so `RouteErrorBoundary` — which resets
+            on the location — and any future route-driven chain selection have one.
             (An earlier note here claimed `ChainProvider` reads and writes
             `?chain=`; it does neither, the chain comes from the wallet.) */}
         <BrowserRouter>

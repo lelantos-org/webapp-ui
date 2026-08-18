@@ -55,16 +55,22 @@ function markReloaded(): void {
 /// A stale chunk after a deploy is the common case and is fixed by a reload,
 /// so that is done once, automatically.
 ///
-/// Keyed on the location, so navigating away clears a latched error. `<Routes>`
-/// lives inside this boundary: without the key, a failed `/swap` chunk kept the
-/// error card on screen after the user clicked "transfer" — the URL changed and
-/// the page did not. `reset()` alone cannot fix that, because it re-renders the
+/// Navigating away clears a latched error. `<Routes>` lives inside this
+/// boundary: without that, a failed `/swap` chunk kept the error card on screen
+/// after the user clicked "transfer" — the URL changed and the page did not.
+/// The fallback's own `reset()` cannot fix it either, since it re-renders the
 /// very subtree that threw.
+///
+/// This is `resetKey`, not `key`. Keying the boundary on the location also
+/// worked, but it remounted everything below it on *every* navigation — so
+/// switching tabs tore down `HomeLayout`, replaying its entrance animation,
+/// re-firing the route `<Suspense>` fallback and refetching balances. The whole
+/// page blinked on each tab click. `resetKey` drops only the error.
 export function RouteErrorBoundary({ children }: { children: ReactNode }) {
   const { key } = useLocation();
   return (
     <ErrorBoundary
-      key={key}
+      resetKey={key}
       fallback={({ error, reset }) => {
         if (isChunkLoadError(error) && !alreadyReloaded()) {
           return <ChunkReload error={error} />;
