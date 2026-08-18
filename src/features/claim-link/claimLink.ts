@@ -50,8 +50,11 @@ export interface GenerateClaimLinkResult {
   tx: TransferResult;
   nskEphHex: string;
   ephAddress: string;
-  /// Handle into `link-vault`, so the UI can forget the record once the user
-  /// says the link has been handed over.
+  /// Handle into `link-vault` for the record written before the broadcast.
+  ///
+  /// The sender-side form no longer forgets it on reset — dropping a record is
+  /// `UnclaimedLinks`' job, behind an explicit confirmation — so this is the
+  /// correlation handle, not a delete token.
   recordId: string;
 }
 

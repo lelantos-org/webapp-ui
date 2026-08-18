@@ -6,6 +6,7 @@ import {
   forgetClaimLink,
   listClaimLinks,
   markClaimLinkBroadcast,
+  pruneExpiredClaimLinks,
   rememberClaimLink,
 } from "@/features/claim-link/link-vault";
 
@@ -88,5 +89,69 @@ describe("link-vault", () => {
     localStorage.setItem("lelantos:claim-links:v1", JSON.stringify([{ nope: true }, null, 7]));
 
     expect(listClaimLinks(CHAIN)).toEqual([]);
+  });
+
+  it("rejects a record whose amount is not a number", () => {
+    // `UnclaimedLinks` calls `BigInt(record.amount)` mid-render, where a throw
+    // unmounts the tab holding every other link. The bad entry is refused at the
+    // boundary instead.
+    localStorage.setItem(
+      "lelantos:claim-links:v1",
+      JSON.stringify([
+        {
+          id: "a",
+          url: "https://app/claim#x",
+          chainId: CHAIN.toString(),
+          assetId: "1",
+          amount: "1e3",
+          createdAt: Date.now(),
+        },
+      ]),
+    );
+
+    expect(listClaimLinks(CHAIN)).toEqual([]);
+  });
+
+  it("removes expired records from storage, not just from the answer", () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01"));
+      rememberClaimLink(input());
+
+      vi.setSystemTime(new Date("2026-03-01"));
+      // Filtered out of every view, but the spending key was still on disk.
+      expect(listClaimLinks(CHAIN)).toHaveLength(0);
+      expect(pruneExpiredClaimLinks()).toBe(true);
+
+      expect(JSON.parse(localStorage.getItem("lelantos:claim-links:v1") ?? "null")).toEqual([]);
+      // Idempotent: callers run it from an effect keyed on the snapshot, so a
+      // second write here would notify and re-trigger that effect forever.
+      expect(pruneExpiredClaimLinks()).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps serving records this tab wrote when storage refuses the write", () => {
+    // Safari private mode and a spent quota both make `setItem` throw. The old
+    // `write` notified anyway and the next read re-parsed the *stale* stored
+    // string, so `rememberClaimLink` returned normally while the only copy of a
+    // bearer key vanished — with the transfer already on its way out.
+    const setItem = vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("quota", "QuotaExceededError");
+    });
+    let id = "";
+    try {
+      id = rememberClaimLink(input());
+
+      const [record] = listClaimLinks(CHAIN);
+      expect(record.id).toBe(id);
+      expect(record.url).toBe("https://app/claim#deadbeef");
+    } finally {
+      setItem.mockRestore();
+      // Leave mirror mode: it persists until a write lands, and the module
+      // state outlives this test.
+      forgetClaimLink(id);
+    }
   });
 });

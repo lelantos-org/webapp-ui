@@ -17,7 +17,6 @@ import { useActiveChain } from "@/features/chain/ChainProvider";
 import { ClaimLinkResult } from "@/features/claim-link/components/ClaimLinkResult";
 import { GenerateModal } from "@/features/claim-link/components/GenerateModal";
 import { UnclaimedLinks } from "@/features/claim-link/components/UnclaimedLinks";
-import { forgetClaimLink } from "@/features/claim-link/link-vault";
 import { useClaimLinkStage } from "@/features/claim-link/use-claim-link-stage";
 import { useGenerateLink } from "@/features/claim-link/use-generate-link";
 import { describeError } from "@/shared/lib/errors";
@@ -93,9 +92,12 @@ export function GenerateLinkForm() {
 
   function resetAll() {
     reset({ asset: selected ? selected.id.toString() : DEFAULT_ASSET_ID, amount: "" });
-    // Only now is the persisted copy dropped: the user has seen the link and
-    // said they are done with it. See `link-vault`.
-    if (mutation.data) forgetClaimLink(mutation.data.recordId);
+    // The persisted copy deliberately survives this. "Generate another link" is
+    // not "the recipient has it": the URL on the screen above is masked by
+    // default, so this button was routinely the *first* thing clicked after a
+    // link was generated — and it deleted the record, leaving the bearer key
+    // nowhere, for funds already sent. `UnclaimedLinks` below is now the only
+    // way a record is dropped, behind its own confirmation. See `link-vault`.
     mutation.reset();
     setPending(null);
     stageApi.toForm();

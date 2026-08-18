@@ -25,6 +25,15 @@ export type ErrorKind = "rejected" | "failed";
 export function friendlyMessage(e: unknown): string {
   const c = classifyError(e);
   if (c.kind === "rejected") return "Canceled in wallet.";
+  // A code the switch below spells out already says the specific thing, and
+  // the keyword pass would only make it vaguer: every "Prover artifacts …"
+  // line contains "prover", so a 404 on the zkey used to be reported as a
+  // failed proof — the one fault it is not. Only codes that fall through to
+  // the raw SDK message reach the keyword heuristics.
+  if (e instanceof WalletError) {
+    const w = walletErrorText(e);
+    if (w.curated) return w.text;
+  }
   const raw = c.raw;
   const lower = raw.toLowerCase();
   // The selector's wording for notes reserved by a spend whose outcome the
@@ -105,6 +114,44 @@ function describeDuplicateSpend(e: NetworkError): string {
 }
 
 function describeWalletError(e: WalletError): string {
+  return walletErrorText(e).text;
+}
+
+/// The user-facing line for a wallet error, plus whether it was written for
+/// that code (`curated`) or is the SDK's own message passed through.
+///
+/// `friendlyMessage` needs the distinction: a curated line is final, while a
+/// pass-through message is exactly what the keyword heuristics exist for.
+function walletErrorText(e: WalletError): { text: string; curated: boolean } {
+  return { text: describeCode(e), curated: CURATED_CODES.has(e.code) };
+}
+
+/// Codes `describeCode` writes a line for. Anything else — `SELECTION`,
+/// `INVALID_ARGUMENT`, a code added by a newer SDK — falls through to the raw
+/// message, which is what the keyword pass is for.
+const CURATED_CODES = new Set<string>([
+  "INSUFFICIENT_COVER",
+  "WALLET_CONFIG",
+  "RELAYER_TIMEOUT",
+  "RELAYER_FAILED",
+  "FMD_TIMEOUT",
+  "FMD_FAILED",
+  "PROVER_FAILED",
+  "PROVER_ARTIFACTS_MISSING",
+  "PROVER_ARTIFACTS_FAILED",
+  "WORKER_TIMEOUT",
+  "WORKER_CRASHED",
+  "WORKER_FAILED",
+  "WIRE_FORMAT",
+  "ENVIRONMENT",
+  "X402_PAYMENT",
+  "NETWORK_NOT_DEPLOYED",
+  "PERMIT_REJECTED",
+  "DEPOSIT_ADAPTER",
+  "TX_MINING",
+]);
+
+function describeCode(e: WalletError): string {
   switch (e.code) {
     case "INSUFFICIENT_COVER": {
       const c = e instanceof InsufficientCoverError ? e : undefined;

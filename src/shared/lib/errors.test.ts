@@ -3,6 +3,8 @@ import {
   InsufficientCoverError,
   NetworkError,
   PermitRejectedError,
+  ProverArtifactsFailedError,
+  ProverArtifactsMissingError,
   ProverError,
   SelectionError,
   TxMiningError,
@@ -53,6 +55,31 @@ describe("describeError", () => {
     [new SelectionError("no spendable notes"), /no spendable notes/],
   ])("maps %s", (err, re) => {
     expect(describeError(err)).toMatch(re);
+  });
+});
+
+describe("prover faults keep their own diagnosis", () => {
+  // Every curated prover line contains the word "prover", so the keyword pass
+  // used to rewrite all of them into "Proof generation failed" — the one fault
+  // an unreachable or 404ing zkey is not.
+  it("a missing artifact is not reported as a failed proof", () => {
+    const msg = friendlyMessage(new ProverArtifactsMissingError(["opts.cdn"], "3x3"));
+    expect(msg).toMatch(/artifacts missing/i);
+    expect(msg).not.toMatch(/Proof generation failed/);
+  });
+
+  it("an artifact that failed to download points at the connection", () => {
+    const msg = friendlyMessage(
+      new ProverArtifactsFailedError("/3x3_final.zkey", "HTTP 404", { retryable: false }),
+    );
+    expect(msg).toMatch(/failed to load/i);
+    expect(msg).not.toMatch(/Proof generation failed/);
+  });
+
+  it("a real prover failure still reads as one", () => {
+    expect(friendlyMessage(new ProverError("witness calculation failed"))).toMatch(
+      /Proof generation failed/,
+    );
   });
 });
 

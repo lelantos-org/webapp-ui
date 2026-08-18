@@ -128,3 +128,121 @@
 }
 
 .claim-result__reset { justify-self: start; }
+
+/* RECOVERY LIST
+   Claim links this browser generated and has not been told to forget.
+
+   Its own classes rather than the `.row` / `.btn` utilities it used to borrow.
+   Those carry a phone breakpoint in `responsive.css` — `.row > .btn { flex: 1 1
+   100% }`, written for the copy field, where the button belongs under the input
+   — which stretched every row's "copy" to full width and stacked each entry
+   into four ragged lines. `.row`'s `align-items: stretch` also left the amount
+   sitting at the top of a 38px row while the buttons filled it. */
+.link-vault {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.link-vault__t {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.link-vault__note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--fg-mute);
+}
+
+.link-vault__list {
+  list-style: none;
+  margin: 0;
+  /* Both, and not the `padding` shorthand: `padding-inline-start` is what the
+     UA sets for the marker gutter, and it is what survives a shorthand written
+     in the other direction under `direction: rtl`. */
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.link-vault__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--bg-2);
+}
+
+/* Takes the slack so the actions sit hard right, and is the element that wraps
+   first when the row runs out of width. */
+.link-vault__amount {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--fg);
+  overflow-wrap: anywhere;
+}
+
+.link-vault__badge {
+  flex: 0 0 auto;
+  padding: 1px 6px;
+  border: 1px solid var(--warn-dim);
+  border-radius: 999px;
+  background: rgba(var(--warn-rgb), 0.08);
+  color: var(--warn);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* A fixed track for the controls: the forget confirmation swaps two words for
+   two buttons, and without a reserved lane every row below it jumped. */
+.link-vault__actions {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 11em;
+}
+
+.link-vault__act {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 120ms var(--ease-soft);
+}
+.link-vault__act:hover { color: var(--accent-2); text-decoration: underline; }
+.link-vault__act--warn { color: var(--warn); }
+.link-vault__act--warn:hover { color: var(--warn); }
+.link-vault__act--mute { color: var(--fg-mute); }
+.link-vault__act--mute:hover { color: var(--fg-dim); }
+
+@media (max-width: 480px) {
+  /* Actions drop to their own full-width line rather than shrinking: at this
+     width the amount and a right-aligned pair of text actions cannot share a
+     line without one of them truncating. */
+  .link-vault__actions {
+    flex: 1 1 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+}
