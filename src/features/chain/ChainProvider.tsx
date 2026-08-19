@@ -15,8 +15,13 @@
 // over with a default.
 
 import { useQuery } from "@tanstack/react-query";
-import { createContext, type ReactNode, useContext, useMemo } from "react";
-import { type ChainEntry, findChain, loadChainRegistry } from "@/config/chains";
+import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
+import {
+  type ChainEntry,
+  findChain,
+  loadChainRegistry,
+  readCachedChainRegistry,
+} from "@/config/chains";
 import { useWalletStore } from "@/features/eip1193/use-store";
 
 export const chainRegistryKey = ["chain-registry"] as const;
@@ -31,9 +36,23 @@ interface ChainContextValue {
 const ChainContext = createContext<ChainContextValue | undefined>(undefined);
 
 export function ChainProvider({ children }: { children: ReactNode }) {
+  // Read once per mount, not per render: this touches localStorage and runs a
+  // zod parse, and its answer cannot change while the tab is open.
+  const [cached] = useState(readCachedChainRegistry);
+
   const registryQuery = useQuery({
     queryKey: chainRegistryKey,
     queryFn: loadChainRegistry,
+    // `placeholderData`, deliberately not `initialData`. Placeholder data is
+    // never treated as cached, so the fetch below still runs exactly once on
+    // mount and the infinite `staleTime` applies only to what the relayer
+    // actually said. `initialData` would combine with that staleTime to pin a
+    // possibly-months-old registry for the life of the tab.
+    //
+    // What this buys: `isPending` is false from the first render when anything
+    // is cached, so the app paints immediately instead of holding a spinner for
+    // a full round-trip to the relayer.
+    placeholderData: cached,
     // The set of deployed chains does not move under a running tab, and every
     // wallet-facing read depends on it, so refetching only churns.
     staleTime: Number.POSITIVE_INFINITY,
@@ -54,21 +73,28 @@ export function ChainProvider({ children }: { children: ReactNode }) {
 
   // Gated on the registry, not on the wallet: without it nothing can tell a
   // supported chain from an unsupported one, so rendering the app would mean
-  // guessing.
+  // guessing. With a cached registry `isPending` is already false here, so this
+  // spinner is only ever shown on a browser that has never reached the relayer.
   if (registryQuery.isPending) return <ChainNotice>loading chains…</ChainNotice>;
-  // Unreachable and empty are different facts and used to be reported as the
-  // same one: `loadChainRegistry` swallowed its error and resolved `[]`, so a
-  // 502 told the user "the registry is empty" and left them nothing to do but
-  // reload the page by hand.
-  if (registryQuery.error) {
-    return (
-      <ChainNotice tone="err" onRetry={() => void registryQuery.refetch()}>
-        Could not reach the relayer to find out which networks are available.{" "}
-        {registryQuery.error.message}
-      </ChainNotice>
-    );
-  }
+
+  // The two failure notices are gated on having no registry at all, rather than
+  // on the query's status. A revalidation that fails behind a cached registry
+  // must not replace a working app with an error screen — the cached chains are
+  // still the right ones, and a relayer that is genuinely down surfaces in
+  // `HealthIndicator` and again at the first action that needs it.
   if (registry.length === 0) {
+    // Unreachable and empty are different facts and used to be reported as the
+    // same one: `loadChainRegistry` swallowed its error and resolved `[]`, so a
+    // 502 told the user "the registry is empty" and left them nothing to do but
+    // reload the page by hand.
+    if (registryQuery.error) {
+      return (
+        <ChainNotice tone="err" onRetry={() => void registryQuery.refetch()}>
+          Could not reach the relayer to find out which networks are available.{" "}
+          {registryQuery.error.message}
+        </ChainNotice>
+      );
+    }
     return (
       <ChainNotice tone="err" onRetry={() => void registryQuery.refetch()}>
         The relayer is not serving any network this app can use.

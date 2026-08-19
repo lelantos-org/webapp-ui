@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { gzipSync } from "node:zlib";
@@ -127,6 +127,78 @@ function tightenCsp(): Plugin {
   };
 }
 
+/// Emits an nginx snippet with a `Link: rel=preload` header for the assets
+/// `index.html` loads eagerly.
+///
+/// The zone has Early Hints enabled (infra/terraform/zone.tf), and Cloudflare
+/// builds a `103 Early Hints` response out of the origin's `Link` headers —
+/// but only out of `rel=preload` and `rel=preconnect`. nginx sent no `Link` at
+/// all, so the setting was on and doing nothing.
+///
+/// Vite already writes `<link rel="modulepreload">` into the document, but the
+/// browser cannot act on those until the document has arrived and been parsed.
+/// A 103 starts the same fetches a round-trip earlier, which is worth most on
+/// exactly the requests that are slowest: an edge MISS on the document, where
+/// the browser would otherwise sit idle for a full trip to the origin.
+///
+/// Reads the emitted HTML rather than the bundle graph so the header can never
+/// disagree with the document — whatever Vite decided to load eagerly is what
+/// gets hinted, including the hashes.
+///
+/// Writes outside `outDir` deliberately: everything under `dist/` is served,
+/// and an nginx config fragment is not something to publish. The Dockerfile
+/// copies it to /etc/nginx/ from the builder stage.
+function linkHeaders(): Plugin {
+  let outDir = "dist";
+  let root = process.cwd();
+  return {
+    name: "link-headers",
+    apply: "build",
+    enforce: "post",
+    configResolved(config) {
+      outDir = config.build.outDir;
+      root = config.root;
+    },
+    closeBundle() {
+      const html = readFileSync(join(outDir, "index.html"), "utf8");
+
+      // `as=script` with `crossorigin`, matching the attributes Vite puts on
+      // the tags. The credentials mode has to agree or the preloaded response
+      // is not reused and the asset is fetched twice.
+      //
+      // `rel=preload`, not `rel=modulepreload`, because Cloudflare drops
+      // anything else when it synthesises the 103.
+      const links: string[] = [];
+      const push = (href: string, as: string) =>
+        links.push(`<${href}>; rel=preload; as=${as}; crossorigin`);
+
+      for (const [, href] of html.matchAll(/<script[^>]+src="([^"]+)"/g)) push(href, "script");
+      for (const [, href] of html.matchAll(/<link[^>]+rel="modulepreload"[^>]+href="([^"]+)"/g)) {
+        push(href, "script");
+      }
+      // Render-blocking, so the least ambiguous win of the three.
+      for (const [, href] of html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)) {
+        push(href, "style");
+      }
+
+      const dir = join(root, ".nginx");
+      mkdirSync(dir, { recursive: true });
+      const dest = join(dir, "link-headers.conf");
+      if (links.length === 0) {
+        // An empty file rather than none: the Dockerfile COPY and the nginx
+        // include both reference it unconditionally, and a missing file fails
+        // the image build with a message about the copy rather than about the
+        // markup that stopped matching.
+        writeFileSync(dest, "# No eagerly-loaded assets found in index.html.\n");
+        this.warn("link-headers: nothing matched in index.html; wrote an empty snippet");
+        return;
+      }
+      writeFileSync(dest, `add_header Link "${links.join(", ")}" always;\n`);
+      this.info(`link-headers: hinted ${links.length} assets`);
+    },
+  };
+}
+
 export default defineConfig({
   define: {
     __COMMIT__: JSON.stringify(commitRef()),
@@ -201,6 +273,7 @@ export default defineConfig({
       },
     }),
     tightenCsp(),
+    linkHeaders(),
     // Last on purpose — see the note on `precompress`.
     precompress(),
   ],

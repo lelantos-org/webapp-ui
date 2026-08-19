@@ -9,6 +9,7 @@ import { type EvmAddress, evmAddress } from "@lelantos-org/sdk";
 import { z } from "zod";
 import { env } from "@/config/env";
 import { createLogger } from "@/shared/lib/logger";
+import { localStore, writeJson } from "@/shared/lib/storage";
 
 const log = createLogger("chains");
 
@@ -228,6 +229,68 @@ function parseChainRow(row: ChainRow): ChainEntryResult {
 /// chains…" in place of the entire app while it does.
 const REGISTRY_TIMEOUT_MS = 10_000;
 
+/// Where the last successful `/chains` body is kept.
+///
+/// Namespaced by relayer URL and carrying a schema version. `env.relayerUrl` is
+/// already absolute — `serviceUrl` in config/env.ts runs it through
+/// `toAbsoluteUrl`, so the configured `/relayer` arrives here as
+/// `https://app.<domain>/relayer` — which makes the namespace per-origin as
+/// well as per-path, and keeps a dev build pointed at one relayer from reading
+/// a body written by a build pointed at another. Bump `v1` if the shape this
+/// module expects ever changes.
+const REGISTRY_CACHE_KEY = `lelantos.chain-registry.v1.${env.relayerUrl}`;
+
+/// Fold a `/chains` body into the chains this app can use.
+///
+/// Shared by the network read and the cache read on purpose: a cached body is
+/// validated by exactly the same zod schema and row mapping as a fresh one, so
+/// an entry truncated by a crash mid-write, left behind by an older build or
+/// edited by hand is rejected here rather than reaching the app as a
+/// half-built `ChainEntry`.
+function entriesFromResponse(body: unknown, source: "relayer" | "cache"): ChainEntry[] {
+  const rows: ChainRow[] = chainsResponse.parse(body).chains;
+
+  const results = rows.map(toChainEntry);
+  const skipped = results.filter((r) => !r.ok).map((r) => r.reason);
+  if (skipped.length > 0) {
+    log.warn("skipping chains the deployment does not fully describe", {
+      source,
+      chains: skipped.map((s) => ({ chainId: s.chainId.toString(), missing: s.missing })),
+    });
+  }
+
+  return results
+    .filter((r) => r.ok)
+    .map((r) => r.entry)
+    .sort((a, b) => (a.chainId < b.chainId ? -1 : a.chainId > b.chainId ? 1 : 0));
+}
+
+/// The last registry this browser saw, if any.
+///
+/// `ChainProvider` renders this immediately and revalidates behind it, which is
+/// what keeps a cold or slow relayer from holding the entire app on a spinner:
+/// the registry gates every wallet-facing read, so waiting for it used to mean
+/// waiting for a full round-trip to the relayer before anything at all
+/// appeared.
+///
+/// Returns `undefined` rather than `[]` for an unusable entry, so the caller
+/// cannot mistake "nothing cached" for "the relayer serves nothing" — the same
+/// distinction `loadChainRegistry` draws between throwing and resolving empty.
+export function readCachedChainRegistry(): ChainEntry[] | undefined {
+  const raw = localStore.get(REGISTRY_CACHE_KEY);
+  if (raw === undefined) return undefined;
+  try {
+    const entries = entriesFromResponse(JSON.parse(raw), "cache");
+    return entries.length > 0 ? entries : undefined;
+  } catch (e) {
+    // Unusable rather than absent: drop it, so a body that will never parse is
+    // not re-read and re-rejected on every boot.
+    log.warn("discarding unusable cached chain registry", e);
+    localStore.remove(REGISTRY_CACHE_KEY);
+    return undefined;
+  }
+}
+
 /// The chains this deployment can talk to.
 ///
 /// Throws when the registry cannot be read. That is the point: swallowing the
@@ -239,20 +302,18 @@ export async function loadChainRegistry(): Promise<ChainEntry[]> {
     signal: AbortSignal.timeout(REGISTRY_TIMEOUT_MS),
   });
   if (!r.ok) throw new Error(`relayer /chains responded ${r.status}`);
-  const rows: ChainRow[] = chainsResponse.parse(await r.json()).chains;
+  const body: unknown = await r.json();
+  const entries = entriesFromResponse(body, "relayer");
 
-  const results = rows.map(toChainEntry);
-  const skipped = results.filter((r) => !r.ok).map((r) => r.reason);
-  if (skipped.length > 0) {
-    log.warn("skipping chains the deployment does not fully describe", {
-      chains: skipped.map((s) => ({ chainId: s.chainId.toString(), missing: s.missing })),
-    });
-  }
+  // Cache the raw body, not the mapped entries: `ChainEntry` holds bigints,
+  // which `JSON.stringify` refuses outright. Storing what the relayer said also
+  // means the cache read runs the same validation as this one.
+  //
+  // Only a non-empty result is worth keeping. An empty one is a real answer,
+  // but seeding a future boot with it would render the "no usable network"
+  // screen from cache before the relayer had been asked again.
+  if (entries.length > 0) writeJson(localStore, REGISTRY_CACHE_KEY, body);
 
-  const entries = results
-    .filter((r) => r.ok)
-    .map((r) => r.entry)
-    .sort((a, b) => (a.chainId < b.chainId ? -1 : a.chainId > b.chainId ? 1 : 0));
   // An empty result is a real answer — the relayer replied, and nothing it
   // serves is usable here. Distinct from the throw above, which means we never
   // got an answer at all; the provider words the two differently.
