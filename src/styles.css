@@ -15,6 +15,7 @@
 
 /* Reusable pieces. Anything used by more than one feature lives here. */
 @import "./styles/components/pill.css";
+@import "./styles/components/beta-banner.css";
 @import "./styles/components/header.css";
 @import "./styles/components/card.css";
 @import "./styles/components/gate.css";

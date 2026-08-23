@@ -1,0 +1,38 @@
+/* Standing "this is beta, funds are at risk" strip above the header.
+
+   It sits outside `.hdr` rather than inside it so the header keeps its own
+   sticky behaviour: the banner scrolls away with the page and the status bar
+   still pins to the top, which is the ordering that matches how often each is
+   needed — the warning once per visit, the connection state continuously. */
+.beta-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 7px 24px;
+  border-bottom: 1px solid var(--warn-dim);
+  /* Opaque, unlike the header's translucent glass: the backdrop behind it is a
+     moving gradient, and a warning that changes contrast as it animates is a
+     warning that is sometimes unreadable. */
+  background: #fef6e7;
+  color: #8a4b04;
+  font-size: 12px;
+  line-height: 1.45;
+  text-align: center;
+}
+.beta-banner__tag {
+  flex: none;
+  padding: 2px 7px;
+  border: 1px solid var(--warn);
+  border-radius: 999px;
+  color: var(--warn);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.4;
+}
+.beta-banner__txt strong {
+  font-weight: 600;
+  color: #7a4204;
+}

@@ -6,6 +6,8 @@
 
 /* MOBILE — tablet & narrower */
 @media (max-width: 720px) {
+  /* Two lines of warning is acceptable where one line would need 9px type. */
+  .beta-banner { padding: 7px 14px; gap: 8px; text-align: left; align-items: flex-start; }
   .hdr { padding: 10px 14px; gap: 10px; }
   .hdr__right { gap: 10px; }
   .brand__sub { display: none; }
@@ -39,6 +41,7 @@
 
 /* MOBILE — phones */
 @media (max-width: 480px) {
+  .beta-banner { padding: 6px 12px; font-size: 11px; }
   .hdr { padding: 8px 12px; }
   .brand { font-size: 12px; letter-spacing: 0.04em; }
   .main { padding: 14px 10px 32px; }

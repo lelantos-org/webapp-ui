@@ -4,6 +4,7 @@ import { ChainBadge } from "@/features/chain/ChainBadge";
 import { HealthIndicator } from "@/features/system/HealthIndicator";
 import { ConnectButton } from "@/features/wallet/ConnectButton";
 import { Backdrop } from "@/shared/ui/Backdrop";
+import { BetaBanner } from "@/shared/ui/BetaBanner";
 
 function GithubIcon() {
   return (
@@ -24,6 +25,9 @@ export function Layout({ children }: { children: ReactNode }) {
           gradient backdrop. */}
       {minimal ? null : <Backdrop />}
       <div className="app">
+        {/* Above the header, and on `/claim` too: that route is where someone
+            who has never seen the app arrives holding a link to real funds. */}
+        <BetaBanner />
         <header className="hdr">
           <div className="hdr__left">
             <span className="brand">LELANTOS</span>
