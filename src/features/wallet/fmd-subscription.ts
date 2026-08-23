@@ -7,13 +7,19 @@ import {
 } from "@lelantos-org/sdk/fmd";
 import { FmdClient, GAMMA_MIN } from "@lelantos-org/sdk/fmd-server";
 import { deriveKeysFromNsk, detectionKeyFor } from "@lelantos-org/sdk/keys";
+import { jitter } from "@/shared/lib/activity";
 import { createLogger } from "@/shared/lib/logger";
 import { localStore, readJson, writeJson } from "@/shared/lib/storage";
+import { accountDigest } from "@/shared/lib/storage-digest";
 
 const log = createLogger("fmd-sub");
 // Namespaced by cache format: entries hold the capability token that
 // addresses the subscription.
-const PREFIX = "lelantos:fmd-sub:v2:";
+//
+// `v3` because the key shape changed — v2 spelled the address out, so the key
+// names alone enumerated every account this browser had connected. See
+// `accountDigest`. A miss costs one idempotent POST.
+const PREFIX = "lelantos:fmd-sub:v3:";
 
 /// Decoys a match set is expected to retain, mirroring the server's
 /// `MIN_EXPECTED_DECOYS`. A γ is acceptable while `noteCount * 2^-γ` stays at
@@ -42,17 +48,20 @@ const DECOY_FLOOR = 64;
 /// apart — they are written, read and cleared together or not at all.
 const tokenCache = {
   key: (chainId: bigint, ethAddr: string) =>
-    `${PREFIX}${chainId.toString(16)}:${ethAddr.toLowerCase()}`,
+    `${PREFIX}${chainId.toString(16)}:${accountDigest(ethAddr)}`,
 
-  /// The cached token, or `undefined` if absent or past the TTL.
+  /// The cached token, or `undefined` if absent or past its expiry.
   get(chainId: bigint, ethAddr: string, now = Date.now()): string | undefined {
     const entry = readJson(localStore, this.key(chainId, ethAddr), isCacheEntry);
     if (!entry) return undefined;
-    return now - entry.confirmedAt < CACHE_TTL_MS ? entry.token : undefined;
+    return now < entry.expiresAt ? entry.token : undefined;
   },
 
-  set(chainId: bigint, ethAddr: string, token: string): void {
-    writeJson(localStore, this.key(chainId, ethAddr), { token, confirmedAt: Date.now() });
+  set(chainId: bigint, ethAddr: string, token: string, now = Date.now()): void {
+    writeJson(localStore, this.key(chainId, ethAddr), {
+      token,
+      expiresAt: now + jitter(CACHE_TTL_MS),
+    });
   },
 
   clear(chainId: bigint, ethAddr: string): void {
@@ -60,19 +69,28 @@ const tokenCache = {
   },
 };
 
-/// How long a cached token is trusted without re-confirming it with the server.
-/// Re-confirming costs one idempotent POST per day.
+/// Nominal lifetime of a cached token before it is re-confirmed with the
+/// server. Re-confirming costs one idempotent POST per day.
+///
+/// Jittered once, at write, into the entry's `expiresAt`. An exact 24h TTL
+/// makes the re-confirm land at the same wall-clock offset every day, which is
+/// a per-wallet schedule the discovery service can recognise without reading
+/// the token it carries. Drawing the jitter at the *comparison* instead would
+/// re-roll the deadline on every read, so one entry could answer "valid" and
+/// then "expired" microseconds apart.
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface CacheEntry {
   token: string;
-  confirmedAt: number;
+  /// Absolute deadline, not a write timestamp: the jitter is baked in here so
+  /// an entry's lifetime is decided once.
+  expiresAt: number;
 }
 
 function isCacheEntry(value: unknown): value is CacheEntry {
   if (typeof value !== "object" || value === null) return false;
   const r = value as Record<string, unknown>;
-  return typeof r.token === "string" && typeof r.confirmedAt === "number";
+  return typeof r.token === "string" && typeof r.expiresAt === "number";
 }
 
 /// Forget the subscription registered for `ethAddr`.

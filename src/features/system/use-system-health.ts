@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { env } from "@/config/env";
-import { IDLE_POLL_FACTOR, useIsIdle } from "@/shared/lib/activity";
+import { pollInterval, useIsIdle } from "@/shared/lib/activity";
 
 export type ServiceState = "up" | "down" | "unknown";
 
@@ -26,7 +26,7 @@ export function useSystemHealth() {
     },
     // `refetchIntervalInBackground: false` handles a hidden tab; the idle
     // factor handles a visible one nobody is looking at.
-    refetchInterval: idle ? POLL_MS * IDLE_POLL_FACTOR : POLL_MS,
+    refetchInterval: () => pollInterval(POLL_MS, idle),
     refetchIntervalInBackground: false,
     staleTime: POLL_MS,
   });

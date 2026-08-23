@@ -28,6 +28,7 @@ import {
   useWalletState,
   type WalletState,
 } from "@/features/wallet/use-wallet-state";
+import { jitter } from "@/shared/lib/activity";
 
 /// How soon to nudge a resync after a watermark-bound entry appears.
 ///
@@ -60,13 +61,16 @@ function createSettlingPoll() {
   /// over the same query key.
   let invalidate: (() => Promise<void>) | undefined;
 
+  // `delay` is the backoff floor; the timer fires on a jittered draw around it
+  // so the settling burst is not a metronome either. The backoff itself stays
+  // exact — jittering the accumulator would compound.
   const schedule = () => {
     timer = setTimeout(() => {
       pruneExpired();
       void invalidate?.();
       delay = Math.min(delay * 2, SETTLING_POLL_MAX_MS);
       schedule();
-    }, delay);
+    }, jitter(delay));
   };
 
   return {

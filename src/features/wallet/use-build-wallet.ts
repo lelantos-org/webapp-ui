@@ -8,6 +8,7 @@ import { getCachedNsk } from "@/features/wallet/nsk-session-cache";
 import { releaseScanner } from "@/features/wallet/scanner";
 import { syncProgress } from "@/features/wallet/sync-progress-store";
 import type { Connection } from "@/features/wallet/use-connection";
+import { describeError } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("wallet:build");
@@ -172,7 +173,7 @@ export function useBuildWallet(conn: Connection): BuildWalletState {
         setFailure({
           chainId: activeChain.chainId,
           address: addr.toLowerCase(),
-          value: e instanceof Error ? e.message : String(e),
+          value: describeError(e),
         });
       });
 

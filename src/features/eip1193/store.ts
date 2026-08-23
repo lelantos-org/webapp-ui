@@ -9,6 +9,8 @@ import {
   type Eip6963ProviderInfo,
   ProviderRegistry,
 } from "@/features/eip1193/discovery";
+import { isUnrecognizedChain } from "@/features/eip1193/errors";
+import { describeError } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
 import { localStore } from "@/shared/lib/storage";
 
@@ -53,34 +55,6 @@ export function parseChainId(value: unknown): number | undefined {
   if (!t) return undefined;
   const n = /^0x/i.test(t) ? Number.parseInt(t.slice(2), 16) : Number(t);
   return Number.isFinite(n) ? n : undefined;
-}
-
-/// EIP-1193: the wallet does not know this chain, so add it before switching.
-const UNRECOGNIZED_CHAIN = 4902;
-
-/// Did the wallet refuse because the chain is unknown to it?
-///
-/// The spec says a bare `4902`, and wallets say it three different ways.
-/// MetaMask wraps it in a generic `-32603` with the real code under
-/// `data.originalError`, some put it under `data`, and some only say so in the
-/// message. Reading the top-level `code` alone meant the
-/// `wallet_addEthereumChain` fallback never ran for MetaMask: the user was told
-/// `Unrecognized chain ID "0x7a69"` about a chain the app could have added for
-/// them.
-export function isUnrecognizedChain(err: unknown): boolean {
-  let node: unknown = err;
-  // Bounded rather than `while (node)`: `data.originalError` is wallet-supplied
-  // and a self-referential one would spin here forever.
-  for (let depth = 0; node !== null && node !== undefined && depth < 4; depth++) {
-    const e = node as { code?: number | string; message?: unknown; data?: unknown };
-    if (e.code === UNRECOGNIZED_CHAIN || String(e.code) === String(UNRECOGNIZED_CHAIN)) {
-      return true;
-    }
-    if (typeof e.message === "string" && /unrecognized chain/i.test(e.message)) return true;
-    const data = e.data as { originalError?: unknown } | null | undefined;
-    node = data?.originalError ?? (data === e ? undefined : data);
-  }
-  return false;
 }
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
@@ -175,7 +149,7 @@ class WalletStore {
       log.warn("connect failed", err);
       this.set({
         status: "error",
-        error: err instanceof Error ? err.message : String(err),
+        error: describeError(err),
       });
     } finally {
       this.connecting = false;
@@ -244,8 +218,12 @@ class WalletStore {
         params: [{ chainId: hexId }],
       });
     } catch (err) {
-      if (isUnrecognizedChain(err)) {
-        log.debug("chain unknown to the wallet; adding it", { chainId: hexId });
+      if (!isUnrecognizedChain(err)) throw err;
+      // `warn`, not `debug`: `debug` needs VITE_DEBUG or `?debug=1`, so a
+      // user-reported failure arrives with the whole fallback invisible.
+      const target = { chainId: hexId, chainName: chain.chainName, rpcUrl: chain.rpcUrl };
+      log.warn("chain unknown to the wallet; adding it", target);
+      try {
         await provider.request({
           method: "wallet_addEthereumChain",
           params: [
@@ -254,18 +232,31 @@ class WalletStore {
               chainName: chain.chainName,
               nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
               rpcUrls: [chain.rpcUrl],
-              blockExplorerUrls: chain.explorerUrl ? [chain.explorerUrl] : undefined,
+              // Spread rather than an explicit `undefined`: wallets validate
+              // this field's type when the key is present, and some refuse the
+              // whole request over it.
+              ...(chain.explorerUrl ? { blockExplorerUrls: [chain.explorerUrl] } : {}),
             },
           ],
         });
-        // Some wallets add without switching — retry explicitly.
+      } catch (addErr) {
+        // The likely faults are all invisible from the message alone: the
+        // wallet refusing custom networks, the RPC URL being unreachable from
+        // the browser, or the RPC answering with a different chain id.
+        log.warn("add chain failed", target, addErr);
+        throw addErr;
+      }
+      // Some wallets add without switching — retry explicitly.
+      try {
         await provider.request({
           method: "wallet_switchEthereumChain",
           params: [{ chainId: hexId }],
         });
-        return;
+      } catch (switchErr) {
+        log.warn("switch after add failed", target, switchErr);
+        throw switchErr;
       }
-      throw err;
+      return;
     }
   };
 

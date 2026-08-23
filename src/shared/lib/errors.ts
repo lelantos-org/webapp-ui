@@ -1,4 +1,5 @@
 import { InsufficientCoverError, NetworkError, WalletError } from "@lelantos-org/sdk/errors";
+import { hasRpcCode, rpcErrorMessage } from "@/shared/lib/rpc-error";
 
 /// Map a thrown value to a short, user-facing string.
 export function describeError(e: unknown): string {
@@ -7,9 +8,13 @@ export function describeError(e: unknown): string {
   // EIP-1193 providers reject with a plain `{ code, message, data }` object
   // rather than an `Error`, so the `String(e)` below rendered every wallet RPC
   // failure as the literal "[object Object]" — the message the wallet went to
-  // the trouble of writing was sitting one property away.
-  const message = (e as { message?: unknown } | null)?.message;
-  if (typeof message === "string" && message.length > 0) return message;
+  // the trouble of writing was sitting one property away, or nested one deeper.
+  const message = rpcErrorMessage(e);
+  if (message !== undefined) return message;
+  // No message anywhere, but a code is still a diagnosis: "-32603" in a bug
+  // report can be looked up, "[object Object]" cannot.
+  const code = (e as { code?: unknown } | null)?.code;
+  if (typeof code === "number" || typeof code === "string") return `Wallet error ${code}`;
   return String(e);
 }
 
@@ -25,6 +30,13 @@ export function isDuplicateSpend(e: unknown): e is NetworkError {
 }
 
 export type ErrorKind = "rejected" | "failed";
+
+/// Hex long enough to be a selector (8), address (40), hash (64) or calldata.
+///
+/// The bar `0x` this replaced also caught a chain id — `0x7a69` — so a wallet
+/// line that read perfectly well was flattened to "Something went wrong", and
+/// each such message needed its own curated branch above to escape.
+const HEX_BLOB = /0x[0-9a-fA-F]{8,}/;
 
 /// User-facing one-liner for an error. Never returns a raw stack trace or
 /// hex selector.
@@ -64,9 +76,8 @@ export function friendlyMessage(e: unknown): string {
     return "Token approval missing or expired. Re-run setup.";
   }
   // Reaches the user only when adding the chain also failed — the switch path
-  // adds it automatically. Curated because the wallet's own line names the
-  // chain in hex, which the `0x` guard at the bottom would otherwise reduce to
-  // "Something went wrong".
+  // adds it automatically. Curated because "add it in the wallet" is the action
+  // to take, which the wallet's own wording does not say.
   if (lower.includes("unrecognized chain") || lower.includes("unrecognized network")) {
     return "Your wallet does not have this network. Add it in the wallet, then retry.";
   }
@@ -82,7 +93,7 @@ export function friendlyMessage(e: unknown): string {
   if (lower.includes("execution reverted") || lower.includes("revert")) {
     return "Transaction reverted on-chain. Check balance and slippage, then retry.";
   }
-  if (raw && raw.length < 140 && !raw.includes("0x") && !raw.includes("\n")) {
+  if (raw && raw.length < 140 && !HEX_BLOB.test(raw) && !raw.includes("\n")) {
     return raw;
   }
   return "Something went wrong. Please try again.";
@@ -95,20 +106,18 @@ export function classifyError(e: unknown): { kind: ErrorKind; raw: string } {
   if (e instanceof WalletError && e.code === "PERMIT_REJECTED") {
     return { kind: "rejected", raw };
   }
-  // EIP-1193 user-rejection codes / common wallet messages.
-  const obj = e as { code?: number | string; reason?: string } | null;
-  if (obj && (obj.code === 4001 || obj.code === "ACTION_REJECTED")) {
+  // EIP-1193 user-rejection codes / common wallet messages. Read at any depth:
+  // the same wrapping that hid `4902` from `switchChain` hides `4001` here, and
+  // a cancellation misread as a fault is logged and shown as a scary failure.
+  if (hasRpcCode(e, 4001, "ACTION_REJECTED")) {
     return { kind: "rejected", raw };
   }
   const lower = raw.toLowerCase();
-  if (
-    lower.includes("user rejected") ||
-    lower.includes("user denied") ||
-    lower.includes("rejected by user") ||
-    lower.includes("rejected the request") ||
-    lower.includes("user cancelled") ||
-    lower.includes("user canceled")
-  ) {
+  // Anchored on the user, not on "rejected": a bare `rejected the request`
+  // also matches the relayer's own refusal text, which reported a server-side
+  // 500 as "Canceled in wallet." and — because a cancellation is deliberately
+  // not logged — left no record of it at all.
+  if (/\buser (rejected|denied|cancell?ed)\b/.test(lower) || lower.includes("rejected by user")) {
     return { kind: "rejected", raw };
   }
   return { kind: "failed", raw };

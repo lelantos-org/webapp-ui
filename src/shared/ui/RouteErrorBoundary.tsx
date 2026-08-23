@@ -18,7 +18,7 @@ const RELOADED_KEY = "lelantos:chunk-reload";
 /// report a dynamic-import failure as a plain `TypeError`, with wording that
 /// differs per engine.
 function isChunkLoadError(error: unknown): boolean {
-  const msg = error instanceof Error ? error.message : String(error);
+  const msg = describeError(error);
   return (
     /Failed to fetch dynamically imported module/i.test(msg) ||
     /error loading dynamically imported module/i.test(msg) ||

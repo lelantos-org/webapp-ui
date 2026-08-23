@@ -19,6 +19,7 @@ import { getProverWorker } from "@/features/wallet/prover/proverWorker";
 import { createScanner } from "@/features/wallet/scanner";
 import { IdbNoteStore } from "@/features/wallet/stores/noteStore";
 import type { ConnectionBundle } from "@/features/wallet/use-connection";
+import { storageDigest } from "@/shared/lib/storage-digest";
 
 async function deriveEphemeralAddress(nsk: Field): Promise<string> {
   const { address } = await deriveKeysFromNsk(nsk);
@@ -107,11 +108,11 @@ export async function generateClaimLink(
 /// leaked onto the screen: `describeError` passes short raw messages straight
 /// through, so an idb failure naming the store rendered the fragment in the
 /// error card.
-async function ephNoteStoreKey(chainId: bigint, nskEphHex: string): Promise<string> {
-  const bytes = new TextEncoder().encode(nskEphHex);
-  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-  const suffix = Array.from(digest.slice(0, 8), (b) => b.toString(16).padStart(2, "0")).join("");
-  return `notes:eph:${chainKey(chainId)}:${suffix}`;
+///
+/// Shares `storageDigest` with the per-account keys, so the two namespaces
+/// cannot drift into disagreeing about what a digest is.
+function ephNoteStoreKey(chainId: bigint, nskEphHex: string): string {
+  return `notes:eph:${chainKey(chainId)}:${storageDigest(nskEphHex)}`;
 }
 
 /// Read the link's notes with a throwaway wallet built from its bearer key.
@@ -152,7 +153,7 @@ export async function buildEphemeralWallet(
     address: bundle.address,
     rpcUrl: chain.rpcUrl,
     prover: getProverWorker(),
-    noteStore: new IdbNoteStore(await ephNoteStoreKey(chain.chainId, nskEphHex)),
+    noteStore: new IdbNoteStore(ephNoteStoreKey(chain.chainId, nskEphHex)),
     // Below the wallet default: this scans a small window for a single note,
     // on a short-lived page.
     scanner: createScanner(2),
@@ -210,6 +211,6 @@ export async function clearEphemeralStore(chainId: bigint, nskEphHex: string): P
   if (nsk.ok) clearCachedSubscription(chainId, await deriveEphemeralAddress(nsk.value));
   // IdbNoteStore writes into the shared `lelantos-wallet` DB under per-key
   // entries, so removing ours leaves every other wallet intact.
-  const store = new IdbNoteStore(await ephNoteStoreKey(chainId, nskEphHex));
+  const store = new IdbNoteStore(ephNoteStoreKey(chainId, nskEphHex));
   await store.destroy();
 }

@@ -2,9 +2,14 @@ import type { Field } from "@lelantos-org/sdk/crypto";
 import { nskFieldFromHex, nskHexFromField } from "@/features/wallet/nsk-codec";
 import { createLogger } from "@/shared/lib/logger";
 import { sessionStore } from "@/shared/lib/storage";
+import { accountDigest } from "@/shared/lib/storage-digest";
 
 const log = createLogger("nsk-cache");
-const PREFIX = "lelantos:nsk:";
+/// `v2` because the key *shape* changed: v1 spelled the address out. Bumping
+/// rather than migrating leaves the old entries to expire with the tab — they
+/// are `sessionStorage`, so there is nothing to clean up — and a miss costs one
+/// EIP-712 prompt.
+const PREFIX = "lelantos:nsk:v2:";
 
 /// Deliberately NOT chain-scoped.
 ///
@@ -12,8 +17,10 @@ const PREFIX = "lelantos:nsk:";
 /// yields the same nsk (and the same shielded address) on every chain. Keying
 /// this by chain would only make a chain switch re-prompt for a signature
 /// whose result is known to be identical.
+///
+/// The address is digested rather than written out — see `accountDigest`.
 function key(ethAddr: string): string {
-  return `${PREFIX}${ethAddr.toLowerCase()}`;
+  return `${PREFIX}${accountDigest(ethAddr)}`;
 }
 
 /// Read the cached nsk for `ethAddr`.

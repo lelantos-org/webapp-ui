@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { useRegisteredAssets } from "@/features/assets/registered-assets";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import { useWallet } from "@/features/wallet";
+import { pollInterval, useIsIdle } from "@/shared/lib/activity";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("balances:transparent");
@@ -90,6 +91,7 @@ export function useDepositSourceBalance(
   const { chainId } = useActiveChain();
   const assets = useRegisteredAssets();
   const token = asEth ? undefined : assets.find((a) => a.id === assetId)?.token;
+  const idle = useIsIdle();
 
   const { data } = useQuery<bigint | null>({
     queryKey: sourceBalanceKey(wallet ? chainId : undefined, ethAddress, assetId, asEth),
@@ -101,7 +103,11 @@ export function useDepositSourceBalance(
       if (token === undefined) throw new Error("not ready");
       return readToken(wallet.chain, token, account);
     },
-    refetchInterval: POLL_MS,
+    // Was a bare `POLL_MS` — the only poller in the app without the idle
+    // factor, and the one that sends the user's EOA to a third-party RPC on
+    // every tick. An unattended tab kept announcing that address every 30s
+    // indefinitely.
+    refetchInterval: () => pollInterval(POLL_MS, idle),
     refetchIntervalInBackground: false,
     staleTime: STALE_MS,
   });

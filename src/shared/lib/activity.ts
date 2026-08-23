@@ -25,6 +25,53 @@ const IDLE_AFTER_MS = 2 * 60_000;
 /** Multiplier applied to a poll interval while idle. */
 export const IDLE_POLL_FACTOR = 4;
 
+/**
+ * Fraction by which `jitter` may shorten or lengthen an interval.
+ *
+ * Kept small on purpose. The point is to blur a cadence, not to defer work:
+ * `selection.ts` applies a spend cooldown keyed on `firstSeenBlock`, and a
+ * staler nullifier view raises the odds of building a spend against a note
+ * already spent elsewhere. ±20% costs at most six seconds on the 30s polls and
+ * leaves that margin intact.
+ */
+const JITTER_FRAC = 0.2;
+
+/**
+ * `baseMs` perturbed by up to ±`frac`.
+ *
+ * Every poll in the app is otherwise exactly periodic — 30s sync, 30s balances,
+ * 15s health — which hands a passive observer (the edge, an ISP) a clean device
+ * fingerprint and a way to cut one long-lived connection into distinct
+ * sessions. The app never sees a client IP; the components in front of it do,
+ * and cadence is what lets them join requests that carry no identifier.
+ *
+ * Call this per tick, not once per mount. React Query accepts a function for
+ * `refetchInterval` and re-invokes it after each fetch, so a value fixed at
+ * mount would be a constant offset — itself a stable per-session fingerprint,
+ * and a more distinctive one than the round number it replaced.
+ */
+export function jitter(baseMs: number, frac = JITTER_FRAC): number {
+  return Math.round(baseMs * (1 + (Math.random() * 2 - 1) * frac));
+}
+
+/**
+ * The interval a poll should use right now: `baseMs`, widened while idle, then
+ * jittered.
+ *
+ * Both adjustments in one call so neither can be applied without the other.
+ * They were open-coded at each query, and `transparent-balances` had drifted to
+ * a bare `refetchInterval: POLL_MS` — the one poller with no idle factor, and
+ * the one that sends the user's EOA to a third-party RPC on every tick, so an
+ * unattended tab kept announcing that address every 30s indefinitely. A helper
+ * makes that omission unrepresentable rather than merely reviewable.
+ *
+ * Pass it as a thunk — `refetchInterval: () => pollInterval(POLL_MS, idle)` —
+ * so React Query re-draws the jitter after each fetch.
+ */
+export function pollInterval(baseMs: number, idle: boolean): number {
+  return jitter(idle ? baseMs * IDLE_POLL_FACTOR : baseMs);
+}
+
 const subscribers = new Set<() => void>();
 
 function notifyActivity(): void {

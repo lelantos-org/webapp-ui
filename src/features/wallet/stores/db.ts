@@ -20,7 +20,9 @@ const DB_NAME = "lelantos-wallet";
 ///   3 — added nullifiers; tree moved to chunked records
 ///   4 — multichain: records dropped, not migrated
 ///   5 — nullifiers truncated to 10 bytes; records dropped, not migrated
-const VERSION = 5;
+///   6 — record keys digest the EOA instead of spelling it out; records
+///       dropped, not migrated
+const VERSION = 6;
 
 export const NOTE_STORE = "notes";
 export const TREE_STORE = "tree";
@@ -73,8 +75,8 @@ export function walletDb(): Promise<IDBPDatabase<WalletSchema>> {
       dbp = undefined;
     },
     upgrade(db, oldVersion) {
-      // Reaching v5 from anything earlier discards the stores rather than
-      // migrating them.
+      // Reaching the current version from anything earlier discards the stores
+      // rather than migrating them.
       //
       // Pre-v4 records were written by a build that could only ever talk to
       // one chain, and while their keys carry a chainId, that id came from a
@@ -89,9 +91,15 @@ export function walletDb(): Promise<IDBPDatabase<WalletSchema>> {
       // spent — then build a double-spend that reverts on chain. Dropping is
       // what makes that unrepresentable rather than merely detectable.
       //
+      // v5 records are keyed by an address written out in full. Re-keying them
+      // would mean holding both spellings to find each record, which is the one
+      // thing the change is meant to remove — and leaving them would keep the
+      // plaintext key names on disk for as long as the wallet is used. Dropping
+      // is what actually clears them.
+      //
       // Everything here is a cache of chain state, so the cost of dropping it
       // is one resync.
-      if (oldVersion > 0 && oldVersion < 5) {
+      if (oldVersion > 0 && oldVersion < VERSION) {
         for (const name of STORES) {
           if (db.objectStoreNames.contains(name)) db.deleteObjectStore(name);
         }

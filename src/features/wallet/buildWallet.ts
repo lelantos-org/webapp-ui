@@ -23,6 +23,7 @@ import { IdbNullifierPersistence } from "@/features/wallet/stores/nullifierStore
 import { IdbTreePersistence } from "@/features/wallet/stores/treeStore";
 import type { ConnectionBundle } from "@/features/wallet/use-connection";
 import { createLogger } from "@/shared/lib/logger";
+import { accountDigest } from "@/shared/lib/storage-digest";
 
 const log = createLogger("wallet:build");
 
@@ -57,8 +58,13 @@ function requireAddress(value: string | null, field: string): string {
 /// Unlike the nsk, these genuinely are per-chain: the notes, the tree and the
 /// spent set describe one pool on one chain, even though the key that decrypts
 /// them is the same everywhere.
+///
+/// The address is digested rather than written out — see `accountDigest`. The
+/// nullifier store holds a global feed rather than anything wallet-specific,
+/// but it is keyed the same way so one wallet's records share a namespace and
+/// `db.ts`'s version drop clears them together.
 function storeKey(kind: "notes" | "tree" | "nullifiers", chainId: bigint, ethAddr: string): string {
-  return `${kind}:${chainKey(chainId)}:${ethAddr.toLowerCase()}`;
+  return `${kind}:${chainKey(chainId)}:${accountDigest(ethAddr)}`;
 }
 
 export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): Promise<WalletApi> {

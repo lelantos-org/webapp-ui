@@ -11,7 +11,7 @@ import {
   WalletConfigError,
 } from "@lelantos-org/sdk/errors";
 import { describe, expect, it } from "vitest";
-import { describeError, friendlyMessage, isDuplicateSpend } from "./errors";
+import { classifyError, describeError, friendlyMessage, isDuplicateSpend } from "./errors";
 
 /// What the relayer answers a spend whose nullifier it has seen: 409 plus the
 /// reason as the body. See `nullifier_guard.rs`.
@@ -35,8 +35,19 @@ describe("describeError", () => {
     );
   });
 
-  it("still falls back for an object with no usable message", () => {
-    expect(describeError({ code: -32603 })).toBe("[object Object]");
+  it("names the code when the wallet sent no message", () => {
+    // "-32603" in a bug report can be looked up; "[object Object]" cannot.
+    expect(describeError({ code: -32603 })).toBe("Wallet error -32603");
+  });
+
+  it("prefers the innermost message over the generic wrapper", () => {
+    expect(
+      describeError({
+        code: -32603,
+        message: "Internal JSON-RPC error.",
+        data: { originalError: { code: 4001, message: "User rejected the request." } },
+      }),
+    ).toBe("User rejected the request.");
   });
 
   it("keeps the unknown-network line out of the hex guard", () => {
@@ -140,5 +151,56 @@ describe("duplicate spend", () => {
       ),
     ).toBe(false);
     expect(isDuplicateSpend(new Error("HTTP 409"))).toBe(false);
+  });
+});
+
+describe("classifyError", () => {
+  it("treats a user cancellation as rejected, however the wallet spells it", () => {
+    expect(classifyError({ code: 4001, message: "User rejected the request." }).kind).toBe(
+      "rejected",
+    );
+    expect(classifyError({ code: "ACTION_REJECTED" }).kind).toBe("rejected");
+    expect(classifyError(new Error("MetaMask Tx Signature: User denied transaction")).kind).toBe(
+      "rejected",
+    );
+  });
+
+  it("finds the cancellation code through the wrapper wallets add", () => {
+    // The same nesting that hid `4902` from `switchChain` hid `4001` here, so a
+    // cancelled prompt was reported — and logged — as a hard failure.
+    expect(
+      classifyError({
+        code: -32603,
+        message: "Internal JSON-RPC error.",
+        data: { originalError: { code: 4001, message: "User rejected the request." } },
+      }).kind,
+    ).toBe("rejected");
+  });
+
+  it("does not read the relayer's own refusal as a user cancellation", () => {
+    // `describeError` renders a relayer 500 as "Relayer rejected the request…",
+    // which a bare "rejected the request" match claimed as a cancellation — so
+    // a server fault showed "Canceled in wallet." and, because cancellations
+    // are deliberately not logged, left no record at all.
+    const serverFault = new NetworkError("RELAYER_FAILED", "/relayer/v1/spend", "HTTP 500", {
+      status: 500,
+    });
+    expect(classifyError(serverFault).kind).toBe("failed");
+  });
+});
+
+describe("friendlyMessage hex guard", () => {
+  it("passes through a message naming a chain id", () => {
+    // A bare `includes("0x")` swallowed this, so every wallet line naming a
+    // chain in hex needed its own curated branch to escape.
+    expect(friendlyMessage(new Error('Chain "0x7a69" is not available.'))).toBe(
+      'Chain "0x7a69" is not available.',
+    );
+  });
+
+  it("still withholds a raw selector or address", () => {
+    expect(friendlyMessage(new Error("call to 0x1e4fbdf7abcdef0123456789 did not complete"))).toBe(
+      "Something went wrong. Please try again.",
+    );
   });
 });

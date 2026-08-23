@@ -189,6 +189,58 @@ describe("resolveSyncStrategy", () => {
     }
   });
 
+  /// A read must not disturb the entry it read.
+  ///
+  /// The deadline is drawn once, at write. Jittering the TTL at the comparison
+  /// instead makes `get` a coin flip near the boundary — the same entry and the
+  /// same clock giving two different answers. The practical cost is small, since
+  /// a re-registration rewrites the entry and the flapping stops, but a cache
+  /// lookup that is not a function of its inputs is not something to reason
+  /// about.
+  it("leaves the stored entry untouched when reading it", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+
+      const [key] = Object.keys(localStorage);
+      const written = localStorage.getItem(key);
+
+      // Comfortably inside even the shortest jittered lifetime (24h − 20%), so
+      // the entry is unambiguously live and every read must agree.
+      vi.setSystemTime(new Date("2026-01-01T12:00:00Z"));
+      const answers = new Set<string>();
+      for (let i = 0; i < 25; i += 1) {
+        answers.add(JSON.stringify(await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR)));
+      }
+
+      expect(answers.size).toBe(1);
+      expect(localStorage.getItem(key)).toBe(written);
+      expect(createCalls).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("spreads the re-confirm deadline across wallets", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+      const deadlines = new Set<number>();
+      for (let i = 0; i < 40; i += 1) {
+        localStorage.clear();
+        await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+        const [key] = Object.keys(localStorage);
+        deadlines.add(JSON.parse(localStorage.getItem(key) as string).expiresAt);
+      }
+
+      // An un-jittered TTL would put every wallet on the same daily tick.
+      expect(deadlines.size).toBeGreaterThan(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("takes the firehose without subscribing when the pool is below the decoy floor", async () => {
     treeState = { leafCount: 10 };
 
