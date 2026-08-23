@@ -27,6 +27,29 @@ describe("describeError", () => {
     expect(describeError(new Error("nope"))).toBe("nope");
   });
 
+  it("reads the message off an EIP-1193 rejection", () => {
+    // Wallets reject with a plain object, not an `Error`. Falling through to
+    // `String(e)` rendered every one of them as "[object Object]".
+    expect(describeError({ code: 4902, message: 'Unrecognized chain ID "0x7a69".' })).toBe(
+      'Unrecognized chain ID "0x7a69".',
+    );
+  });
+
+  it("still falls back for an object with no usable message", () => {
+    expect(describeError({ code: -32603 })).toBe("[object Object]");
+  });
+
+  it("keeps the unknown-network line out of the hex guard", () => {
+    // The wallet names the chain in hex, which the generic `0x` guard would
+    // otherwise flatten to "Something went wrong".
+    expect(
+      friendlyMessage({
+        code: -32603,
+        message: 'Unrecognized chain ID "0x7a69". Try adding the chain first.',
+      }),
+    ).toBe("Your wallet does not have this network. Add it in the wallet, then retry.");
+  });
+
   it("InsufficientCoverError mentions consolidation", () => {
     const err = new InsufficientCoverError({
       target: 100n,

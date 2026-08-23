@@ -4,6 +4,12 @@ import { InsufficientCoverError, NetworkError, WalletError } from "@lelantos-org
 export function describeError(e: unknown): string {
   if (e instanceof WalletError) return describeWalletError(e);
   if (e instanceof Error) return e.message;
+  // EIP-1193 providers reject with a plain `{ code, message, data }` object
+  // rather than an `Error`, so the `String(e)` below rendered every wallet RPC
+  // failure as the literal "[object Object]" — the message the wallet went to
+  // the trouble of writing was sitting one property away.
+  const message = (e as { message?: unknown } | null)?.message;
+  if (typeof message === "string" && message.length > 0) return message;
   return String(e);
 }
 
@@ -56,6 +62,13 @@ export function friendlyMessage(e: unknown): string {
   }
   if (lower.includes("allowance") || lower.includes("permit")) {
     return "Token approval missing or expired. Re-run setup.";
+  }
+  // Reaches the user only when adding the chain also failed — the switch path
+  // adds it automatically. Curated because the wallet's own line names the
+  // chain in hex, which the `0x` guard at the bottom would otherwise reduce to
+  // "Something went wrong".
+  if (lower.includes("unrecognized chain") || lower.includes("unrecognized network")) {
+    return "Your wallet does not have this network. Add it in the wallet, then retry.";
   }
   if (lower.includes("network") && (lower.includes("changed") || lower.includes("disconnect"))) {
     return "Network changed mid-flight. Reconnect wallet and retry.";

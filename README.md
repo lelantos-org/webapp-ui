@@ -16,6 +16,9 @@ A browser-based shielded wallet for the MASP (Multi-Asset Shielded Pool), built 
 - Node.js 24+
 - npm with access to the `@lelantos-org` registry scope (see `.npmrc`)
 - Local backend services when developing against the default proxy configuration (see [Development](#development))
+- Any EIP-6963 browser wallet — MetaMask, Rabby, Rainbow, Zerion. Discovery is by
+  announcement, so no wallet is special-cased; with more than one installed the app asks
+  which to use and remembers the choice per browser.
 
 ## Getting Started
 

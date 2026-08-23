@@ -36,6 +36,7 @@
 /* One file per feature surface; each may lean on the components above. */
 @import "./styles/features/hero.css";
 @import "./styles/features/account.css";
+@import "./styles/features/wallet-picker.css";
 @import "./styles/features/welcome.css";
 @import "./styles/features/home.css";
 @import "./styles/features/footer.css";

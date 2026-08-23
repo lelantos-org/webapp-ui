@@ -68,8 +68,9 @@ export class ProviderRegistry {
   /// nsk and a different shielded address, none of it chosen by the user. It
   /// has to fail closed and let the caller wait or give up.
   ///
-  /// Without `rdns` — a fresh connect with no stored preference — prefer
-  /// MetaMask, then whatever announced first.
+  /// Without `rdns`, prefer MetaMask, then whatever announced first. This is
+  /// the last resort, reached only when the caller had no wallet to name —
+  /// which in practice means nothing had announced yet when it asked.
   pick(rdns?: string): Eip6963ProviderDetail | undefined {
     if (rdns) return this.find(rdns);
     const list = this.list();

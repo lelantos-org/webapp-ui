@@ -17,6 +17,7 @@ import { cx } from "@/shared/lib/cx";
 import { formatAmountForAsset } from "@/shared/lib/format";
 import { MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { type ReportedError, reportError } from "@/shared/lib/report-error";
+import { trapFocus } from "@/shared/ui/focus-trap";
 import { Stepper, type StepperItem } from "@/shared/ui/Stepper";
 import { useExitTransition } from "@/shared/ui/use-exit-transition";
 
@@ -320,22 +321,4 @@ function TxHashLine({ txHash }: { txHash: string }) {
       )}
     </p>
   );
-}
-
-function trapFocus(e: React.KeyboardEvent, root: HTMLElement | null) {
-  if (e.key !== "Tab" || !root) return;
-  const focusables = root.querySelectorAll<HTMLElement>(
-    "button:not(:disabled), [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
-  );
-  if (focusables.length === 0) return;
-  const first = focusables[0];
-  const last = focusables[focusables.length - 1];
-  const active = document.activeElement as HTMLElement | null;
-  if (e.shiftKey && active === first) {
-    e.preventDefault();
-    last.focus();
-  } else if (!e.shiftKey && active === last) {
-    e.preventDefault();
-    first.focus();
-  }
 }

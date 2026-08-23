@@ -348,7 +348,12 @@ export default defineConfig({
     },
     proxy: {
       "/relayer": {
-        target: "http://localhost:3003",
+        // Dev proxy target. Defaults to the local relayer; point
+        // RELAYER_PROXY_TARGET at a deployed one (e.g.
+        // https://relayer.lelantos.xyz) to develop against it. The proxy runs
+        // server-side, so it sidesteps the deployed relayer's CORS policy,
+        // which only allows the https://app.lelantos.xyz origin.
+        target: process.env.RELAYER_PROXY_TARGET ?? "http://localhost:3003",
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/relayer/, ""),
         // Stream SSE through without buffering. Default http-proxy stream

@@ -4,19 +4,9 @@
 // would fan a single announce out into one store notification per prior call,
 // re-rendering every `useWalletStore` subscriber that many times.
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { type Eip6963ProviderDetail, parseChainId, walletStore } from "./store";
-
-function detail(uuid: string, rdns: string): Eip6963ProviderDetail {
-  return {
-    info: { uuid, name: rdns, icon: "", rdns },
-    provider: { request: vi.fn() },
-  };
-}
-
-function announce(d: Eip6963ProviderDetail): void {
-  window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: d }));
-}
+import { beforeEach, describe, expect, it } from "vitest";
+import { announce, detail } from "@/test/eip6963";
+import { isUnrecognizedChain, parseChainId, walletStore } from "./store";
 
 describe("startDiscovery", () => {
   let notifies: number;
@@ -88,6 +78,19 @@ describe("pickProvider", () => {
     expect(walletStore.pickProvider("COM.RAINBOW")?.info.rdns).toBe("com.rainbow");
   });
 
+  it("returns the named wallet rather than the tiebreak winner", () => {
+    // Rabby announces alongside MetaMask, which wins `pick(undefined)`. The
+    // picker's whole job is naming one, so this is the path it depends on.
+    announce(detail("uuid-mm3", "io.metamask"));
+    announce(detail("uuid-rb", "io.rabby"));
+
+    expect(walletStore.pickProvider("io.rabby")?.info.rdns).toBe("io.rabby");
+    expect(walletStore.getState().discovered.map((d) => d.info.rdns)).toEqual([
+      "io.metamask",
+      "io.rabby",
+    ]);
+  });
+
   it("prefers MetaMask only when no wallet was named", () => {
     announce(detail("uuid-ph", "app.phantom"));
     announce(detail("uuid-mm2", "io.metamask"));
@@ -114,5 +117,49 @@ describe("parseChainId", () => {
     expect(parseChainId("zzz")).toBeUndefined();
     expect(parseChainId(null)).toBeUndefined();
     expect(parseChainId(Number.NaN)).toBeUndefined();
+  });
+});
+
+describe("isUnrecognizedChain", () => {
+  it("reads the bare code the spec describes", () => {
+    expect(isUnrecognizedChain({ code: 4902 })).toBe(true);
+    expect(isUnrecognizedChain({ code: "4902" })).toBe(true);
+  });
+
+  it("unwraps the generic -32603 MetaMask and Rabby wrap it in", () => {
+    // Both build on the same `rpc-errors` package, so the real code is under
+    // `data.originalError` and the top-level one is a useless "internal error".
+    // Reading only the top level skipped `wallet_addEthereumChain` entirely.
+    expect(
+      isUnrecognizedChain({
+        code: -32603,
+        message: "Internal JSON-RPC error.",
+        data: { originalError: { code: 4902 } },
+      }),
+    ).toBe(true);
+  });
+
+  it("falls back to the message for wallets that send no usable code", () => {
+    expect(
+      isUnrecognizedChain({
+        code: -32603,
+        message:
+          'Unrecognized chain ID "0x7a69". Try adding the chain using wallet_switchEthereumChain first.',
+      }),
+    ).toBe(true);
+  });
+
+  it("leaves every other failure alone", () => {
+    expect(isUnrecognizedChain({ code: 4001, message: "User rejected the request." })).toBe(false);
+    expect(isUnrecognizedChain(new Error("boom"))).toBe(false);
+    expect(isUnrecognizedChain(null)).toBe(false);
+    expect(isUnrecognizedChain(undefined)).toBe(false);
+  });
+
+  it("terminates on a self-referential error object", () => {
+    // `data` is wallet-supplied; an unbounded walk over it would hang the tab.
+    const cyclic: { code: number; data?: unknown } = { code: -32603 };
+    cyclic.data = { originalError: cyclic };
+    expect(isUnrecognizedChain(cyclic)).toBe(false);
   });
 });

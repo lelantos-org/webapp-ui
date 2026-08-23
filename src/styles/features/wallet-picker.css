@@ -1,0 +1,52 @@
+/* The wallet picker's rows. The overlay, panel and both animations come from
+   components/modal.css — only the list is new. */
+.wallet-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.wallet-choice {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  font-family: var(--sans);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms var(--ease-soft), border-color 120ms var(--ease-soft);
+}
+.wallet-choice:hover {
+  background: rgba(var(--accent-rgb), 0.06);
+  border-color: var(--accent-dim);
+}
+.wallet-choice:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.wallet-choice__icon {
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+  background: var(--bg-1);
+}
+/* Fallback for a wallet whose announced icon is not a data URI. */
+.wallet-choice__icon--mono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line-strong);
+  color: var(--fg-mute);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.wallet-choice__name { min-width: 0; overflow-wrap: anywhere; }

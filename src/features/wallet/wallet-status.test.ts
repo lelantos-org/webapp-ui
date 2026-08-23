@@ -8,7 +8,6 @@ const connection = (over: Partial<Connection> = {}): Connection =>
     isConnected: true,
     isConnecting: false,
     chainSupported: true,
-    connect: () => {},
     disconnect: () => {},
     switchChain: () => {},
     ...over,

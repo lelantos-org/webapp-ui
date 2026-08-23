@@ -50,7 +50,6 @@ const connection = (address: string, over: Partial<Connection> = {}): Connection
     isConnecting: false,
     chainSupported: true,
     bundle: { provider: {}, address, chain: { id: 1, name: "test" } },
-    connect: () => {},
     disconnect: () => {},
     switchChain: () => {},
     ...over,

@@ -7,14 +7,20 @@ import { disposeProverWorker } from "@/features/wallet/prover/proverWorker";
 import { releaseScanner } from "@/features/wallet/scanner";
 import type { WalletContextValue } from "@/features/wallet/types";
 import { useBuildWallet } from "@/features/wallet/use-build-wallet";
+import { useConnectFlow } from "@/features/wallet/use-connect-flow";
 import { useConnection } from "@/features/wallet/use-connection";
 import { WalletContext } from "@/features/wallet/use-wallet";
+import { WalletPicker } from "@/features/wallet/WalletPicker";
 import { deriveWalletStatus } from "@/features/wallet/wallet-status";
 import { toastInfo } from "@/shared/lib/toast";
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const conn = useConnection();
   const { wallet, error: deriveError, hasCachedKey } = useBuildWallet(conn);
+  // The picker lives here rather than at each connect button: `connect` becomes
+  // "start the flow", so every call site stays a plain onClick and no picker
+  // state has to be threaded through them.
+  const flow = useConnectFlow();
 
   const status = deriveWalletStatus({
     conn,
@@ -68,13 +74,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       error,
       wallet,
       ethAddress: conn.address,
-      connect: conn.connect,
+      connect: flow.begin,
       disconnect,
       switchChain: conn.switchChain,
       refresh,
     }),
-    [status, error, wallet, conn.address, conn.connect, conn.switchChain, disconnect, refresh],
+    [status, error, wallet, conn.address, flow.begin, conn.switchChain, disconnect, refresh],
   );
 
-  return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
+  return (
+    <WalletContext.Provider value={value}>
+      {children}
+      {flow.choices ? (
+        <WalletPicker wallets={flow.choices} onChoose={flow.choose} onCancel={flow.cancel} />
+      ) : null}
+    </WalletContext.Provider>
+  );
 }

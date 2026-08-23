@@ -25,7 +25,6 @@ export interface Connection {
   isConnected: boolean;
   isConnecting: boolean;
   connectError?: string;
-  connect(): void;
   disconnect(): void;
   switchChain(target: ChainEntry): void;
 }
@@ -39,10 +38,6 @@ export function useConnection(): Connection {
   const chainId = useWalletStore((s) => s.chainId);
   const provider = useWalletStore((s) => s.provider);
   const error = useWalletStore((s) => s.error);
-
-  const connect = useCallback(() => {
-    void walletStore.connect();
-  }, []);
 
   const disconnect = useCallback(() => walletStore.disconnect(), []);
 
@@ -65,7 +60,6 @@ export function useConnection(): Connection {
     isConnected,
     isConnecting: status === "connecting",
     connectError: status === "error" ? error : undefined,
-    connect,
     disconnect,
     switchChain,
   };

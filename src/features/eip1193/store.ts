@@ -21,7 +21,17 @@ export interface Eip1193Provider {
 
 const log = createLogger("eip1193");
 
+/// The wallet currently attached. Cleared on disconnect, so a resume never
+/// reattaches something the user explicitly walked away from.
 const STORAGE_KEY = "lelantos:wallet:rdns";
+
+/// The wallet last chosen, kept across disconnects.
+///
+/// A separate key because the two have opposite lifetimes: `STORAGE_KEY` is a
+/// session latch that `disconnect` must clear, while this is a preference whose
+/// whole purpose is to outlive one. Sharing them meant the picker had nothing
+/// to order by in the case it exists for — the connect right after a disconnect.
+const PREFERRED_KEY = "lelantos:wallet:preferred-rdns";
 
 /// How long to wait for the wanted wallet to announce before giving up.
 ///
@@ -43,6 +53,34 @@ export function parseChainId(value: unknown): number | undefined {
   if (!t) return undefined;
   const n = /^0x/i.test(t) ? Number.parseInt(t.slice(2), 16) : Number(t);
   return Number.isFinite(n) ? n : undefined;
+}
+
+/// EIP-1193: the wallet does not know this chain, so add it before switching.
+const UNRECOGNIZED_CHAIN = 4902;
+
+/// Did the wallet refuse because the chain is unknown to it?
+///
+/// The spec says a bare `4902`, and wallets say it three different ways.
+/// MetaMask wraps it in a generic `-32603` with the real code under
+/// `data.originalError`, some put it under `data`, and some only say so in the
+/// message. Reading the top-level `code` alone meant the
+/// `wallet_addEthereumChain` fallback never ran for MetaMask: the user was told
+/// `Unrecognized chain ID "0x7a69"` about a chain the app could have added for
+/// them.
+export function isUnrecognizedChain(err: unknown): boolean {
+  let node: unknown = err;
+  // Bounded rather than `while (node)`: `data.originalError` is wallet-supplied
+  // and a self-referential one would spin here forever.
+  for (let depth = 0; node !== null && node !== undefined && depth < 4; depth++) {
+    const e = node as { code?: number | string; message?: unknown; data?: unknown };
+    if (e.code === UNRECOGNIZED_CHAIN || String(e.code) === String(UNRECOGNIZED_CHAIN)) {
+      return true;
+    }
+    if (typeof e.message === "string" && /unrecognized chain/i.test(e.message)) return true;
+    const data = e.data as { originalError?: unknown } | null | undefined;
+    node = data?.originalError ?? (data === e ? undefined : data);
+  }
+  return false;
 }
 
 export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
@@ -120,12 +158,7 @@ class WalletStore {
       if (this.registry.list().length === 0) this.startDiscovery();
       const pick = await this.registry.waitFor(() => this.registry.pick(rdns), ANNOUNCE_WAIT_MS);
       if (!pick) {
-        this.set({
-          status: "error",
-          error: rdns
-            ? `${rdns} did not respond. Is it installed and unlocked?`
-            : "No wallet detected. Install MetaMask.",
-        });
+        this.set({ status: "error", error: this.notFoundMessage(rdns) });
         return;
       }
       const accounts = (await pick.provider.request({
@@ -211,8 +244,8 @@ class WalletStore {
         params: [{ chainId: hexId }],
       });
     } catch (err) {
-      const code = (err as { code?: number | string } | null)?.code;
-      if (code === 4902 || String(code) === "4902") {
+      if (isUnrecognizedChain(err)) {
+        log.debug("chain unknown to the wallet; adding it", { chainId: hexId });
         await provider.request({
           method: "wallet_addEthereumChain",
           params: [
@@ -314,12 +347,32 @@ class WalletStore {
     for (const l of this.listeners) l();
   };
 
+  /// Name the wallet the way the user saw it in the picker. `rdns` is an
+  /// implementation detail that means nothing on screen, and this string is
+  /// rendered verbatim by `Welcome`.
+  private notFoundMessage(rdns?: string): string {
+    if (!rdns) {
+      return "No EVM wallet detected. Install MetaMask, Rabby or another browser wallet.";
+    }
+    const known = this.registry.find(rdns);
+    return `${known?.info.name ?? rdns} did not respond. Is it installed and unlocked?`;
+  }
+
   private persistRdns(rdns: string): void {
     localStore.set(STORAGE_KEY, rdns);
+    localStore.set(PREFERRED_KEY, rdns);
   }
 }
 
 export const walletStore = new WalletStore();
+
+/// The wallet chosen last time, if any. Survives a disconnect.
+///
+/// For ordering the picker. The keys themselves stay private so nothing else
+/// grows an opinion about how the preference is stored.
+export function preferredRdns(): string | undefined {
+  return localStore.get(PREFERRED_KEY);
+}
 
 /// The wallet's current chain, read at call time rather than at render.
 ///
