@@ -105,14 +105,16 @@
    sized type stacked in one right-aligned cell was the crowding. */
 .bal {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 5px;
-  /* Reserve the settling row even when it is absent. The chips come and go on
-     their own as a tx settles; without the reservation every appearance
-     resized the row and nudged the whole table. */
-  min-height: 44px;
+  /* Centred, not baseline-aligned: the legs lead with a spinner, which has no
+     baseline of its own to align the figure to. */
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  /* No height reserved, and none needed: the in-flight legs sit on the
+     figure's line, so a row is the same height whether something is settling
+     or not. Reserving a second line instead left every idle row carrying the
+     empty space, and the chips still resized the row when two of them
+     wrapped. */
 }
 .bal__main {
   font-size: 14px;
@@ -121,36 +123,34 @@
   color: var(--fg);
 }
 
-/* One chip per direction. Wraps rather than overflowing: a swap has both legs
-   in flight at once, and on a narrow screen two chips do not fit on one line. */
-.bal__settle {
-  display: inline-flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 4px;
-}
-.bal__chip {
+/* In-flight legs, ahead of the figure they are moving. Never wraps: a swap has
+   both legs in flight at once, and a second line here would resize the row,
+   which is the thing this layout exists to avoid. The cell scrolls its own
+   overflow on a narrow screen rather than pushing the table wider. */
+.bal__flow {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  min-width: 0;
+  white-space: nowrap;
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  padding: 3px 8px;
-  border-radius: 999px;
   animation: bal-settle-in 200ms var(--ease) both;
 }
 @keyframes bal-settle-in {
-  from { opacity: 0; transform: translateY(-2px); }
+  from { opacity: 0; transform: translateX(3px); }
   to { opacity: 1; transform: none; }
 }
-.bal__chip--in { color: var(--accent); background: rgba(var(--accent-rgb), 0.09); }
-.bal__chip--out { color: var(--warn); background: rgba(var(--warn-rgb), 0.11); }
+.bal__delta--in { color: var(--accent); }
+.bal__delta--out { color: var(--warn); }
+/* Quieter than either delta: it says "still moving", it is not the number. */
 .bal__spin {
+  flex: none;
   width: 7px; height: 7px;
   border-radius: 50%;
-  border: 1.5px solid currentColor;
+  border: 1.5px solid var(--fg-mute);
   border-top-color: transparent;
   animation: bal-spin 800ms linear infinite;
 }

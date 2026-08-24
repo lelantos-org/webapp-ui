@@ -210,13 +210,13 @@ const ShieldedRowView = memo(function ShieldedRowView({
   // hid an incoming amount whenever something was also on its way out, so a
   // swap — which has both legs in flight at once — reported only the debit.
   //
-  // One chip each, rather than one chip holding both signed figures: a debit
-  // and a credit are two facts, and running them together — `−1 +2 settling` —
-  // read as a single arithmetic expression.
-  const settling: SettleChip[] = [
+  // One element each, rather than one holding both signed figures: a debit and
+  // a credit are two facts, and running them together — `−1 +2` — read as a
+  // single arithmetic expression.
+  const settling: SettleLeg[] = [
     row.outflow > 0n ? { dir: "out" as const, text: `−${fmt(row.outflow)}` } : undefined,
     row.pending > 0n ? { dir: "in" as const, text: `+${fmt(row.pending)}` } : undefined,
-  ].filter((c): c is SettleChip => c !== undefined);
+  ].filter((c): c is SettleLeg => c !== undefined);
 
   const total = row.balance + row.pending;
   const usd =
@@ -237,20 +237,26 @@ const ShieldedRowView = memo(function ShieldedRowView({
       </td>
       <td className="ta-r">
         <span className="bal">
-          <span className="bal__main mono">{fmt(total)}</span>
+          {/* Ahead of the figure on its own line, not stacked beneath it. As
+              chips this was a second line in the cell, so every leg that
+              appeared and every one that settled changed the row's height and
+              nudged the whole table — and a swap's two chips wrapped to a
+              third line on a narrow screen. The legs are quiet type on the
+              figure's line now, so the row is one line tall throughout. */}
           {settling.length > 0 ? (
-            <span className="bal__settle">
-              {/* The chips are amounts with a colour and a spinner; the word
+            <span className="bal__flow">
+              {/* The legs are amounts with a colour and a spinner; the word
                   that makes them mean something is only in the styling. */}
               <span className="sr-only">settling</span>
+              <span className="bal__spin" aria-hidden />
               {settling.map((c) => (
-                <span key={c.dir} className={`bal__chip bal__chip--${c.dir}`}>
-                  <span className="bal__spin" aria-hidden />
+                <span key={c.dir} className={`bal__delta bal__delta--${c.dir}`}>
                   {c.text}
                 </span>
               ))}
             </span>
           ) : null}
+          <span className="bal__main mono">{fmt(total)}</span>
         </span>
       </td>
       {/* An unpriced asset gets a dash, not a blank: the column stays a column,
@@ -269,7 +275,7 @@ const ShieldedRowView = memo(function ShieldedRowView({
 });
 
 /// One in-flight leg of a row's balance.
-interface SettleChip {
+interface SettleLeg {
   dir: "in" | "out";
   text: string;
 }
