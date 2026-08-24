@@ -80,7 +80,10 @@ export function heroSubtitleFor(phase: Phase, blocked = false): string | undefin
     case "reading-fragment":
       return "reading the bearer secret from the URL fragment.";
     case "bad-link":
-      return "this link can't be parsed.";
+      // A reload is the common way to land here, and it did not break anything.
+      return phase.reason === "missing"
+        ? "the secret is only ever in the address bar, and only for a moment."
+        : "this link can't be parsed.";
     case "need-wallet":
       return "connect a wallet to derive the destination shielded address.";
     case "loading":

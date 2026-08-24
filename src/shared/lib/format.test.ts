@@ -4,11 +4,13 @@ import {
   formatAmountForAsset,
   formatDecimal,
   formatDecimalCompact,
+  formatUsd,
   PUBLIC_IN_MAX,
   parseAmountForAsset,
   parseDecimal,
   relativeTime,
   shortAddr,
+  usdValue,
 } from "./format";
 
 describe("parseDecimal", () => {
@@ -167,5 +169,57 @@ describe("parseDecimal with no fractional units", () => {
   it("still accepts whole numbers", () => {
     expect(parseDecimal("19", 0)).toBe(19n);
     expect(parseDecimal("1,234", 0)).toBe(1234n);
+  });
+});
+
+describe("usdValue", () => {
+  it("converts base units through decimals", () => {
+    // 1.5 USDC at $0.99.
+    expect(usdValue(1_500_000n, 6, 1n, 0.99)).toBeCloseTo(1.485, 9);
+  });
+
+  it("applies scale before decimals", () => {
+    // Balances are circuit units. With scale 10^12 and 18 decimals, 2_000_000n
+    // circuit units is 2 whole tokens; ignoring scale would report $0.000006.
+    expect(usdValue(2_000_000n, 18, 10n ** 12n, 3000)).toBeCloseTo(6000, 6);
+  });
+
+  it("keeps the integer part of an 18-decimal balance", () => {
+    // 1_234_567 WETH in base units is ~1.23e24, far past MAX_SAFE_INTEGER.
+    // Converting the bigint whole would round the dollars away.
+    const usd = usdValue(1_234_567n * 10n ** 18n, 18, 1n, 2);
+    expect(usd).toBeCloseTo(2_469_134, 0);
+  });
+
+  it("handles an asset with no fractional units", () => {
+    expect(usdValue(7n, 0, 1n, 3)).toBe(21);
+  });
+
+  it("returns zero for a zero balance", () => {
+    expect(usdValue(0n, 18, 1n, 3000)).toBe(0);
+  });
+});
+
+describe("formatUsd", () => {
+  it("formats a normal amount", () => {
+    expect(formatUsd(1234.5)).toBe("$1,234.50");
+  });
+
+  it("reports dust as below a cent rather than as zero", () => {
+    // "$0.00" would read as a measured zero; the balance is real but tiny.
+    expect(formatUsd(0.0001)).toBe("<$0.01");
+  });
+
+  it("still prints an exact zero as zero", () => {
+    expect(formatUsd(0)).toBe("$0.00");
+  });
+
+  it("rounds a half-cent up rather than calling it dust", () => {
+    expect(formatUsd(0.005)).toBe("$0.01");
+  });
+
+  it("renders nothing for a non-finite value", () => {
+    expect(formatUsd(Number.NaN)).toBe("");
+    expect(formatUsd(Number.POSITIVE_INFINITY)).toBe("");
   });
 });

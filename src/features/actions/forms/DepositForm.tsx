@@ -1,18 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { ActionForm } from "@/features/actions/forms/ActionForm";
-import {
-  parseAmountSafe,
-  pickAmountError,
-  validateDepositAmount,
-} from "@/features/actions/forms/amount-field";
-import { feeLine, joinHint, settledFee } from "@/features/actions/forms/fee-hint";
+import { AmountField } from "@/features/actions/forms/AmountField";
+import { feeLine, joinHint } from "@/features/actions/forms/fee-hint";
 import { type DepositInput, depositSchema } from "@/features/actions/forms/schemas";
 import { useAmountControls } from "@/features/actions/forms/use-amount-controls";
 import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
+import { useDepositAmount } from "@/features/actions/forms/use-deposit-amount";
 import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
 import { useDeposit } from "@/features/actions/mutations";
-import { useFeePreview } from "@/features/actions/use-fee-preview";
 import { AssetPicker } from "@/features/assets/AssetPicker";
 import {
   DEFAULT_ASSET_ID,
@@ -20,14 +16,13 @@ import {
   type RegisteredAsset,
   useRegisteredAssets,
 } from "@/features/assets/registered-assets";
-import { useDepositSourceBalance } from "@/features/assets/transparent-balances";
 import { useEthAssetPicker } from "@/features/assets/use-eth-asset-picker";
 import { SetupFlow } from "@/features/onboarding/SetupFlow";
 import { SetupNotice } from "@/features/onboarding/SetupNotice";
 import { useDepositSetup } from "@/features/onboarding/use-deposit-setup";
 import type { FeeBreakdown } from "@/shared/lib/fees";
 import { formatDecimalCompact, parseAmountForAsset } from "@/shared/lib/format";
-import { TextField } from "@/shared/ui/Field";
+import { Notice } from "@/shared/ui/Notice";
 
 export function DepositForm() {
   const { mutation: m, progress } = useDeposit();
@@ -43,36 +38,27 @@ export function DepositForm() {
     watch,
     formState: { errors },
   } = form;
-  const { clearAmount } = useAmountControls(form);
+  const { clearAmount, setAmount } = useAmountControls(form);
 
   const watchedAsset = watch("asset");
   const watchedAsEth = watch("asEth");
   const { pickerValue, onPickerChange } = useEthAssetPicker(setValue, watchedAsset, watchedAsEth);
   const selected = findAsset(assets, watchedAsset);
 
-  const parsed = parseAmountSafe(watch("amount"), selected);
-  const fee = useFeePreview(selected?.id, parsed);
-  // Public wallet balance, not the shielded one: a deposit moves funds in.
-  const sourceBalance = useDepositSourceBalance(selected?.id, watchedAsEth);
-  // `validateDepositAmount` reports an absent fee as `feeUnknown` and refuses
-  // to validate, which is what keeps the button disabled through the debounce
-  // window; it previously fell back to checking the bare amount and stayed live.
-  const settled = settledFee(fee);
-  const feeTotal = settled?.total;
-  const v = validateDepositAmount(parsed, selected, sourceBalance, feeTotal);
-  const setup = useDepositSetup(selected?.id, {
-    asEth: watchedAsEth,
-    total: feeTotal,
-  });
-  const submitDisabled = !v.valid || setup.blocked;
+  const amount = useDepositAmount(selected, { asEth: watchedAsEth, input: watch("amount") });
+  const setup = useDepositSetup(selected?.id, { asEth: watchedAsEth, total: amount.total });
+  const submitDisabled = !amount.validation.valid || setup.blocked;
   const clearFinished = useClearFinishedOp(m, progress);
-  const pendingAmountBase = selected && parsed !== undefined ? parsed * selected.scale : undefined;
+  const pendingAmountBase =
+    selected && amount.parsed !== undefined ? amount.parsed * selected.scale : undefined;
 
   const onSubmit = handleSubmit(
     useSubmitOnce(async (values) => {
       if (!selected) return;
-      const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
-      await m.mutateAsync({ amount, asset: selected.id, asEth: values.asEth });
+      // Named apart from the `amount` state above, which is the whole
+      // amount-and-fee view rather than the figure being sent.
+      const circuitAmount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
+      await m.mutateAsync({ amount: circuitAmount, asset: selected.id, asEth: values.asEth });
       clearAmount();
     }),
   );
@@ -102,15 +88,23 @@ export function DepositForm() {
       />
       <input type="hidden" {...register("asset")} />
       <input type="hidden" {...register("asEth")} />
-      <TextField
-        label="amount"
-        placeholder={selected ? `1.0 ${selected.symbol}` : "1.0"}
-        inputMode="decimal"
-        autoComplete="off"
-        error={pickAmountError(errors.amount?.message, v)}
-        hint={depositHint(selected, watchedAsEth, sourceBalance, settled)}
-        {...register("amount")}
+      <AmountField
+        inputProps={register("amount")}
+        selected={selected}
+        maxAmount={amount.maxAmount}
+        validation={amount.validation}
+        formError={errors.amount?.message}
+        hint={depositHint(selected, watchedAsEth, amount.sourceBalance, amount.fee)}
+        amount={amount.parsed}
+        onSetMax={setAmount}
       />
+      {/* Without this the form is simply dead: an unreadable fee leaves the
+          amount unvalidatable, and nothing retries it. See `feeFailed`. */}
+      {amount.feeFailed && amount.parsed !== undefined ? (
+        <Notice title="Can't read the network fee" actionLabel="retry" onAction={amount.retryFee}>
+          The deposit can't be checked against your balance until it loads.
+        </Notice>
+      ) : null}
       {setup.applicable && selected ? (
         <>
           {setup.needs.needsSetup || setup.unknown ? (

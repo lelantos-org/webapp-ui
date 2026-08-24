@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { quoteAgeSecs } from "@lelantos-org/sdk/quoter";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { ActionForm } from "@/features/actions/forms/ActionForm";
 import { AmountField } from "@/features/actions/forms/AmountField";
@@ -16,24 +16,23 @@ import {
   findAsset,
   useRegisteredAssets,
 } from "@/features/assets/registered-assets";
-import { useAssetBalance } from "@/features/assets/use-balances";
+import { useAssetBalance, useAssetBalanceLabel } from "@/features/assets/use-balances";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import { QuoteCard } from "@/features/swaps/QuoteCard";
 import { SlippageField } from "@/features/swaps/SlippageField";
 import { type SwapInput, swapSchema } from "@/features/swaps/schemas";
-import { type QuoteRequest, useSwapQuote } from "@/features/swaps/use-swap-quote";
+import { QUOTE_STALE_SECS, useSwapQuote } from "@/features/swaps/use-swap-quote";
 import { SyncErrorNotice } from "@/features/wallet/SyncErrorNotice";
 import { formatAmountForAsset, parseAmountForAsset } from "@/shared/lib/format";
 
-const QUOTE_STALE_SECS = 30;
 /// Any asset other than `DEFAULT_ASSET_ID`, so the pair starts valid: a swap
-/// needs two distinct assets and `canQuote` rejects `assetIn === assetOut`.
+/// needs two distinct assets, and a matching pair leaves the quote request
+/// `undefined`.
 const DEFAULT_SWAP_ASSET_OUT_ID = "2";
 const DEFAULT_SLIPPAGE_BPS = 50;
 
 export function SwapForm() {
   const { mutation: m, progress } = useSwap();
-  const quoteM = useSwapQuote();
   const assets = useRegisteredAssets();
   const activeChain = useActiveChain();
   const clearFinished = useClearFinishedOp(m, progress);
@@ -64,25 +63,35 @@ export function SwapForm() {
   const inAsset = findAsset(assets, wAssetIn);
   const outAsset = findAsset(assets, wAssetOut);
   const inBalance = useAssetBalance(inAsset?.id)?.balance;
+  const balanceOf = useAssetBalanceLabel();
 
   const parsed = parseAmountSafe(wAmount, inAsset);
   const v = validateAmount(parsed, inAsset, inBalance);
 
-  // Invalidate the quote whenever the (assetIn, assetOut, amount, slippage)
-  // tuple changes — a stale quote would bind a wrong route to the proof.
-  // Track the previous key in a ref so the effect doesn't re-fire on quote
-  // arrival (which would reset the freshly-fetched data).
-  const quoteKey = `${wAssetIn}|${wAssetOut}|${wAmount}|${wSlippage}`;
-  const resetQuote = quoteM.reset;
-  const prevKey = useRef(quoteKey);
-  useEffect(() => {
-    if (prevKey.current !== quoteKey) {
-      prevKey.current = quoteKey;
-      resetQuote();
-    }
-  }, [quoteKey, resetQuote]);
+  // The quote binds a route into the proof, so it is fetched for one exact
+  // (pair, amount, slippage) and nothing else. Passing `undefined` until every
+  // part is present is what keeps the query off — and because the request *is*
+  // the cache key, changing any part invalidates the old quote by construction.
+  // This used to be a ref tracking the previous tuple and calling `reset()`.
+  //
+  // MetaQuoter quotes against token base units. MASP skims its fee off the
+  // gross publicOut before the wrapper sees the input, so the true adapter-side
+  // input is slightly less; the user's `slippageBps` floor absorbs it.
+  const request =
+    inAsset && outAsset && wAssetIn !== wAssetOut && v.valid && parsed !== undefined
+      ? {
+          chainId: activeChain.chainId,
+          tokenIn: inAsset.token,
+          tokenOut: outAsset.token,
+          amountIn: parsed * inAsset.scale,
+          slippageBps: wSlippage,
+        }
+      : undefined;
+  const quoteQ = useSwapQuote(request);
+  // Suppressed while the debounce catches up: `data` then describes an earlier
+  // amount, and submitting against it would prove the wrong route.
+  const quote = quoteQ.stale ? undefined : quoteQ.data;
 
-  const quote = quoteM.data;
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const quoteAge = quote ? quoteAgeSecs(quote, now) : undefined;
   const feeBps = useFeeBps();
@@ -100,37 +109,19 @@ export function SwapForm() {
     return () => clearInterval(id);
   }, [quote, quoteStale]);
 
-  const canQuote =
-    !!inAsset && !!outAsset && wAssetIn !== wAssetOut && v.valid && !quoteM.isPending;
+  const refreshQuote = () => void quoteQ.refetch();
+  const quoting = quoteQ.isFetching || (request !== undefined && quoteQ.stale);
 
-  const onGetQuote = () => {
-    if (!inAsset || !outAsset) return;
-    const amountInUnits = parseAmountForAsset(wAmount, inAsset.decimals, inAsset.scale);
-    // MetaQuoter quotes against token base units. MASP skims its fee off
-    // the gross publicOut before the wrapper sees the input, so the true
-    // adapter-side input is slightly less; user's `slippageBps` floor
-    // absorbs the difference.
-    const req: QuoteRequest = {
-      chainId: activeChain.chainId,
-      tokenIn: inAsset.token,
-      tokenOut: outAsset.token,
-      amountIn: amountInUnits * inAsset.scale,
-      slippageBps: wSlippage,
-    };
-    quoteM.mutate(req);
-  };
-
-  const submitDisabled = !v.valid || !quote || quoteStale || quoteM.isPending;
+  const submitDisabled = !v.valid || !quote || quoteStale || quoting;
 
   const onSubmit = handleSubmit(
     useSubmitOnce(async (values) => {
       if (!inAsset || !outAsset || !quote) return;
       const amount = parseAmountForAsset(values.amount, inAsset.decimals, inAsset.scale);
       await m.mutateAsync({ assetIn: inAsset.id, assetOut: outAsset.id, amount, quote });
-      // The quote is bound to this exact amount and pair, so it cannot outlive
-      // the submit — unlike the pair and slippage, which are the user's standing
-      // choices.
-      quoteM.reset();
+      // The quote is bound to this exact amount, so clearing the amount is also
+      // what retires it: the request goes `undefined`, the query goes idle, and
+      // the pair and slippage — the user's standing choices — survive.
       clearAmount();
     }),
   );
@@ -148,6 +139,7 @@ export function SwapForm() {
       <SyncErrorNotice />
       <AssetPicker
         label="from"
+        balanceOf={balanceOf}
         value={wAssetIn}
         onChange={(next) => {
           clearFinished();
@@ -158,6 +150,7 @@ export function SwapForm() {
       <input type="hidden" {...register("assetIn")} />
       <AssetPicker
         label="to"
+        balanceOf={balanceOf}
         value={wAssetOut}
         onChange={(next) => {
           clearFinished();
@@ -169,7 +162,7 @@ export function SwapForm() {
       <AmountField
         inputProps={register("amount")}
         selected={inAsset}
-        balance={inBalance}
+        maxAmount={inBalance}
         validation={v}
         formError={errors.amount?.message}
         hint={
@@ -186,10 +179,25 @@ export function SwapForm() {
       />
       <input type="hidden" {...register("slippageBps", { valueAsNumber: true })} />
       <div className="stack stack--sm">
-        <button type="button" className="btn btn--ghost" onClick={onGetQuote} disabled={!canQuote}>
-          {quoteM.isPending ? "fetching quote…" : quote ? "refresh quote" : "get quote"}
-        </button>
-        {quoteM.error ? <div className="err">{quoteM.error.message}</div> : null}
+        {/* No "get quote" button any more — the query fetches as soon as the
+            pair and amount are valid, and refreshes itself before the quote
+            expires. What is left is the state in between, which used to be the
+            button's label and would otherwise be a blank gap under the form.
+            `QuoteCard` carries its own refresh once there is a card to put it
+            on. */}
+        {quoting && !quote ? (
+          <div className="muted txt-sm">
+            <span className="spinner" aria-hidden /> fetching quote…
+          </div>
+        ) : null}
+        {quoteQ.error ? (
+          <div className="row row--center">
+            <span className="err grow">{quoteQ.error.message}</span>
+            <button type="button" className="btn btn--ghost" onClick={refreshQuote}>
+              retry
+            </button>
+          </div>
+        ) : null}
         {quote && outAsset ? (
           <QuoteCard
             quote={quote}
@@ -200,8 +208,8 @@ export function SwapForm() {
             ageSecs={quoteAge ?? 0}
             stale={quoteStale}
             slippageBps={wSlippage}
-            onRefresh={onGetQuote}
-            refreshing={quoteM.isPending}
+            onRefresh={refreshQuote}
+            refreshing={quoteQ.isFetching}
           />
         ) : null}
       </div>

@@ -1,7 +1,14 @@
 // Protocol fee math, over the SDK's `applyFee`. Truncating integer division
 // mirrors `MASP._takeFee` on-chain.
 
-import { applyFee } from "@lelantos-org/sdk/core";
+import { applyFee, BPS_DENOMINATOR } from "@lelantos-org/sdk/core";
+
+/// The basis-point denominator `applyFee` — and `MASP._takeFee` — divide by.
+///
+/// Re-exported from the SDK rather than spelled `10_000n` locally: it is a
+/// property of the contract, and a local copy would go on agreeing with a
+/// changed one only by luck. Same reasoning as `PUBLIC_IN_MAX` in `format`.
+export { BPS_DENOMINATOR };
 
 export type FeeMode = "deposit" | "withdraw";
 

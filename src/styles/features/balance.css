@@ -35,3 +35,22 @@
   animation: bal-spin 800ms linear infinite;
 }
 @keyframes bal-spin { to { transform: rotate(360deg); } }
+
+/* Secondary line under a row's token amount. Quieter and smaller than the
+   figure it annotates: the token quantity is what the wallet actually holds,
+   the dollar value is an estimate from a third party. */
+.bal__usd {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Aggregate USD in the Portfolio card header.
+   `.card__hdr` is `space-between` over three children, which would strand this
+   in the middle of the row; `margin-right: auto` sits it beside the title and
+   leaves the sync actions on the right. */
+.pf-total {
+  margin-right: auto;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

@@ -3,7 +3,12 @@ import type { EphemeralBalance } from "@/features/claim-link/claimLink";
 
 export type Phase =
   | { kind: "reading-fragment" }
-  | { kind: "bad-link"; error: string }
+  /// `reason` separates "this URL never carried a secret" from "the secret it
+  /// carried is unreadable". They look identical to the machine and read very
+  /// differently to the user: the first is what a *reload* produces, because
+  /// the fragment is scrubbed on mount by design, and telling that user the
+  /// link is spent is both wrong and alarming.
+  | { kind: "bad-link"; error: string; reason: BadLinkReason }
   | { kind: "need-wallet"; nskHex: string; chainId: bigint }
   | { kind: "loading"; nskHex: string; chainId: bigint }
   | { kind: "ready"; nskHex: string; chainId: bigint; eph: WalletApi; balances: EphemeralBalance[] }
@@ -22,6 +27,8 @@ export type Phase =
   /// without them a transient RPC blip during the scan stranded the claim
   /// permanently — and reloading destroyed the secret outright.
   | { kind: "error"; message: string; nskHex?: string; chainId?: bigint; from?: "scan" | "sweep" };
+
+export type BadLinkReason = "missing" | "malformed";
 
 export type Event =
   | { t: "fragment-good"; nskHex: string; chainId: bigint }
@@ -42,10 +49,12 @@ export function reduce(s: Phase, e: Event): Phase {
   switch (e.t) {
     case "fragment-missing":
       return s.kind === "reading-fragment"
-        ? { kind: "bad-link", error: "missing claim secret in URL fragment" }
+        ? { kind: "bad-link", error: "missing claim secret in URL fragment", reason: "missing" }
         : s;
     case "fragment-bad":
-      return s.kind === "reading-fragment" ? { kind: "bad-link", error: e.error } : s;
+      return s.kind === "reading-fragment"
+        ? { kind: "bad-link", error: e.error, reason: "malformed" }
+        : s;
     case "fragment-good":
       return s.kind === "reading-fragment"
         ? { kind: "need-wallet", nskHex: e.nskHex, chainId: e.chainId }

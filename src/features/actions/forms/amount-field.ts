@@ -2,9 +2,11 @@
 // against the selected asset, then validate against the asset cap and (for
 // spends) the balance.
 
+import { BPS_DENOMINATOR, feeBreakdown } from "@/shared/lib/fees";
 import {
   exceedsPublicInLimit,
   formatAmountForAsset,
+  PUBLIC_IN_MAX,
   parseAmountForAsset,
 } from "@/shared/lib/format";
 
@@ -12,6 +14,10 @@ export interface AssetMeta {
   decimals: number;
   scale: bigint;
   symbol?: string;
+  /// Backing ERC-20 address, used to look up a USD price. Optional because the
+  /// placeholder metas the forms fall back to describe no real token; a meta
+  /// without one simply renders no dollar figure.
+  token?: string;
 }
 
 /// Permissive parse: returns `undefined` rather than throwing on partial /
@@ -101,6 +107,42 @@ export function pickAmountError(
   // Not an error the user can act on, and it clears on its own within a few
   // hundred ms — the disabled submit button is the whole signal.
   return undefined;
+}
+
+/// The largest deposit the wallet's balance can actually cover, in circuit
+/// units — or `undefined` when there is nothing to compute it from.
+///
+/// A deposit is charged the protocol fee *on top* (`total = inAmt + fee`), so
+/// "max" is not the balance: depositing the whole balance costs a Permit2
+/// signature and then reverts on a `transferFrom` for `amount + fee`. The
+/// figure wanted is the largest `amount` whose `total` still fits.
+///
+/// Solved, then corrected in both directions. `inAmt ≈ balance * BPS /
+/// (BPS + feeBps)` inverts the fee, but `applyFee` truncates, so the algebra
+/// can land either side of the true maximum by a unit — over, which would
+/// revert, and under, which quietly short-changes the user. Both loops re-check
+/// against the same `feeBreakdown` the form and the mutation use rather than
+/// trusting the inverse of a lossy function, and each runs a step or two.
+///
+/// Clamped to the `uint48` publicIn cap: a balance above it would otherwise
+/// produce a "max" that `validateAmount` immediately rejects as too large.
+export function depositMaxAmount(
+  balanceBase: bigint | undefined,
+  scale: bigint,
+  feeBps: bigint | undefined,
+): bigint | undefined {
+  if (balanceBase === undefined || feeBps === undefined) return undefined;
+  if (balanceBase <= 0n || scale <= 0n) return undefined;
+
+  const fits = (amount: bigint) =>
+    feeBreakdown({ amount, scale, feeBps, mode: "deposit" }).total <= balanceBase;
+
+  let amount = (balanceBase * BPS_DENOMINATOR) / (BPS_DENOMINATOR + feeBps) / scale;
+  while (amount > 0n && !fits(amount)) amount -= 1n;
+  while (fits(amount + 1n)) amount += 1n;
+
+  if (amount <= 0n) return undefined;
+  return exceedsPublicInLimit(amount) ? PUBLIC_IN_MAX : amount;
 }
 
 /// Render an asset balance for the "max" button click handler.

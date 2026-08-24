@@ -18,7 +18,7 @@ import {
   findAsset,
   useRegisteredAssets,
 } from "@/features/assets/registered-assets";
-import { useAssetBalance } from "@/features/assets/use-balances";
+import { useAssetBalance, useAssetBalanceLabel } from "@/features/assets/use-balances";
 import { useEthAssetPicker } from "@/features/assets/use-eth-asset-picker";
 import { SyncErrorNotice } from "@/features/wallet/SyncErrorNotice";
 import { parseAmountForAsset } from "@/shared/lib/format";
@@ -44,18 +44,13 @@ export function WithdrawForm() {
   const selected = findAsset(assets, watchedAsset);
   const row = useAssetBalance(selected?.id);
   const balance = row?.balance;
+  const balanceOf = useAssetBalanceLabel();
 
   const parsed = parseAmountSafe(watch("amount"), selected);
   const v = validateAmount(parsed, selected, balance);
   const fee = useFeePreview(selected?.id, parsed, "withdraw");
   const submitDisabled = !v.valid;
   const clearFinished = useClearFinishedOp(m, progress);
-
-  // No `dirtyFields.to` guard: it stood in for "the user has typed something",
-  // which the pattern already implies — an empty field cannot match. It also
-  // goes false when `onSubmit` resets the form while keeping the recipient,
-  // which would drop the valid marker off an address that is still valid.
-  const toValid = !errors.to && isEvmAddress(watch("to"));
 
   const onSubmit = handleSubmit(
     useSubmitOnce(async (values) => {
@@ -84,6 +79,7 @@ export function WithdrawForm() {
       <SyncErrorNotice />
       <AssetPicker
         showEth
+        balanceOf={balanceOf}
         value={pickerValue}
         onChange={(next) => {
           clearFinished();
@@ -97,13 +93,15 @@ export function WithdrawForm() {
         inputProps={register("to")}
         label="recipient (0x)"
         placeholder="0x…"
-        valid={toValid}
+        value={watch("to")}
+        isValid={isEvmAddress}
+        onPaste={(to) => setValue("to", to, { shouldDirty: true, shouldValidate: true })}
         formError={errors.to?.message}
       />
       <AmountField
         inputProps={register("amount")}
         selected={selected}
-        balance={balance}
+        maxAmount={balance}
         validation={v}
         formError={errors.amount?.message}
         hint={joinHint(
@@ -112,6 +110,7 @@ export function WithdrawForm() {
           // the recipient actually receives.
           feeLine(settledFee(fee), selected, "receive"),
         )}
+        amount={parsed}
         onSetMax={setAmount}
       />
     </ActionForm>

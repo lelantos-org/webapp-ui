@@ -19,6 +19,11 @@ export interface StepperProps {
 
 type StepState = "done" | "current" | "pending" | "failed";
 
+interface Flags {
+  failed: boolean;
+  done: boolean;
+}
+
 const CLASSES: Record<StepState, string> = {
   done: "step step--done",
   current: "step step--current",
@@ -29,26 +34,53 @@ const CLASSES: Record<StepState, string> = {
 export function Stepper({ steps, current, failed = false, done = false }: StepperProps) {
   if (steps.length === 0) return null;
   const currentIdx = current ? steps.findIndex((s) => s.id === current) : -1;
+  const flags: Flags = { failed, done };
   return (
-    <ol className="stepper" aria-label="transaction progress">
-      {steps.map((s, i) => {
-        const state = stateAt(i, currentIdx, { failed, done });
-        return (
-          <li key={s.id} className={CLASSES[state]}>
-            <span className="step__mark" aria-hidden>
-              {markFor(state, i)}
-            </span>
-            <span className="step__label">{s.label}</span>
-          </li>
-        );
-      })}
-    </ol>
+    <>
+      <ol className="stepper" aria-label="transaction progress">
+        {steps.map((s, i) => {
+          const state = stateAt(i, currentIdx, flags);
+          return (
+            <li key={s.id} className={CLASSES[state]}>
+              <span className="step__mark" aria-hidden>
+                {markFor(state, i)}
+              </span>
+              <span className="step__label">{s.label}</span>
+            </li>
+          );
+        })}
+      </ol>
+      {/* The list above is a picture: the marks are `aria-hidden` and the state
+          lives in class names, so a screen reader hears the same five labels
+          however far along the op is. A deposit runs for a minute or more, and
+          this is the only thing that says it is still moving.
+
+          One sentence naming the active step, not the list — an `aria-live` on
+          the `<ol>` would re-read every step on each transition. Absolutely
+          positioned, so it is not a grid item and cannot shift the layout. */}
+      <p className="sr-only" role="status" aria-live="polite">
+        {announce(steps, currentIdx, flags)}
+      </p>
+    </>
   );
 }
 
-interface Flags {
-  failed: boolean;
-  done: boolean;
+/// The one sentence worth reading aloud, or "" before anything has started.
+function announce(steps: StepperItem[], currentIdx: number, flags: Flags): string {
+  // `stateAt` puts a pre-step failure on index 0; anything else with no current
+  // step has nothing to report yet.
+  const idx = currentIdx === -1 ? (flags.failed ? 0 : -1) : currentIdx;
+  const step = idx === -1 ? undefined : steps[idx];
+  if (!step) return "";
+  const position = `step ${idx + 1} of ${steps.length}`;
+  switch (stateAt(idx, currentIdx, flags)) {
+    case "failed":
+      return `${position} failed: ${step.label}`;
+    case "done":
+      return `${position} complete: ${step.label}`;
+    default:
+      return `${position}: ${step.label}`;
+  }
 }
 
 function stateAt(i: number, currentIdx: number, { failed, done }: Flags): StepState {

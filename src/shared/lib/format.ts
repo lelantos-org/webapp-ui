@@ -147,3 +147,50 @@ export function relativeTime(from: number, now: number = Date.now()): string {
   if (abs < 86400) return RTF.format(Math.round(sec / 3600), "hour");
   return RTF.format(Math.round(sec / 86400), "day");
 }
+
+const USD_FORMATTER = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
+/// Smallest figure `formatUsd` will print as a number. Below this it says
+/// `<$0.01` instead, because `$0.00` reads as a measured zero — the same reason
+/// the backend omits a price it does not know rather than sending `0`.
+const USD_MIN_DISPLAY = 0.005;
+
+/// Render a USD figure. `<$0.01` for a non-zero amount too small to show, and
+/// a plain `$0.00` only for an actual zero.
+export function formatUsd(value: number): string {
+  if (!Number.isFinite(value)) return "";
+  const abs = Math.abs(value);
+  if (abs === 0) return USD_FORMATTER.format(0);
+  if (abs < USD_MIN_DISPLAY) return value < 0 ? ">-$0.01" : "<$0.01";
+  return USD_FORMATTER.format(value);
+}
+
+/// USD value of `circuitUnits` of an asset priced at `priceUsd` per whole token.
+///
+/// Mirrors `formatAmountForAsset`: balances are held in *circuit units*, so
+/// `scale` converts to base units before `decimals` converts to whole tokens.
+/// Skipping that step understates every asset whose `scale > 1`.
+///
+/// The bigint is split into whole and fractional parts before either reaches
+/// `Number`. Converting the base-unit value directly would round an 18-decimal
+/// balance well past `Number.MAX_SAFE_INTEGER`, losing dollars off the integer
+/// part to buy precision on a fraction of a cent.
+export function usdValue(
+  circuitUnits: bigint,
+  decimals: number,
+  scale: bigint,
+  priceUsd: number,
+): number {
+  const base = scale > 1n ? circuitUnits * scale : circuitUnits;
+  if (decimals <= 0) return Number(base) * priceUsd;
+  const div = 10n ** BigInt(decimals);
+  const neg = base < 0n;
+  const abs = neg ? -base : base;
+  const tokens = Number(abs / div) + Number(abs % div) / Number(div);
+  return (neg ? -tokens : tokens) * priceUsd;
+}

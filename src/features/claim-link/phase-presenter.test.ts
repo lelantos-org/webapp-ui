@@ -1,7 +1,11 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { describe, expect, it } from "vitest";
 import type { Phase } from "@/features/claim-link/phase-machine";
-import { linkChainIdOf, stepperStateFor } from "@/features/claim-link/phase-presenter";
+import {
+  heroSubtitleFor,
+  linkChainIdOf,
+  stepperStateFor,
+} from "@/features/claim-link/phase-presenter";
 
 const CHAIN = 31337n;
 const eph = {} as WalletApi;
@@ -40,7 +44,7 @@ describe("linkChainIdOf", () => {
   // Before the fragment is decoded there is no chain to know.
   it.each<[string, Phase]>([
     ["reading-fragment", { kind: "reading-fragment" }],
-    ["bad-link", { kind: "bad-link", error: "nope" }],
+    ["bad-link", { kind: "bad-link", error: "nope", reason: "malformed" }],
     ["error with nothing retained", { kind: "error", message: "boom" }],
   ])("has no chain during %s", (_label, phase) => {
     expect(linkChainIdOf(phase)).toBeUndefined();
@@ -77,5 +81,24 @@ describe("stepperStateFor", () => {
     ["error", { kind: "error", message: "boom" }, false],
   ])("keeps %s terminal even when blocked", (_label, phase, done) => {
     expect(stepperStateFor(phase, true)).toEqual({ current: "claim", failed: !done, done });
+  });
+});
+
+describe("heroSubtitleFor", () => {
+  // A reload lands here, and the link in the sender's chat is still good — so
+  // the two bad-link reasons must not share a line.
+  it("does not call a reloaded page an unparseable link", () => {
+    const missing = heroSubtitleFor({ kind: "bad-link", error: "gone", reason: "missing" });
+    const malformed = heroSubtitleFor({ kind: "bad-link", error: "gone", reason: "malformed" });
+
+    expect(missing).not.toEqual(malformed);
+    expect(malformed).toContain("parsed");
+  });
+
+  // The network gate card already names both chains and offers the switch.
+  it("yields the line to the network gate while blocked", () => {
+    expect(
+      heroSubtitleFor({ kind: "loading", nskHex: "ab", chainId: CHAIN }, true),
+    ).toBeUndefined();
   });
 });

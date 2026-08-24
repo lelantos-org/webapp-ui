@@ -14,6 +14,7 @@ import {
   type RegisteredAsset,
   useRegisteredAssets,
 } from "@/features/assets/registered-assets";
+import { useAssetBalanceLabel } from "@/features/assets/use-balances";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import { ClaimLinkResult } from "@/features/claim-link/components/ClaimLinkResult";
 import { GenerateModal } from "@/features/claim-link/components/GenerateModal";
@@ -37,6 +38,7 @@ export function GenerateLinkForm() {
   const { mutation, progress } = useGenerateLink();
   const assets = useRegisteredAssets();
   const chain = useActiveChain();
+  const balanceOf = useAssetBalanceLabel();
   const stageApi = useClaimLinkStage();
   const {
     register,
@@ -133,7 +135,11 @@ export function GenerateLinkForm() {
         submitDisabled={!selected || !amountValid}
         progress={stageApi.stage === "running" ? undefined : progress}
       >
-        <AssetSelectField error={errors.asset?.message} {...register("asset")} />
+        <AssetSelectField
+          balanceOf={balanceOf}
+          error={errors.asset?.message}
+          {...register("asset")}
+        />
         <TextField
           label="amount"
           placeholder={selected ? `1.0 ${selected.symbol}` : "1.0"}

@@ -19,21 +19,23 @@ describe("phase-machine", () => {
     expect(next).toEqual({ kind: "need-wallet", nskHex: "abc", chainId: CHAIN });
   });
 
-  it("fragment-bad → bad-link", () => {
+  it("fragment-bad → bad-link, marked malformed", () => {
     const next = reduce(initial, { t: "fragment-bad", error: "nope" });
-    expect(next).toEqual({ kind: "bad-link", error: "nope" });
+    expect(next).toEqual({ kind: "bad-link", error: "nope", reason: "malformed" });
   });
 
-  it("fragment-missing → bad-link", () => {
+  it("fragment-missing → bad-link, marked missing", () => {
+    // The card words these two very differently: a missing fragment is what a
+    // *reload* produces, and the link itself is still good.
     const next = reduce(initial, { t: "fragment-missing" });
-    expect(next.kind).toBe("bad-link");
+    expect(next).toMatchObject({ kind: "bad-link", reason: "missing" });
   });
 
   it("load-start only valid from need-wallet", () => {
     const a = reduce({ kind: "need-wallet", nskHex: "x", chainId: CHAIN }, { t: "load-start" });
     expect(a).toEqual({ kind: "loading", nskHex: "x", chainId: CHAIN });
 
-    const b = reduce({ kind: "bad-link", error: "e" }, { t: "load-start" });
+    const b = reduce({ kind: "bad-link", error: "e", reason: "malformed" }, { t: "load-start" });
     expect(b.kind).toBe("bad-link");
   });
 

@@ -21,7 +21,7 @@ import {
   findAsset,
   useRegisteredAssets,
 } from "@/features/assets/registered-assets";
-import { useAssetBalance } from "@/features/assets/use-balances";
+import { useAssetBalance, useAssetBalanceLabel } from "@/features/assets/use-balances";
 import { SyncErrorNotice } from "@/features/wallet/SyncErrorNotice";
 import { parseAmountForAsset } from "@/shared/lib/format";
 
@@ -35,6 +35,7 @@ export function TransferForm() {
   const {
     register,
     handleSubmit,
+    setValue,
     watch,
     formState: { errors },
   } = form;
@@ -42,20 +43,11 @@ export function TransferForm() {
   const selected = findAsset(assets, watch("asset"));
   const row = useAssetBalance(selected?.id);
   const balance = row?.balance;
+  const balanceOf = useAssetBalanceLabel();
 
   const parsed = parseAmountSafe(watch("amount"), selected);
   const v = validateAmount(parsed, selected, balance);
   const submitDisabled = !v.valid;
-
-  // The schema's own check, not a looser prefix test: `errors.to` is empty
-  // until the first submit, so a bare `startsWith` ticked the field green on a
-  // half-typed address the form would then reject.
-  //
-  // No `dirtyFields.to` guard: it stood in for "the user has typed something",
-  // which the check already implies — an empty field cannot pass. It also goes
-  // false when `onSubmit` clears the amount while keeping the recipient, which
-  // would drop the valid marker off an address that is still valid.
-  const toValid = !errors.to && isShieldedAddress(watch("to"));
 
   const clearFinished = useClearFinishedOp(m, progress);
   const assetField = register("asset");
@@ -81,6 +73,7 @@ export function TransferForm() {
     >
       <SyncErrorNotice />
       <AssetSelectField
+        balanceOf={balanceOf}
         error={errors.asset?.message}
         {...assetField}
         onChange={(e) => {
@@ -92,16 +85,19 @@ export function TransferForm() {
         inputProps={register("to")}
         label="recipient"
         placeholder={`${ADDRESS_HRP}1…`}
-        valid={toValid}
+        value={watch("to")}
+        isValid={isShieldedAddress}
+        onPaste={(to) => setValue("to", to, { shouldDirty: true, shouldValidate: true })}
         formError={errors.to?.message}
       />
       <AmountField
         inputProps={register("amount")}
         selected={selected}
-        balance={balance}
+        maxAmount={balance}
         validation={v}
         formError={errors.amount?.message}
         hint={balanceHint(balance, row?.pending ?? 0n, row?.outflow ?? 0n, selected ?? NO_META)}
+        amount={parsed}
         onSetMax={setAmount}
       />
     </ActionForm>

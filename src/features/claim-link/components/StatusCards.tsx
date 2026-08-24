@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { findAsset, type RegisteredAsset } from "@/features/assets/registered-assets";
 import { useTxExplorerUrl } from "@/features/chain/use-explorer-url";
+import type { BadLinkReason } from "@/features/claim-link/phase-machine";
+import { cx } from "@/shared/lib/cx";
 import { formatAmountForAsset, shortAddr } from "@/shared/lib/format";
 
 export function ClaimHero({ subtitle }: { subtitle?: string }) {
@@ -58,18 +60,38 @@ export function ScanningCard() {
   );
 }
 
-export function BadLinkCard({ error }: { error: string }) {
+/// Two failures wearing one card.
+///
+/// `missing` is overwhelmingly a reload: the page strips the fragment from the
+/// address bar on mount so the secret never reaches history, which means the
+/// URL the browser reloads no longer has it. Nothing is lost — the original
+/// link still works — and the old copy ("ask the sender to regenerate. each
+/// claim link is single-use") told exactly the wrong story to someone holding
+/// live funds. Warn rather than error, on the same reasoning as
+/// `NetworkGateCard`: the flow has stopped, but nothing has broken.
+export function BadLinkCard({ error, reason }: { error: string; reason: BadLinkReason }) {
+  const missing = reason === "missing";
   return (
-    <div className="card gate">
+    <div className={cx("card", "gate", missing && "gate--warn")}>
       <div className="gate__mark" aria-hidden>
-        ×
+        {missing ? "↺" : "×"}
       </div>
       <div className="stack stack--sm">
-        <div className="gate__t">bad link</div>
-        <div className="muted txt-sm">{error}</div>
-        <div className="muted txt-xs">
-          ask the sender to regenerate. each claim link is single-use and bearer-only.
-        </div>
+        <div className="gate__t">{missing ? "no claim secret in this URL" : "bad link"}</div>
+        {missing ? (
+          <div className="muted txt-sm">
+            the secret is stripped from the address bar the moment this page opens, so it never
+            reaches your history — which is also why a reload cannot bring it back. open the
+            original link again.
+          </div>
+        ) : (
+          <>
+            <div className="muted txt-sm">{error}</div>
+            <div className="muted txt-xs">
+              ask the sender to regenerate. each claim link is single-use and bearer-only.
+            </div>
+          </>
+        )}
         <div className="row">
           <Link to="/" className="btn">
             home

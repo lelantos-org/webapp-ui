@@ -1,16 +1,19 @@
 import { forwardRef, type SelectHTMLAttributes } from "react";
+import { type AssetBalanceLabel, assetOptionLabel } from "@/features/assets/asset-option";
 import { DEFAULT_ASSET_ID, useRegisteredAssets } from "@/features/assets/registered-assets";
 import { Field } from "@/shared/ui/Field";
 
 export type AssetSelectFieldProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "className"> & {
   label?: string;
   error?: string;
+  /// Balance to show beside each symbol. See `AssetBalanceLabel`.
+  balanceOf?: AssetBalanceLabel;
 };
 
 /// Asset picker bound to the on-chain registry. Falls back to a single
 /// "asset 1" option while the registry is empty or still loading.
 export const AssetSelectField = forwardRef<HTMLSelectElement, AssetSelectFieldProps>(
-  function AssetSelectField({ label = "asset", error, ...selectProps }, ref) {
+  function AssetSelectField({ label = "asset", error, balanceOf, ...selectProps }, ref) {
     const assets = useRegisteredAssets();
     const fallback = assets.length === 0;
 
@@ -29,7 +32,7 @@ export const AssetSelectField = forwardRef<HTMLSelectElement, AssetSelectFieldPr
             ) : (
               assets.map((a) => (
                 <option key={a.id.toString()} value={a.id.toString()}>
-                  {a.symbol}
+                  {assetOptionLabel(a.symbol, balanceOf?.(a))}
                 </option>
               ))
             )}

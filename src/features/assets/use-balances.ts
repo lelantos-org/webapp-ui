@@ -13,6 +13,7 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
+import type { AssetBalanceLabel } from "@/features/assets/asset-option";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import {
   type PendingTotals,
@@ -29,6 +30,7 @@ import {
   type WalletState,
 } from "@/features/wallet/use-wallet-state";
 import { jitter } from "@/shared/lib/activity";
+import { formatDecimalCompact } from "@/shared/lib/format";
 
 /// How soon to nudge a resync after a watermark-bound entry appears.
 ///
@@ -203,4 +205,29 @@ function mergePending(state: WalletState, pending: Map<bigint, PendingTotals>): 
   }
   merged.sort((a, b) => (a.asset < b.asset ? -1 : a.asset > b.asset ? 1 : 0));
   return { ...state, balances: merged };
+}
+
+/// Formatted shielded balance per asset, for labelling a picker's options.
+///
+/// Confirmed balance only, without the in-flight overlay `useBalances` adds:
+/// this labels a menu of things the user can spend right now, and value that
+/// is still settling is not that. The portfolio card is where the pending
+/// figure belongs, and it says "settling" beside it.
+///
+/// `undefined` until a sync has succeeded, so the options read as bare symbols
+/// rather than claiming a balance of zero for every asset while loading.
+///
+/// Compact rather than exact: an 18-decimal balance rendered in full is wider
+/// than the select it sits in.
+export function useAssetBalanceLabel(): AssetBalanceLabel {
+  const { data } = useBalances();
+  // Indexed once rather than scanned per option, as `AssetsCard` does for the
+  // same reason: a picker calls this for every registered asset on every
+  // render of the form around it.
+  return useMemo((): AssetBalanceLabel => {
+    if (!data) return () => undefined;
+    const byAsset = new Map(data.balances.map((b) => [b.asset, b.balance]));
+    return (asset) =>
+      formatDecimalCompact((byAsset.get(asset.id) ?? 0n) * asset.scale, asset.decimals);
+  }, [data]);
 }

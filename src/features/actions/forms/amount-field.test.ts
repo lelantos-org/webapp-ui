@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { feeBreakdown } from "@/shared/lib/fees";
 import { PUBLIC_IN_MAX } from "@/shared/lib/format";
 import {
   type AssetMeta,
+  depositMaxAmount,
   formatBalance,
   parseAmountSafe,
   pickAmountError,
@@ -157,5 +159,84 @@ describe("validateDepositAmount", () => {
 
   it("stays invalid for a non-positive amount", () => {
     expect(validateDepositAmount(0n, WETH, ONE_BASE, ONE_BASE).valid).toBe(false);
+  });
+});
+
+describe("depositMaxAmount", () => {
+  /// What the deposit actually costs the wallet, in base units.
+  const cost = (amount: bigint, scale: bigint, feeBps: bigint) =>
+    feeBreakdown({ amount, scale, feeBps, mode: "deposit" }).total;
+
+  it("leaves room for the fee charged on top", () => {
+    // 30bps on a 1000-unit balance: depositing all 1000 would need 1003. 998
+    // is the answer rather than the naive 997 — `applyFee` truncates, so the
+    // fee on 998 is 2, not 2.994.
+    const max = depositMaxAmount(1_000n, 1n, 30n);
+
+    expect(max).toBe(998n);
+    expect(cost(998n, 1n, 30n)).toBe(1_000n);
+  });
+
+  it("does not short-change the user where the fee truncates in their favour", () => {
+    // The closed-form inverse lands on 123086, but 123087 also fits once
+    // `applyFee`'s truncation is accounted for. Regression: the first version
+    // only corrected downwards and left that unit behind.
+    expect(depositMaxAmount(123_456n, 1n, 30n)).toBe(123_087n);
+  });
+
+  it("never exceeds the publicIn cap, however large the balance", () => {
+    // Otherwise "max" writes an amount `validateAmount` rejects on sight.
+    expect(depositMaxAmount((PUBLIC_IN_MAX + 1_000n) * 2n, 1n, 0n)).toBe(PUBLIC_IN_MAX);
+  });
+
+  it("never returns an amount the balance cannot cover", () => {
+    // Swept rather than spot-checked: `applyFee` truncates, so the closed-form
+    // inverse can land a unit over for some (balance, bps) pairs and the
+    // verify loop is what actually holds the invariant.
+    for (const balance of [1n, 7n, 999n, 1_000n, 123_456n, 10n ** 18n]) {
+      for (const bps of [0n, 1n, 30n, 250n, 9_999n]) {
+        const max = depositMaxAmount(balance, 1n, bps);
+        if (max === undefined) continue;
+        expect(cost(max, 1n, bps)).toBeLessThanOrEqual(balance);
+        // And it is the *largest* such amount, not merely a safe one — unless
+        // the publicIn cap is what bounded it rather than the balance.
+        if (max < PUBLIC_IN_MAX) {
+          expect(cost(max + 1n, 1n, bps)).toBeGreaterThan(balance);
+        }
+      }
+    }
+  });
+
+  it("gives back as little as it can", () => {
+    // One more unit must not fit, or the button is short-changing the user.
+    const balance = 123_456n;
+    const max = depositMaxAmount(balance, 1n, 30n);
+    if (max === undefined) throw new Error("expected a max");
+
+    expect(cost(max + 1n, 1n, 30n)).toBeGreaterThan(balance);
+  });
+
+  it("is the whole balance when the chain charges no fee", () => {
+    expect(depositMaxAmount(1_000n, 1n, 0n)).toBe(1_000n);
+  });
+
+  it("floors to the asset's granularity", () => {
+    // `scale > 1n` means the circuit cannot represent every base unit, and
+    // `parseAmountForAsset` rejects an amount that is not a multiple.
+    const max = depositMaxAmount(1_000n, 100n, 0n);
+
+    expect(max).toBe(10n);
+    expect(cost(10n, 100n, 0n)).toBe(1_000n);
+  });
+
+  it("offers nothing without a balance or a fee to size it against", () => {
+    expect(depositMaxAmount(undefined, 1n, 30n)).toBeUndefined();
+    expect(depositMaxAmount(1_000n, 1n, undefined)).toBeUndefined();
+  });
+
+  it("offers nothing when the balance is too small to deposit anything", () => {
+    // Below one circuit unit there is no amount to write.
+    expect(depositMaxAmount(0n, 1n, 30n)).toBeUndefined();
+    expect(depositMaxAmount(50n, 100n, 0n)).toBeUndefined();
   });
 });

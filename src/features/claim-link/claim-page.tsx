@@ -83,7 +83,7 @@ function PhaseCard({
       return <ReadingFragmentCard />;
 
     case "bad-link":
-      return <BadLinkCard error={phase.error} />;
+      return <BadLinkCard error={phase.error} reason={phase.reason} />;
 
     // Both wait on the network gate, which is already on screen saying so. A
     // second card under it would read as a second, separate problem — and a
