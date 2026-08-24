@@ -80,7 +80,9 @@
   /* Three columns is one too many at this width: the glyph mark goes, and the
      table falls back to content sizing so the two figures keep their digits. */
   .pf-sum__val { font-size: 22px; }
-  .tok__mark { display: none; }
+  /* Scoped to the table's own cell: `.tok__mark` is now also the claim page's
+     44px glyph, which has a grid column of its own there and must stay. */
+  .tok .tok__mark { display: none; }
   .tok { gap: 0; }
   .tbl--pf th:first-child, .tbl--pf th:last-child { width: auto; }
   .bal__main, .bal__usd { font-size: 12px; }

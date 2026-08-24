@@ -1,5 +1,6 @@
 import type { ChainEntry } from "@/config/chains";
 import { useChainRegistry } from "@/features/chain/ChainProvider";
+import { ChainIcon } from "@/features/icons/ChainIcon";
 
 /// The networks this deployment serves, named before a wallet is connected.
 ///
@@ -23,6 +24,7 @@ export function SupportedNetworks() {
             className="pill pill--sm"
             title={`chain id ${c.chainId}`}
           >
+            <ChainIcon chainId={c.chainId} chainName={c.chainName} />
             {c.chainName}
           </span>
         ))}

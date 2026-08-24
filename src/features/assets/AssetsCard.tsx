@@ -4,6 +4,7 @@ import { PortfolioActions } from "@/features/assets/PortfolioActions";
 import { portfolioTotal } from "@/features/assets/portfolio-total";
 import { type RegisteredAsset, useRegisteredAssets } from "@/features/assets/registered-assets";
 import { type AssetBalanceView, useBalances } from "@/features/assets/use-balances";
+import { TokenIcon } from "@/features/icons/TokenIcon";
 import { priceOf } from "@/features/prices/asset-usd";
 import { type PriceMap, usePrices } from "@/features/prices/use-prices";
 import { useSyncProgress } from "@/features/wallet/sync-progress-store";
@@ -226,12 +227,9 @@ const ShieldedRowView = memo(function ShieldedRowView({
     <tr>
       <td>
         <span className="tok">
-          {/* Standing in for a token logo, which the registry does not carry.
-              One glyph is enough to make the rows scannable by shape instead
-              of by reading every symbol. */}
-          <span className="tok__mark" aria-hidden>
-            {label.slice(0, 1).toUpperCase()}
-          </span>
+          {/* Seeded on the token address where there is one, so two rows that
+              share a symbol still get different marks. */}
+          <TokenIcon symbol={label} address={meta?.token} />
           <span className="tok__sym mono">{label}</span>
         </span>
       </td>

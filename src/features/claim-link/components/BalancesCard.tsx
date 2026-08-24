@@ -1,5 +1,6 @@
 import { findAsset, type RegisteredAsset } from "@/features/assets/registered-assets";
 import type { EphemeralBalance } from "@/features/claim-link/claimLink";
+import { TokenIcon } from "@/features/icons/TokenIcon";
 import { formatAmount, formatAmountForAsset } from "@/shared/lib/format";
 import { AddressBadge } from "@/shared/ui/AddressBadge";
 
@@ -66,9 +67,12 @@ export function BalancesCard({
           const isBusy = busy && busyAsset === b.asset;
           return (
             <div key={b.asset.toString()} className="claim-row">
-              <div className="claim-row__glyph" aria-hidden>
-                {symbol.slice(0, 3).toUpperCase()}
-              </div>
+              <TokenIcon
+                symbol={symbol}
+                address={a?.token}
+                size="lg"
+                className="claim-row__glyph"
+              />
               <div className="claim-row__main">
                 <div className="claim-row__sym">{symbol}</div>
                 <div className="claim-row__sub muted txt-xs">

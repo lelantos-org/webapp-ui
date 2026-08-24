@@ -73,27 +73,8 @@
   gap: 9px;
   min-width: 0;
 }
-.tok__mark {
-  flex: none;
-  width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border-radius: 7px;
-  font-family: var(--sans);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--accent);
-  background: rgba(var(--accent-rgb), 0.09);
-  border: 1px solid rgba(var(--accent-rgb), 0.16);
-}
-/* Loading: the same box, drained of the letter and the accent. */
-.tok__mark--skel {
-  color: transparent;
-  background: var(--bg-2);
-  border-color: var(--line);
-}
+/* `.tok__mark` itself lives in `components/token-mark.css`: the claim page
+   draws the same mark. */
 .tok__sym {
   font-size: 13px;
   font-weight: 600;

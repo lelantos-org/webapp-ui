@@ -29,6 +29,7 @@
 @import "./styles/components/stepper.css";
 @import "./styles/components/spinner.css";
 @import "./styles/components/skeleton.css";
+@import "./styles/components/token-mark.css";
 @import "./styles/components/hex.css";
 @import "./styles/components/modal.css";
 @import "./styles/components/toast.css";

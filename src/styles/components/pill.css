@@ -5,6 +5,9 @@
 .pill {
   display: inline-flex;
   align-items: center;
+  /* Only pays out when a pill holds a mark beside its text — the network chips
+     do; a text-only pill has nothing to space. */
+  gap: 6px;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--bg-1);

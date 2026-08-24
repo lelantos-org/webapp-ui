@@ -87,21 +87,11 @@
   border-color: var(--accent-dim);
   box-shadow: 0 0 18px rgba(var(--accent-rgb), 0.08);
 }
+/* Placement only. The box itself is `.tok__mark--lg` in `balance.css`, shared
+   with the portfolio table — these were two hand-drawn glyphs for one idea,
+   and drifted to different sizes, letter counts and radii. */
 .claim-row__glyph {
   grid-area: g;
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-  border: 1px solid var(--accent-dim);
-  background: rgba(var(--accent-rgb), 0.05);
-  border-radius: 8px;
 }
 .claim-row__main { grid-area: m; display: grid; gap: 2px; }
 .claim-row__sym {

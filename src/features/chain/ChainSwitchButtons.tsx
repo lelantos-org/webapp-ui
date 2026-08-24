@@ -1,6 +1,7 @@
 import type { ChainEntry } from "@/config/chains";
 import { useActiveChainOrUndefined, useChainRegistry } from "@/features/chain/ChainProvider";
 import { useSwitchChain } from "@/features/eip1193/use-switch-chain";
+import { ChainIcon } from "@/features/icons/ChainIcon";
 
 export interface ChainSwitchButtonsProps {
   /// Restrict the offer to one chain — used when a claim link names the chain
@@ -42,6 +43,7 @@ export function ChainSwitchButtons({ only, align = "center" }: ChainSwitchButton
           className="btn"
           onClick={() => switchChain(c)}
         >
+          <ChainIcon chainId={c.chainId} chainName={c.chainName} />
           switch to {c.chainName}
         </button>
       ))}

@@ -1,0 +1,72 @@
+/* TOKEN AND CHAIN MARKS — the coloured square beside a symbol or network name.
+ *
+ * A component rather than part of `balance.css` because two features draw it:
+ * the portfolio table and the claim page, which each used to hand-draw their
+ * own and had drifted to different sizes, letter counts and radii.
+ *
+ * The colour arrives as `--mono-h/s/l` from `monogramStyle`: a brand colour for
+ * something the bundle recognises, otherwise a hue derived from the token
+ * address or chain id. The fallbacks below keep the mark on the accent for any
+ * caller that sets no style — the skeleton is the one that does. */
+.tok__mark,
+.chain-icon {
+  --mono-h: 245;
+  --mono-s: 76%;
+  --mono-l: 58%;
+  flex: none;
+  /* `inline-grid`, not `grid`: a chain mark also sits inside `.btn`, which is
+     not a flex container, and a block-level box there would take its own line.
+     Flex and grid parents blockify it back, so the flex call sites are
+     unaffected. */
+  display: inline-grid;
+  place-items: center;
+  font-family: var(--sans);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  /* Text at the stated lightness, fill and border as low-alpha washes of the
+     same colour. One hue at three weights, so a saturated brand and a muted
+     derived hue carry the same visual weight down a column. */
+  color: hsl(var(--mono-h) var(--mono-s) var(--mono-l));
+  background: hsl(var(--mono-h) var(--mono-s) var(--mono-l) / 0.1);
+  border: 1px solid hsl(var(--mono-h) var(--mono-s) var(--mono-l) / 0.22);
+}
+
+.tok__mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  font-size: 11px;
+}
+
+/* The claim page's mark: same rules, one size up, to match its 44px row. */
+.tok__mark--lg {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius);
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+}
+
+/* Loading: the same box, drained of the letter and the colour. */
+.tok__mark--skel {
+  color: transparent;
+  background: var(--bg-2);
+  border-color: var(--line);
+}
+
+/* Smaller than the token mark and fully round: a network is not an asset, and
+   at the sizes these sit next to each other the shape is what separates them
+   faster than the letters do. */
+.chain-icon {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  font-size: 8px;
+  letter-spacing: 0;
+  /* Pulls the mark onto the text's optical centre where the parent is not
+     doing the aligning — inside `.btn`, which is plain inline flow. Ignored by
+     the flex parents (`.pill`, `.chain-badge`), which centre it themselves. */
+  vertical-align: -3px;
+  margin-right: 2px;
+}
