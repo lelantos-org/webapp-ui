@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
 import { PortfolioActions } from "@/features/assets/PortfolioActions";
 import { type RegisteredAsset, useRegisteredAssets } from "@/features/assets/registered-assets";
-import { useBalances } from "@/features/assets/use-balances";
+import { type AssetBalanceView, useBalances } from "@/features/assets/use-balances";
 import { useSyncProgress } from "@/features/wallet/sync-progress-store";
 import { describeError } from "@/shared/lib/errors";
 import { formatAmountForAsset } from "@/shared/lib/format";
@@ -42,22 +42,14 @@ export function AssetsCard() {
   );
 }
 
-interface ShieldedRow {
-  asset: bigint;
-  balance: bigint;
-  notes: number;
-  pending: bigint;
-  outflow: bigint;
-}
-
 /// Stable identity for the no-data case; see `NO_ASSETS`.
-const EMPTY_ROWS: ShieldedRow[] = [];
+const EMPTY_ROWS: AssetBalanceView[] = [];
 
 function ShieldedTable({
   rows,
   byId,
 }: {
-  rows: ShieldedRow[];
+  rows: AssetBalanceView[];
   byId: ReadonlyMap<bigint, RegisteredAsset>;
 }) {
   if (rows.length === 0) {
@@ -114,7 +106,7 @@ const ShieldedRowView = memo(function ShieldedRowView({
   label,
   meta,
 }: {
-  row: ShieldedRow;
+  row: AssetBalanceView;
   label: string;
   meta: RegisteredAsset | undefined;
 }) {

@@ -16,7 +16,7 @@ export function SuccessCheck({ caption }: SuccessCheckProps) {
         <circle className="claim-success__circle" cx="26" cy="26" r="23" />
         <path className="claim-success__tick" d="M14 27 l8 8 l16 -18" />
       </svg>
-      {caption ? <p className="setup-copy">{caption}</p> : null}
+      {caption ? <p className="modal-copy">{caption}</p> : null}
     </div>
   );
 }

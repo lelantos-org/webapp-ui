@@ -4,12 +4,14 @@ import { ActionForm } from "@/features/actions/forms/ActionForm";
 import { AmountField } from "@/features/actions/forms/AmountField";
 import { NO_META, parseAmountSafe, validateAmount } from "@/features/actions/forms/amount-field";
 import { balanceHint } from "@/features/actions/forms/balance-hint";
+import { feeLine, joinHint, settledFee } from "@/features/actions/forms/fee-hint";
 import { RecipientField } from "@/features/actions/forms/RecipientField";
-import { type WithdrawInput, withdrawSchema } from "@/features/actions/forms/schemas";
+import { isEvmAddress, type WithdrawInput, withdrawSchema } from "@/features/actions/forms/schemas";
+import { useAmountControls } from "@/features/actions/forms/use-amount-controls";
 import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
 import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
 import { useWithdraw } from "@/features/actions/mutations";
-import { type FeePreview, useFeePreview } from "@/features/actions/use-fee-preview";
+import { useFeePreview } from "@/features/actions/use-fee-preview";
 import { AssetPicker } from "@/features/assets/AssetPicker";
 import {
   DEFAULT_ASSET_ID,
@@ -19,23 +21,23 @@ import {
 import { useAssetBalance } from "@/features/assets/use-balances";
 import { useEthAssetPicker } from "@/features/assets/use-eth-asset-picker";
 import { SyncErrorNotice } from "@/features/wallet/SyncErrorNotice";
-import { formatDecimalCompact, parseAmountForAsset } from "@/shared/lib/format";
+import { parseAmountForAsset } from "@/shared/lib/format";
 
 export function WithdrawForm() {
   const { mutation: m, progress } = useWithdraw();
   const assets = useRegisteredAssets();
-  const {
-    register,
-    handleSubmit,
-    reset,
-    getValues,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<WithdrawInput>({
+  const form = useForm<WithdrawInput>({
     resolver: zodResolver(withdrawSchema),
     defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID, asEth: false },
   });
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = form;
+  const { clearAmount, setAmount } = useAmountControls(form);
   const watchedAsset = watch("asset");
   const watchedAsEth = watch("asEth");
   const { pickerValue, onPickerChange } = useEthAssetPicker(setValue, watchedAsset, watchedAsEth);
@@ -53,7 +55,7 @@ export function WithdrawForm() {
   // which the pattern already implies — an empty field cannot match. It also
   // goes false when `onSubmit` resets the form while keeping the recipient,
   // which would drop the valid marker off an address that is still valid.
-  const toValid = !errors.to && /^0x[0-9a-fA-F]{40}$/.test(watch("to"));
+  const toValid = !errors.to && isEvmAddress(watch("to"));
 
   const onSubmit = handleSubmit(
     useSubmitOnce(async (values) => {
@@ -65,18 +67,7 @@ export function WithdrawForm() {
         to: values.to,
         asEth: values.asEth,
       });
-      // Not a bare `reset()`: that restores `defaultValues`, snapping the asset
-      // picker back to id 1 and blanking the recipient the moment the tx is
-      // broadcast — while the stepper is still advancing, so it reads as the
-      // form clearing itself. The asset and `asEth` are a mode selection rather
-      // than an entry, and the recipient is typically the same EOA every time.
-      // Only the amount is dropped, so a completed withdraw is never one click
-      // from being repeated.
-      //
-      // Read live rather than from the submitted snapshot: nothing disables
-      // these fields during the tx, so a snapshot would undo an edit made while
-      // waiting — including `asEth`, which decides whether native ETH moves.
-      reset({ ...getValues(), amount: "" });
+      clearAmount();
     }),
   );
 
@@ -115,34 +106,14 @@ export function WithdrawForm() {
         balance={balance}
         validation={v}
         formError={errors.amount?.message}
-        hint={withdrawHint(
+        hint={joinHint(
           balanceHint(balance, row?.pending ?? 0n, row?.outflow ?? 0n, selected ?? NO_META),
-          selected,
-          // Suppressed while the debounce is catching up, as `DepositForm`
-          // already does: `fee.data` then describes the *previous* keystroke's
-          // amount, and this hint is the "fee X · receive Y" line the user
-          // reads immediately before clicking withdraw.
-          fee.stale ? undefined : fee.data,
+          // Deducted from the gross amount, so the figure worth stating is what
+          // the recipient actually receives.
+          feeLine(settledFee(fee), selected, "receive"),
         )}
-        onSetMax={(formatted) =>
-          setValue("amount", formatted, { shouldDirty: true, shouldValidate: true })
-        }
+        onSetMax={setAmount}
       />
     </ActionForm>
   );
-}
-
-/// Append a fee/net-receive line to the existing balance hint when the
-/// preview is available. Withdraw fee is *deducted* from the gross
-/// amount → recipient receives `total = inAmt - fee`.
-function withdrawHint(
-  base: string | undefined,
-  selected: { symbol: string; decimals: number; scale: bigint } | undefined,
-  fee?: FeePreview,
-): string | undefined {
-  if (!selected || !fee || fee.fee === 0n) return base;
-  const fmt = (v: bigint) => formatDecimalCompact(v, selected.decimals);
-  const bps = (Number(fee.feeBps) / 100).toFixed(2);
-  const line = `fee ${fmt(fee.fee)} (${bps}%) · receive ${fmt(fee.total)} ${selected.symbol}`;
-  return base ? `${base} · ${line}` : line;
 }

@@ -6,7 +6,12 @@ import { AmountField } from "@/features/actions/forms/AmountField";
 import { NO_META, parseAmountSafe, validateAmount } from "@/features/actions/forms/amount-field";
 import { balanceHint } from "@/features/actions/forms/balance-hint";
 import { RecipientField } from "@/features/actions/forms/RecipientField";
-import { type TransferInput, transferSchema } from "@/features/actions/forms/schemas";
+import {
+  isShieldedAddress,
+  type TransferInput,
+  transferSchema,
+} from "@/features/actions/forms/schemas";
+import { useAmountControls } from "@/features/actions/forms/use-amount-controls";
 import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
 import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
 import { useTransfer } from "@/features/actions/mutations";
@@ -23,18 +28,17 @@ import { parseAmountForAsset } from "@/shared/lib/format";
 export function TransferForm() {
   const { mutation: m, progress } = useTransfer();
   const assets = useRegisteredAssets();
-  const {
-    register,
-    handleSubmit,
-    reset,
-    getValues,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<TransferInput>({
+  const form = useForm<TransferInput>({
     resolver: zodResolver(transferSchema),
     defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID },
   });
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = form;
+  const { clearAmount, setAmount } = useAmountControls(form);
   const selected = findAsset(assets, watch("asset"));
   const row = useAssetBalance(selected?.id);
   const balance = row?.balance;
@@ -43,9 +47,15 @@ export function TransferForm() {
   const v = validateAmount(parsed, selected, balance);
   const submitDisabled = !v.valid;
 
-  // See `WithdrawForm`: the prefix test already implies a non-empty field, and
-  // `dirtyFields.to` goes false across the post-submit reset.
-  const toValid = !errors.to && watch("to").startsWith(`${ADDRESS_HRP}1`);
+  // The schema's own check, not a looser prefix test: `errors.to` is empty
+  // until the first submit, so a bare `startsWith` ticked the field green on a
+  // half-typed address the form would then reject.
+  //
+  // No `dirtyFields.to` guard: it stood in for "the user has typed something",
+  // which the check already implies — an empty field cannot pass. It also goes
+  // false when `onSubmit` clears the amount while keeping the recipient, which
+  // would drop the valid marker off an address that is still valid.
+  const toValid = !errors.to && isShieldedAddress(watch("to"));
 
   const clearFinished = useClearFinishedOp(m, progress);
   const assetField = register("asset");
@@ -55,11 +65,7 @@ export function TransferForm() {
       if (!selected) return;
       const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
       await m.mutateAsync({ amount, asset: selected.id, to: values.to });
-      // Amount only — see `WithdrawForm` for why the asset and recipient stay.
-      // From `getValues()` rather than the submitted snapshot: neither field is
-      // disabled while the tx is in flight, and rolling back an edit made
-      // during that window is not a reset the user asked for.
-      reset({ ...getValues(), amount: "" });
+      clearAmount();
     }),
   );
 
@@ -96,9 +102,7 @@ export function TransferForm() {
         validation={v}
         formError={errors.amount?.message}
         hint={balanceHint(balance, row?.pending ?? 0n, row?.outflow ?? 0n, selected ?? NO_META)}
-        onSetMax={(formatted) =>
-          setValue("amount", formatted, { shouldDirty: true, shouldValidate: true })
-        }
+        onSetMax={setAmount}
       />
     </ActionForm>
   );

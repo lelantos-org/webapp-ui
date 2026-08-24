@@ -1,6 +1,7 @@
-/* The blocking setup modal — overlay, panel, and the fade-out both play on
-   the way out. Used by onboarding and by claim-link generation. */
-.setup-overlay {
+/* The shared modal shell: overlay, panel, title, and the body classes the
+   panels fill themselves with. Rendered by `shared/ui/Modal`; the overlay and
+   the panel each play their own fade on the way out. */
+.modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.7);
@@ -8,12 +9,12 @@
   place-items: center;
   z-index: 50;
   backdrop-filter: blur(4px);
-  animation: setup-fade 160ms ease;
+  animation: modal-fade 160ms ease;
   padding: 16px;
 }
-.setup-overlay--locked { cursor: progress; }
-@keyframes setup-fade { from { opacity: 0; } to { opacity: 1; } }
-.setup-modal {
+.modal-overlay--locked { cursor: progress; }
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+.modal-panel {
   width: min(440px, 100%);
   padding: 22px 22px 18px;
   background: var(--bg-1);
@@ -22,83 +23,82 @@
   display: grid;
   gap: 14px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 32px rgba(var(--accent-rgb), 0.06);
-  animation: setup-rise 200ms ease;
+  animation: modal-rise 200ms ease;
 }
-@keyframes setup-rise {
+@keyframes modal-rise {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.setup-modal:focus { outline: none; }
-.setup-modal--running { pointer-events: auto; }
-.setup-title {
+.modal-panel:focus { outline: none; }
+.modal-title {
   margin: 0;
   font-size: 13px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--fg);
 }
-.setup-copy {
+.modal-copy {
   margin: 0;
   font-size: 13px;
   line-height: 1.55;
   color: var(--fg-dim);
 }
-.setup-copy strong { color: var(--fg); font-weight: 500; }
-.setup-meta {
+.modal-copy strong { color: var(--fg); font-weight: 500; }
+.modal-meta {
   margin: 0;
   font-size: 11px;
   color: var(--fg-mute);
   font-family: var(--mono);
   letter-spacing: 0.04em;
 }
-.setup-actions {
+.modal-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
   margin-top: 4px;
 }
-.setup-advanced {
+.modal-advanced {
   font-size: 11px;
   color: var(--fg-mute);
   font-family: var(--mono);
   letter-spacing: 0.06em;
 }
-.setup-advanced > summary {
+.modal-advanced > summary {
   cursor: pointer;
   user-select: none;
   padding: 4px 0;
   text-transform: uppercase;
 }
-.setup-advanced > summary:hover { color: var(--accent); }
-.setup-advanced[open] > summary { color: var(--fg-dim); }
-.setup-advanced .setup-meta { margin-top: 6px; }
-.setup-tx {
+.modal-advanced > summary:hover { color: var(--accent); }
+.modal-advanced[open] > summary { color: var(--fg-dim); }
+.modal-advanced .modal-meta { margin-top: 6px; }
+.modal-tx {
   margin: 0;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--fg-mute);
   letter-spacing: 0.04em;
 }
-.setup-tx a {
+.modal-tx a {
   color: var(--fg-dim);
   border-bottom: 1px dotted var(--fg-mute);
   text-decoration: none;
   transition: color 120ms var(--ease-soft);
 }
-.setup-tx a:hover { color: var(--accent); border-color: var(--accent); }
+.modal-tx a:hover { color: var(--accent); border-color: var(--accent); }
 
 /* MODAL FADE-OUT */
-.setup-overlay--fade-out {
-  animation: setup-overlay-fade 240ms ease-in forwards;
+.modal-overlay--fade-out {
+  animation: modal-overlay-fade 240ms ease-in forwards;
   pointer-events: none;
 }
-.setup-modal--fade-out {
-  animation: setup-modal-fade 240ms ease-in forwards;
+.modal-panel--fade-out {
+  animation: modal-panel-fade 240ms ease-in forwards;
 }
-@keyframes setup-overlay-fade {
+@keyframes modal-overlay-fade {
   to { opacity: 0; }
 }
-@keyframes setup-modal-fade {
+@keyframes modal-panel-fade {
   to { opacity: 0; transform: translateY(-4px) scale(0.98); }
 }
 
@@ -108,8 +108,8 @@
    Must stay after the rules above: a media query adds no specificity, so this
    only wins on source order. */
 @media (prefers-reduced-motion: reduce) {
-  .setup-overlay,
-  .setup-modal,
-  .setup-overlay--fade-out,
-  .setup-modal--fade-out { animation: none; }
+  .modal-overlay,
+  .modal-panel,
+  .modal-overlay--fade-out,
+  .modal-panel--fade-out { animation: none; }
 }

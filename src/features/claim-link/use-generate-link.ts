@@ -8,7 +8,7 @@
 
 import type { TransferResult } from "@lelantos-org/sdk";
 import { useMutation } from "@tanstack/react-query";
-import { type ActionMutation, progressView } from "@/features/actions/mutations";
+import { type ActionMutation, progressView, trackPostSubmit } from "@/features/actions/mutations";
 import type { GenerateLinkCall, WithAsset } from "@/features/actions/port";
 import { stepsFor } from "@/features/actions/tx/tx-progress";
 import { useTxProgress } from "@/features/actions/tx/use-tx-progress";
@@ -48,7 +48,10 @@ export function useGenerateLink(): ActionMutation<GenerateLinkCall, GenerateClai
       // claimLink.tx is the SDK TransferResult; tag with the asset id so
       // the tracker can drive the pending-tx overlay + lifecycle.
       const tagged: WithAsset<TransferResult> = Object.assign(r.tx, { asset: i.asset });
-      void track({
+      // Through the shared boundary, not a bare `void track(...)`: see
+      // `trackPostSubmit`. Floating it turned any rejection into an unhandled
+      // one, on the path that has just produced a bearer key.
+      trackPostSubmit(track, {
         label: "claim link",
         kind: "transfer",
         result: tagged,

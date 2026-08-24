@@ -5,21 +5,10 @@ import { useCallback } from "react";
 import { useRegisteredAssets } from "@/features/assets/registered-assets";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import { useWallet } from "@/features/wallet";
-import { pollInterval, useIsIdle } from "@/shared/lib/activity";
+import { BALANCE_POLL_MS, BALANCE_STALE_MS, pollInterval, useIsIdle } from "@/shared/lib/activity";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("balances:transparent");
-
-const POLL_MS = 30_000;
-
-/// Window in which a remount reuses the cached balance instead of re-reading
-/// the chain.
-///
-/// `DepositForm` is the index route, so navigating between forms remounts this
-/// query repeatedly. Deposits invalidate explicitly via
-/// `useInvalidateTransparentBalances`, so the window cannot mask a balance the
-/// user has just changed.
-const STALE_MS = 10_000;
 
 /// Prefix shared by every per-asset entry; invalidating it covers them all.
 export const transparentBalancesKey = (chainId: bigint | undefined, account: string | undefined) =>
@@ -103,13 +92,13 @@ export function useDepositSourceBalance(
       if (token === undefined) throw new Error("not ready");
       return readToken(wallet.chain, token, account);
     },
-    // Was a bare `POLL_MS` — the only poller in the app without the idle
+    // Was a bare interval — the only poller in the app without the idle
     // factor, and the one that sends the user's EOA to a third-party RPC on
     // every tick. An unattended tab kept announcing that address every 30s
     // indefinitely.
-    refetchInterval: () => pollInterval(POLL_MS, idle),
+    refetchInterval: () => pollInterval(BALANCE_POLL_MS, idle),
     refetchIntervalInBackground: false,
-    staleTime: STALE_MS,
+    staleTime: BALANCE_STALE_MS,
   });
 
   return data ?? undefined;
@@ -118,7 +107,7 @@ export function useDepositSourceBalance(
 /// Drop every cached source balance for the active wallet.
 ///
 /// Called after a deposit, the one action that moves funds out of the
-/// transparent balance; `STALE_MS` would otherwise hold the pre-deposit figure
+/// transparent balance; `BALANCE_STALE_MS` would otherwise hold the pre-deposit figure
 /// on screen.
 export function useInvalidateTransparentBalances(): () => Promise<void> {
   const qc = useQueryClient();

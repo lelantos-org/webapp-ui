@@ -24,6 +24,7 @@ import { useScannerOwner } from "@/features/wallet/use-scanner-owner";
 import { describeError } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
 import { toastError } from "@/shared/lib/toast";
+import { useIsMounted } from "@/shared/lib/use-is-mounted";
 
 const log = createLogger("claim:flow");
 
@@ -123,17 +124,14 @@ export function useClaimFlow(): ClaimFlow {
 
   // Results that arrive after the page is gone are dropped rather than
   // dispatched into an unmounted reducer.
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+  const isMounted = useIsMounted();
 
-  const dispatchIfMounted = useCallback((e: Event) => {
-    if (mounted.current) dispatch(e);
-  }, []);
+  const dispatchIfMounted = useCallback(
+    (e: Event) => {
+      if (isMounted()) dispatch(e);
+    },
+    [isMounted],
+  );
 
   // Decode the bearer secret out of the URL, then scrub it from history.
   //
@@ -185,12 +183,12 @@ export function useClaimFlow(): ClaimFlow {
         // A scan that lands after unmount still built a wallet holding live
         // workers, and the reducer will never receive it — so it is discarded
         // rather than held.
-        if (mounted.current) scanner.hold(e.eph);
+        if (isMounted()) scanner.hold(e.eph);
         else scanner.discard(e.eph);
       }
       dispatchIfMounted(e);
     });
-  }, [phase, status, wallet, bundle, linkChain, mismatch, dispatchIfMounted, scanner]);
+  }, [phase, status, wallet, bundle, linkChain, mismatch, dispatchIfMounted, isMounted, scanner]);
 
   const claim = useCallback(
     async (asset: bigint): Promise<void> => {

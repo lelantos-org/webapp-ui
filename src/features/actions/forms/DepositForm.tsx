@@ -6,7 +6,9 @@ import {
   pickAmountError,
   validateDepositAmount,
 } from "@/features/actions/forms/amount-field";
+import { feeLine, joinHint, settledFee } from "@/features/actions/forms/fee-hint";
 import { type DepositInput, depositSchema } from "@/features/actions/forms/schemas";
+import { useAmountControls } from "@/features/actions/forms/use-amount-controls";
 import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
 import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
 import { useDeposit } from "@/features/actions/mutations";
@@ -30,18 +32,18 @@ import { TextField } from "@/shared/ui/Field";
 export function DepositForm() {
   const { mutation: m, progress } = useDeposit();
   const assets = useRegisteredAssets();
-  const {
-    register,
-    handleSubmit,
-    reset,
-    getValues,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<DepositInput>({
+  const form = useForm<DepositInput>({
     resolver: zodResolver(depositSchema),
     defaultValues: { amount: "", asset: DEFAULT_ASSET_ID, asEth: false },
   });
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = form;
+  const { clearAmount } = useAmountControls(form);
 
   const watchedAsset = watch("asset");
   const watchedAsEth = watch("asEth");
@@ -52,13 +54,11 @@ export function DepositForm() {
   const fee = useFeePreview(selected?.id, parsed);
   // Public wallet balance, not the shielded one: a deposit moves funds in.
   const sourceBalance = useDepositSourceBalance(selected?.id, watchedAsEth);
-  // The preview is debounced, so between a keystroke and the fetch settling
-  // `fee.data` describes the previous amount — treated as absent so the fee for
-  // one amount is never applied to another. `validateDepositAmount` now reports
-  // that absence as `feeUnknown` and refuses to validate, which is what
-  // actually keeps the button disabled through the window; it previously fell
-  // back to checking the bare amount and stayed live.
-  const feeTotal = fee.stale ? undefined : fee.data?.total;
+  // `validateDepositAmount` reports an absent fee as `feeUnknown` and refuses
+  // to validate, which is what keeps the button disabled through the debounce
+  // window; it previously fell back to checking the bare amount and stayed live.
+  const settled = settledFee(fee);
+  const feeTotal = settled?.total;
   const v = validateDepositAmount(parsed, selected, sourceBalance, feeTotal);
   const setup = useDepositSetup(selected?.id, {
     asEth: watchedAsEth,
@@ -73,14 +73,7 @@ export function DepositForm() {
       if (!selected) return;
       const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
       await m.mutateAsync({ amount, asset: selected.id, asEth: values.asEth });
-      // Amount only — see `WithdrawForm` for why the asset and `asEth` stay.
-      //
-      // From `getValues()`, not the submitted `values`: nothing disables the
-      // asset picker while the tx is in flight, and that window is long (proof
-      // generation, then the post-submit bookkeeping). Resetting from the
-      // submit-time snapshot silently rolled back an asset — or `asEth` — the
-      // user had changed in the meantime, moving the picker under their cursor.
-      reset({ ...getValues(), amount: "" });
+      clearAmount();
     }),
   );
 
@@ -115,7 +108,7 @@ export function DepositForm() {
         inputMode="decimal"
         autoComplete="off"
         error={pickAmountError(errors.amount?.message, v)}
-        hint={depositHint(selected, watchedAsEth, sourceBalance, fee.data)}
+        hint={depositHint(selected, watchedAsEth, sourceBalance, settled)}
         {...register("amount")}
       />
       {setup.applicable && selected ? (
@@ -147,20 +140,18 @@ function depositHint(
   selected: RegisteredAsset | undefined,
   asEth: boolean,
   sourceBalance: bigint | undefined,
-  fee?: FeeBreakdown,
+  fee: FeeBreakdown | undefined,
 ): string | undefined {
   if (!selected) return undefined;
   const mode = asEth ? "wraps ETH → WETH then deposits" : `${selected.symbol} via Permit2`;
-  // Balances here are the public wallet's, already in base units — format by
-  // the token's decimals alone, without the circuit-units scale.
+  // The source balance is the public wallet's, already in base units — format
+  // by the token's decimals alone, without the circuit-units scale.
   const sym = asEth ? "ETH" : selected.symbol;
-  const head =
+  const balance =
     sourceBalance === undefined
-      ? mode
-      : `${mode} · balance ${formatDecimalCompact(sourceBalance, asEth ? 18 : selected.decimals)} ${sym}`;
-  if (!fee || fee.fee === 0n) return head;
-  // fee.{inAmt,fee,total} are in ERC20 base units → format by token decimals only.
-  const fmt = (v: bigint) => formatDecimalCompact(v, selected.decimals);
-  const bps = (Number(fee.feeBps) / 100).toFixed(2);
-  return `${head} · fee ${fmt(fee.fee)} (${bps}%) · total ${fmt(fee.total)} ${selected.symbol}`;
+      ? undefined
+      : `balance ${formatDecimalCompact(sourceBalance, asEth ? 18 : selected.decimals)} ${sym}`;
+  // The fee is charged on top of a deposit, so the figure worth stating is the
+  // total leaving the wallet.
+  return joinHint(mode, balance, feeLine(fee, selected, "total"));
 }

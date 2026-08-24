@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { ActionForm } from "@/features/actions/forms/ActionForm";
 import { AmountField } from "@/features/actions/forms/AmountField";
 import { parseAmountSafe, validateAmount } from "@/features/actions/forms/amount-field";
+import { useAmountControls } from "@/features/actions/forms/use-amount-controls";
 import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
 import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
 import { useSwap } from "@/features/actions/mutations";
@@ -37,15 +38,7 @@ export function SwapForm() {
   const activeChain = useActiveChain();
   const clearFinished = useClearFinishedOp(m, progress);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    getValues,
-    setValue,
-    watch,
-    formState: { errors },
-  } = useForm<SwapInput>({
+  const form = useForm<SwapInput>({
     resolver: zodResolver(swapSchema),
     defaultValues: {
       assetIn: DEFAULT_ASSET_ID,
@@ -54,6 +47,14 @@ export function SwapForm() {
       slippageBps: DEFAULT_SLIPPAGE_BPS,
     },
   });
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors },
+  } = form;
+  const { clearAmount, setAmount } = useAmountControls(form);
 
   const wAssetIn = watch("assetIn");
   const wAssetOut = watch("assetOut");
@@ -128,12 +129,9 @@ export function SwapForm() {
       await m.mutateAsync({ assetIn: inAsset.id, assetOut: outAsset.id, amount, quote });
       // The quote is bound to this exact amount and pair, so it cannot outlive
       // the submit — unlike the pair and slippage, which are the user's standing
-      // choices. Amount only, as in the other forms.
+      // choices.
       quoteM.reset();
-      // Live values, not the submit-time snapshot: the pair and slippage are
-      // editable throughout the tx, and rolling them back is not something the
-      // user asked for.
-      reset({ ...getValues(), amount: "" });
+      clearAmount();
     }),
   );
 
@@ -179,9 +177,7 @@ export function SwapForm() {
             ? `balance ${formatAmountForAsset(inBalance, inAsset.decimals, inAsset.scale)} ${inAsset.symbol}`
             : undefined
         }
-        onSetMax={(formatted) =>
-          setValue("amount", formatted, { shouldDirty: true, shouldValidate: true })
-        }
+        onSetMax={setAmount}
       />
       <SlippageField
         bps={wSlippage}

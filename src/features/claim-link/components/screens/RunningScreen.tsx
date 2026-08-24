@@ -12,12 +12,12 @@ export function RunningScreen({ amountLabel, steps, activePhase }: RunningScreen
   const failed = activePhase === "failed";
   return (
     <>
-      <p className="setup-copy">
+      <p className="modal-copy">
         Sending <strong>{amountLabel}</strong> to a fresh ephemeral address. Keep this window open
         until the link is ready.
       </p>
       <Stepper steps={steps} current={activePhase} failed={failed} />
-      <p className="setup-meta">Do not close this window.</p>
+      <p className="modal-meta">Do not close this window.</p>
     </>
   );
 }

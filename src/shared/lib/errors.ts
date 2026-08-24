@@ -38,6 +38,72 @@ export type ErrorKind = "rejected" | "failed";
 /// each such message needed its own curated branch above to escape.
 const HEX_BLOB = /0x[0-9a-fA-F]{8,}/;
 
+/// Does the message contain any of these?
+const anyOf =
+  (...words: string[]) =>
+  (lower: string) =>
+    words.some((w) => lower.includes(w));
+
+/// Both must hold. For the one rule that is a conjunction rather than a list.
+const both = (a: (s: string) => boolean, b: (s: string) => boolean) => (lower: string) =>
+  a(lower) && b(lower);
+
+/// Advice for the faults worth wording ourselves, matched on the raw message.
+///
+/// A table rather than a chain of `if`s because order *is* the semantics here:
+/// several rules overlap, and the first match wins. "allowance" would otherwise
+/// swallow an expired permit that the quote rule above it words better, and
+/// "revert" at the bottom would swallow most of the list. Keeping them in one
+/// ordered list makes that the single thing a reader has to check when adding
+/// one.
+const KEYWORD_ADVICE: ReadonlyArray<{ when(lower: string): boolean; text: string }> = [
+  {
+    // The selector's wording for notes reserved by a spend whose outcome the
+    // wallet never learned (SDK >= 0.17). They come back on their own, so this
+    // is a wait rather than the "insufficient balance" it would otherwise read
+    // as.
+    when: anyOf("awaiting an earlier spend"),
+    text: "Some notes are still tied up in an earlier spend. Retry in a few minutes.",
+  },
+  {
+    when: anyOf("insufficient cover", "insufficient balance"),
+    text: "Insufficient balance for this amount.",
+  },
+  {
+    when: anyOf("slippage", "min out", "minout"),
+    text: "Price moved past your slippage limit. Refresh quote and retry.",
+  },
+  { when: anyOf("expired", "deadline"), text: "Quote expired. Refresh and retry." },
+  {
+    when: anyOf("nonce too low", "replacement transaction"),
+    text: "Wallet nonce conflict. Reset pending txs and retry.",
+  },
+  {
+    when: anyOf("allowance", "permit"),
+    text: "Token approval missing or expired. Re-run setup.",
+  },
+  {
+    // Reaches the user only when adding the chain also failed — the switch path
+    // adds it automatically. Curated because "add it in the wallet" is the
+    // action to take, which the wallet's own wording does not say.
+    when: anyOf("unrecognized chain", "unrecognized network"),
+    text: "Your wallet does not have this network. Add it in the wallet, then retry.",
+  },
+  {
+    when: both(anyOf("network"), anyOf("changed", "disconnect")),
+    text: "Network changed mid-flight. Reconnect wallet and retry.",
+  },
+  { when: anyOf("relayer"), text: "Relayer rejected the request. Retry shortly." },
+  {
+    when: anyOf("prover", "proof"),
+    text: "Proof generation failed. Reload to reset the prover.",
+  },
+  {
+    when: anyOf("execution reverted", "revert"),
+    text: "Transaction reverted on-chain. Check balance and slippage, then retry.",
+  },
+];
+
 /// User-facing one-liner for an error. Never returns a raw stack trace or
 /// hex selector.
 export function friendlyMessage(e: unknown): string {
@@ -54,45 +120,8 @@ export function friendlyMessage(e: unknown): string {
   }
   const raw = c.raw;
   const lower = raw.toLowerCase();
-  // The selector's wording for notes reserved by a spend whose outcome the
-  // wallet never learned (SDK ≥ 0.17). They come back on their own, so this is
-  // a wait rather than the "insufficient balance" it would otherwise read as.
-  if (lower.includes("awaiting an earlier spend")) {
-    return "Some notes are still tied up in an earlier spend. Retry in a few minutes.";
-  }
-  if (lower.includes("insufficient cover") || lower.includes("insufficient balance")) {
-    return "Insufficient balance for this amount.";
-  }
-  if (lower.includes("slippage") || lower.includes("min out") || lower.includes("minout")) {
-    return "Price moved past your slippage limit. Refresh quote and retry.";
-  }
-  if (lower.includes("expired") || lower.includes("deadline")) {
-    return "Quote expired. Refresh and retry.";
-  }
-  if (lower.includes("nonce too low") || lower.includes("replacement transaction")) {
-    return "Wallet nonce conflict. Reset pending txs and retry.";
-  }
-  if (lower.includes("allowance") || lower.includes("permit")) {
-    return "Token approval missing or expired. Re-run setup.";
-  }
-  // Reaches the user only when adding the chain also failed — the switch path
-  // adds it automatically. Curated because "add it in the wallet" is the action
-  // to take, which the wallet's own wording does not say.
-  if (lower.includes("unrecognized chain") || lower.includes("unrecognized network")) {
-    return "Your wallet does not have this network. Add it in the wallet, then retry.";
-  }
-  if (lower.includes("network") && (lower.includes("changed") || lower.includes("disconnect"))) {
-    return "Network changed mid-flight. Reconnect wallet and retry.";
-  }
-  if (lower.includes("relayer")) {
-    return "Relayer rejected the request. Retry shortly.";
-  }
-  if (lower.includes("prover") || lower.includes("proof")) {
-    return "Proof generation failed. Reload to reset the prover.";
-  }
-  if (lower.includes("execution reverted") || lower.includes("revert")) {
-    return "Transaction reverted on-chain. Check balance and slippage, then retry.";
-  }
+  const advice = KEYWORD_ADVICE.find((entry) => entry.when(lower));
+  if (advice) return advice.text;
   if (raw && raw.length < 140 && !HEX_BLOB.test(raw) && !raw.includes("\n")) {
     return raw;
   }

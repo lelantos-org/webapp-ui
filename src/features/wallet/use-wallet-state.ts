@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useActiveChain } from "@/features/chain/ChainProvider";
 import { useWallet } from "@/features/wallet";
 import { syncProgress } from "@/features/wallet/sync-progress-store";
-import { pollInterval, useIsIdle } from "@/shared/lib/activity";
+import { BALANCE_POLL_MS, BALANCE_STALE_MS, pollInterval, useIsIdle } from "@/shared/lib/activity";
 
 /// Confirmed holdings for one asset: what the wallet has actually decrypted.
 ///
@@ -24,10 +24,6 @@ export interface WalletState {
 }
 
 const SYNC_LIMIT = 500;
-const POLL_MS = 30_000;
-/// Window in which a remount reuses the cached state instead of resyncing.
-/// Well under `POLL_MS`, so the polling cadence is unaffected.
-const STALE_MS = 10_000;
 
 /// Chain-scoped as well as address-scoped. The address is the same on every
 /// chain, so without the chainId a switch would serve the previous chain's
@@ -88,13 +84,13 @@ export function useWalletState(): UseQueryResult<WalletState> {
     // recompute over every unspent note, on the main thread. Slowed on an
     // unattended tab, which `refetchIntervalInBackground: false` does not
     // cover because that tab is still visible.
-    refetchInterval: () => pollInterval(POLL_MS, idle),
+    refetchInterval: () => pollInterval(BALANCE_POLL_MS, idle),
     refetchIntervalInBackground: false,
     // Several components reach this query. At `staleTime: 0` every mount —
     // so every route change into a form — refetches, firing a redundant
     // `syncNotes`. Mutations still show immediately: they invalidate the query
     // explicitly via `useInvalidateWalletState`, which ignores staleTime.
-    staleTime: STALE_MS,
+    staleTime: BALANCE_STALE_MS,
   });
 }
 

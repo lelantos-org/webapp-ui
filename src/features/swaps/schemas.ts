@@ -1,8 +1,5 @@
 import { z } from "zod";
-import { isDecimalString, isPositiveIntegerString } from "@/shared/lib/format";
-
-const amount = z.string().refine(isDecimalString, "must be a positive number");
-const asset = z.string().refine(isPositiveIntegerString, "must be a positive integer");
+import { amountField as amount, assetField as asset } from "@/features/actions/forms/schemas";
 
 export const swapSchema = z
   .object({

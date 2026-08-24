@@ -2,9 +2,10 @@
 // mounted with a fade-out class for `MODAL_EXIT_MS` so the CSS animation
 // completes before unmount.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { animationDelay, MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { sleep } from "@/shared/lib/timing";
+import { useIsMounted } from "@/shared/lib/use-is-mounted";
 
 export type ClaimLinkStage = "form" | "confirm" | "running" | "success" | "closing" | "result";
 
@@ -35,17 +36,14 @@ export function useClaimLinkStage(): ClaimLinkStageApi {
   // used to keep setting state regardless of whether the component was still
   // mounted. That window is precisely when the link is most at risk of being
   // lost, so it is worth not fighting React over it.
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
+  const isMounted = useIsMounted();
 
-  const setStageIfMounted = useCallback((next: ClaimLinkStage) => {
-    if (mounted.current) setStage(next);
-  }, []);
+  const setStageIfMounted = useCallback(
+    (next: ClaimLinkStage) => {
+      if (isMounted()) setStage(next);
+    },
+    [isMounted],
+  );
 
   const toForm = useCallback(() => setStage("form"), []);
   const toConfirm = useCallback(() => setStage("confirm"), []);

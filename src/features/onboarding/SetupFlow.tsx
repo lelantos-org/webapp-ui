@@ -1,7 +1,6 @@
 // One-time wallet setup modal for the Permit2 AllowanceTransfer flow.
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { RegisteredAsset } from "@/features/assets/registered-assets";
 import { useTxExplorerUrl } from "@/features/chain/use-explorer-url";
 import { useInvalidateSetupStatus } from "@/features/onboarding/use-setup-status";
@@ -13,11 +12,10 @@ import {
   type SetupStep,
   type SetupStepPhase,
 } from "@/features/wallet/permit2";
-import { cx } from "@/shared/lib/cx";
-import { formatAmountForAsset } from "@/shared/lib/format";
+import { formatAmountForAsset, shortAddr } from "@/shared/lib/format";
 import { MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { type ReportedError, reportError } from "@/shared/lib/report-error";
-import { trapFocus } from "@/shared/ui/focus-trap";
+import { Modal } from "@/shared/ui/Modal";
 import { Stepper, type StepperItem } from "@/shared/ui/Stepper";
 import { useExitTransition } from "@/shared/ui/use-exit-transition";
 
@@ -58,13 +56,7 @@ export interface SetupFlowProps {
   onCancel(): void;
 }
 
-export function SetupFlow(props: SetupFlowProps) {
-  const target = typeof document !== "undefined" ? document.body : null;
-  if (!target) return null;
-  return createPortal(<SetupModal {...props} />, target);
-}
-
-function SetupModal({
+export function SetupFlow({
   asset,
   pendingAmountBase,
   needsErc20Approve,
@@ -83,9 +75,7 @@ function SetupModal({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const { exiting, exit } = useExitTransition(MODAL_EXIT_MS);
   const cancelledRef = useRef(false);
-  const titleId = useId();
   const descId = useId();
-  const modalRef = useRef<HTMLDivElement>(null);
 
   const baseTotal = pendingAmountBase ?? FALLBACK_AMOUNT_BASE * 10n ** BigInt(asset.decimals);
   const cap = defaultAllowanceCap(baseTotal);
@@ -95,11 +85,10 @@ function SetupModal({
     ? ALL_STEPS
     : ALL_STEPS.filter((s) => s.id !== "approving");
 
-  // `locked` drives the busy cursor, `dismissable` gates the close paths. They
-  // differ only while the exit plays: the flow is no longer running, but the
-  // modal is on its way out and must not take another dismiss.
+  // The flow is running and the wallet is mid-prompt: no dismiss path is open,
+  // and the overlay says so with a busy cursor. `Modal` closes them for the
+  // duration of the exit too.
   const locked = !(screen === "intro" || screen === "failed" || screen === "done");
-  const dismissable = !locked && !exiting;
 
   const requestCancel = useCallback(() => exit(onCancel), [exit, onCancel]);
   const requestSuccess = useCallback(() => exit(onSuccess), [exit, onSuccess]);
@@ -148,157 +137,95 @@ function SetupModal({
     [],
   );
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && dismissable) {
-        e.stopPropagation();
-        requestCancel();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [dismissable, requestCancel]);
-
-  // Focus the modal on mount *and* whenever the screen changes.
-  //
-  // With `[]` deps this ran once. Clicking "begin setup" unmounts the button it
-  // had focused, so focus falls back to `<body>` — and `trapFocus` keys off
-  // `document.activeElement` being the first or last focusable inside the
-  // modal, so from there it traps nothing and Tab walks out into the locked
-  // page behind.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `screen` is the re-run trigger, not a value the effect reads
-  useEffect(() => {
-    const root = modalRef.current;
-    if (!root) return;
-    const primary = root.querySelector<HTMLElement>("[data-primary]");
-    if (primary) {
-      primary.focus();
-      return;
-    }
-    const focusables = root.querySelectorAll<HTMLElement>(
-      "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
-    );
-    focusables[0]?.focus();
-  }, [screen]);
-
-  const onBackdrop = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && dismissable) requestCancel();
-  };
-
   return (
-    // biome-ignore lint/a11y/noStaticElementInteractions: backdrop click paired with Escape-key handler on window for keyboard dismiss
-    // biome-ignore lint/a11y/useKeyWithClickEvents: keyboard equivalent is Escape, handled at window level
-    <div
-      className={cx(
-        "setup-overlay",
-        locked && "setup-overlay--locked",
-        exiting && "setup-overlay--fade-out",
-      )}
-      onClick={onBackdrop}
+    <Modal
+      title="One-time setup"
+      onDismiss={requestCancel}
+      busy={locked}
+      exiting={exiting}
+      describedBy={descId}
+      focusKey={screen}
     >
-      <div
-        ref={modalRef}
-        className={cx(
-          "setup-modal",
-          screen === "running" && "setup-modal--running",
-          exiting && "setup-modal--fade-out",
-        )}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        aria-describedby={descId}
-        tabIndex={-1}
-        onKeyDown={(e) => trapFocus(e, modalRef.current)}
-      >
-        <h2 id={titleId} className="setup-title">
-          One-time setup
-        </h2>
+      {screen === "intro" ? (
+        <>
+          <p id={descId} className="modal-copy">
+            You're depositing <strong>{asset.symbol}</strong> into the shielded pool. We need a
+            one-time on-chain authorization so future deposits take a single signature.
+          </p>
+          <p className="modal-copy">
+            This grants the pool an allowance up to{" "}
+            <strong>
+              {formatAmountForAsset(cap, asset.decimals, asset.scale)} {asset.symbol}
+            </strong>
+            , valid for {EXPIRY_DAYS} days.
+          </p>
+          <details
+            className="modal-advanced"
+            open={showAdvanced}
+            onToggle={(e) => setShowAdvanced((e.target as HTMLDetailsElement).open)}
+          >
+            <summary>Advanced</summary>
+            <p className="modal-meta">
+              cap: {formatAmountForAsset(cap, asset.decimals, asset.scale)} {asset.symbol}
+              <br />
+              expires: {expiryStr}
+              <br />
+              steps: {visibleSteps.length}
+            </p>
+          </details>
+          <div className="modal-actions">
+            <button type="button" className="btn btn--ghost" onClick={requestCancel}>
+              cancel
+            </button>
+            <button type="button" className="btn" onClick={run} disabled={!wallet} data-primary>
+              begin setup
+            </button>
+          </div>
+        </>
+      ) : null}
 
-        {screen === "intro" ? (
-          <>
-            <p id={descId} className="setup-copy">
-              You're depositing <strong>{asset.symbol}</strong> into the shielded pool. We need a
-              one-time on-chain authorization so future deposits take a single signature.
-            </p>
-            <p className="setup-copy">
-              This grants the pool an allowance up to{" "}
-              <strong>
-                {formatAmountForAsset(cap, asset.decimals, asset.scale)} {asset.symbol}
-              </strong>
-              , valid for {EXPIRY_DAYS} days.
-            </p>
-            <details
-              className="setup-advanced"
-              open={showAdvanced}
-              onToggle={(e) => setShowAdvanced((e.target as HTMLDetailsElement).open)}
-            >
-              <summary>Advanced</summary>
-              <p className="setup-meta">
-                cap: {formatAmountForAsset(cap, asset.decimals, asset.scale)} {asset.symbol}
-                <br />
-                expires: {expiryStr}
-                <br />
-                steps: {visibleSteps.length}
-              </p>
-            </details>
-            <div className="setup-actions">
-              <button type="button" className="btn btn--ghost" onClick={requestCancel}>
-                cancel
-              </button>
-              <button type="button" className="btn" onClick={run} disabled={!wallet} data-primary>
-                begin setup
-              </button>
-            </div>
-          </>
-        ) : null}
+      {screen === "running" ? (
+        <>
+          <p id={descId} className="modal-copy">
+            {RUNNING_COPY[activeStep][activeStatus]}
+          </p>
+          <Stepper steps={visibleSteps} current={activeStep} />
+          {activeStatus === "confirming" && activeTxHash ? (
+            <TxHashLine txHash={activeTxHash} />
+          ) : null}
+          <p className="modal-meta">Do not close this window.</p>
+        </>
+      ) : null}
 
-        {screen === "running" ? (
-          <>
-            <p id={descId} className="setup-copy">
-              {RUNNING_COPY[activeStep][activeStatus]}
-            </p>
-            <Stepper steps={visibleSteps} current={activeStep} />
-            {activeStatus === "confirming" && activeTxHash ? (
-              <TxHashLine txHash={activeTxHash} />
-            ) : null}
-            <p className="setup-meta">Do not close this window.</p>
-          </>
-        ) : null}
+      {screen === "failed" ? (
+        <>
+          <p id={descId} className="modal-copy">
+            {error?.kind === "rejected"
+              ? `You cancelled the ${stepLabel(activeStep)} step. Try again when ready.`
+              : `Setup failed at the ${stepLabel(activeStep)} step.`}
+          </p>
+          <Stepper steps={visibleSteps} current={activeStep} failed />
+          {error?.kind === "failed" ? <div className="err">{error.message}</div> : null}
+          <div className="modal-actions">
+            <button type="button" className="btn btn--ghost" onClick={requestCancel}>
+              cancel
+            </button>
+            <button type="button" className="btn" onClick={run} data-primary>
+              retry
+            </button>
+          </div>
+        </>
+      ) : null}
 
-        {screen === "failed" ? (
-          <>
-            <p id={descId} className="setup-copy">
-              {error?.kind === "rejected"
-                ? `You cancelled the ${stepLabel(activeStep)} step. Try again when ready.`
-                : `Setup failed at the ${stepLabel(activeStep)} step.`}
-            </p>
-            <Stepper steps={visibleSteps} current={activeStep} failed />
-            {error?.kind === "failed" ? <div className="err">{error.message}</div> : null}
-            <div className="setup-actions">
-              <button type="button" className="btn btn--ghost" onClick={requestCancel}>
-                cancel
-              </button>
-              <button type="button" className="btn" onClick={run} data-primary>
-                retry
-              </button>
-            </div>
-          </>
-        ) : null}
-
-        {screen === "done" ? (
-          <>
-            <p id={descId} className="setup-copy">
-              Setup complete. You can now deposit with a single signature.
-            </p>
-            <Stepper
-              steps={visibleSteps}
-              current={visibleSteps[visibleSteps.length - 1]?.id}
-              done
-            />
-          </>
-        ) : null}
-      </div>
-    </div>
+      {screen === "done" ? (
+        <>
+          <p id={descId} className="modal-copy">
+            Setup complete. You can now deposit with a single signature.
+          </p>
+          <Stepper steps={visibleSteps} current={visibleSteps[visibleSteps.length - 1]?.id} done />
+        </>
+      ) : null}
+    </Modal>
   );
 }
 
@@ -308,9 +235,9 @@ function stepLabel(step: SetupStep): string {
 
 function TxHashLine({ txHash }: { txHash: string }) {
   const url = useTxExplorerUrl()(txHash);
-  const short = `${txHash.slice(0, 6)}…${txHash.slice(-4)}`;
+  const short = shortAddr(txHash, 4);
   return (
-    <p className="setup-tx">
+    <p className="modal-tx">
       tx{" "}
       {url ? (
         <a href={url} target="_blank" rel="noreferrer">

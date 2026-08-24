@@ -14,6 +14,7 @@ import { type UseMutationResult, useMutation } from "@tanstack/react-query";
 import { useCallback } from "react";
 import type {
   DepositCall,
+  ShieldedActions,
   SwapCall,
   TransferCall,
   TxResult,
@@ -22,7 +23,11 @@ import type {
 } from "@/features/actions/port";
 import { stepsFor, terminalFor } from "@/features/actions/tx/tx-progress";
 import { type TxProgressApi, useTxProgress } from "@/features/actions/tx/use-tx-progress";
-import { type TrackTxArgs, useTxTracker } from "@/features/actions/tx/use-tx-tracker";
+import {
+  type TrackTxArgs,
+  type TrackTxRequest,
+  useTxTracker,
+} from "@/features/actions/tx/use-tx-tracker";
 import { requireActions, useShieldedActions } from "@/features/actions/use-shielded-actions";
 import { fetchAssetFeeInputs } from "@/features/assets/asset-entry";
 import { useInvalidateTransparentBalances } from "@/features/assets/transparent-balances";
@@ -47,7 +52,10 @@ const log = createLogger("actions:spend");
 /// mirror bug — it floated the same call, so a rejection became an unhandled
 /// rejection and the stepper stuck on "sign transaction" forever. `useTxTracker`
 /// no longer rejects; this keeps the boundary explicit either way.
-function trackPostSubmit(track: (args: TrackTxArgs) => Promise<void>, args: TrackTxArgs): void {
+export function trackPostSubmit(
+  track: (args: TrackTxArgs) => Promise<void>,
+  args: TrackTxArgs,
+): void {
   void track(args).catch((e: unknown) => log.warn("post-submit tracking failed", e));
 }
 
@@ -97,6 +105,46 @@ function useSpendFailed(): (label: string, progress: TxProgressApi, e: unknown) 
     },
     [invalidateWallet],
   );
+}
+
+/// What one note-spending op does that the others do not.
+///
+/// Transfer, withdraw and swap differ only in the call they make and the
+/// tracker request they produce. Everything around that — the stepper, the
+/// duplicate-spend resync, the failure toast, the post-submit tracking that
+/// must not be returned to react-query — is one policy, stated once in
+/// `useSpendMutation` rather than three times.
+interface SpendSpec<I, R extends TxResult> {
+  /// Names the op in the failure toast and in the tracker. A function because
+  /// withdraw's depends on whether the native-ETH bridge is used.
+  label(input: I): string;
+  /// Start the stepper and drive the op. The step list is op-specific, so
+  /// `progress.start` is the callee's to call.
+  run(actions: ShieldedActions, input: I, progress: TxProgressApi): Promise<R>;
+  /// The tracker request for a broadcast result. Built per op rather than
+  /// assembled here: `TrackTxRequest` correlates `kind` with the shape of
+  /// `result`, and a generic `{ kind, result }` pair would erase that.
+  track(input: I, result: R): TrackTxRequest;
+}
+
+function useSpendMutation<I, R extends TxResult>(spec: SpendSpec<I, R>): ActionMutation<I, R> {
+  const actions = useShieldedActions();
+  const track = useTxTracker();
+  const progress = useTxProgress();
+  const spendFailed = useSpendFailed();
+  const mutation = useMutation<R, Error, I>({
+    mutationFn: (input) => spec.run(requireActions(actions), input, progress),
+    onSuccess: (result, input) => {
+      // Deliberately not returned — see `trackPostSubmit`.
+      trackPostSubmit(track, {
+        ...spec.track(input, result),
+        label: spec.label(input),
+        onPhase: progress.set,
+      });
+    },
+    onError: (e, input) => spendFailed(spec.label(input), progress, e),
+  });
+  return { mutation, progress: progressView(progress) };
 }
 
 export function useDeposit(): ActionMutation<DepositCall> {
@@ -168,7 +216,7 @@ export function useDeposit(): ActionMutation<DepositCall> {
     },
     onSuccess: (r) => {
       // The funds have left the transparent balance the form validates
-      // against, and that query holds its value for `STALE_MS`.
+      // against, and that query holds its value for `BALANCE_STALE_MS`.
       void invalidateTransparent();
       // Deliberately not returned — see `trackPostSubmit`.
       trackPostSubmit(track, {
@@ -186,81 +234,39 @@ export function useDeposit(): ActionMutation<DepositCall> {
   return { mutation, progress: progressView(progress) };
 }
 
-export function useTransfer(): ActionMutation<TransferCall> {
-  const actions = useShieldedActions();
-  const track = useTxTracker();
+export function useTransfer(): ActionMutation<TransferCall, WithAsset<TransferResult>> {
   const { wallet } = useWallet();
-  const progress = useTxProgress();
-  const spendFailed = useSpendFailed();
-  const mutation = useMutation<WithAsset<TransferResult>, Error, TransferCall>({
-    mutationFn: async (i) => {
-      const a = requireActions(actions);
+  return useSpendMutation<TransferCall, WithAsset<TransferResult>>({
+    label: () => "transfer",
+    run: (a, i, progress) => {
       progress.start(stepsFor("transfer"));
-      return a.transfer({
-        to: i.to,
-        amount: i.amount,
-        asset: i.asset,
-        onPhase: progress.set,
-      });
+      return a.transfer({ to: i.to, amount: i.amount, asset: i.asset, onPhase: progress.set });
     },
-    onSuccess: (r, i) => {
-      trackPostSubmit(track, {
-        label: "transfer",
-        kind: "transfer",
-        result: r,
-        isSelfTransfer: !!wallet && i.to === wallet.address,
-        onPhase: progress.set,
-      });
-    },
-    onError: (e) => spendFailed("transfer", progress, e),
+    track: (i, result) => ({
+      kind: "transfer",
+      result,
+      isSelfTransfer: !!wallet && i.to === wallet.address,
+    }),
   });
-  return { mutation, progress: progressView(progress) };
 }
 
-export function useWithdraw(): ActionMutation<WithdrawCall> {
-  const actions = useShieldedActions();
-  const track = useTxTracker();
-  const progress = useTxProgress();
-  const spendFailed = useSpendFailed();
-  const mutation = useMutation<WithAsset<WithdrawResult>, Error, WithdrawCall>({
-    mutationFn: async (i) => {
-      const a = requireActions(actions);
+export function useWithdraw(): ActionMutation<WithdrawCall, WithAsset<WithdrawResult>> {
+  return useSpendMutation<WithdrawCall, WithAsset<WithdrawResult>>({
+    label: (i) => (i.asEth ? "withdraw eth" : "withdraw"),
+    run: (a, i, progress) => {
       progress.start(stepsFor("withdraw"));
-      return i.asEth
-        ? a.withdrawEth({
-            to: i.to,
-            amount: i.amount,
-            asset: i.asset,
-            onPhase: progress.set,
-          })
-        : a.withdraw({
-            to: i.to,
-            amount: i.amount,
-            asset: i.asset,
-            onPhase: progress.set,
-          });
+      // Both entry points take the same request; only the unwrap differs.
+      const req = { to: i.to, amount: i.amount, asset: i.asset, onPhase: progress.set };
+      return i.asEth ? a.withdrawEth(req) : a.withdraw(req);
     },
-    onSuccess: (r, i) => {
-      trackPostSubmit(track, {
-        label: i.asEth ? "withdraw eth" : "withdraw",
-        kind: i.asEth ? "withdrawEth" : "withdraw",
-        result: r,
-        onPhase: progress.set,
-      });
-    },
-    onError: (e, i) => spendFailed(i.asEth ? "withdraw eth" : "withdraw", progress, e),
+    track: (i, result) => ({ kind: i.asEth ? "withdrawEth" : "withdraw", result }),
   });
-  return { mutation, progress: progressView(progress) };
 }
 
-export function useSwap(): ActionMutation<SwapCall> {
-  const actions = useShieldedActions();
-  const track = useTxTracker();
-  const progress = useTxProgress();
-  const spendFailed = useSpendFailed();
-  const mutation = useMutation<WithAsset<SwapResult>, Error, SwapCall>({
-    mutationFn: async (i) => {
-      const a = requireActions(actions);
+export function useSwap(): ActionMutation<SwapCall, WithAsset<SwapResult>> {
+  return useSpendMutation<SwapCall, WithAsset<SwapResult>>({
+    label: () => "swap",
+    run: (a, i, progress) => {
       progress.start(stepsFor("swap"));
       return a.swap({
         assetIn: i.assetIn,
@@ -270,16 +276,6 @@ export function useSwap(): ActionMutation<SwapCall> {
         onPhase: progress.set,
       });
     },
-    onSuccess: (r, i) => {
-      trackPostSubmit(track, {
-        label: "swap",
-        kind: "swap",
-        result: r,
-        swap: i,
-        onPhase: progress.set,
-      });
-    },
-    onError: (e) => spendFailed("swap", progress, e),
+    track: (i, result) => ({ kind: "swap", result, swap: i }),
   });
-  return { mutation, progress: progressView(progress) };
 }

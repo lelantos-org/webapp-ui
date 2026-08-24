@@ -72,6 +72,28 @@ export function pollInterval(baseMs: number, idle: boolean): number {
   return jitter(idle ? baseMs * IDLE_POLL_FACTOR : baseMs);
 }
 
+/**
+ * Cadence for the two queries that answer "what does this wallet hold" — the
+ * shielded note sync and the transparent chain reads.
+ *
+ * One constant rather than one per query. They are read side by side (a
+ * deposit form validates against the transparent balance while the portfolio
+ * shows the shielded one), so a drift between them shows up as two figures
+ * refreshing at visibly different times, and the two copies this replaced had
+ * already grown separate rationales for the same number.
+ */
+export const BALANCE_POLL_MS = 30_000;
+
+/**
+ * Window in which a remount reuses a cached balance instead of re-reading.
+ *
+ * Well under `BALANCE_POLL_MS`, so the polling cadence is unaffected. It exists
+ * because the forms are routes: navigating between deposit and withdraw
+ * remounts their queries repeatedly, and every balance-changing op invalidates
+ * explicitly, so the window cannot mask a figure the user has just changed.
+ */
+export const BALANCE_STALE_MS = 10_000;
+
 const subscribers = new Set<() => void>();
 
 function notifyActivity(): void {

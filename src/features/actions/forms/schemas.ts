@@ -9,6 +9,8 @@ import { isDecimalString, isPositiveIntegerString } from "@/shared/lib/format";
 const ADDRESS_DATA_LEN = 160;
 const ADDRESS_LEN = ADDRESS_HRP.length + 1 + ADDRESS_DATA_LEN;
 
+/// Shape check for a shielded address.
+///
 /// HRP and charset come from the SDK's own validator rather than a second regex
 /// here — a hand-written `[0-9a-z]` admits `1`, `b`, `i` and `o`, which are not
 /// in the bech32 charset. It performs no length check, hence the pair.
@@ -16,7 +18,11 @@ const ADDRESS_LEN = ADDRESS_HRP.length + 1 + ADDRESS_DATA_LEN;
 /// `decodeAddress` is the definitive answer (checksum and curve points), but it
 /// needs a Jubjub context and is far too much to run on every keystroke. A bad
 /// address that clears this still fails there, before anything is signed.
-function isWellFormedAddress(value: string): boolean {
+///
+/// Exported for the recipient field's live valid marker, which has to agree
+/// with the schema that gates the submit — a marker with its own weaker rule
+/// ticks green on an address the form will go on to reject.
+export function isShieldedAddress(value: string): boolean {
   if (value.length !== ADDRESS_LEN) return false;
   try {
     brandShieldedAddress(value);
@@ -26,12 +32,26 @@ function isWellFormedAddress(value: string): boolean {
   }
 }
 
-const amount = z.string().refine(isDecimalString, "must be a positive number");
-const ethAddress = z.string().regex(/^0x[0-9a-fA-F]{40}$/, "expected 0x-prefixed address");
+const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
+
+/// Shape check for an EVM address. Exported for the same reason as
+/// `isShieldedAddress`.
+export function isEvmAddress(value: string): boolean {
+  return EVM_ADDRESS.test(value);
+}
+
+/// Field schemas shared across every action form, including the swap form's
+/// own object — two spellings of "a positive decimal" would eventually
+/// disagree about which strings the submit button accepts.
+export const amountField = z.string().refine(isDecimalString, "must be a positive number");
+export const assetField = z.string().refine(isPositiveIntegerString, "must be a positive integer");
+
+const amount = amountField;
+const asset = assetField.default("1");
+const ethAddress = z.string().refine(isEvmAddress, "expected 0x-prefixed address");
 const shieldedAddress = z
   .string()
-  .refine(isWellFormedAddress, `expected bech32 ${ADDRESS_HRP}1… address`);
-const asset = z.string().refine(isPositiveIntegerString, "must be a positive integer").default("1");
+  .refine(isShieldedAddress, `expected bech32 ${ADDRESS_HRP}1… address`);
 
 /// `asEth: true` switches withdraw to the WETH-bridge entry point
 /// (`MASP.withdrawEth`). Only valid when the selected asset is the
