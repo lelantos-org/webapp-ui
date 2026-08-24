@@ -1,23 +1,143 @@
-/* Reserve the settling badge's row even when it is absent. The badge comes and
-   goes on its own as a tx settles; without the reservation every appearance
-   resized the row and nudged the whole table. */
-.bal {
+/* PORTFOLIO SUMMARY — the card's headline figure.
+
+   Its own band above the table rather than a line in the header row. The
+   header is a run of small type (title, sync state, three inline actions);
+   anything set into it inherits that scale, and the aggregate was ending up
+   smaller than the per-row balances it summarises. */
+.pf-sum {
   display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 13px 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  /* Accent wash from the top-left corner only — a flat tint at this size reads
+     as a disabled panel, a corner-weighted one as a lit surface. */
+  background:
+    radial-gradient(120% 170% at 0% 0%, rgba(var(--accent-rgb), 0.10), transparent 62%),
+    var(--bg-2);
+}
+.pf-sum__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+/* Same treatment as a table column header: this labels a figure, so it should
+   look like the other things that label figures on this card. */
+.pf-sum__label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+.pf-sum__val {
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.pf-sum__approx {
+  margin-right: 3px;
+  font-weight: 500;
+  color: var(--fg-mute);
+}
+/* Cents are a rounding artefact at this scale — kept for precision, sized so
+   they do not compete with the dollars for the first glance. */
+.pf-sum__cents {
+  font-size: 0.62em;
+  color: var(--fg-mute);
+}
+.pf-sum__partial {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--warn);
+  background: rgba(var(--warn-rgb), 0.1);
+}
+
+/* ASSET CELL — glyph mark + symbol. */
+.tok {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+}
+.tok__mark {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.09);
+  border: 1px solid rgba(var(--accent-rgb), 0.16);
+}
+/* Loading: the same box, drained of the letter and the accent. */
+.tok__mark--skel {
+  color: transparent;
+  background: var(--bg-2);
+  border-color: var(--line);
+}
+.tok__sym {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* BALANCE CELL — the token figure, with any in-flight legs beneath it.
+   The dollar value moved out to a column of its own; three lines of differently
+   sized type stacked in one right-aligned cell was the crowding. */
+.bal {
+  display: inline-flex;
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
-  gap: 4px;
-  padding: 6px 0;
-  min-height: 48px;
+  gap: 5px;
+  /* Reserve the settling row even when it is absent. The chips come and go on
+     their own as a tx settles; without the reservation every appearance
+     resized the row and nudged the whole table. */
+  min-height: 44px;
 }
-.bal__main { font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.bal__main {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+
+/* One chip per direction. Wraps rather than overflowing: a swap has both legs
+   in flight at once, and on a narrow screen two chips do not fit on one line. */
 .bal__settle {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.bal__chip {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
+  font-weight: 600;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  padding: 3px 8px;
   border-radius: 999px;
   animation: bal-settle-in 200ms var(--ease) both;
 }
@@ -25,10 +145,10 @@
   from { opacity: 0; transform: translateY(-2px); }
   to { opacity: 1; transform: none; }
 }
-.bal__settle--in { color: var(--accent); background: rgba(var(--accent-rgb), 0.08); }
-.bal__settle--out { color: var(--warn); background: rgba(var(--warn-rgb), 0.1); }
+.bal__chip--in { color: var(--accent); background: rgba(var(--accent-rgb), 0.09); }
+.bal__chip--out { color: var(--warn); background: rgba(var(--warn-rgb), 0.11); }
 .bal__spin {
-  width: 8px; height: 8px;
+  width: 7px; height: 7px;
   border-radius: 50%;
   border: 1.5px solid currentColor;
   border-top-color: transparent;
@@ -36,21 +156,17 @@
 }
 @keyframes bal-spin { to { transform: rotate(360deg); } }
 
-/* Secondary line under a row's token amount. Quieter and smaller than the
-   figure it annotates: the token quantity is what the wallet actually holds,
-   the dollar value is an estimate from a third party. */
+/* VALUE CELL. Quieter than the token figure it annotates: the quantity is what
+   the wallet actually holds, the dollar value is an estimate from a third
+   party. */
 .bal__usd {
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Aggregate USD in the Portfolio card header.
-   `.card__hdr` is `space-between` over three children, which would strand this
-   in the middle of the row; `margin-right: auto` sits it beside the title and
-   leaves the sync actions on the right. */
-.pf-total {
-  margin-right: auto;
   font-size: 13px;
-  font-weight: 600;
+  color: var(--fg-dim);
   font-variant-numeric: tabular-nums;
 }
+.bal__usd--none { color: var(--fg-mute); }
+
+/* Column widths for the portfolio table. Without them the browser sizes on
+   content and the asset column takes half the card on a short symbol list. */
+.tbl--pf th:first-child { width: 44%; }
+.tbl--pf th:last-child { width: 26%; }

@@ -33,6 +33,9 @@
   .tbl th, .tbl td { padding: 8px 10px; }
   .tbl { font-size: 11px; }
 
+  .pf-sum { padding: 12px 13px; }
+  .pf-sum__val { font-size: 26px; }
+
   .welcome { min-height: 50vh; padding: 18px 8px; }
   .welcome__t { font-size: 28px; }
   .welcome__panel { padding: 18px 14px; }
@@ -73,6 +76,14 @@
 
   /* Decorative background overlay is heavy on tiny screens — drop it. */
   body::before { display: none; }
+
+  /* Three columns is one too many at this width: the glyph mark goes, and the
+     table falls back to content sizing so the two figures keep their digits. */
+  .pf-sum__val { font-size: 22px; }
+  .tok__mark { display: none; }
+  .tok { gap: 0; }
+  .tbl--pf th:first-child, .tbl--pf th:last-child { width: auto; }
+  .bal__main, .bal__usd { font-size: 12px; }
 
   .claim-row { grid-template-columns: 38px 1fr auto; grid-template-areas: "g m a" "g s c" "x x c"; }
   .claim-row__cta { grid-area: c; }

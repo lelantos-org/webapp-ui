@@ -30,9 +30,10 @@ export function AssetsCard() {
     <div className="card">
       <div className="card__hdr">
         <h3 className="card__t">Portfolio </h3>
-        <PortfolioTotal rows={shielded.data?.balances ?? EMPTY_ROWS} byId={byId} prices={prices} />
         <PortfolioActions />
       </div>
+
+      <PortfolioTotal rows={shielded.data?.balances ?? EMPTY_ROWS} byId={byId} prices={prices} />
 
       {shielded.isLoading && !shielded.data ? (
         <PortfolioSkeleton />
@@ -55,7 +56,11 @@ export function AssetsCard() {
 /// Stable identity for the no-data case; see `NO_ASSETS`.
 const EMPTY_ROWS: AssetBalanceView[] = [];
 
-/// Aggregate USD beside the card title.
+/// Aggregate USD, as the card's headline figure.
+///
+/// Its own band above the table rather than a 13px span wedged into the header
+/// row: this is the one number the card exists to report, and it was being set
+/// smaller than the per-row balances underneath it.
 ///
 /// Absent entirely until something is priced, so a chain the provider does not
 /// cover — the local anvil stack included — shows the card exactly as before
@@ -80,12 +85,43 @@ function PortfolioTotal({
 
   if (priced === 0) return null;
 
+  const [dollars, cents] = splitUsd(formatUsd(usd));
+
   return (
-    <span className="pf-total mono">
-      {formatUsd(usd)}
-      {unpriced > 0 ? <span className="muted txt-xs"> + {unpriced} unpriced</span> : null}
-    </span>
+    <div className="pf-sum">
+      <div className="pf-sum__body">
+        <span className="pf-sum__label">total value</span>
+        <span className="pf-sum__val mono">
+          {/* The tilde is the whole warning at a glance; the chip beside it
+              carries the same fact in words for anyone reading, or listening,
+              rather than scanning. */}
+          {unpriced > 0 ? (
+            <span className="pf-sum__approx" aria-hidden>
+              ≈
+            </span>
+          ) : null}
+          {dollars}
+          {cents ? <span className="pf-sum__cents">{cents}</span> : null}
+        </span>
+      </div>
+      {unpriced > 0 ? (
+        <span className="pf-sum__partial">
+          excludes {unpriced} unpriced asset{unpriced === 1 ? "" : "s"}
+        </span>
+      ) : null}
+    </div>
   );
+}
+
+/// Split a rendered USD figure into its dollars and its cents, so the cents can
+/// be set smaller and the eye lands on the magnitude.
+///
+/// A string with no two-digit decimal tail — `formatUsd`'s `<$0.01` — comes
+/// back whole rather than being cut at an arbitrary dot.
+function splitUsd(s: string): [dollars: string, cents: string] {
+  const dot = s.lastIndexOf(".");
+  if (dot < 0 || s.length - dot !== 3) return [s, ""];
+  return [s.slice(0, dot), s.slice(dot)];
 }
 
 function ShieldedTable({
@@ -118,11 +154,12 @@ function ShieldedTable({
   }
   return (
     <div className="tbl-wrap">
-      <table className="tbl">
+      <table className="tbl tbl--pf">
         <thead>
           <tr>
             <th>asset</th>
             <th className="ta-r">balance</th>
+            <th className="ta-r">value</th>
           </tr>
         </thead>
         <tbody>
@@ -172,10 +209,14 @@ const ShieldedRowView = memo(function ShieldedRowView({
   // Both directions, not one or the other. A single ternary on `outflow`
   // hid an incoming amount whenever something was also on its way out, so a
   // swap — which has both legs in flight at once — reported only the debit.
-  const settling = [
-    row.outflow > 0n ? `−${fmt(row.outflow)}` : undefined,
-    row.pending > 0n ? `+${fmt(row.pending)}` : undefined,
-  ].filter((s): s is string => s !== undefined);
+  //
+  // One chip each, rather than one chip holding both signed figures: a debit
+  // and a credit are two facts, and running them together — `−1 +2 settling` —
+  // read as a single arithmetic expression.
+  const settling: SettleChip[] = [
+    row.outflow > 0n ? { dir: "out" as const, text: `−${fmt(row.outflow)}` } : undefined,
+    row.pending > 0n ? { dir: "in" as const, text: `+${fmt(row.pending)}` } : undefined,
+  ].filter((c): c is SettleChip => c !== undefined);
 
   const total = row.balance + row.pending;
   const usd =
@@ -183,22 +224,55 @@ const ShieldedRowView = memo(function ShieldedRowView({
 
   return (
     <tr>
-      <td className="mono">{label}</td>
-      <td className="bal ta-r">
-        <span className="bal__main mono accent">{fmt(total)}</span>
-        {usd !== undefined ? <span className="bal__usd muted">{formatUsd(usd)}</span> : null}
-        {settling.length > 0 ? (
-          <span
-            className={`bal__settle ${row.outflow > 0n ? "bal__settle--out" : "bal__settle--in"}`}
-          >
-            <span className="bal__spin" aria-hidden />
-            {settling.join(" ")} settling
+      <td>
+        <span className="tok">
+          {/* Standing in for a token logo, which the registry does not carry.
+              One glyph is enough to make the rows scannable by shape instead
+              of by reading every symbol. */}
+          <span className="tok__mark" aria-hidden>
+            {label.slice(0, 1).toUpperCase()}
           </span>
-        ) : null}
+          <span className="tok__sym mono">{label}</span>
+        </span>
+      </td>
+      <td className="ta-r">
+        <span className="bal">
+          <span className="bal__main mono">{fmt(total)}</span>
+          {settling.length > 0 ? (
+            <span className="bal__settle">
+              {/* The chips are amounts with a colour and a spinner; the word
+                  that makes them mean something is only in the styling. */}
+              <span className="sr-only">settling</span>
+              {settling.map((c) => (
+                <span key={c.dir} className={`bal__chip bal__chip--${c.dir}`}>
+                  <span className="bal__spin" aria-hidden />
+                  {c.text}
+                </span>
+              ))}
+            </span>
+          ) : null}
+        </span>
+      </td>
+      {/* An unpriced asset gets a dash, not a blank: the column stays a column,
+          and "no price known" is said rather than left to be inferred. */}
+      <td className="ta-r">
+        {usd !== undefined ? (
+          <span className="bal__usd mono">{formatUsd(usd)}</span>
+        ) : (
+          <span className="bal__usd bal__usd--none" title="no price for this asset">
+            —
+          </span>
+        )}
       </td>
     </tr>
   );
 });
+
+/// One in-flight leg of a row's balance.
+interface SettleChip {
+  dir: "in" | "out";
+  text: string;
+}
 
 /// Counts from the in-flight sync, so the first load is not a bare spinner.
 /// A cold sync scans the whole note feed and can run for minutes; without a
@@ -217,21 +291,28 @@ function SyncProgressLine() {
 function PortfolioSkeleton() {
   return (
     <div className="tbl-wrap" role="status" aria-busy="true" aria-label="loading portfolio">
-      <table className="tbl">
+      <table className="tbl tbl--pf">
         <thead>
           <tr>
             <th>asset</th>
             <th className="ta-r">balance</th>
+            <th className="ta-r">value</th>
           </tr>
         </thead>
         <tbody>
           {[0, 1, 2].map((i) => (
             <tr key={i}>
               <td>
-                <span className="skel-bar" style={{ width: "5ch" }} />
+                <span className="tok">
+                  <span className="tok__mark tok__mark--skel" aria-hidden />
+                  <span className="skel-bar" style={{ width: "5ch" }} />
+                </span>
               </td>
               <td className="ta-r">
                 <span className="skel-bar" style={{ width: "10ch" }} />
+              </td>
+              <td className="ta-r">
+                <span className="skel-bar" style={{ width: "6ch" }} />
               </td>
             </tr>
           ))}
