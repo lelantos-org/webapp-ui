@@ -29,17 +29,24 @@ export interface TokenIconProps {
 /// adjacent text does not already carry.
 export function TokenIcon({ symbol, address, size = "sm", className }: TokenIconProps) {
   const brand = tokenBrand(symbol);
-  // The address is the stabler seed, but an asset picked out of a balance row
-  // may not carry one; the symbol keeps the mark deterministic either way.
-  const seed = address ?? symbol;
+  const box = cx("tok__mark", size === "lg" && "tok__mark--lg", className);
 
+  // A real mark needs no tinted container: the artwork carries its own shape
+  // and colour, and a logo set inside an accent square reads as a badge on a
+  // badge. The monogram branch keeps the box, because there it *is* the mark.
+  if (brand) {
+    return (
+      <span className={cx(box, "tok__mark--art")} aria-hidden>
+        {brand.art}
+      </span>
+    );
+  }
+
+  // The address is the stabler seed, but an asset read out of a balance row
+  // may not carry one; the symbol keeps the mark deterministic either way.
   return (
-    <span
-      className={cx("tok__mark", size === "lg" && "tok__mark--lg", className)}
-      style={monogramStyle(seed, brand?.color)}
-      aria-hidden
-    >
-      {brand?.label ?? monogramText(symbol)}
+    <span className={box} style={monogramStyle(address ?? symbol)} aria-hidden>
+      {monogramText(symbol)}
     </span>
   );
 }

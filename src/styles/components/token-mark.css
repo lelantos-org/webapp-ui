@@ -48,6 +48,21 @@
   letter-spacing: 0.04em;
 }
 
+/* A real vendor mark supplies its own shape and colour, so the tinted box goes
+   — a logo inside an accent square reads as a badge on a badge. The artwork is
+   24x24 by its own viewBox and scales to whatever the box is set to. */
+.tok__mark--art,
+.chain-icon--art {
+  background: none;
+  border: none;
+}
+.tok__mark--art > svg,
+.chain-icon--art > svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
 /* Loading: the same box, drained of the letter and the colour. */
 .tok__mark--skel {
   color: transparent;

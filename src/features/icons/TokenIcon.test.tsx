@@ -4,7 +4,7 @@ import { ChainIcon } from "@/features/icons/ChainIcon";
 import { TokenIcon } from "@/features/icons/TokenIcon";
 
 /// The marks are `aria-hidden`, so no accessible query can reach them. That is
-/// the behaviour under test as much as anything else — see the last case.
+/// as much the behaviour under test as anything else — see the decorative case.
 function mark(container: HTMLElement, selector: string): HTMLElement {
   const el = container.querySelector<HTMLElement>(selector);
   if (!el) throw new Error(`no ${selector} rendered`);
@@ -13,32 +13,51 @@ function mark(container: HTMLElement, selector: string): HTMLElement {
 
 describe("TokenIcon", () => {
   it("never requests a remote image", () => {
-    // The whole reason the artwork is bundled: the CSP is `img-src 'self'
-    // data:`, and asking a logo CDN for a token would tell it which assets
-    // this user holds. Nothing here may become a network fetch.
-    const { container } = render(<TokenIcon symbol="USDC" address="0xa0b8" />);
-
-    expect(container.querySelector("img")).toBeNull();
-    expect(container.innerHTML).not.toMatch(/https?:/);
+    // The whole reason the artwork is inlined: the CSP is `img-src 'self'
+    // data:`, and asking a logo CDN for a token would tell it which assets this
+    // user holds. Neither branch may become a network fetch.
+    for (const symbol of ["USDC", "ZZZZ"]) {
+      const { container } = render(<TokenIcon symbol={symbol} address="0xa0b8" />);
+      expect(container.querySelector("img")).toBeNull();
+      expect(container.innerHTML).not.toMatch(/https?:\/\//);
+    }
   });
 
-  it("shows two letters of the symbol", () => {
+  it("draws the real mark for a token the bundle knows", () => {
+    const { container } = render(<TokenIcon symbol="USDC" address="0xa0b8" />);
+    const el = mark(container, ".tok__mark");
+
+    expect(el.querySelector("svg")).not.toBeNull();
+    // The tinted box is dropped, or the logo sits in a badge on a badge.
+    expect(el.className).toContain("tok__mark--art");
+    expect(el.textContent).toBe("");
+  });
+
+  it("matches the symbol case-insensitively", () => {
+    // `symbol()` is whatever the token returns; the table is keyed uppercase.
     const { container } = render(<TokenIcon symbol="usdc" />);
-    expect(mark(container, ".tok__mark").textContent).toBe("US");
+    expect(mark(container, ".tok__mark").querySelector("svg")).not.toBeNull();
   });
 
-  it("gives a recognised token its brand colour", () => {
-    const { container } = render(<TokenIcon symbol="USDC" address="0xa0b8" />);
-    const branded = mark(container, ".tok__mark").style.getPropertyValue("--mono-h");
+  it("gives WETH ether's mark", () => {
+    // It is ether. `chains.ts` derives `isWeth` from this same symbol.
+    const { container: weth } = render(<TokenIcon symbol="WETH" />);
+    const { container: eth } = render(<TokenIcon symbol="ETH" />);
 
-    const { container: other } = render(<TokenIcon symbol="ZZZZ" address="0xa0b8" />);
-    const derived = mark(other, ".tok__mark").style.getPropertyValue("--mono-h");
-
-    expect(branded).not.toBe("");
-    expect(branded).not.toBe(derived);
+    expect(mark(weth, ".tok__mark").innerHTML).toBe(mark(eth, ".tok__mark").innerHTML);
   });
 
-  it("separates two same-symbol tokens by address", () => {
+  it("falls back to a coloured monogram for a token it does not know", () => {
+    const { container } = render(<TokenIcon symbol="ZZZZ" address="0xaaaa" />);
+    const el = mark(container, ".tok__mark");
+
+    expect(el.querySelector("svg")).toBeNull();
+    expect(el.className).not.toContain("tok__mark--art");
+    expect(el.textContent).toBe("ZZ");
+    expect(el.style.getPropertyValue("--mono-h")).not.toBe("");
+  });
+
+  it("separates two unknown same-symbol tokens by address", () => {
     // Nothing stops two chains registering different assets under one symbol,
     // and a symbol-only seed would draw them identically.
     const { container: a } = render(<TokenIcon symbol="ZZZZ" address="0xaaaa" />);
@@ -61,31 +80,50 @@ describe("TokenIcon", () => {
 
   it("is decorative, because every call site prints the symbol beside it", () => {
     // Announcing the mark would make a screen reader read each asset twice.
-    const { container } = render(<TokenIcon symbol="USDC" />);
-    expect(mark(container, ".tok__mark")).toHaveAttribute("aria-hidden");
+    for (const symbol of ["USDC", "ZZZZ"]) {
+      const { container } = render(<TokenIcon symbol={symbol} />);
+      expect(mark(container, ".tok__mark")).toHaveAttribute("aria-hidden");
+    }
   });
 });
 
 describe("ChainIcon", () => {
-  it("gives a known chain its brand colour and short label", () => {
-    const { container } = render(<ChainIcon chainId={1n} chainName="Ethereum" />);
-    const el = mark(container, ".chain-icon");
+  /// The six `prices::llama_chain` can price, which is the set the relayer is
+  /// deployed against. Asserted as a table so adding a chain to the registry
+  /// without artwork fails here rather than in a browser.
+  const SERVED = [1n, 10n, 137n, 8453n, 42161n, 43114n];
 
-    expect(el.textContent).toBe("ET");
-    expect(el.style.getPropertyValue("--mono-h")).toBe("229");
+  it("draws a real mark for every chain the deployment serves", () => {
+    for (const chainId of SERVED) {
+      const { container } = render(<ChainIcon chainId={chainId} chainName="x" />);
+      const el = mark(container, ".chain-icon");
+
+      expect(el.querySelector("svg"), `chain ${chainId}`).not.toBeNull();
+      expect(el.className).toContain("chain-icon--art");
+    }
+  });
+
+  it("draws a different mark for each of them", () => {
+    const drawn = SERVED.map((chainId) => {
+      const { container } = render(<ChainIcon chainId={chainId} chainName="x" />);
+      return mark(container, ".chain-icon").innerHTML;
+    });
+
+    expect(new Set(drawn).size).toBe(SERVED.length);
   });
 
   it("falls back to the name for a chain this bundle predates", () => {
     // Anvil, and any network onboarded after this build. It must render as
-    // itself rather than vanish or claim another chain's colour.
+    // itself rather than vanish or borrow another chain's mark.
     const { container } = render(<ChainIcon chainId={31337n} chainName="anvil" />);
     const el = mark(container, ".chain-icon");
 
+    expect(el.querySelector("svg")).toBeNull();
     expect(el.textContent).toBe("AN");
     expect(el.style.getPropertyValue("--mono-h")).not.toBe("");
   });
 
-  it("seeds on the id, not the operator-supplied name", () => {
+  it("seeds the fallback on the id, not the operator-supplied name", () => {
     // `chains.public.name` is a config string that can be reworded without the
     // network having become a different one.
     const { container: a } = render(<ChainIcon chainId={31337n} chainName="anvil" />);

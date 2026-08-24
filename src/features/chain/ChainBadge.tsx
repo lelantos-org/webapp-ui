@@ -1,5 +1,4 @@
 import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
-import { ChainIcon } from "@/features/icons/ChainIcon";
 
 /// Which network the app is talking to. Read-only by design.
 ///
@@ -20,7 +19,6 @@ export function ChainBadge() {
   return (
     <span className="chain-badge" title={`chain id ${chain.chainId}`}>
       <span className="chain-badge__label">network</span>
-      <ChainIcon chainId={chain.chainId} chainName={chain.chainName} />
       <span className="chain-badge__name">{chain.chainName}</span>
     </span>
   );

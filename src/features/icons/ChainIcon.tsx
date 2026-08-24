@@ -23,13 +23,21 @@ export interface ChainIconProps {
 export function ChainIcon({ chainId, chainName, className }: ChainIconProps) {
   const brand = chainBrand(chainId);
 
+  if (brand) {
+    return (
+      <span className={cx("chain-icon", "chain-icon--art", className)} aria-hidden>
+        {brand.art}
+      </span>
+    );
+  }
+
   return (
     <span
       className={cx("chain-icon", className)}
-      style={monogramStyle(chainId.toString(), brand?.color)}
+      style={monogramStyle(chainId.toString())}
       aria-hidden
     >
-      {brand?.label ?? monogramText(chainName)}
+      {monogramText(chainName)}
     </span>
   );
 }
