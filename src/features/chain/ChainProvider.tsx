@@ -22,7 +22,7 @@ import {
   loadChainRegistry,
   readCachedChainRegistry,
 } from "@/config/chains";
-import { useWalletStore } from "@/features/eip1193/use-store";
+import { useWalletStore } from "@/features/eip1193";
 
 export const chainRegistryKey = ["chain-registry"] as const;
 

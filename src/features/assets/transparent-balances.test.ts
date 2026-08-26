@@ -11,20 +11,22 @@ const chain = {
   tokenBalanceOf: vi.fn(),
 };
 
-vi.mock("@/features/wallet", () => ({
+// The leaf rather than the barrel, so mocking one hook does not blank every
+// other symbol `@/features/wallet` re-exports.
+vi.mock("@/features/wallet/use-wallet", () => ({
   useWallet: () => ({ wallet: { chain }, ethAddress: ACCOUNT }),
 }));
 vi.mock("@/features/chain/ChainProvider", () => ({
   useActiveChain: () => ({ chainId: 1n }),
 }));
-vi.mock("@/features/assets/registered-assets", () => ({
+vi.mock("./registered-assets", () => ({
   useRegisteredAssets: () => [{ id: 5n, token: TOKEN }],
 }));
 
 const ACCOUNT = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1";
 const TOKEN = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1";
 
-const { useDepositSourceBalance } = await import("@/features/assets/transparent-balances");
+const { useDepositSourceBalance } = await import("./transparent-balances");
 
 beforeEach(() => {
   chain.nativeBalance.mockReset();

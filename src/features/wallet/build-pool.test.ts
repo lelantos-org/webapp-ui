@@ -4,8 +4,8 @@
 // nobody adopted — and every case below is a way that has gone wrong.
 
 import { describe, expect, it, vi } from "vitest";
-import { createSharedWorkPool } from "@/features/wallet/build-pool";
 import { deferred } from "@/test/harness";
+import { createSharedWorkPool } from "./build-pool";
 
 const take = async () => true;
 const decline = async () => false;

@@ -1,5 +1,5 @@
 import type { NoteStore, NotesFile } from "@lelantos-org/sdk";
-import { NOTE_STORE, walletDb } from "@/features/wallet/stores/db";
+import { NOTE_STORE, walletDb } from "./db";
 
 export class IdbNoteStore implements NoteStore {
   private readonly key: string;

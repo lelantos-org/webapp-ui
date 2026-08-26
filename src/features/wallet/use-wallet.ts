@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import type { WalletContextValue } from "@/features/wallet/types";
+import type { WalletContextValue } from "./types";
 
 export const WalletContext = createContext<WalletContextValue | null>(null);
 

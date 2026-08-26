@@ -1,5 +1,5 @@
-import { ChainSwitchButtons } from "@/features/chain/ChainSwitchButtons";
-import type { ChainMismatch } from "@/features/claim-link/chain-guard";
+import { ChainSwitchButtons } from "@/features/chain";
+import type { ChainMismatch } from "../chain-guard";
 
 /// The stop between "connect" and "scan": the wallet is somewhere the link's
 /// notes do not exist.

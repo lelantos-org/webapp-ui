@@ -1,7 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { type QuoteRequest, useSwapQuote } from "@/features/swaps/use-swap-quote";
 import { queryWrapper } from "@/test/harness";
+import { type QuoteRequest, useSwapQuote } from "./use-swap-quote";
 
 const fetchSwapQuote = vi.hoisted(() => vi.fn());
 

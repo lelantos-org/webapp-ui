@@ -6,7 +6,7 @@
 // `decimals()` round trip per token on every load.
 
 import type { RegisteredAsset } from "@/config/chains";
-import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
+import { useActiveChainOrUndefined } from "@/features/chain";
 
 export type { RegisteredAsset };
 

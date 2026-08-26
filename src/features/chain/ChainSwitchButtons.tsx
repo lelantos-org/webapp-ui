@@ -1,7 +1,7 @@
 import type { ChainEntry } from "@/config/chains";
-import { useActiveChainOrUndefined, useChainRegistry } from "@/features/chain/ChainProvider";
-import { useSwitchChain } from "@/features/eip1193/use-switch-chain";
-import { ChainIcon } from "@/features/icons/ChainIcon";
+import { useSwitchChain } from "@/features/eip1193";
+import { ChainIcon } from "@/features/icons";
+import { useActiveChainOrUndefined, useChainRegistry } from "./ChainProvider";
 
 export interface ChainSwitchButtonsProps {
   /// Restrict the offer to one chain — used when a claim link names the chain

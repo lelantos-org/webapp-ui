@@ -3,8 +3,8 @@ import { type ReactNode, useEffect } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "sonner";
 import { PwaUpdatePrompt } from "@/app/PwaUpdatePrompt";
-import { ChainProvider } from "@/features/chain/ChainProvider";
-import { walletStore } from "@/features/eip1193/store";
+import { ChainProvider } from "@/features/chain";
+import { walletStore } from "@/features/eip1193";
 import { WalletProvider } from "@/features/wallet";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 

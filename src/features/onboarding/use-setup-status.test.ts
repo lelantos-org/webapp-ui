@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { evaluateSetup, NO_SETUP_NEEDS, type SetupStatus } from "./use-setup-status";
+import { UNLIMITED_ALLOWANCE } from "@/features/wallet";
+import {
+  evaluateSetup,
+  evaluateSetupMany,
+  NO_SETUP_NEEDS,
+  type SetupStatus,
+} from "./use-setup-status";
 
 const NOW = 1_700_000_000;
 const FAR = NOW + 30 * 24 * 3600;
@@ -86,5 +92,73 @@ describe("evaluateSetup on a chain that cannot answer", () => {
   it("still demands setup for a real all-zero reading", () => {
     const zeroed = { erc20Allowance: 0n, window: { amount: 0n, expiration: 0, nonce: 0 } };
     expect(evaluateSetup(zeroed, 1_000n).needsSetup).toBe(true);
+  });
+});
+
+// The window used to be sized as `depositTotal * 10n` at the moment setup ran,
+// so it drained after ~10 same-sized deposits and a single larger deposit
+// outran it outright — both re-opening the setup modal on a token the user had
+// already authorized. `defaultAllowanceCap` now returns `type(uint160).max`,
+// which Permit2 reads as unlimited and never decrements.
+describe("evaluateSetup with an unlimited window", () => {
+  const unlimited = (expiration = FAR): SetupStatus => ({
+    erc20Allowance: UNLIMITED_ALLOWANCE,
+    window: { amount: UNLIMITED_ALLOWANCE, expiration, nonce: 0 },
+  });
+
+  it("covers any total, however large", () => {
+    for (const total of [1n, 10n ** 30n, UNLIMITED_ALLOWANCE]) {
+      expect(evaluateSetup(unlimited(), total, NOW)).toEqual(NO_SETUP_NEEDS);
+    }
+  });
+
+  it("still expires — the cap is unbounded, the grant is not", () => {
+    const needs = evaluateSetup(unlimited(NOW + 30), 1_000n, NOW);
+    expect(needs.needsAllowancePermit).toBe(true);
+    expect(needs.needsErc20Approve).toBe(false);
+  });
+});
+
+describe("evaluateSetupMany", () => {
+  it("evaluates each asset against its own total", () => {
+    const statuses = new Map<bigint, SetupStatus | undefined>([
+      [1n, state(10_000n, 10_000n)],
+      [2n, state(10_000n, 500n)],
+    ]);
+    const totals = new Map<bigint, bigint | undefined>([
+      [1n, 1_000n],
+      [2n, 1_000n],
+    ]);
+    const out = evaluateSetupMany(statuses, totals, NOW);
+
+    expect(out.get(1n)?.needsSetup).toBe(false);
+    // Same total, smaller window — must not inherit asset 1's verdict.
+    expect(out.get(2n)).toMatchObject({ needsAllowancePermit: true, needsErc20Approve: false });
+  });
+
+  // The multi-token modal has no amount typed, so this is the path it uses.
+  it("falls back to an existence check when a total is missing", () => {
+    const statuses = new Map<bigint, SetupStatus | undefined>([
+      [1n, state(0n, 0n)],
+      [2n, state(10_000n, 10_000n)],
+    ]);
+    const out = evaluateSetupMany(statuses, undefined, NOW);
+
+    expect(out.get(1n)?.needsSetup).toBe(true);
+    expect(out.get(2n)?.needsSetup).toBe(false);
+  });
+
+  it("passes an unanswerable probe straight through as nothing-to-do", () => {
+    const out = evaluateSetupMany(new Map([[1n, undefined]]), undefined, NOW);
+    expect(out.get(1n)).toEqual(NO_SETUP_NEEDS);
+  });
+
+  it("returns one entry per input asset", () => {
+    const statuses = new Map<bigint, SetupStatus | undefined>([
+      [1n, state(0n, 0n)],
+      [2n, undefined],
+      [3n, state(10_000n, 10_000n)],
+    ]);
+    expect([...evaluateSetupMany(statuses, undefined, NOW).keys()]).toEqual([1n, 2n, 3n]);
   });
 });

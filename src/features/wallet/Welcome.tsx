@@ -1,6 +1,5 @@
-import { ChainSwitchButtons } from "@/features/chain/ChainSwitchButtons";
-import { SupportedNetworks } from "@/features/chain/SupportedNetworks";
-import { useWallet } from "@/features/wallet";
+import { ChainSwitchButtons, SupportedNetworks } from "@/features/chain";
+import { useWallet } from "./use-wallet";
 
 export interface WelcomeProps {
   /// Bottom marketing copy; pages can override for context.

@@ -1,5 +1,5 @@
 import type { NullifierPersistence, NullifierStoreState } from "@lelantos-org/sdk/wallet";
-import { NULLIFIER_STORE, walletDb } from "@/features/wallet/stores/db";
+import { NULLIFIER_STORE, walletDb } from "./db";
 
 interface StoredState {
   nullifiers: string[]; // bigint as hex; see `treeStore.ts` for why not decimal

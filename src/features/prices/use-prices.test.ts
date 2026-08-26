@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pricesResponse, toPriceMap } from "@/features/prices/use-prices";
+import { pricesResponse, toPriceMap } from "./use-prices";
 
 const row = (chainId: number, token: string, priceUsd: number) => ({
   chainId,

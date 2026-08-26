@@ -9,17 +9,18 @@
 // reads have to agree before the submit button can be trusted. Keeping them
 // together is what makes their disagreements visible.
 
+import type { RegisteredAsset } from "@/features/assets";
+import { useDepositSourceBalance, useRegisteredAssets } from "@/features/assets";
+import type { FeeBreakdown } from "@/shared/lib/fees";
+import { useFeeBps, useFeePreview } from "../use-fee-preview";
+import { feeOptionFor, resolveFeeOption, useFeeQuote } from "../use-fee-quote";
 import {
   type AmountValidation,
   depositMaxAmount,
   parseAmountSafe,
   validateDepositAmount,
-} from "@/features/actions/forms/amount-field";
-import { settledFee } from "@/features/actions/forms/fee-hint";
-import { useFeeBps, useFeePreview } from "@/features/actions/use-fee-preview";
-import type { RegisteredAsset } from "@/features/assets/registered-assets";
-import { useDepositSourceBalance } from "@/features/assets/transparent-balances";
-import type { FeeBreakdown } from "@/shared/lib/fees";
+} from "./amount-field";
+import { feeIncoming, settledFee, shownFee } from "./fee-hint";
 
 export interface DepositAmount {
   /// The typed amount in circuit units; `undefined` while the input is partial
@@ -29,11 +30,25 @@ export interface DepositAmount {
   /// not the shielded one — a deposit moves funds in.
   sourceBalance: bigint | undefined;
   /// The fee preview, or `undefined` while the debounce is catching up. Never
-  /// the previous keystroke's figure; see `settledFee`.
+  /// the previous keystroke's figure; see `settledFee`. This is the one to gate
+  /// the submit on.
   fee: FeeBreakdown | undefined;
-  /// `amount + fee` in base units — what actually leaves the wallet. Feeds the
-  /// Permit2 allowance sizing in `useDepositSetup`.
+  /// The same preview for *display*, which does include a figure held over
+  /// from the previous amount. See `shownFee` for why the fee panel wants the
+  /// held-over one and validation does not.
+  feeShown: FeeBreakdown | undefined;
+  /// A protocol-fee figure is still on its way, as opposed to absent for good.
+  /// Lets the fee panel hold a line open for it. See `feeIncoming`.
+  feePending: boolean;
+  /// `amount + protocolFee + relayerFee` in base units — what actually leaves
+  /// the wallet. Feeds the Permit2 allowance sizing in `useDepositSetup`, so
+  /// the relayer's share has to be in it: the SDK sizes the permit over all
+  /// three (`executeDeposit`), and an allowance short of that is refused at
+  /// submit.
   total: bigint | undefined;
+  /// The relayer's charge for flushing this deposit, in base units. `undefined`
+  /// while the quote is loading, `0n` on a chain that subsidises.
+  relayerFee: bigint | undefined;
   validation: AmountValidation;
   /// What the "max" button writes, or `undefined` where no honest figure
   /// exists.
@@ -62,6 +77,7 @@ export function useDepositAmount(
   selected: RegisteredAsset | undefined,
   { asEth, input }: DepositAmountInputs,
 ): DepositAmount {
+  const registry = useRegisteredAssets();
   const parsed = parseAmountSafe(input, selected);
   const fee = useFeePreview(selected?.id, parsed);
   const sourceBalance = useDepositSourceBalance(selected?.id, asEth);
@@ -70,19 +86,34 @@ export function useDepositAmount(
   // is typed.
   const feeBps = useFeeBps();
 
+  // A deposit's relayer note is minted in the deposited asset, so there is no
+  // choice to make here — just the one option to read. Amount-independent, like
+  // `feeBps` above, so it is available before anything is typed and can size
+  // the "max" button.
+  const quote = useFeeQuote("deposit");
+  const relayer = resolveFeeOption(feeOptionFor(quote.data, selected?.id), registry);
+  const relayerFee = quote.isPending
+    ? undefined
+    : (relayer?.amount ?? 0n) * (relayer?.asset.scale ?? 1n);
+
   const settled = settledFee(fee);
-  const total = settled?.total;
+  const total = settled && relayerFee !== undefined ? settled.total + relayerFee : undefined;
 
   return {
     parsed,
     sourceBalance,
     fee: settled,
+    feeShown: shownFee(fee),
+    feePending: feeIncoming(fee),
     total,
+    relayerFee,
     validation: validateDepositAmount(parsed, selected, sourceBalance, total),
     // Withheld on the native-ETH path: the funding source is the native
     // balance, and the gas the deposit itself burns is not knowable here, so
     // every figure this could offer is one the user cannot actually send.
-    maxAmount: asEth ? undefined : depositMaxAmount(sourceBalance, selected?.scale ?? 1n, feeBps),
+    maxAmount: asEth
+      ? undefined
+      : depositMaxAmount(sourceBalance, selected?.scale ?? 1n, feeBps, relayerFee ?? 0n),
     feeFailed: fee.isError,
     retryFee: () => void fee.refetch(),
   };

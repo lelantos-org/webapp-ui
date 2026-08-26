@@ -1,5 +1,5 @@
-import { useWallet } from "@/features/wallet";
 import { shortAddr } from "@/shared/lib/format";
+import { useWallet } from "./use-wallet";
 
 export function ConnectButton() {
   const { status, ethAddress, connect, disconnect, error } = useWallet();

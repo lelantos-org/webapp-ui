@@ -1,7 +1,7 @@
-import type { ShieldedActions } from "@/features/actions/port";
-import { createSdkActions } from "@/features/actions/sdk-adapter";
-import { useActiveChain } from "@/features/chain/ChainProvider";
+import { useActiveChain } from "@/features/chain";
 import { useWallet } from "@/features/wallet";
+import type { ShieldedActions } from "./port";
+import { createSdkActions } from "./sdk-adapter";
 
 /// Returns a `ShieldedActions` port bound to the current wallet, or
 /// `undefined` while the wallet isn't ready. Mutation hooks should fail loudly

@@ -7,7 +7,7 @@
 // it are selection policy and live in `use-connect-flow`.
 
 import { useCallback } from "react";
-import type { Eip6963ProviderDetail } from "@/features/eip1193/store";
+import type { Eip6963ProviderDetail } from "@/features/eip1193";
 import { MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { Modal } from "@/shared/ui/Modal";
 import { useExitTransition } from "@/shared/ui/use-exit-transition";

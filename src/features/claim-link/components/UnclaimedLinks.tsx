@@ -11,7 +11,9 @@
 // curate; the vault's TTL is only a backstop.
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { findAsset, type RegisteredAsset } from "@/features/assets/registered-assets";
+import { findAsset, type RegisteredAsset } from "@/features/assets";
+import { formatAssetAmount } from "@/shared/lib/format";
+import { copyWithToast } from "@/shared/lib/use-copy";
 import {
   claimLinksSnapshot,
   forgetClaimLink,
@@ -19,9 +21,7 @@ import {
   type StoredClaimLink,
   selectClaimLinks,
   subscribeClaimLinks,
-} from "@/features/claim-link/link-vault";
-import { formatAssetAmount } from "@/shared/lib/format";
-import { copyWithToast } from "@/shared/lib/use-copy";
+} from "../link-vault";
 
 /// Label for a stored record's amount.
 ///

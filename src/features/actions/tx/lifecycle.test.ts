@@ -6,7 +6,7 @@
 // without reloading the page.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { TxPhase } from "@/features/actions/tx/tx-progress";
+import type { TxPhase } from "./tx-progress";
 
 const awaitFlush = vi.fn();
 
@@ -25,7 +25,7 @@ vi.mock("@/shared/lib/toast", () => ({
   toastTx: () => toastHandle,
 }));
 
-const { trackTxLifecycle } = await import("@/features/actions/tx/lifecycle");
+const { trackTxLifecycle } = await import("./lifecycle");
 
 const chain = { chainId: 1n, explorerUrl: undefined } as never;
 

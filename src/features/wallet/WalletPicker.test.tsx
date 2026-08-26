@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { WalletPicker } from "@/features/wallet/WalletPicker";
 import { detail } from "@/test/eip6963";
+import { WalletPicker } from "./WalletPicker";
 
 // A 1x1 gif — the shape of icon EIP-6963 actually mandates.
 const DATA_ICON = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";

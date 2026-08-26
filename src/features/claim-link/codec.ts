@@ -1,10 +1,10 @@
-import { NSK_HEX_LEN, type NskParseError, nskFieldFromHex } from "@/features/wallet/nsk-codec";
+import { NSK_HEX_LEN, type NskParseError, nskFieldFromHex } from "@/features/wallet";
 import { err, ok, type Result } from "@/shared/lib/result";
 
-export type { NskParseError } from "@/features/wallet/nsk-codec";
+export type { NskParseError } from "@/features/wallet";
 // Re-exported so claim-link callers keep one import for the link format and
 // the key encoding it wraps.
-export { NSK_HEX_LEN, nskFieldFromHex, nskHexFromField } from "@/features/wallet/nsk-codec";
+export { NSK_HEX_LEN, nskFieldFromHex, nskHexFromField } from "@/features/wallet";
 
 /// What a claim link carries: which chain the notes are on, and the ephemeral
 /// key that spends them.

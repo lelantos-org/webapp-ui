@@ -1,10 +1,10 @@
 // "ETH (native)" is encoded as `asset = WETH.id` plus an `asEth` flag by
 // the Deposit/Withdraw forms.
 
-import { type AssetBalanceLabel, assetOptionLabel } from "@/features/assets/asset-option";
-import { DEFAULT_ASSET_ID, useRegisteredAssets } from "@/features/assets/registered-assets";
-import { useActiveChain } from "@/features/chain/ChainProvider";
+import { useActiveChain } from "@/features/chain";
 import { Field } from "@/shared/ui/Field";
+import { type AssetBalanceLabel, assetOptionLabel } from "./asset-option";
+import { DEFAULT_ASSET_ID, useRegisteredAssets } from "./registered-assets";
 
 export const ETH_OPTION = "eth";
 

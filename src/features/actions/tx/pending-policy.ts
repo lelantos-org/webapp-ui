@@ -9,10 +9,9 @@ import type {
   TransferResult,
   WithdrawResult,
 } from "@lelantos-org/sdk/wallet";
-import { sizeBNote } from "@lelantos-org/sdk/wallet";
-import type { SwapCall, WithAsset } from "@/features/actions/port";
-import type { ShieldedKind } from "@/features/actions/tx/tx-progress";
-import type { PendingShape } from "@/features/pending-tx/store";
+import type { PendingShape } from "@/features/pending-tx";
+import type { WithAsset } from "../port";
+import type { ShieldedKind } from "./tx-progress";
 
 // One definition, in the module that also maps a kind to its step list.
 export type { ShieldedKind };
@@ -34,12 +33,15 @@ export type PendingContext =
     };
 
 export interface SwapLegBData {
-  swap: SwapCall;
-  /// `wallet.balance(swap.assetOut)` snapshotted BEFORE the post-tx sync
-  /// runs, so a fast relayer flush doesn't inflate the watermark anchor.
+  /// Asset the B-note credits.
+  assetOut: bigint;
+  /// Value it will carry, as `swapCredit` sizes it. The tracker resolves this
+  /// where the reads it needs already are, so this module stays the pure
+  /// mapping it is for every other kind.
+  bNoteValue: bigint;
+  /// `wallet.balance(assetOut)` snapshotted BEFORE the post-tx sync runs, so a
+  /// fast relayer flush doesn't inflate the watermark anchor.
   assetOutBaseline: bigint;
-  scaleOut: bigint;
-  feeBps: bigint;
 }
 
 type Builder<K extends ShieldedKind> = (
@@ -74,24 +76,20 @@ function shape(asset: bigint, pendingIn: bigint, outflow: bigint): PendingShape[
 
 /// Leg-2 B-note inflow on `assetOut`.
 ///
-/// `sizeBNote` is the SDK's own sizing — the same call `executeSwap` makes to
-/// set the deposit leg's `publicIn` — so this is exactly what lands in the
-/// wallet. The closed form this used to inline is only the lower bound that
-/// sizing starts from, and under-reports whenever the division is inexact.
+/// Watched by watermark rather than by commitment: the relayer flushes this
+/// deposit asynchronously, so the lifecycle tracker never sees the note land.
 function swapLegB(d: SwapLegBData): PendingShape[] {
-  if (d.scaleOut <= 0n) return [];
-  const bValue = sizeBNote(d.swap.quote.minOut, d.scaleOut, d.feeBps);
-  if (bValue <= 0n) return [];
+  if (d.bNoteValue <= 0n) return [];
   return [
     {
-      asset: d.swap.assetOut,
-      pendingIn: bValue,
+      asset: d.assetOut,
+      pendingIn: d.bNoteValue,
       outflow: 0n,
       // The watermark is the balance this note will actually produce, not
       // `baseline + 1`. Any unrelated inflow on `assetOut` — an inbound
       // transfer, a concurrent deposit — satisfied `+1` and dropped the
       // overlay while the swap was still settling.
-      clearWhenBalanceAtLeast: d.assetOutBaseline + bValue,
+      clearWhenBalanceAtLeast: d.assetOutBaseline + d.bNoteValue,
     },
   ];
 }

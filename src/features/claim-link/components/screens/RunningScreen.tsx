@@ -1,4 +1,4 @@
-import type { Step, TxPhase } from "@/features/actions/tx/tx-progress";
+import type { Step, TxPhase } from "@/features/actions";
 import { Stepper } from "@/shared/ui/Stepper";
 
 interface RunningScreenProps {

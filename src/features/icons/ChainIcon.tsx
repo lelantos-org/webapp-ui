@@ -1,6 +1,6 @@
-import { monogramStyle, monogramText } from "@/features/icons/monogram";
-import { chainBrand } from "@/features/icons/registry";
 import { cx } from "@/shared/lib/cx";
+import { monogramStyle, monogramText } from "./monogram";
+import { chainBrand } from "./registry";
 
 export interface ChainIconProps {
   chainId: bigint;

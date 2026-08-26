@@ -2,28 +2,35 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { quoteAgeSecs } from "@lelantos-org/sdk/quoter";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { ActionForm } from "@/features/actions/forms/ActionForm";
-import { AmountField } from "@/features/actions/forms/AmountField";
-import { parseAmountSafe, validateAmount } from "@/features/actions/forms/amount-field";
-import { useAmountControls } from "@/features/actions/forms/use-amount-controls";
-import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
-import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
-import { useSwap } from "@/features/actions/mutations";
-import { useFeeBps } from "@/features/actions/use-fee-preview";
-import { AssetPicker } from "@/features/assets/AssetPicker";
 import {
+  ActionForm,
+  AmountField,
+  FeeSummary,
+  parseAmountSafe,
+  useAmountControls,
+  useClearFinishedOp,
+  useDepositFee,
+  useFeeBps,
+  useFeePanel,
+  useSubmitOnce,
+  useSwap,
+  validateAmount,
+} from "@/features/actions";
+import {
+  AssetPicker,
   DEFAULT_ASSET_ID,
   findAsset,
+  useAssetBalance,
+  useAssetBalanceLabel,
   useRegisteredAssets,
-} from "@/features/assets/registered-assets";
-import { useAssetBalance, useAssetBalanceLabel } from "@/features/assets/use-balances";
-import { useActiveChain } from "@/features/chain/ChainProvider";
-import { QuoteCard } from "@/features/swaps/QuoteCard";
-import { SlippageField } from "@/features/swaps/SlippageField";
-import { type SwapInput, swapSchema } from "@/features/swaps/schemas";
-import { QUOTE_STALE_SECS, useSwapQuote } from "@/features/swaps/use-swap-quote";
-import { SyncErrorNotice } from "@/features/wallet/SyncErrorNotice";
+} from "@/features/assets";
+import { useActiveChain } from "@/features/chain";
+import { SyncErrorNotice } from "@/features/wallet";
 import { formatAmountForAsset, parseAmountForAsset } from "@/shared/lib/format";
+import { QuoteCard } from "./QuoteCard";
+import { SlippageField } from "./SlippageField";
+import { type SwapInput, swapSchema } from "./schemas";
+import { QUOTE_STALE_SECS, useSwapQuote } from "./use-swap-quote";
 
 /// Any asset other than `DEFAULT_ASSET_ID`, so the pair starts valid: a swap
 /// needs two distinct assets, and a matching pair leaves the quote request
@@ -95,6 +102,22 @@ export function SwapForm() {
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const quoteAge = quote ? quoteAgeSecs(quote, now) : undefined;
   const feeBps = useFeeBps();
+  // Leg 2 is a deposit, and the relayer's charge for flushing it comes out of
+  // the B-note rather than being billed separately — so it belongs to the
+  // credited figure `QuoteCard` computes, not to the fee panel below.
+  const outDepositFee = useDepositFee(outAsset?.id);
+  // Relayer fee only. The protocol fee on leg 2 is already inside the credited
+  // figure `QuoteCard` shows (`sizeBNote`), so stating it again here would
+  // double-count it to the reader.
+  const [feeAsset, setFeeAsset] = useState<bigint | undefined>(undefined);
+  const fees = useFeePanel({
+    kind: "swap",
+    selected: inAsset,
+    amount: parsed,
+    protocol: undefined,
+    feeAsset,
+    onFeeAsset: setFeeAsset,
+  });
   const quoteStale = quoteAge !== undefined && quoteAge > QUOTE_STALE_SECS;
 
   // `now` drives the quote's age counter only, so it ticks only while a quote
@@ -118,7 +141,7 @@ export function SwapForm() {
     useSubmitOnce(async (values) => {
       if (!inAsset || !outAsset || !quote) return;
       const amount = parseAmountForAsset(values.amount, inAsset.decimals, inAsset.scale);
-      await m.mutateAsync({ assetIn: inAsset.id, assetOut: outAsset.id, amount, quote });
+      await m.mutateAsync({ assetIn: inAsset.id, assetOut: outAsset.id, amount, quote, feeAsset });
       // The quote is bound to this exact amount, so clearing the amount is also
       // what retires it: the request goes `undefined`, the query goes idle, and
       // the pair and slippage — the user's standing choices — survive.
@@ -205,6 +228,7 @@ export function SwapForm() {
             outScale={outAsset.scale}
             outSymbol={outAsset.symbol}
             feeBps={feeBps}
+            outDepositFee={outDepositFee}
             ageSecs={quoteAge ?? 0}
             stale={quoteStale}
             slippageBps={wSlippage}
@@ -212,6 +236,7 @@ export function SwapForm() {
             refreshing={quoteQ.isFetching}
           />
         ) : null}
+        <FeeSummary model={fees.model} refreshing={fees.refreshing} feeAsset={fees.feeAsset} />
       </div>
     </ActionForm>
   );

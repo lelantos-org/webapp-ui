@@ -2,7 +2,7 @@
 // figure behind it is.
 
 import type { SwapQuote } from "@lelantos-org/sdk/quoter";
-import { sizeBNote } from "@lelantos-org/sdk/wallet";
+import { swapCredit } from "@/features/actions";
 import { formatAmountForAsset } from "@/shared/lib/format";
 
 interface QuoteCardProps {
@@ -14,6 +14,10 @@ interface QuoteCardProps {
   /// lands, in which case the card says so rather than showing a figure the
   /// wallet will not honour.
   feeBps: bigint | undefined;
+  /// What the relayer charges to flush the leg-2 deposit, in circuit units of
+  /// the out asset. Also part of the B-note's size — see below. `undefined`
+  /// until its quote lands, and treated like `feeBps`.
+  outDepositFee: bigint | undefined;
   ageSecs: number;
   stale: boolean;
   slippageBps: number;
@@ -27,6 +31,7 @@ export function QuoteCard({
   outScale,
   outSymbol,
   feeBps,
+  outDepositFee,
   ageSecs,
   stale,
   slippageBps,
@@ -35,15 +40,16 @@ export function QuoteCard({
 }: QuoteCardProps) {
   // What the wallet is actually credited.
   //
-  // Not `minOut / outScale`. `executeSwap` sizes the re-shielded B-note with
-  // this same `sizeBNote` call and encodes the result as the deposit leg's
-  // `publicIn` — the leg-2 protocol fee comes out on top of it,
-  // so `minOut / scale` overstates the credit by roughly the fee. It is also
-  // a *fixed* amount rather than a floor: the wrapper pulls only what the
-  // B-note needs and any better-than-quoted fill is forwarded to the treasury
-  // as dust. So this one number is both what you receive and the minimum, and
-  // showing `expectedOut` as "you receive" promised upside that never arrives.
-  const received = feeBps === undefined ? undefined : sizeBNote(quote.minOut, outScale, feeBps);
+  // Not `minOut / outScale`. `swapCredit` is the sizing `executeSwap` encodes
+  // as the deposit leg's `publicIn` — the leg-2 protocol fee and the relayer's
+  // flush note both come out of it, so `minOut / scale` overstates the credit
+  // by both. It is also a *fixed* amount rather than a floor, so this one
+  // number is both what you receive and the minimum; showing `expectedOut` as
+  // "you receive" promised upside that never arrives.
+  const received =
+    feeBps === undefined || outDepositFee === undefined
+      ? undefined
+      : swapCredit({ minOut: quote.minOut, scaleOut: outScale, feeBps, depositFee: outDepositFee });
   const fmt = (v: bigint) => formatAmountForAsset(v / outScale, outDecimals, outScale);
   const fmtCircuit = (v: bigint) => formatAmountForAsset(v, outDecimals, outScale);
   const slipPct = (slippageBps / 100).toFixed(slippageBps < 100 ? 2 : 1);

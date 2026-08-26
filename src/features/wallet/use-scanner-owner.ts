@@ -15,7 +15,7 @@
 
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { releaseScanner } from "@/features/wallet/scanner";
+import { releaseScanner } from "./scanner";
 
 export interface ScannerOwner {
   /// Take ownership, releasing anything previously held.

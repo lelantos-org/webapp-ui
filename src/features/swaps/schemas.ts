@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { amountField as amount, assetField as asset } from "@/features/actions/forms/schemas";
+import { amountField as amount, assetField as asset } from "@/features/actions";
 
 export const swapSchema = z
   .object({

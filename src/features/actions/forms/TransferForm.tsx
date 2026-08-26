@@ -1,65 +1,73 @@
-import { zodResolver } from "@hookform/resolvers/zod";
 import { ADDRESS_HRP } from "@lelantos-org/sdk";
-import { useForm } from "react-hook-form";
-import { ActionForm } from "@/features/actions/forms/ActionForm";
-import { AmountField } from "@/features/actions/forms/AmountField";
-import { NO_META, parseAmountSafe, validateAmount } from "@/features/actions/forms/amount-field";
-import { balanceHint } from "@/features/actions/forms/balance-hint";
-import { RecipientField } from "@/features/actions/forms/RecipientField";
+import { useState } from "react";
 import {
-  isShieldedAddress,
-  type TransferInput,
-  transferSchema,
-} from "@/features/actions/forms/schemas";
-import { useAmountControls } from "@/features/actions/forms/use-amount-controls";
-import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
-import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
-import { useTransfer } from "@/features/actions/mutations";
-import { AssetSelectField } from "@/features/assets/AssetSelectField";
-import {
+  AssetSelectField,
   DEFAULT_ASSET_ID,
-  findAsset,
-  useRegisteredAssets,
-} from "@/features/assets/registered-assets";
-import { useAssetBalance, useAssetBalanceLabel } from "@/features/assets/use-balances";
-import { SyncErrorNotice } from "@/features/wallet/SyncErrorNotice";
-import { parseAmountForAsset } from "@/shared/lib/format";
+  useAssetBalance,
+  useAssetBalanceLabel,
+} from "@/features/assets";
+import { SyncErrorNotice, useSpendableMax } from "@/features/wallet";
+import { useTransfer } from "../mutations";
+import { ActionForm } from "./ActionForm";
+import { AmountField } from "./AmountField";
+import { NO_META, parseAmountSafe, validateAmount } from "./amount-field";
+import { balanceHint, withheldHint } from "./balance-hint";
+import { FeeSummary } from "./FeeSummary";
+import { joinHint } from "./fee-hint";
+import { RecipientField } from "./RecipientField";
+import { isShieldedAddress, type TransferInput, transferSchema } from "./schemas";
+import { useActionForm } from "./use-action-form";
+import { useFeePanel } from "./use-fee-panel";
+import { useFollowMax } from "./use-follow-max";
 
 export function TransferForm() {
-  const { mutation: m, progress } = useTransfer();
-  const assets = useRegisteredAssets();
-  const form = useForm<TransferInput>({
-    resolver: zodResolver(transferSchema),
-    defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID },
-  });
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = form;
-  const { clearAmount, setAmount } = useAmountControls(form);
-  const selected = findAsset(assets, watch("asset"));
+  const action = useTransfer();
+  const { mutation: m, progress } = action;
+  const { register, watch, setValue, errors, selected, setAmount, clearFinished, onSubmit } =
+    useActionForm<TransferInput, Parameters<typeof m.mutateAsync>[0], unknown>({
+      schema: transferSchema,
+      defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID },
+      action,
+      send: (values, { asset, amount }) =>
+        m.mutateAsync({ amount, asset: asset.id, to: values.to, feeAsset }),
+    });
+
   const row = useAssetBalance(selected?.id);
   const balance = row?.balance;
   const balanceOf = useAssetBalanceLabel();
 
   const parsed = parseAmountSafe(watch("amount"), selected);
   const v = validateAmount(parsed, selected, balance);
-  const submitDisabled = !v.valid;
-
-  const clearFinished = useClearFinishedOp(m, progress);
   const assetField = register("asset");
 
-  const onSubmit = handleSubmit(
-    useSubmitOnce(async (values) => {
-      if (!selected) return;
-      const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
-      await m.mutateAsync({ amount, asset: selected.id, to: values.to });
-      clearAmount();
-    }),
-  );
+  // Left unset until the user picks: `undefined` means "the asset being sent",
+  // which is the SDK's own default and stays correct when they change assets.
+  const [feeAsset, setFeeAsset] = useState<bigint | undefined>(undefined);
+  const fees = useFeePanel({
+    kind: "transfer",
+    selected,
+    amount: parsed,
+    // A transfer has no transparent leg, so `MASP._takeFee` never runs.
+    protocol: undefined,
+    feeAsset,
+    onFeeAsset: setFeeAsset,
+  });
+
+  // Not the balance. The selector refuses reserved, cooling-down and dust
+  // notes, and a spend can only consume `nIn` of what is left — so a max wired
+  // to the balance writes an amount the selector then rejects. See
+  // `wallet/spendable.ts`.
+  const crossAssetFee = feeAsset !== undefined && feeAsset !== selected?.id;
+  const spendable = useSpendableMax(selected?.id, {
+    crossAssetFee,
+    // A same-asset relayer fee comes out of this spend's own target, so the
+    // most that can be *sent* is the ceiling less the fee.
+    sameAssetFee: crossAssetFee ? 0n : fees.relayerAmount,
+  });
+
+  // Switching the fee asset moves the ceiling; a figure this wrote before
+  // that change has to move with it. See `use-follow-max.ts`.
+  const { onSetMax } = useFollowMax(spendable?.max, selected, watch("amount"), setAmount);
 
   return (
     <ActionForm
@@ -67,7 +75,7 @@ export function TransferForm() {
       busy={m.isPending}
       error={m.error}
       onSubmit={onSubmit}
-      submitDisabled={submitDisabled}
+      submitDisabled={!v.valid}
       progress={progress}
       txHash={m.data?.txHash}
     >
@@ -93,13 +101,17 @@ export function TransferForm() {
       <AmountField
         inputProps={register("amount")}
         selected={selected}
-        maxAmount={balance}
+        maxAmount={spendable?.max}
         validation={v}
         formError={errors.amount?.message}
-        hint={balanceHint(balance, row?.pending ?? 0n, row?.outflow ?? 0n, selected ?? NO_META)}
+        hint={joinHint(
+          balanceHint(balance, row?.pending ?? 0n, row?.outflow ?? 0n, selected ?? NO_META),
+          withheldHint(spendable, selected ?? NO_META),
+        )}
         amount={parsed}
-        onSetMax={setAmount}
+        onSetMax={onSetMax}
       />
+      <FeeSummary model={fees.model} refreshing={fees.refreshing} feeAsset={fees.feeAsset} />
     </ActionForm>
   );
 }

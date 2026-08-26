@@ -1,12 +1,10 @@
 import { Fragment, Suspense, useEffect, useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { chainKey } from "@/config/chains";
-import { AssetsCard } from "@/features/assets/AssetsCard";
-import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
-import { useWallet } from "@/features/wallet";
-import { AccountCard } from "@/features/wallet/AccountCard";
-import { preloadProverWorker } from "@/features/wallet/prover/proverWorker";
-import { Welcome } from "@/features/wallet/Welcome";
+import { AssetsCard } from "@/features/assets";
+import { useActiveChainOrUndefined } from "@/features/chain";
+import { SetupAllNotice } from "@/features/onboarding";
+import { AccountCard, preloadProverWorker, useWallet, Welcome } from "@/features/wallet";
 
 const PREFETCH: Record<string, () => Promise<unknown>> = {
   "/": () => import("@/features/actions/forms/DepositForm"),
@@ -79,6 +77,11 @@ export function HomeLayout() {
       {ready && wallet ? (
         <div className="home stack home--enter">
           <AccountCard shielded={wallet.address} eth={ethAddress} />
+          {/* Above the portfolio: this gates every ERC-20 deposit, so it is
+              the first thing worth acting on. Rendered here rather than inside
+              a feature card because `onboarding` already depends on `assets`,
+              and reaching back the other way would close a barrel cycle. */}
+          <SetupAllNotice />
           <AssetsCard />
           <div className="action-shell">
             <nav className="action-shell__tabs seg">

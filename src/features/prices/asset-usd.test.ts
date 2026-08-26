@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { assetUsd, priceOf } from "@/features/prices/asset-usd";
-import type { PriceMap } from "@/features/prices/use-prices";
+import { assetUsd, priceOf } from "./asset-usd";
+import type { PriceMap } from "./use-prices";
 
 const priceMap = (entries: Record<string, number>): PriceMap =>
   new Map(Object.entries(entries).map(([k, v]) => [k, { priceUsd: v, priceAt: 0 }]));

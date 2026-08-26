@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
 import { txExplorerUrl } from "@/shared/lib/toast";
+import { useActiveChainOrUndefined } from "./ChainProvider";
 
 /// Builds explorer links for the active chain.
 ///

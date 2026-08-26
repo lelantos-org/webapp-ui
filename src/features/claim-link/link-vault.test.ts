@@ -2,7 +2,7 @@
 // unrecoverable funds, so its ordering guarantees matter more than its shape.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { RememberClaimLinkInput } from "@/features/claim-link/link-vault";
+import type { RememberClaimLinkInput } from "./link-vault";
 
 const STORAGE_KEY = "lelantos:claim-links:v1";
 const CHAIN = 31337n;
@@ -22,12 +22,12 @@ const input = (over: Partial<RememberClaimLinkInput> = {}): RememberClaimLinkInp
 /// alone left the next test reading one of those caches, so a test could pass
 /// or fail on where it sat in the file. Re-importing is the only reset that
 /// covers every one of them at once.
-let vault: typeof import("@/features/claim-link/link-vault");
+let vault: typeof import("./link-vault");
 
 beforeEach(async () => {
   localStorage.clear();
   vi.resetModules();
-  vault = await import("@/features/claim-link/link-vault");
+  vault = await import("./link-vault");
 });
 
 function readStored(): unknown {

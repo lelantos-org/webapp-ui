@@ -7,7 +7,7 @@ import {
   type WithdrawResult,
 } from "@lelantos-org/sdk";
 import type { ChainEntry } from "@/config/chains";
-import type { ShieldedActions, WithAsset } from "@/features/actions/port";
+import type { ShieldedActions, WithAsset } from "./port";
 
 /// Adapt the SDK's `WalletApi` to the webapp's `ShieldedActions` port. Pure
 /// translation — no caching, no retries, no logging. Cross-cutting concerns
@@ -35,6 +35,7 @@ export function createSdkActions(wallet: WalletApi, chain: ChainEntry): Shielded
         to: r.to,
         amount: r.amount,
         asset: r.asset,
+        feeAsset: r.feeAsset,
         autoConsolidate: true,
         onPhase: r.onPhase,
       })) as TransferResult;
@@ -45,6 +46,7 @@ export function createSdkActions(wallet: WalletApi, chain: ChainEntry): Shielded
         to: evmAddress(r.to),
         amount: r.amount,
         asset: r.asset,
+        feeAsset: r.feeAsset,
         autoConsolidate: true,
         onPhase: r.onPhase,
       })) as WithdrawResult;
@@ -55,6 +57,9 @@ export function createSdkActions(wallet: WalletApi, chain: ChainEntry): Shielded
         to: evmAddress(r.to),
         amount: r.amount,
         asset: r.asset,
+        // No `feeAsset`: `WithdrawEthOptions` has none. The native path is
+        // bound to `NativeAdapter` as both relayer and recipient, so the fee
+        // rides in the asset being unwrapped.
         autoConsolidate: true,
         onPhase: r.onPhase,
       })) as WithdrawResult;
@@ -71,6 +76,7 @@ export function createSdkActions(wallet: WalletApi, chain: ChainEntry): Shielded
         amount: r.amount,
         quote: r.quote,
         wrapperAddress,
+        feeAsset: r.feeAsset,
         autoConsolidate: true,
         onPhase: r.onPhase,
       })) as SwapResult;

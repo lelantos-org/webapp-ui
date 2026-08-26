@@ -10,7 +10,7 @@ import "fake-indexeddb/auto";
 import type { MerkleNode, TreeStoreState } from "@lelantos-org/sdk/wallet";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TREE_STORE, walletDb } from "./db";
-import { IdbTreePersistence } from "./treeStore";
+import { IdbTreePersistence } from "./tree-store";
 
 const DEPTH = 10;
 

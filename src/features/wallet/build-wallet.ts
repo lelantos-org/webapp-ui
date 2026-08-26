@@ -4,6 +4,7 @@ import {
   Eip1193Signer,
   type EthSigner,
   evmAddress,
+  TRANSACT_4X4,
 } from "@lelantos-org/sdk";
 import { ViemChainAdapter } from "@lelantos-org/sdk/chain";
 import { requestPersistentStorage } from "@lelantos-org/sdk/core";
@@ -12,18 +13,18 @@ import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { toast } from "sonner";
 import { type ChainEntry, chainKey } from "@/config/chains";
 import { env } from "@/config/env";
-import { resolveSyncStrategy } from "@/features/wallet/fmd-subscription";
-import { networkPreset } from "@/features/wallet/network-preset";
-import { cacheNsk, getCachedNsk } from "@/features/wallet/nsk-session-cache";
-import { instrumentWallet, timed } from "@/features/wallet/perf";
-import { getProverWorker } from "@/features/wallet/prover/proverWorker";
-import { createScanner } from "@/features/wallet/scanner";
-import { IdbNoteStore } from "@/features/wallet/stores/noteStore";
-import { IdbNullifierPersistence } from "@/features/wallet/stores/nullifierStore";
-import { IdbTreePersistence } from "@/features/wallet/stores/treeStore";
-import type { ConnectionBundle } from "@/features/wallet/use-connection";
 import { createLogger } from "@/shared/lib/logger";
 import { accountDigest } from "@/shared/lib/storage-digest";
+import { resolveSyncStrategy } from "./fmd-subscription";
+import { networkPreset } from "./network-preset";
+import { cacheNsk, getCachedNsk } from "./nsk-session-cache";
+import { instrumentWallet, timed } from "./perf";
+import { getProverWorker } from "./prover/prover-worker";
+import { createScanner } from "./scanner";
+import { IdbNoteStore } from "./stores/note-store";
+import { IdbNullifierPersistence } from "./stores/nullifier-store";
+import { IdbTreePersistence } from "./stores/tree-store";
+import type { ConnectionBundle } from "./use-connection";
 
 const log = createLogger("wallet:build");
 
@@ -141,6 +142,11 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
       connect({
         network,
         nsk,
+        // Stated rather than inherited. The prover worker bundles the 4x4
+        // artifacts, and the two have to agree or every proof is built at the
+        // wrong arity — so this does not ride on whichever shape the installed
+        // SDK happens to default to.
+        shape: TRANSACT_4X4,
         chain: chainAdapter,
         prover: getProverWorker(),
         noteStore: new IdbNoteStore(storeKey("notes", chain.chainId, ethAddr)),

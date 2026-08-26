@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
-import { findAsset, type RegisteredAsset } from "@/features/assets/registered-assets";
-import { useTxExplorerUrl } from "@/features/chain/use-explorer-url";
-import type { BadLinkReason } from "@/features/claim-link/phase-machine";
+import { findAsset, type RegisteredAsset } from "@/features/assets";
+import { useTxExplorerUrl } from "@/features/chain";
 import { cx } from "@/shared/lib/cx";
 import { formatAmountForAsset, shortAddr } from "@/shared/lib/format";
+import type { BadLinkReason } from "../phase-machine";
 
 export function ClaimHero({ subtitle }: { subtitle?: string }) {
   return (

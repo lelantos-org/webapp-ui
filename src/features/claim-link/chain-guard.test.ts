@@ -1,11 +1,7 @@
 import { evmAddress } from "@lelantos-org/sdk";
 import { describe, expect, it } from "vitest";
 import type { ChainEntry } from "@/config/chains";
-import {
-  chainLabel,
-  chainMismatch,
-  describeChainMismatch,
-} from "@/features/claim-link/chain-guard";
+import { chainLabel, chainMismatch, describeChainMismatch } from "./chain-guard";
 
 function chain(chainId: bigint, chainName: string): ChainEntry {
   const addr = evmAddress("0x0000000000000000000000000000000000000001");

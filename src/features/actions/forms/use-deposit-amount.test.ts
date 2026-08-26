@@ -1,7 +1,7 @@
 import { evmAddress } from "@lelantos-org/sdk";
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import type { RegisteredAsset } from "@/features/assets/registered-assets";
+import type { RegisteredAsset } from "@/features/assets";
 import { useDepositAmount } from "./use-deposit-amount";
 
 const USDC: RegisteredAsset = {
@@ -17,24 +17,38 @@ const USDC: RegisteredAsset = {
 
 const FEE_BPS = 30n;
 
-/// The three chain reads this hook composes. Stubbed so the test stays on the
+/// The chain reads this hook composes. Stubbed so the test stays on the
 /// gating rules rather than on react-query's disabled-query semantics — the
 /// same trade `use-deposit-setup.test` makes.
 const stubs = vi.hoisted(() => ({
   preview: {} as Record<string, unknown>,
   feeBps: undefined as bigint | undefined,
   sourceBalance: undefined as bigint | undefined,
+  feeQuote: {} as Record<string, unknown>,
 }));
 
-vi.mock("@/features/actions/use-fee-preview", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/actions/use-fee-preview")>()),
+vi.mock("../use-fee-preview", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../use-fee-preview")>()),
   useFeePreview: () => stubs.preview,
   useFeeBps: () => stubs.feeBps,
+}));
+
+/// The relayer's flat charge for flushing the deposit. Real `resolveFeeOption`
+/// and `feeOptionFor` — only the query is stubbed, so the registry join stays
+/// under test.
+vi.mock("../use-fee-quote", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../use-fee-quote")>()),
+  useFeeQuote: () => stubs.feeQuote,
 }));
 
 vi.mock("@/features/assets/transparent-balances", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/assets/transparent-balances")>()),
   useDepositSourceBalance: () => stubs.sourceBalance,
+}));
+
+vi.mock("@/features/assets/registered-assets", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/assets/registered-assets")>()),
+  useRegisteredAssets: () => [USDC],
 }));
 
 interface Options {
@@ -43,11 +57,28 @@ interface Options {
   balance?: bigint;
   feeBps?: bigint;
   preview?: Record<string, unknown>;
+  /// Relayer charge in circuit units of USDC. Zero unless a case says
+  /// otherwise, which keeps the pre-existing max arithmetic readable.
+  relayerFee?: bigint;
 }
 
-function deposit({ asEth = false, input = "100", balance, feeBps, preview }: Options = {}) {
+function deposit({
+  asEth = false,
+  input = "100",
+  balance,
+  feeBps,
+  preview,
+  relayerFee = 0n,
+}: Options = {}) {
   stubs.sourceBalance = balance;
   stubs.feeBps = feeBps;
+  stubs.feeQuote = {
+    data: {
+      charged: relayerFee > 0n,
+      options: [{ asset: USDC, amount: relayerFee, balance: relayerFee, affordable: true }],
+    },
+    isPending: false,
+  };
   stubs.preview = {
     // A settled preview for `input` at `FEE_BPS`, unless the case overrides it.
     data: { inAmt: 100n, fee: 0n, total: 100n, feeBps: FEE_BPS, mode: "deposit" },
@@ -113,5 +144,33 @@ describe("useDepositAmount", () => {
 
     expect(d.total).toBe(103n);
     expect(d.validation.valid).toBe(true);
+  });
+});
+
+// The relayer's note is funded by the same Permit2 pull as the amount and the
+// protocol fee (`resolveDepositFee`), so both the allowance and the "max"
+// button have to reserve it. Under-reserving either is a deposit that fails at
+// submit rather than in the form.
+describe("relayer fee", () => {
+  it("adds it to the total the Permit2 allowance is sized against", () => {
+    expect(deposit({ balance: 1_000n, feeBps: 0n, relayerFee: 7n }).total).toBe(107n);
+    expect(deposit({ balance: 1_000n, feeBps: 0n, relayerFee: 0n }).total).toBe(100n);
+  });
+
+  it("reserves it out of the max", () => {
+    // Flat, not proportional — the relayer prices gas, not value — so at 0 bps
+    // it comes straight off the balance.
+    expect(deposit({ balance: 1_000n, feeBps: 0n, relayerFee: 7n }).maxAmount).toBe(993n);
+  });
+
+  it("withholds the total until the quote lands, rather than under-sizing it", () => {
+    // Seed every other stub through the helper, then take the quote away — so
+    // this asserts about the pending quote and not about leftover state.
+    deposit({ balance: 1_000n, feeBps: 0n });
+    stubs.feeQuote = { data: undefined, isPending: true };
+    const r = renderHook(() => useDepositAmount(USDC, { asEth: false, input: "100" })).result
+      .current;
+    expect(r.relayerFee).toBeUndefined();
+    expect(r.total).toBeUndefined();
   });
 });

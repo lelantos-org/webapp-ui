@@ -2,10 +2,10 @@
 // form can render "you'll pay X / receive Y" before the user submits.
 // Cached per (asset, amount, mode) via react-query.
 
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
+import { keepPreviousData, type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { fetchAssetFeeInputs } from "@/features/assets/asset-entry";
-import { useActiveChain } from "@/features/chain/ChainProvider";
+import { fetchAssetFeeInputs } from "@/features/assets";
+import { useActiveChain } from "@/features/chain";
 import { useWallet } from "@/features/wallet";
 import { type FeeBreakdown, type FeeMode, feeBreakdown } from "@/shared/lib/fees";
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
@@ -19,12 +19,17 @@ const DEFAULT_MODE: FeeMode = "deposit";
 /// keystroke issues two chain reads and occupies its own cache entry.
 const DEBOUNCE_MS = 300;
 
-/// The query result plus `stale`: true while the debounce is catching up with
-/// `amount`.
+/// The query result plus `stale`: true whenever `data` describes an amount
+/// other than the one currently typed.
 ///
-/// While `stale` is set, `data` describes an earlier amount. Callers gating a
-/// submit — validation, the approval probe — must treat it as absent, or the
-/// button becomes live against the fee for a different amount.
+/// Two ways that happens, and both have to be covered: the debounce has not
+/// caught up with `amount` yet, or it has and the query for the new amount is
+/// still in flight, holding the previous one's answer (`keepPreviousData`).
+///
+/// Callers gating a submit — validation, the approval probe — must treat a
+/// stale figure as absent, or the button becomes live against the fee for a
+/// different amount. Callers merely *displaying* it should not: see
+/// `shownFee`.
 ///
 /// An intersection rather than `interface extends`: `UseQueryResult` is a
 /// discriminated union over the loading, error and success states, which
@@ -41,7 +46,6 @@ export function useFeePreview(
   // chain's pool, so the same (asset, amount) means different money elsewhere.
   const { chainId } = useActiveChain();
   const settled = useDebouncedValue(amount, DEBOUNCE_MS);
-  const stale = settled !== amount;
 
   const query = useQuery<FeePreview>({
     queryKey: [
@@ -63,8 +67,17 @@ export function useFeePreview(
     // Each distinct amount is its own key, so intermediate entries would
     // otherwise be retained for the 5 minute default.
     gcTime: 60_000,
+    // Every settled amount is a new key, so without this the fee blanks on each
+    // edit and the panel reads as broken between keystrokes. The figure held
+    // over describes the previous amount — which is exactly what `stale` above
+    // already says, and what callers gating a submit already have to honour.
+    placeholderData: keepPreviousData,
   });
 
+  // `isPlaceholderData` is the second half of it: the debounce has settled, but
+  // the query for the settled amount has not, so `data` is still the previous
+  // amount's.
+  const stale = settled !== amount || query.isPlaceholderData;
   return useMemo(() => ({ ...query, stale }) as FeePreviewResult, [query, stale]);
 }
 

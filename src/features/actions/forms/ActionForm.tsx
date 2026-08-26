@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import type { Step, TxPhase } from "@/features/actions/tx/tx-progress";
-import { useTxExplorerUrl } from "@/features/chain/use-explorer-url";
+import { useTxExplorerUrl } from "@/features/chain";
 import { friendlyMessage } from "@/shared/lib/errors";
 import { Stepper } from "@/shared/ui/Stepper";
 import { TxHash } from "@/shared/ui/TxHash";
+import type { Step, TxPhase } from "../tx/tx-progress";
 
 export interface ActionFormProps {
   /// Omit when the surrounding nav already names the op.

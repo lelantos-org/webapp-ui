@@ -1,6 +1,6 @@
-import { monogramStyle, monogramText } from "@/features/icons/monogram";
-import { tokenBrand } from "@/features/icons/registry";
 import { cx } from "@/shared/lib/cx";
+import { monogramStyle, monogramText } from "./monogram";
+import { tokenBrand } from "./registry";
 
 export interface TokenIconProps {
   /// Display symbol, as the row already shows it — including the `#<id>`

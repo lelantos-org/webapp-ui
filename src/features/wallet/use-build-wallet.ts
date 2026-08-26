@@ -1,15 +1,15 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { useEffect, useRef, useState } from "react";
 import { chainKey } from "@/config/chains";
-import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
-import { closeDepositStreamsExcept } from "@/features/relayer/deposit-stream";
-import { createSharedWorkPool } from "@/features/wallet/build-pool";
-import { getCachedNsk } from "@/features/wallet/nsk-session-cache";
-import { releaseScanner } from "@/features/wallet/scanner";
-import { syncProgress } from "@/features/wallet/sync-progress-store";
-import type { Connection } from "@/features/wallet/use-connection";
+import { useActiveChainOrUndefined } from "@/features/chain";
+import { closeDepositStreamsExcept } from "@/features/relayer";
 import { describeError } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
+import { createSharedWorkPool } from "./build-pool";
+import { getCachedNsk } from "./nsk-session-cache";
+import { releaseScanner } from "./scanner";
+import { syncProgress } from "./sync-progress-store";
+import type { Connection } from "./use-connection";
 
 const log = createLogger("wallet:build");
 
@@ -17,7 +17,7 @@ const log = createLogger("wallet:build");
 /// sub-100ms rebuilds render the panel as a brief flash.
 const MIN_RESUME_MS = 1000;
 
-const loadBuildWallet = () => import("@/features/wallet/buildWallet").then((m) => m.buildWallet);
+const loadBuildWallet = () => import("./build-wallet").then((m) => m.buildWallet);
 
 // Dedupe concurrent builds for one `(chainId, addr)`, and dispose of a build
 // nobody adopts.

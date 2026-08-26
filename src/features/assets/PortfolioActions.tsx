@@ -1,9 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  useCompactNotes,
-  useHardRefresh,
-  useWalletState,
-} from "@/features/wallet/use-wallet-state";
+import { useCompactNotes, useHardRefresh, useWalletState } from "@/features/wallet";
 import { relativeTime } from "@/shared/lib/format";
 import { toastError, toastInfo } from "@/shared/lib/toast";
 

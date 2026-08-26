@@ -4,8 +4,8 @@
 import { evmAddress } from "@lelantos-org/sdk";
 import { describe, expect, it } from "vitest";
 import type { RegisteredAsset } from "@/config/chains";
-import { describeStoredAmount } from "@/features/claim-link/components/UnclaimedLinks";
-import type { StoredClaimLink } from "@/features/claim-link/link-vault";
+import type { StoredClaimLink } from "../link-vault";
+import { describeStoredAmount } from "./UnclaimedLinks";
 
 const USDC: RegisteredAsset = {
   id: 1n,

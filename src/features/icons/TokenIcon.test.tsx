@@ -1,7 +1,7 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { ChainIcon } from "@/features/icons/ChainIcon";
-import { TokenIcon } from "@/features/icons/TokenIcon";
+import { ChainIcon } from "./ChainIcon";
+import { TokenIcon } from "./TokenIcon";
 
 /// The marks are `aria-hidden`, so no accessible query can reach them. That is
 /// as much the behaviour under test as anything else — see the decorative case.

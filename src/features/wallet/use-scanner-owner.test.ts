@@ -7,11 +7,11 @@ import { renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const releaseScanner = vi.fn();
-vi.mock("@/features/wallet/scanner", () => ({
+vi.mock("./scanner", () => ({
   releaseScanner: (...a: unknown[]) => releaseScanner(...a),
 }));
 
-const { useScannerOwner } = await import("@/features/wallet/use-scanner-owner");
+const { useScannerOwner } = await import("./use-scanner-owner");
 
 const wallet = (id: string) => ({ address: id }) as unknown as WalletApi;
 

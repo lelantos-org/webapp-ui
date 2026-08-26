@@ -4,15 +4,15 @@
 // and boot resumes silently via `eth_accounts` (no popup).
 
 import type { ChainEntry } from "@/config/chains";
+import { describeError } from "@/shared/lib/errors";
+import { createLogger } from "@/shared/lib/logger";
+import { localStore } from "@/shared/lib/storage";
 import {
   type Eip6963ProviderDetail,
   type Eip6963ProviderInfo,
   ProviderRegistry,
-} from "@/features/eip1193/discovery";
-import { isUnrecognizedChain } from "@/features/eip1193/errors";
-import { describeError } from "@/shared/lib/errors";
-import { createLogger } from "@/shared/lib/logger";
-import { localStore } from "@/shared/lib/storage";
+} from "./discovery";
+import { isUnrecognizedChain } from "./errors";
 
 export type { Eip6963ProviderDetail, Eip6963ProviderInfo };
 

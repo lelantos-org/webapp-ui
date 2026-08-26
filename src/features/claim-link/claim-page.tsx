@@ -1,8 +1,11 @@
-import type { RegisteredAsset } from "@/features/assets/registered-assets";
-import type { ChainMismatch } from "@/features/claim-link/chain-guard";
-import { BalancesCard } from "@/features/claim-link/components/BalancesCard";
-import { ConnectGate } from "@/features/claim-link/components/ConnectGate";
-import { NetworkGateCard } from "@/features/claim-link/components/NetworkGateCard";
+import type { RegisteredAsset } from "@/features/assets";
+import type { WalletStatus } from "@/features/wallet";
+import { useWallet } from "@/features/wallet";
+import { Stepper } from "@/shared/ui/Stepper";
+import type { ChainMismatch } from "./chain-guard";
+import { BalancesCard } from "./components/BalancesCard";
+import { ConnectGate } from "./components/ConnectGate";
+import { NetworkGateCard } from "./components/NetworkGateCard";
 import {
   BadLinkCard,
   ClaimHero,
@@ -10,17 +13,10 @@ import {
   ErrorCard,
   ReadingFragmentCard,
   ScanningCard,
-} from "@/features/claim-link/components/StatusCards";
-import type { Phase } from "@/features/claim-link/phase-machine";
-import {
-  CLAIM_STEPS,
-  heroSubtitleFor,
-  stepperStateFor,
-} from "@/features/claim-link/phase-presenter";
-import { useClaimFlow } from "@/features/claim-link/use-claim-flow";
-import { useWallet } from "@/features/wallet";
-import type { WalletStatus } from "@/features/wallet/types";
-import { Stepper } from "@/shared/ui/Stepper";
+} from "./components/StatusCards";
+import type { Phase } from "./phase-machine";
+import { CLAIM_STEPS, heroSubtitleFor, stepperStateFor } from "./phase-presenter";
+import { useClaimFlow } from "./use-claim-flow";
 
 export function ClaimPage() {
   const { wallet, status, connect } = useWallet();

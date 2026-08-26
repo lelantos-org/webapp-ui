@@ -6,7 +6,7 @@
 // `features/eip1193/discovery.ts`.
 
 import { vi } from "vitest";
-import type { Eip6963ProviderDetail } from "@/features/eip1193/store";
+import type { Eip6963ProviderDetail } from "@/features/eip1193";
 
 /// An announced wallet. `name` defaults to the rdns, which is all the tests
 /// that only care about identity need.

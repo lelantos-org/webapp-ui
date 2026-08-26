@@ -278,7 +278,28 @@ export default defineConfig({
     precompress(),
   ],
   optimizeDeps: {
-    include: ["@lelantos-org/sdk", "assert"],
+    include: [
+      "@lelantos-org/sdk",
+      "assert",
+      // poseidon-lite ships CommonJS (`exports.poseidonN = ...`) with no ESM
+      // build. Pre-bundling it here is what gives those files real named
+      // exports in dev.
+      //
+      // It is reachable two ways, and only one of them was covered before.
+      // Statically, `crypto/poseidon.js` is pulled into the SDK's own
+      // pre-bundle and inlined — fine. But the scanner worker
+      // (`sync/worker/entry.js`) reaches it through a *dynamic*
+      // `import("../../crypto/poseidon.js")`, which Vite serves as its own
+      // module outside that bundle. The bare specifier there is rewritten to
+      // `/node_modules/poseidon-lite/poseidonN.js?v=<hash>` and served raw, so
+      // `import { poseidonN }` finds no such export and the worker dies on
+      // first use.
+      //
+      // Arities 1-8, matching what `crypto/poseidon.js` imports. Listing them
+      // individually because each is its own export subpath; the package root
+      // is never imported.
+      ...Array.from({ length: 8 }, (_, i) => `poseidon-lite/poseidon${i + 1}`),
+    ],
     esbuildOptions: {
       define: { global: "globalThis" },
     },

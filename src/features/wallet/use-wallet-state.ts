@@ -1,10 +1,11 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useState } from "react";
-import { useActiveChain } from "@/features/chain/ChainProvider";
-import { useWallet } from "@/features/wallet";
-import { syncProgress } from "@/features/wallet/sync-progress-store";
-import { BALANCE_POLL_MS, BALANCE_STALE_MS, pollInterval, useIsIdle } from "@/shared/lib/activity";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useActiveChain } from "@/features/chain";
+import { BALANCE_POLL_MS, BALANCE_STALE_MS, usePolling } from "@/shared/lib/activity";
+import { syncProgress } from "./sync-progress-store";
+import { useSyncHead } from "./use-sync-head";
+import { useWallet } from "./use-wallet";
 
 /// Confirmed holdings for one asset: what the wallet has actually decrypted.
 ///
@@ -48,6 +49,33 @@ function computeBalances(wallet: WalletApi): AssetBalance[] {
     .sort((a, b) => (a.asset < b.asset ? -1 : a.asset > b.asset ? 1 : 0));
 }
 
+/// Invalidate the wallet state whenever the server's watermark moves.
+///
+/// This is what makes the sync event-driven. The cheap `/v1/head` poll runs six
+/// times as often as `BALANCE_POLL_MS`, and only a real change triggers the
+/// expensive `syncNotes`.
+///
+/// An effect rather than putting the head in the query key: a changing key
+/// mints a fresh cache entry per watermark, which both accumulates entries and
+/// blanks `data` while the new key loads — the balances would flicker to empty
+/// every time a note arrived.
+///
+/// The ref is what keeps the *first* observed head from counting as a change.
+/// Without it the initial `null -> "0:0"` transition fires an invalidate on
+/// mount, duplicating the sync the query has only just started.
+function useRefetchOnNewHead(): void {
+  const head = useSyncHead();
+  const invalidate = useInvalidateWalletState();
+  const seen = useRef<string | null>(null);
+  useEffect(() => {
+    if (head === null) return;
+    const previous = seen.current;
+    seen.current = head;
+    if (previous === null || previous === head) return;
+    void invalidate();
+  }, [head, invalidate]);
+}
+
 /// Sync the wallet and derive confirmed balances; polls while the tab is
 /// visible. Mutations should call `useInvalidateWalletState()` after a
 /// successful submit.
@@ -57,7 +85,7 @@ function computeBalances(wallet: WalletApi): AssetBalance[] {
 export function useWalletState(): UseQueryResult<WalletState> {
   const { wallet } = useWallet();
   const { chainId } = useActiveChain();
-  const idle = useIsIdle();
+  useRefetchOnNewHead();
   return useQuery<WalletState>({
     queryKey: walletStateKey(chainId, wallet?.address),
     enabled: !!wallet,
@@ -84,8 +112,12 @@ export function useWalletState(): UseQueryResult<WalletState> {
     // recompute over every unspent note, on the main thread. Slowed on an
     // unattended tab, which `refetchIntervalInBackground: false` does not
     // cover because that tab is still visible.
-    refetchInterval: () => pollInterval(BALANCE_POLL_MS, idle),
-    refetchIntervalInBackground: false,
+    //
+    // Retained as a floor even though `head` above now drives the timely path:
+    // the watermark covers `notes` and `spent_nullifiers`, so anything that
+    // changes a balance without moving either — and any spell where the head
+    // poll itself is failing — still resolves within the old 30s.
+    ...usePolling(BALANCE_POLL_MS),
     // Several components reach this query. At `staleTime: 0` every mount —
     // so every route change into a form — refetches, firing a redundant
     // `syncNotes`. Mutations still show immediately: they invalidate the query

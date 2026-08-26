@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { RegisteredAsset } from "@/config/chains";
-import { portfolioTotal } from "@/features/assets/portfolio-total";
-import type { AssetBalanceView } from "@/features/assets/use-balances";
-import type { PriceMap } from "@/features/prices/use-prices";
+import type { PriceMap } from "@/features/prices";
+import { portfolioTotal } from "./portfolio-total";
+import type { AssetBalanceView } from "./use-balances";
 
 function asset(id: bigint, token: string, decimals = 18, scale = 1n): RegisteredAsset {
   return {

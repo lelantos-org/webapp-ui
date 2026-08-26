@@ -4,15 +4,17 @@
 
 import type { TransactionResult, WalletApi } from "@lelantos-org/sdk/wallet";
 import { useCallback } from "react";
-import { trackTxLifecycle } from "@/features/actions/tx/lifecycle";
-import { type PendingContext, pendingShapesFor } from "@/features/actions/tx/pending-policy";
-import type { TxPhase } from "@/features/actions/tx/tx-progress";
-import { fetchAssetEntry } from "@/features/assets/asset-entry";
-import { useActiveChain } from "@/features/chain/ChainProvider";
-import { addPendingMany, clearPending } from "@/features/pending-tx/store";
-import { useWallet } from "@/features/wallet";
-import { useInvalidateWalletState } from "@/features/wallet/use-wallet-state";
+import { fetchAssetEntry } from "@/features/assets";
+import { useActiveChain } from "@/features/chain";
+import { addPendingMany, clearPending } from "@/features/pending-tx";
+import { useInvalidateWalletState, useWallet } from "@/features/wallet";
 import { createLogger } from "@/shared/lib/logger";
+import type { SwapCall } from "../port";
+import { swapCredit } from "../swap-credit";
+import { type FeeQuoteResult, feeOptionFor } from "../use-fee-quote";
+import { trackTxLifecycle } from "./lifecycle";
+import { type PendingContext, pendingShapesFor } from "./pending-policy";
+import type { TxPhase } from "./tx-progress";
 
 const log = createLogger("tx:tracker");
 
@@ -23,7 +25,7 @@ export type TrackTxRequest =
   | {
       kind: "swap";
       result: Extract<PendingContext, { kind: "swap" }>["result"];
-      swap: NonNullable<Extract<PendingContext, { kind: "swap" }>["legB"]>["swap"];
+      swap: SwapCall;
     };
 
 export type TrackTxArgs = TrackTxRequest & {
@@ -48,9 +50,9 @@ export function useTxTracker(): (args: TrackTxArgs) => Promise<void> {
   const chain = useActiveChain();
   return useCallback(
     async (args) => {
-      // Per-kind pre-tx capture. Only swap needs it (assetOut baseline +
-      // fee/scale). Snapshot BEFORE invalidate so post-tx sync that lands
-      // the B-note can't inflate the watermark anchor.
+      // Per-kind pre-tx capture. Only swap needs it (the B-note's size, and
+      // the assetOut baseline it is measured from). Snapshot BEFORE invalidate
+      // so post-tx sync that lands the B-note can't inflate the anchor.
       const ctx = await prepareCtx(args, wallet);
 
       // Refetch so balance reflects local markSpent before the pending
@@ -89,24 +91,43 @@ async function prepareCtx(
   if (args.kind !== "swap") return args;
   if (!wallet) return { kind: "swap", result: args.result };
   try {
-    const [entryOut, feeBps] = await Promise.all([
-      fetchAssetEntry(wallet, args.swap.assetOut),
+    const { assetOut, quote } = args.swap;
+    const [entryOut, feeBps, depositFees] = await Promise.all([
+      fetchAssetEntry(wallet, assetOut),
       wallet.chain.fetchFeeBps(),
+      // Priced as a deposit, because leg 2 *is* one: the relayer's flush note
+      // is minted in the deposited asset, so this is the same quote
+      // `resolveDepositFee` read when `executeSwap` sized the B-note.
+      wallet.quoteFee({ kind: "deposit" }),
     ]);
     return {
       kind: "swap",
       result: args.result,
       legB: {
-        swap: args.swap,
-        assetOutBaseline: wallet.balance(args.swap.assetOut),
-        scaleOut: entryOut.scale,
-        feeBps,
+        assetOut,
+        bNoteValue: swapCredit({
+          minOut: quote.minOut,
+          scaleOut: entryOut.scale,
+          feeBps,
+          depositFee: depositFeeFor(depositFees, assetOut),
+        }),
+        assetOutBaseline: wallet.balance(assetOut),
       },
     };
   } catch (e) {
     log.warn("swap leg-B context unavailable; overlay will omit it", e);
     return { kind: "swap", result: args.result };
   }
+}
+
+/// What the relayer takes to flush a deposit of `asset`, in circuit units.
+///
+/// Zero when it quoted nothing for this asset — either the chain subsidises
+/// deposits or the relayer takes no fee at all, both of which `executeSwap`
+/// resolves to a zero-value note. It cannot be "quoted but unpayable" here:
+/// `resolveDepositFee` throws on that before the swap is ever submitted.
+function depositFeeFor(quote: FeeQuoteResult, asset: bigint): bigint {
+  return feeOptionFor(quote, asset)?.amount ?? 0n;
 }
 
 /// Only deposit + swap surface an on-chain deposit id — the same value the

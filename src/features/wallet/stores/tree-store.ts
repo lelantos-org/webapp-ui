@@ -1,6 +1,6 @@
 import type { MerkleNode, TreePersistence, TreeStoreState } from "@lelantos-org/sdk/wallet";
 import type { IDBPDatabase, IDBPObjectStore } from "idb";
-import { TREE_STORE, type WalletSchema, walletDb } from "@/features/wallet/stores/db";
+import { TREE_STORE, type WalletSchema, walletDb } from "./db";
 
 /// Leaves per stored record. Matches the server's chunk size, so a sync that
 /// pulls one chunk dirties exactly one record.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { SwapCall, WithAsset } from "../port";
+import type { WithAsset } from "../port";
 import { type PendingContext, pendingShapesFor } from "./pending-policy";
 
 // Only the fields the policy reads are populated; the rest of the SDK
@@ -49,9 +49,6 @@ describe("pendingShapesFor", () => {
   });
 
   describe("swap", () => {
-    const swapCall = (assetOut: bigint, minOut: bigint): SwapCall =>
-      ({ assetIn: 1n, assetOut, amount: 100n, quote: { minOut } }) as SwapCall;
-
     it("emits only leg-A when no wallet was available for leg-B data", () => {
       const ctx = {
         kind: "swap",
@@ -60,80 +57,27 @@ describe("pendingShapesFor", () => {
       expect(pendingShapesFor(ctx)).toEqual([{ asset: 1n, pendingIn: 10n, outflow: 90n }]);
     });
 
-    it("sizes the leg-B inflow the way the SDK sizes the B-note", () => {
+    it("adds the leg-B note as an inflow the wallet's balance has to reach", () => {
+      // Sizing itself belongs to `swapCredit`; what this asserts is the
+      // watermark built on top of it — the balance the note will actually
+      // produce, not `baseline + 1`, which any unrelated inflow on `assetOut`
+      // satisfied while the swap was still settling.
       const ctx = {
         kind: "swap",
         result: result({ asset: 1n, ownInflow: 10n, sent: 90n }),
-        legB: {
-          swap: swapCall(2n, 10_050n),
-          assetOutBaseline: 7n,
-          scaleOut: 1n,
-          feeBps: 50n,
-        },
+        legB: { assetOut: 2n, bNoteValue: 10_000n, assetOutBaseline: 7n },
       } as unknown as PendingContext;
-      // 10_000 * 1 + 50bps = 10_050, exactly covering minOut.
       expect(pendingShapesFor(ctx)).toEqual([
         { asset: 1n, pendingIn: 10n, outflow: 90n },
-        {
-          asset: 2n,
-          pendingIn: 10_000n,
-          outflow: 0n,
-          // The balance this note will actually produce. `baseline + 1` was
-          // satisfied by any unrelated inflow on `assetOut` — an inbound
-          // transfer, a concurrent deposit — and dropped the overlay while the
-          // swap was still settling.
-          clearWhenBalanceAtLeast: 10_007n,
-        },
+        { asset: 2n, pendingIn: 10_000n, outflow: 0n, clearWhenBalanceAtLeast: 10_007n },
       ]);
     });
 
-    it("divides the leg-B inflow down by the output asset's scale", () => {
+    it("drops the leg-B entry when the swap credits nothing", () => {
       const ctx = {
         kind: "swap",
         result: result({ asset: 1n, ownInflow: 0n, sent: 0n }),
-        legB: {
-          swap: swapCall(2n, 10_000n * 1_000n),
-          assetOutBaseline: 0n,
-          scaleOut: 1_000n,
-          feeBps: 0n,
-        },
-      } as unknown as PendingContext;
-      // 10_000 * 1_000 == 10_000_000, and a zero fee adds nothing.
-      expect(pendingShapesFor(ctx)).toEqual([
-        { asset: 2n, pendingIn: 10_000n, outflow: 0n, clearWhenBalanceAtLeast: 10_000n },
-      ]);
-    });
-
-    it("rounds a sub-unit minOut up to the one unit that actually gets minted", () => {
-      // The closed form floors this to zero, and the old code dropped the entry
-      // — but the SDK walks up until the pull covers `minOut`, so a note of one
-      // circuit unit is what is really minted. Dropping it hid an inflow the
-      // wallet was about to receive.
-      const ctx = {
-        kind: "swap",
-        result: result({ asset: 1n, ownInflow: 0n, sent: 0n }),
-        legB: {
-          swap: swapCall(2n, 1n),
-          assetOutBaseline: 0n,
-          scaleOut: 10n ** 18n,
-          feeBps: 0n,
-        },
-      } as unknown as PendingContext;
-      expect(pendingShapesFor(ctx)).toEqual([
-        { asset: 2n, pendingIn: 1n, outflow: 0n, clearWhenBalanceAtLeast: 1n },
-      ]);
-    });
-
-    it("drops the leg-B entry when the output scale is degenerate", () => {
-      const ctx = {
-        kind: "swap",
-        result: result({ asset: 1n, ownInflow: 0n, sent: 0n }),
-        legB: {
-          swap: swapCall(2n, 1_000n),
-          assetOutBaseline: 0n,
-          scaleOut: 0n,
-          feeBps: 0n,
-        },
+        legB: { assetOut: 2n, bNoteValue: 0n, assetOutBaseline: 0n },
       } as unknown as PendingContext;
       expect(pendingShapesFor(ctx)).toEqual([]);
     });

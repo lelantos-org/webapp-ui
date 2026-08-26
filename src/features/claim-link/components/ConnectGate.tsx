@@ -1,5 +1,5 @@
-import { ConnectButton } from "@/features/wallet/ConnectButton";
-import type { WalletStatus } from "@/features/wallet/types";
+import type { WalletStatus } from "@/features/wallet";
+import { ConnectButton } from "@/features/wallet";
 
 export interface ConnectGateProps {
   status: WalletStatus;

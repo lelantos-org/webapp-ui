@@ -13,8 +13,8 @@
 // branches on whether a token was recognised.
 
 import type { ReactElement } from "react";
-import { CHAIN_ART, TOKEN_ART } from "@/features/icons/artwork";
-import type { Hsl } from "@/features/icons/monogram";
+import { CHAIN_ART, TOKEN_ART } from "./artwork";
+import type { Hsl } from "./monogram";
 
 /// What the bundle knows about one token or chain.
 interface Brand {

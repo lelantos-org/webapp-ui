@@ -1,6 +1,6 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { describe, expect, it } from "vitest";
-import type { EphemeralBalance } from "./claimLink";
+import type { EphemeralBalance } from "./ephemeral-wallet";
 import { initial, type Phase, reduce } from "./phase-machine";
 
 const stubWallet = {} as WalletApi;

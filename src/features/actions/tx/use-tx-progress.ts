@@ -3,7 +3,7 @@
 // `done` to drive the inline `<Stepper>`.
 
 import { useCallback, useRef, useState } from "react";
-import { isTerminal, type Step, type TxPhase } from "@/features/actions/tx/tx-progress";
+import { isTerminal, type Step, type TxPhase } from "./tx-progress";
 
 export interface StartOpts {
   /// Phase that closes out the stepper. Defaults to the last step's id

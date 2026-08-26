@@ -8,17 +8,20 @@
 
 import type { TransferResult } from "@lelantos-org/sdk";
 import { useMutation } from "@tanstack/react-query";
-import { type ActionMutation, progressView, trackPostSubmit } from "@/features/actions/mutations";
-import type { GenerateLinkCall, WithAsset } from "@/features/actions/port";
-import { stepsFor } from "@/features/actions/tx/tx-progress";
-import { useTxProgress } from "@/features/actions/tx/use-tx-progress";
-import { useTxTracker } from "@/features/actions/tx/use-tx-tracker";
-import { useActiveChain } from "@/features/chain/ChainProvider";
-import { type GenerateClaimLinkResult, generateClaimLink } from "@/features/claim-link/claimLink";
-import { currentWalletChainId } from "@/features/eip1193/store";
-import { useWallet } from "@/features/wallet";
-import { useInvalidateWalletState } from "@/features/wallet/use-wallet-state";
+import type { GenerateLinkCall, WithAsset } from "@/features/actions";
+import {
+  type ActionMutation,
+  progressView,
+  stepsFor,
+  trackPostSubmit,
+  useTxProgress,
+  useTxTracker,
+} from "@/features/actions";
+import { useActiveChain } from "@/features/chain";
+import { currentWalletChainId } from "@/features/eip1193";
+import { useInvalidateWalletState, useWallet } from "@/features/wallet";
 import { toastError } from "@/shared/lib/toast";
+import { type GenerateClaimLinkResult, generateClaimLink } from "./ephemeral-wallet";
 
 export function useGenerateLink(): ActionMutation<GenerateLinkCall, GenerateClaimLinkResult> {
   const { wallet } = useWallet();

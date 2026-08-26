@@ -1,18 +1,18 @@
 // React context wiring for the SDK wallet.
 
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
-import { closeDepositStreams } from "@/features/relayer/deposit-stream";
-import { clearAllCachedNsk, clearCachedNsk } from "@/features/wallet/nsk-session-cache";
-import { disposeProverWorker } from "@/features/wallet/prover/proverWorker";
-import { releaseScanner } from "@/features/wallet/scanner";
-import type { WalletContextValue } from "@/features/wallet/types";
-import { useBuildWallet } from "@/features/wallet/use-build-wallet";
-import { useConnectFlow } from "@/features/wallet/use-connect-flow";
-import { useConnection } from "@/features/wallet/use-connection";
-import { WalletContext } from "@/features/wallet/use-wallet";
-import { WalletPicker } from "@/features/wallet/WalletPicker";
-import { deriveWalletStatus } from "@/features/wallet/wallet-status";
+import { closeDepositStreams } from "@/features/relayer";
 import { toastInfo } from "@/shared/lib/toast";
+import { clearAllCachedNsk, clearCachedNsk } from "./nsk-session-cache";
+import { disposeProverWorker } from "./prover/prover-worker";
+import { releaseScanner } from "./scanner";
+import type { WalletContextValue } from "./types";
+import { useBuildWallet } from "./use-build-wallet";
+import { useConnectFlow } from "./use-connect-flow";
+import { useConnection } from "./use-connection";
+import { WalletContext } from "./use-wallet";
+import { WalletPicker } from "./WalletPicker";
+import { deriveWalletStatus } from "./wallet-status";
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const conn = useConnection();

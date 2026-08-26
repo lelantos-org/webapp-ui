@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
-import type { ActionMutation, ProgressView } from "@/features/actions/mutations";
+import type { ActionMutation, ProgressView } from "../mutations";
+import { useClearFinishedOp } from "./use-clear-finished-op";
 
 type Mutation = ActionMutation<unknown, unknown>["mutation"];
 

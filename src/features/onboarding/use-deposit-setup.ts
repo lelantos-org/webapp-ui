@@ -2,13 +2,8 @@
 // required, whether that blocks submit, and the modal's open state.
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  evaluateSetup,
-  NO_SETUP_NEEDS,
-  type SetupNeeds,
-  useSetupStatus,
-} from "@/features/onboarding/use-setup-status";
 import { createLogger } from "@/shared/lib/logger";
+import { evaluateSetup, NO_SETUP_NEEDS, type SetupNeeds, useSetupStatus } from "./use-setup-status";
 
 const log = createLogger("permit2:setup");
 

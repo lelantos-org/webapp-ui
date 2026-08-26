@@ -4,9 +4,9 @@
 
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { walletStore } from "@/features/eip1193/store";
-import { useConnectFlow } from "@/features/wallet/use-connect-flow";
+import { walletStore } from "@/features/eip1193";
 import { announce, detail } from "@/test/eip6963";
+import { useConnectFlow } from "./use-connect-flow";
 
 describe("useConnectFlow", () => {
   beforeEach(() => {

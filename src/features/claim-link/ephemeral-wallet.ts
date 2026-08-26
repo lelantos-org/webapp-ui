@@ -5,21 +5,19 @@ import { type Field, randomFr } from "@lelantos-org/sdk/core";
 import type { SpendPhase } from "@lelantos-org/sdk/wallet";
 import { type ChainEntry, chainKey } from "@/config/chains";
 import { env } from "@/config/env";
+import type { ConnectionBundle } from "@/features/wallet";
 import {
-  describeClaimError,
-  encodeClaimPayload,
-  nskFieldFromHex,
-  nskHexFromField,
-} from "@/features/claim-link/codec";
-import { markClaimLinkBroadcast, rememberClaimLink } from "@/features/claim-link/link-vault";
-import { clearCachedSubscription, resolveSyncStrategy } from "@/features/wallet/fmd-subscription";
-import { networkPreset } from "@/features/wallet/network-preset";
-import { instrumentWallet } from "@/features/wallet/perf";
-import { getProverWorker } from "@/features/wallet/prover/proverWorker";
-import { createScanner } from "@/features/wallet/scanner";
-import { IdbNoteStore } from "@/features/wallet/stores/noteStore";
-import type { ConnectionBundle } from "@/features/wallet/use-connection";
+  clearCachedSubscription,
+  createScanner,
+  getProverWorker,
+  IdbNoteStore,
+  instrumentWallet,
+  networkPreset,
+  resolveSyncStrategy,
+} from "@/features/wallet";
 import { storageDigest } from "@/shared/lib/storage-digest";
+import { describeClaimError, encodeClaimPayload, nskFieldFromHex, nskHexFromField } from "./codec";
+import { markClaimLinkBroadcast, rememberClaimLink } from "./link-vault";
 
 async function deriveEphemeralAddress(nsk: Field): Promise<string> {
   const { address } = await deriveKeysFromNsk(nsk);

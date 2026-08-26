@@ -1,6 +1,6 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { describe, expect, it } from "vitest";
-import type { Connection } from "@/features/wallet/use-connection";
+import type { Connection } from "./use-connection";
 import { deriveWalletStatus, type WalletStatusInputs } from "./wallet-status";
 
 const connection = (over: Partial<Connection> = {}): Connection =>

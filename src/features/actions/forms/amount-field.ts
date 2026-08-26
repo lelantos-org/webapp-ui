@@ -130,14 +130,23 @@ export function depositMaxAmount(
   balanceBase: bigint | undefined,
   scale: bigint,
   feeBps: bigint | undefined,
+  /// The relayer's flat charge in token base units, which Permit2 pulls
+  /// alongside the amount and the protocol fee (`resolveDepositFee`).
+  ///
+  /// Flat, not proportional: the relayer prices gas rather than value, so it
+  /// comes off the top of the balance before the proportional fee is solved
+  /// for, rather than joining the ratio below.
+  relayerReserve = 0n,
 ): bigint | undefined {
   if (balanceBase === undefined || feeBps === undefined) return undefined;
   if (balanceBase <= 0n || scale <= 0n) return undefined;
 
   const fits = (amount: bigint) =>
-    feeBreakdown({ amount, scale, feeBps, mode: "deposit" }).total <= balanceBase;
+    feeBreakdown({ amount, scale, feeBps, mode: "deposit" }).total + relayerReserve <= balanceBase;
 
-  let amount = (balanceBase * BPS_DENOMINATOR) / (BPS_DENOMINATOR + feeBps) / scale;
+  const spendable = balanceBase - relayerReserve;
+  if (spendable <= 0n) return undefined;
+  let amount = (spendable * BPS_DENOMINATOR) / (BPS_DENOMINATOR + feeBps) / scale;
   while (amount > 0n && !fits(amount)) amount -= 1n;
   while (fits(amount + 1n)) amount += 1n;
 

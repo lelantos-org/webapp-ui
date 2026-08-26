@@ -72,6 +72,31 @@
 .modal-advanced > summary:hover { color: var(--accent); }
 .modal-advanced[open] > summary { color: var(--fg-dim); }
 .modal-advanced .modal-meta { margin-top: 6px; }
+/* Token picker in the multi-token Permit2 setup modal. */
+.setup-token-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.setup-token-list > li > label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--fg-dim);
+  cursor: pointer;
+}
+.setup-token-list > li > label:hover { background: var(--bg-hover, rgba(127, 127, 127, 0.08)); }
+.setup-token-list input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+.setup-token-list .modal-meta { margin-left: auto; }
+
 .modal-tx {
   margin: 0;
   font-family: var(--mono);

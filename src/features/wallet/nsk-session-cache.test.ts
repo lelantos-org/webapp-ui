@@ -3,13 +3,8 @@
 
 import type { Field } from "@lelantos-org/sdk/crypto";
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  cacheNsk,
-  clearAllCachedNsk,
-  clearCachedNsk,
-  getCachedNsk,
-} from "@/features/wallet/nsk-session-cache";
 import { accountDigest } from "@/shared/lib/storage-digest";
+import { cacheNsk, clearAllCachedNsk, clearCachedNsk, getCachedNsk } from "./nsk-session-cache";
 
 const ADDR_A = "0xAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaa1";
 const ADDR_B = "0xBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbb1";

@@ -3,27 +3,31 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { ActionForm } from "@/features/actions/forms/ActionForm";
-import { parseAmountSafe, validateAmount } from "@/features/actions/forms/amount-field";
-import { type GenerateLinkInput, generateLinkSchema } from "@/features/actions/forms/schemas";
-import type { TxPhase } from "@/features/actions/tx/tx-progress";
-import { AssetSelectField } from "@/features/assets/AssetSelectField";
+import type { TxPhase } from "@/features/actions";
 import {
+  ActionForm,
+  type GenerateLinkInput,
+  generateLinkSchema,
+  parseAmountSafe,
+  validateAmount,
+} from "@/features/actions";
+import {
+  AssetSelectField,
   DEFAULT_ASSET_ID,
   findAsset,
   type RegisteredAsset,
+  useAssetBalanceLabel,
   useRegisteredAssets,
-} from "@/features/assets/registered-assets";
-import { useAssetBalanceLabel } from "@/features/assets/use-balances";
-import { useActiveChain } from "@/features/chain/ChainProvider";
-import { ClaimLinkResult } from "@/features/claim-link/components/ClaimLinkResult";
-import { GenerateModal } from "@/features/claim-link/components/GenerateModal";
-import { UnclaimedLinks } from "@/features/claim-link/components/UnclaimedLinks";
-import { useClaimLinkStage } from "@/features/claim-link/use-claim-link-stage";
-import { useGenerateLink } from "@/features/claim-link/use-generate-link";
+} from "@/features/assets";
+import { useActiveChain } from "@/features/chain";
 import { describeError } from "@/shared/lib/errors";
 import { formatAssetAmount, parseAmountForAsset } from "@/shared/lib/format";
 import { TextField } from "@/shared/ui/Field";
+import { ClaimLinkResult } from "./components/ClaimLinkResult";
+import { GenerateModal } from "./components/GenerateModal";
+import { UnclaimedLinks } from "./components/UnclaimedLinks";
+import { useClaimLinkStage } from "./use-claim-link-stage";
+import { useGenerateLink } from "./use-generate-link";
 
 /// Phases shown in the running-modal stepper. The mutation actually
 /// resolves after `submitting` (broadcast); `mined`/`settled` fire later

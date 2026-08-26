@@ -3,11 +3,11 @@
 // The exit is driven from outside: `useClaimLinkStage` holds the modal mounted
 // in a `closing` stage for the length of the fade, so this only forwards it.
 
-import type { Step, TxPhase } from "@/features/actions/tx/tx-progress";
-import { ConfirmScreen } from "@/features/claim-link/components/screens/ConfirmScreen";
-import { RunningScreen } from "@/features/claim-link/components/screens/RunningScreen";
-import { SuccessScreen } from "@/features/claim-link/components/screens/SuccessScreen";
+import type { Step, TxPhase } from "@/features/actions";
 import { Modal } from "@/shared/ui/Modal";
+import { ConfirmScreen } from "./screens/ConfirmScreen";
+import { RunningScreen } from "./screens/RunningScreen";
+import { SuccessScreen } from "./screens/SuccessScreen";
 
 export type ModalScreen = "confirm" | "running" | "success";
 

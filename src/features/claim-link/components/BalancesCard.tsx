@@ -1,8 +1,8 @@
-import { findAsset, type RegisteredAsset } from "@/features/assets/registered-assets";
-import type { EphemeralBalance } from "@/features/claim-link/claimLink";
-import { TokenIcon } from "@/features/icons/TokenIcon";
+import { findAsset, type RegisteredAsset } from "@/features/assets";
+import { TokenIcon } from "@/features/icons";
 import { formatAmount, formatAmountForAsset } from "@/shared/lib/format";
 import { AddressBadge } from "@/shared/ui/AddressBadge";
+import type { EphemeralBalance } from "../ephemeral-wallet";
 
 export interface BalancesCardProps {
   balances: EphemeralBalance[];

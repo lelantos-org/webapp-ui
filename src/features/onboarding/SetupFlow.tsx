@@ -1,89 +1,121 @@
 // One-time wallet setup modal for the Permit2 AllowanceTransfer flow.
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
-import type { RegisteredAsset } from "@/features/assets/registered-assets";
-import { useTxExplorerUrl } from "@/features/chain/use-explorer-url";
-import { useInvalidateSetupStatus } from "@/features/onboarding/use-setup-status";
-import { useWallet } from "@/features/wallet";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import type { RegisteredAsset } from "@/features/assets";
+import { useTxExplorerUrl } from "@/features/chain";
 import {
   defaultAllowanceCap,
   defaultAllowanceExpirationSecs,
-  ensurePermit2AuthorizedSetup,
+  ensurePermit2AuthorizedSetupBatch,
+  type SetupProgress,
   type SetupStep,
-  type SetupStepPhase,
-} from "@/features/wallet/permit2";
-import { formatAmountForAsset, shortAddr } from "@/shared/lib/format";
+  useWallet,
+} from "@/features/wallet";
+import { shortAddr } from "@/shared/lib/format";
 import { MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { type ReportedError, reportError } from "@/shared/lib/report-error";
 import { Modal } from "@/shared/ui/Modal";
 import { Stepper, type StepperItem } from "@/shared/ui/Stepper";
 import { useExitTransition } from "@/shared/ui/use-exit-transition";
+import { useInvalidateSetupStatus } from "./use-setup-status";
 
 type Screen = "intro" | "running" | "done" | "failed";
 
-const ALL_STEPS: { id: SetupStep; label: string }[] = [
-  { id: "approving", label: "authorize Permit2" },
-  { id: "signing", label: "sign deposit allowance" },
-  { id: "permitting", label: "submit allowance on-chain" },
+const SHARED_STEPS: { id: SetupStep; label: string }[] = [
+  { id: "signing", label: "sign allowances" },
+  { id: "permitting", label: "submit allowances on-chain" },
 ];
 
-const RUNNING_COPY: Record<SetupStep, Record<SetupStepPhase, string>> = {
-  approving: {
-    wallet: "Approving token for Permit2 — confirm in your wallet.",
-    confirming: "Approval submitted. Waiting for block confirmation…",
-  },
-  signing: {
-    wallet: "Sign the allowance — no gas, just a signature.",
-    confirming: "Sign the allowance — no gas, just a signature.",
-  },
-  permitting: {
-    wallet: "Confirm the on-chain submission in your wallet.",
-    confirming: "Submitted. Waiting for block confirmation…",
-  },
-};
+/// The approval line names its token and its position, because it is the step
+/// that repeats — without that, N identical prompts look like one stuck prompt.
+function runningCopy(p: SetupProgress, symbolOf: (t: string) => string): string {
+  if (p.step === "approving") {
+    const sym = symbolOf(p.token);
+    const where = p.total > 1 ? ` (${p.index}/${p.total})` : "";
+    return p.status === "wallet"
+      ? `Approving ${sym} for Permit2${where} — confirm in your wallet.`
+      : `${sym} approval submitted${where}. Waiting for block confirmation…`;
+  }
+  if (p.step === "signing") return "Sign the allowances — no gas, just one signature.";
+  return p.status === "wallet"
+    ? "Confirm the on-chain submission in your wallet."
+    : "Submitted. Waiting for block confirmation…";
+}
 
-const FALLBACK_AMOUNT_BASE = 100n;
-const EXPIRY_DAYS = 30;
+/// The honest cost of a run: the approvals are the part that does not batch,
+/// so N tokens means N prompts plus the two shared steps. Shared with
+/// `SetupAllModal`, which quotes the same figure before the flow starts.
+export function setupCostLine(approvals: number): string {
+  const a = approvals > 0 ? `${approvals} approval${approvals === 1 ? "" : "s"}, ` : "";
+  return `${a}1 signature, 1 transaction`;
+}
+
+/// Where the flow will start, before any progress callback has fired.
+function initialProgress(toApprove: readonly RegisteredAsset[]): SetupProgress {
+  const first = toApprove[0];
+  return first
+    ? { step: "approving", status: "wallet", token: first.token, index: 1, total: toApprove.length }
+    : { step: "signing", status: "wallet" };
+}
+
+/// Stepper row id for one token's approval. Shared by the row and the
+/// highlight so a rename cannot desync them.
+const approvalStepId = (assetId: bigint | undefined) => `approving:${assetId}`;
+
+const EXPIRY_DAYS = 365;
 const DONE_AUTOCLOSE_MS = 1500;
 
 export interface SetupFlowProps {
-  asset: RegisteredAsset;
-  /// Live deposit amount, in token base units. Sizes the allowance cap.
-  pendingAmountBase?: bigint;
-  /// True if the ERC20 → Permit2 approve step is still required.
-  needsErc20Approve: boolean;
+  /// Tokens to authorize. One entry is the deposit-form path and behaves as it
+  /// always has; N entries collapse the signature and the permit tx into one
+  /// each, which is the whole reason this takes an array.
+  assets: RegisteredAsset[];
+  /// Whether `asset` still needs the ERC20 → Permit2 approval. Per-asset
+  /// because that step is the one that does not batch.
+  needsErc20Approve(assetId: bigint): boolean;
   onSuccess(): void;
   onCancel(): void;
 }
 
-export function SetupFlow({
-  asset,
-  pendingAmountBase,
-  needsErc20Approve,
-  onSuccess,
-  onCancel,
-}: SetupFlowProps) {
+export function SetupFlow({ assets, needsErc20Approve, onSuccess, onCancel }: SetupFlowProps) {
   const { wallet } = useWallet();
   const invalidate = useInvalidateSetupStatus();
   const [screen, setScreen] = useState<Screen>("intro");
-  const [activeStep, setActiveStep] = useState<SetupStep>(
-    needsErc20Approve ? "approving" : "signing",
+  // Memoised so `run` below keeps a stable identity across renders.
+  const toApprove = useMemo(
+    () => assets.filter((a) => needsErc20Approve(a.id)),
+    [assets, needsErc20Approve],
   );
-  const [activeStatus, setActiveStatus] = useState<SetupStepPhase>("wallet");
-  const [activeTxHash, setActiveTxHash] = useState<string | undefined>(undefined);
+  const [progress, setProgress] = useState<SetupProgress>(() => initialProgress(toApprove));
   const [error, setError] = useState<ReportedError | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const { exiting, exit } = useExitTransition(MODAL_EXIT_MS);
   const cancelledRef = useRef(false);
   const descId = useId();
 
-  const baseTotal = pendingAmountBase ?? FALLBACK_AMOUNT_BASE * 10n ** BigInt(asset.decimals);
-  const cap = defaultAllowanceCap(baseTotal);
+  const cap = defaultAllowanceCap();
   const expiration = defaultAllowanceExpirationSecs();
   const expiryStr = new Date(expiration * 1000).toISOString().slice(0, 10);
-  const visibleSteps: StepperItem[] = needsErc20Approve
-    ? ALL_STEPS
-    : ALL_STEPS.filter((s) => s.id !== "approving");
+  const assetByToken = (token: string) =>
+    assets.find((a) => a.token.toLowerCase() === token.toLowerCase());
+  const symbolOf = (token: string) => assetByToken(token)?.symbol ?? "token";
+  const symbolList = assets.map((a) => a.symbol).join(", ");
+  const costLine = `${setupCostLine(toApprove.length)}.`;
+
+  // One approval row per token that needs one — they are separate wallet
+  // prompts, so collapsing them into a single "authorize" row would show a
+  // finished step while more prompts were still coming.
+  const visibleSteps: StepperItem[] = [
+    ...toApprove.map((a) => ({ id: approvalStepId(a.id), label: `authorize ${a.symbol}` })),
+    ...SHARED_STEPS,
+  ];
+  const currentStepId =
+    progress.step === "approving"
+      ? approvalStepId(assetByToken(progress.token)?.id)
+      : progress.step;
+  // Both the running and failed screens want the human label for wherever the
+  // flow currently is, and `visibleSteps` already holds exactly that.
+  const currentLabel = visibleSteps.find((s) => s.id === currentStepId)?.label ?? progress.step;
 
   // The flow is running and the wallet is mid-prompt: no dismiss path is open,
   // and the overlay says so with a busy cursor. `Modal` closes them for the
@@ -97,32 +129,27 @@ export function SetupFlow({
     if (!wallet) return;
     cancelledRef.current = false;
     setError(null);
-    setActiveStep(needsErc20Approve ? "approving" : "signing");
-    setActiveStatus("wallet");
-    setActiveTxHash(undefined);
+    setProgress(initialProgress(toApprove));
     setScreen("running");
     try {
-      await ensurePermit2AuthorizedSetup(
+      await ensurePermit2AuthorizedSetupBatch(
         wallet,
-        asset.token,
-        cap,
-        expiration,
-        (step, status, txHash) => {
+        assets.map((a) => ({ token: a.token, cap, expirationUnixSecs: expiration })),
+        (p) => {
           if (cancelledRef.current) return;
-          setActiveStep(step);
-          setActiveStatus(status);
-          setActiveTxHash(txHash);
+          setProgress(p);
         },
       );
       if (cancelledRef.current) return;
-      await invalidate(asset.id);
+      // Each asset keeps its own cache entry, so each needs its own invalidate.
+      await Promise.all(assets.map((a) => invalidate(a.id)));
       setScreen("done");
     } catch (e) {
       if (cancelledRef.current) return;
       setError(reportError("permit2 setup failed", e));
       setScreen("failed");
     }
-  }, [wallet, asset.id, asset.token, cap, expiration, invalidate, needsErc20Approve]);
+  }, [wallet, assets, cap, expiration, invalidate, toApprove]);
 
   useEffect(() => {
     if (screen !== "done") return;
@@ -149,16 +176,16 @@ export function SetupFlow({
       {screen === "intro" ? (
         <>
           <p id={descId} className="modal-copy">
-            You're depositing <strong>{asset.symbol}</strong> into the shielded pool. We need a
-            one-time on-chain authorization so future deposits take a single signature.
+            Authorizing <strong>{symbolList}</strong> for the shielded pool. This is a one-time
+            on-chain step so future deposits take a single signature.
           </p>
           <p className="modal-copy">
-            This grants the pool an allowance up to{" "}
-            <strong>
-              {formatAmountForAsset(cap, asset.decimals, asset.scale)} {asset.symbol}
-            </strong>
-            , valid for {EXPIRY_DAYS} days.
+            It grants the pool an <strong>unlimited</strong> allowance on{" "}
+            {assets.length === 1 ? "that token" : "those tokens"}, valid for {EXPIRY_DAYS} days. The
+            pool can only draw on it during a deposit you send yourself, and you can revoke it at
+            any time.
           </p>
+          <p className="modal-meta">{costLine}</p>
           <details
             className="modal-advanced"
             open={showAdvanced}
@@ -166,7 +193,7 @@ export function SetupFlow({
           >
             <summary>Advanced</summary>
             <p className="modal-meta">
-              cap: {formatAmountForAsset(cap, asset.decimals, asset.scale)} {asset.symbol}
+              cap: unlimited ({symbolList})
               <br />
               expires: {expiryStr}
               <br />
@@ -187,11 +214,11 @@ export function SetupFlow({
       {screen === "running" ? (
         <>
           <p id={descId} className="modal-copy">
-            {RUNNING_COPY[activeStep][activeStatus]}
+            {runningCopy(progress, symbolOf)}
           </p>
-          <Stepper steps={visibleSteps} current={activeStep} />
-          {activeStatus === "confirming" && activeTxHash ? (
-            <TxHashLine txHash={activeTxHash} />
+          <Stepper steps={visibleSteps} current={currentStepId} />
+          {progress.status === "confirming" && progress.txHash ? (
+            <TxHashLine txHash={progress.txHash} />
           ) : null}
           <p className="modal-meta">Do not close this window.</p>
         </>
@@ -201,10 +228,10 @@ export function SetupFlow({
         <>
           <p id={descId} className="modal-copy">
             {error?.kind === "rejected"
-              ? `You cancelled the ${stepLabel(activeStep)} step. Try again when ready.`
-              : `Setup failed at the ${stepLabel(activeStep)} step.`}
+              ? `You cancelled the ${currentLabel} step. Try again when ready.`
+              : `Setup failed at the ${currentLabel} step.`}
           </p>
-          <Stepper steps={visibleSteps} current={activeStep} failed />
+          <Stepper steps={visibleSteps} current={currentStepId} failed />
           {error?.kind === "failed" ? <div className="err">{error.message}</div> : null}
           <div className="modal-actions">
             <button type="button" className="btn btn--ghost" onClick={requestCancel}>
@@ -227,10 +254,6 @@ export function SetupFlow({
       ) : null}
     </Modal>
   );
-}
-
-function stepLabel(step: SetupStep): string {
-  return ALL_STEPS.find((s) => s.id === step)?.label ?? step;
 }
 
 function TxHashLine({ txHash }: { txHash: string }) {

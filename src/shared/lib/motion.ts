@@ -12,6 +12,11 @@ import { sleep } from "@/shared/lib/timing";
 /// there is one number to keep in step with the CSS.
 export const MODAL_EXIT_MS = 240;
 
+/// Fee-panel collapse duration. Must match the `grid-template-rows` transition
+/// on `.fees-slot` in `fee-summary.css` — the panel holds its last model on
+/// screen for exactly this long so there is something to collapse.
+export const PANEL_COLLAPSE_MS = 220;
+
 /// False when there is no `matchMedia` — SSR and older test environments.
 export function prefersReducedMotion(): boolean {
   return globalThis.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;

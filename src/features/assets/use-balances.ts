@@ -13,24 +13,24 @@
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
-import type { AssetBalanceLabel } from "@/features/assets/asset-option";
-import { useActiveChain } from "@/features/chain/ChainProvider";
+import { useActiveChain } from "@/features/chain";
 import {
   type PendingTotals,
   pruneByBalances,
   pruneExpired,
   usePending,
   usePendingByAsset,
-} from "@/features/pending-tx/store";
-import { useWallet } from "@/features/wallet";
+} from "@/features/pending-tx";
 import {
   type AssetBalance,
   useInvalidateWalletState,
+  useWallet,
   useWalletState,
   type WalletState,
-} from "@/features/wallet/use-wallet-state";
+} from "@/features/wallet";
 import { jitter } from "@/shared/lib/activity";
 import { formatDecimalCompact } from "@/shared/lib/format";
+import type { AssetBalanceLabel } from "./asset-option";
 
 /// How soon to nudge a resync after a watermark-bound entry appears.
 ///

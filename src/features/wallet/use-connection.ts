@@ -2,11 +2,9 @@
 
 import { useCallback, useMemo } from "react";
 import type { ChainEntry } from "@/config/chains";
-import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
-import type { Eip1193Provider } from "@/features/eip1193/store";
-import { walletStore } from "@/features/eip1193/store";
-import { useWalletStore } from "@/features/eip1193/use-store";
-import { useSwitchChain } from "@/features/eip1193/use-switch-chain";
+import { useActiveChainOrUndefined } from "@/features/chain";
+import type { Eip1193Provider } from "@/features/eip1193";
+import { useSwitchChain, useWalletStore, walletStore } from "@/features/eip1193";
 
 /// Everything the SDK signer adapter needs in one bag.
 export interface ConnectionBundle {

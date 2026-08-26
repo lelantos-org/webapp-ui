@@ -1,67 +1,57 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { ActionForm } from "@/features/actions/forms/ActionForm";
-import { AmountField } from "@/features/actions/forms/AmountField";
-import { feeLine, joinHint } from "@/features/actions/forms/fee-hint";
-import { type DepositInput, depositSchema } from "@/features/actions/forms/schemas";
-import { useAmountControls } from "@/features/actions/forms/use-amount-controls";
-import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
-import { useDepositAmount } from "@/features/actions/forms/use-deposit-amount";
-import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
-import { useDeposit } from "@/features/actions/mutations";
-import { AssetPicker } from "@/features/assets/AssetPicker";
+import { useCallback, useMemo } from "react";
 import {
+  AssetPicker,
   DEFAULT_ASSET_ID,
-  findAsset,
   type RegisteredAsset,
-  useRegisteredAssets,
-} from "@/features/assets/registered-assets";
-import { useEthAssetPicker } from "@/features/assets/use-eth-asset-picker";
-import { SetupFlow } from "@/features/onboarding/SetupFlow";
-import { SetupNotice } from "@/features/onboarding/SetupNotice";
-import { useDepositSetup } from "@/features/onboarding/use-deposit-setup";
-import type { FeeBreakdown } from "@/shared/lib/fees";
-import { formatDecimalCompact, parseAmountForAsset } from "@/shared/lib/format";
+  useEthAssetPicker,
+} from "@/features/assets";
+import { SetupFlow, SetupNotice, useDepositSetup } from "@/features/onboarding";
+import { formatDecimalCompact } from "@/shared/lib/format";
 import { Notice } from "@/shared/ui/Notice";
+import { useDeposit } from "../mutations";
+import { ActionForm } from "./ActionForm";
+import { AmountField } from "./AmountField";
+import { FeeSummary } from "./FeeSummary";
+import { joinHint } from "./fee-hint";
+import { type DepositInput, depositSchema } from "./schemas";
+import { useActionForm } from "./use-action-form";
+import { useDepositAmount } from "./use-deposit-amount";
+import { useFeePanel } from "./use-fee-panel";
 
 export function DepositForm() {
-  const { mutation: m, progress } = useDeposit();
-  const assets = useRegisteredAssets();
-  const form = useForm<DepositInput>({
-    resolver: zodResolver(depositSchema),
-    defaultValues: { amount: "", asset: DEFAULT_ASSET_ID, asEth: false },
-  });
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = form;
-  const { clearAmount, setAmount } = useAmountControls(form);
+  const action = useDeposit();
+  const { mutation: m, progress } = action;
+  const { register, watch, setValue, errors, selected, setAmount, clearFinished, onSubmit } =
+    useActionForm<DepositInput, Parameters<typeof m.mutateAsync>[0], unknown>({
+      schema: depositSchema,
+      defaultValues: { amount: "", asset: DEFAULT_ASSET_ID, asEth: false },
+      action,
+      send: (values, { asset, amount }) =>
+        m.mutateAsync({ amount, asset: asset.id, asEth: values.asEth }),
+    });
 
-  const watchedAsset = watch("asset");
   const watchedAsEth = watch("asEth");
-  const { pickerValue, onPickerChange } = useEthAssetPicker(setValue, watchedAsset, watchedAsEth);
-  const selected = findAsset(assets, watchedAsset);
+  const { pickerValue, onPickerChange } = useEthAssetPicker(setValue, watch("asset"), watchedAsEth);
 
+  // `amount` here is the whole amount-and-fee view, not the figure being sent.
   const amount = useDepositAmount(selected, { asEth: watchedAsEth, input: watch("amount") });
   const setup = useDepositSetup(selected?.id, { asEth: watchedAsEth, total: amount.total });
+  // No `onFeeAsset`: a deposit's relayer note is minted in the deposited asset
+  // (`resolveDepositFee`), so there is nothing to choose.
+  const fees = useFeePanel({
+    kind: "deposit",
+    selected,
+    amount: amount.parsed,
+    // The displayed figure, not the one the submit is gated on: the panel
+    // keeps the last amount's fee on screen while the next is priced rather
+    // than blanking on every keystroke.
+    protocol: amount.feeShown,
+    protocolPending: amount.feePending,
+  });
   const submitDisabled = !amount.validation.valid || setup.blocked;
-  const clearFinished = useClearFinishedOp(m, progress);
-  const pendingAmountBase =
-    selected && amount.parsed !== undefined ? amount.parsed * selected.scale : undefined;
-
-  const onSubmit = handleSubmit(
-    useSubmitOnce(async (values) => {
-      if (!selected) return;
-      // Named apart from the `amount` state above, which is the whole
-      // amount-and-fee view rather than the figure being sent.
-      const circuitAmount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
-      await m.mutateAsync({ amount: circuitAmount, asset: selected.id, asEth: values.asEth });
-      clearAmount();
-    }),
-  );
+  const setupErc20 = setup.needs.needsErc20Approve;
+  const needsErc20Approve = useCallback(() => setupErc20, [setupErc20]);
+  const setupAssets = useMemo(() => (selected ? [selected] : []), [selected]);
 
   return (
     <ActionForm
@@ -94,10 +84,11 @@ export function DepositForm() {
         maxAmount={amount.maxAmount}
         validation={amount.validation}
         formError={errors.amount?.message}
-        hint={depositHint(selected, watchedAsEth, amount.sourceBalance, amount.fee)}
+        hint={depositHint(selected, watchedAsEth, amount.sourceBalance)}
         amount={amount.parsed}
         onSetMax={setAmount}
       />
+      <FeeSummary model={fees.model} refreshing={fees.refreshing} />
       {/* Without this the form is simply dead: an unreadable fee leaves the
           amount unvalidatable, and nothing retries it. See `feeFailed`. */}
       {amount.feeFailed && amount.parsed !== undefined ? (
@@ -117,9 +108,8 @@ export function DepositForm() {
           ) : null}
           {setup.open ? (
             <SetupFlow
-              asset={selected}
-              pendingAmountBase={pendingAmountBase}
-              needsErc20Approve={setup.needs.needsErc20Approve}
+              assets={setupAssets}
+              needsErc20Approve={needsErc20Approve}
               onSuccess={setup.complete}
               onCancel={setup.dismiss}
             />
@@ -130,11 +120,15 @@ export function DepositForm() {
   );
 }
 
+/// The mode-and-balance line under the amount field.
+///
+/// Fees used to ride here too. They moved to `FeeSummary`, which has room to
+/// name both of them and to say which is which — a deposit is charged the
+/// protocol fee *and* the relayer's, and one figure could not carry that.
 function depositHint(
   selected: RegisteredAsset | undefined,
   asEth: boolean,
   sourceBalance: bigint | undefined,
-  fee: FeeBreakdown | undefined,
 ): string | undefined {
   if (!selected) return undefined;
   const mode = asEth ? "wraps ETH → WETH then deposits" : `${selected.symbol} via Permit2`;
@@ -145,7 +139,5 @@ function depositHint(
     sourceBalance === undefined
       ? undefined
       : `balance ${formatDecimalCompact(sourceBalance, asEth ? 18 : selected.decimals)} ${sym}`;
-  // The fee is charged on top of a deposit, so the figure worth stating is the
-  // total leaving the wallet.
-  return joinHint(mode, balance, feeLine(fee, selected, "total"));
+  return joinHint(mode, balance);
 }

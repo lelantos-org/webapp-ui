@@ -72,6 +72,35 @@ export function pollInterval(baseMs: number, idle: boolean): number {
   return jitter(idle ? baseMs * IDLE_POLL_FACTOR : baseMs);
 }
 
+/** The `useQuery` options that make a query poll correctly. */
+export interface PollingOptions {
+  refetchInterval: () => number;
+  refetchIntervalInBackground: false;
+}
+
+/**
+ * Every option a polled query needs, so none of them can be left out.
+ *
+ * `pollInterval` above made the idle factor and the jitter inseparable, but the
+ * three things that actually *deliver* them stayed open-coded at each call
+ * site: the `useIsIdle()` subscription, the thunk, and
+ * `refetchIntervalInBackground: false`. Each is easy to omit and none of them
+ * fails loudly — a bare value instead of a thunk freezes the jitter into a
+ * fixed per-session offset, which is a more distinctive fingerprint than the
+ * round number it replaced; a missing background flag keeps polling a hidden
+ * tab. Spreading one object makes all three unrepresentable, for the same
+ * reason `pollInterval` exists at all.
+ *
+ * Usage: `...usePolling(BALANCE_POLL_MS)` inside the `useQuery` options.
+ */
+export function usePolling(baseMs: number): PollingOptions {
+  const idle = useIsIdle();
+  return {
+    refetchInterval: () => pollInterval(baseMs, idle),
+    refetchIntervalInBackground: false,
+  };
+}
+
 /**
  * Cadence for the two queries that answer "what does this wallet hold" — the
  * shielded note sync and the transparent chain reads.
@@ -83,6 +112,21 @@ export function pollInterval(baseMs: number, idle: boolean): number {
  * already grown separate rationales for the same number.
  */
 export const BALANCE_POLL_MS = 30_000;
+
+/**
+ * Cadence of the `/v1/head` watermark poll.
+ *
+ * Six times the rate of `BALANCE_POLL_MS` for a fraction of its cost: the
+ * endpoint is two indexed `MAX()`s and a handful of bytes, where a balance
+ * refresh is a full `syncNotes` plus a recompute over every unspent note. New
+ * value is therefore *detected* in about five seconds while the expensive work
+ * runs only when something actually moved — strictly less often than the old
+ * unconditional 30s poll.
+ *
+ * Goes through `pollInterval` like every other poll here, so the jitter and
+ * idle-widening above apply to it unchanged.
+ */
+export const HEAD_POLL_MS = 5_000;
 
 /**
  * Window in which a remount reuses a cached balance instead of re-reading.

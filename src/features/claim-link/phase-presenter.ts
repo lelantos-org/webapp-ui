@@ -1,7 +1,7 @@
 // Pure presentation helpers derived from the claim-flow Phase.
 
-import type { Phase } from "@/features/claim-link/phase-machine";
 import type { StepperItem } from "@/shared/ui/Stepper";
+import type { Phase } from "./phase-machine";
 
 export const CLAIM_STEPS: StepperItem[] = [
   { id: "link", label: "decode link" },

@@ -39,6 +39,28 @@ export function formatDecimal(value: bigint, decimals: number): string {
   return `${neg ? "-" : ""}${wholeStr}.${fracStr}`;
 }
 
+/// Fractional digits `formatDecimalCompact` keeps for `value`.
+///
+/// Exposed so a *derived* figure can be rendered at least as finely as the
+/// figures it was derived from. A sum shown coarser than its addends does not
+/// read as a rounding, it reads as arithmetic that does not work: a 0.0025
+/// protocol fee plus a 0.00000002 relayer fee, both listed, totalling to
+/// "0.0025" says the panel dropped one of them.
+///
+/// Feed the result back in as `maxFrac` on the derived figure.
+export function compactFracDigits(value: bigint, decimals: number, maxFrac = 6): number {
+  if (decimals <= 0) return 0;
+  const abs = value < 0n ? -value : value;
+  const frac = abs % 10n ** BigInt(decimals);
+  if (frac === 0n) return 0;
+  const digits = frac.toString().padStart(decimals, "0");
+  const leadingZeros = digits.length - digits.replace(/^0+/, "").length;
+  // Dust would truncate to "0" at the cap, so it keeps going until four
+  // significant digits show; anything with a whole part stops at the cap.
+  const floor = abs / 10n ** BigInt(decimals) === 0n ? leadingZeros + 4 : maxFrac;
+  return Math.min(decimals, Math.max(maxFrac, floor));
+}
+
 /// Display-only variant of `formatDecimal` that caps the fractional part.
 /// 18-decimal balances are unreadable in a hint line, so keep at most
 /// `maxFrac` digits, truncating toward zero — never round up, so a balance
@@ -56,10 +78,7 @@ export function formatDecimalCompact(value: bigint, decimals: number, maxFrac = 
   const wholeStr = AMOUNT_FORMATTER.format(whole);
   if (frac === 0n) return `${sign}${wholeStr}`;
   const digits = frac.toString().padStart(decimals, "0");
-  const leadingZeros = digits.length - digits.replace(/^0+/, "").length;
-  const floor = whole === 0n ? leadingZeros + 4 : maxFrac;
-  const keep = Math.min(decimals, Math.max(maxFrac, floor));
-  const fracStr = digits.slice(0, keep).replace(/0+$/, "");
+  const fracStr = digits.slice(0, compactFracDigits(value, decimals, maxFrac)).replace(/0+$/, "");
   return fracStr === "" ? `${sign}${wholeStr}` : `${sign}${wholeStr}.${fracStr}`;
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isUnrecognizedChain } from "@/features/eip1193/errors";
+import { isUnrecognizedChain } from "./errors";
 
 describe("isUnrecognizedChain", () => {
   it("reads the bare code the spec describes", () => {

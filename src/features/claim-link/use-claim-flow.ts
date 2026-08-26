@@ -1,30 +1,23 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 import { type ChainEntry, findChain } from "@/config/chains";
-import { useChainRegistry } from "@/features/chain/ChainProvider";
-import {
-  type ChainMismatch,
-  chainMismatch,
-  describeChainMismatch,
-} from "@/features/claim-link/chain-guard";
+import { useChainRegistry } from "@/features/chain";
+import { currentWalletChainId, useWalletStore } from "@/features/eip1193";
+import type { ConnectionBundle } from "@/features/wallet";
+import { useConnection, useScannerOwner, useWallet } from "@/features/wallet";
+import { describeError } from "@/shared/lib/errors";
+import { createLogger } from "@/shared/lib/logger";
+import { toastError } from "@/shared/lib/toast";
+import { useIsMounted } from "@/shared/lib/use-is-mounted";
+import { type ChainMismatch, chainMismatch, describeChainMismatch } from "./chain-guard";
 import {
   buildEphemeralWallet,
   clearEphemeralStore,
   summarizeEphemeralNotes,
   sweepEphemeral,
-} from "@/features/claim-link/claimLink";
-import { readFragmentFromHash, scrubLocationHash } from "@/features/claim-link/fragment";
-import { type Event, initial, type Phase, reduce } from "@/features/claim-link/phase-machine";
-import { linkChainIdOf } from "@/features/claim-link/phase-presenter";
-import { currentWalletChainId } from "@/features/eip1193/store";
-import { useWalletStore } from "@/features/eip1193/use-store";
-import { useWallet } from "@/features/wallet";
-import type { ConnectionBundle } from "@/features/wallet/use-connection";
-import { useConnection } from "@/features/wallet/use-connection";
-import { useScannerOwner } from "@/features/wallet/use-scanner-owner";
-import { describeError } from "@/shared/lib/errors";
-import { createLogger } from "@/shared/lib/logger";
-import { toastError } from "@/shared/lib/toast";
-import { useIsMounted } from "@/shared/lib/use-is-mounted";
+} from "./ephemeral-wallet";
+import { readFragmentFromHash, scrubLocationHash } from "./fragment";
+import { type Event, initial, type Phase, reduce } from "./phase-machine";
+import { linkChainIdOf } from "./phase-presenter";
 
 const log = createLogger("claim:flow");
 

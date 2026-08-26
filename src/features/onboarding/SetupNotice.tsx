@@ -1,4 +1,4 @@
-import type { RegisteredAsset } from "@/features/assets/registered-assets";
+import type { RegisteredAsset } from "@/features/assets";
 import { Notice } from "@/shared/ui/Notice";
 
 export interface SetupNoticeProps {

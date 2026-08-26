@@ -208,10 +208,15 @@ function describeCode(e: WalletError): string {
       const c = e instanceof InsufficientCoverError ? e : undefined;
       const head = `Insufficient cover${c ? ` for ${c.target}` : ""}.`;
       const n = c?.consolidate.length ?? 0;
-      const tip =
-        n > 0
-          ? `Consolidate ${n} smallest note${n === 1 ? "" : "s"} first, or pass autoConsolidate.`
-          : "Top up the asset balance.";
+      if (n === 0) return `${head} Top up the asset balance.`;
+      // The wallet always asks for consolidation, so the branch that used to
+      // suggest passing `autoConsolidate` was advice on a flag already set —
+      // and it was the only thing this said when consolidation had run and
+      // still not produced a cover. `consolidationAttempted` separates them.
+      const tip = c?.consolidationAttempted
+        ? "Merging notes didn't free up enough — pay the relayer in the asset you're sending, " +
+          "or wait a block and retry."
+        : `Consolidate ${n} smallest note${n === 1 ? "" : "s"} first.`;
       return `${head} ${tip}`;
     }
     case "WALLET_CONFIG":

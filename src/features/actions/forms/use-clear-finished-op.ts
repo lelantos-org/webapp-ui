@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import type { ActionMutation, ProgressView } from "@/features/actions/mutations";
+import type { ActionMutation, ProgressView } from "../mutations";
 
 /// Returns a callback clearing what a finished op left on the form: the
 /// stepper, the tx link and the inline error.

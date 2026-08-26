@@ -3,8 +3,8 @@
 
 import { useCallback } from "react";
 import type { UseFormSetValue } from "react-hook-form";
-import { ETH_OPTION } from "@/features/assets/AssetPicker";
-import { useRegisteredAssets } from "@/features/assets/registered-assets";
+import { ETH_OPTION } from "./AssetPicker";
+import { useRegisteredAssets } from "./registered-assets";
 
 export interface AssetEthForm {
   asset: string;

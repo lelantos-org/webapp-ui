@@ -4,9 +4,9 @@
 // a figure is honest — is testable without rendering a table.
 
 import type { RegisteredAsset } from "@/config/chains";
-import type { AssetBalanceView } from "@/features/assets/use-balances";
-import { assetUsd } from "@/features/prices/asset-usd";
-import type { PriceMap } from "@/features/prices/use-prices";
+import type { PriceMap } from "@/features/prices";
+import { assetUsd } from "@/features/prices";
+import type { AssetBalanceView } from "./use-balances";
 
 export interface PortfolioTotalResult {
   /// Sum over the rows that have a price. Meaningless on its own — read it

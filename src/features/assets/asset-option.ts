@@ -1,4 +1,4 @@
-import type { RegisteredAsset } from "@/features/assets/registered-assets";
+import type { RegisteredAsset } from "./registered-assets";
 
 /// Supplies the balance shown beside an asset in a picker, already formatted;
 /// `undefined` for an asset whose balance is not known yet, which renders as a

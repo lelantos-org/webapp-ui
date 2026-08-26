@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { monogramStyle, monogramText } from "@/features/icons/monogram";
+import { monogramStyle, monogramText } from "./monogram";
 
 /// `monogramStyle` returns `CSSProperties`, which has no index signature for
 /// custom properties. The variables are the whole point of it, so tests read

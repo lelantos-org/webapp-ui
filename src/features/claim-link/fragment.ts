@@ -1,9 +1,5 @@
-import {
-  type ClaimPayload,
-  describeClaimError,
-  parseClaimFragment,
-} from "@/features/claim-link/codec";
 import { err, ok, type Result } from "@/shared/lib/result";
+import { type ClaimPayload, describeClaimError, parseClaimFragment } from "./codec";
 
 export type FragmentError = "missing" | "invalid";
 export type FragmentRead = Result<ClaimPayload, { kind: FragmentError; message: string }>;

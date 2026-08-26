@@ -4,8 +4,8 @@
 // so the two conventions it encodes live in exactly one place: prices are keyed
 // by lowercased address, and an amount is in circuit units.
 
-import type { PriceMap } from "@/features/prices/use-prices";
 import { usdValue } from "@/shared/lib/format";
+import type { PriceMap } from "./use-prices";
 
 /// The parts of an asset needed to price it. Satisfied by both `RegisteredAsset`
 /// and the forms' `AssetMeta`.

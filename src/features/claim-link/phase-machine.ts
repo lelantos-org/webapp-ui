@@ -1,5 +1,5 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
-import type { EphemeralBalance } from "@/features/claim-link/claimLink";
+import type { EphemeralBalance } from "./ephemeral-wallet";
 
 export type Phase =
   | { kind: "reading-fragment" }

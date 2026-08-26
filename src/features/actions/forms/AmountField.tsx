@@ -1,16 +1,15 @@
 import type { UseFormRegisterReturn } from "react-hook-form";
+import { assetUsd, usePrices } from "@/features/prices";
+import { preloadProverWorker } from "@/features/wallet";
+import { formatUsd } from "@/shared/lib/format";
+import { TextField } from "@/shared/ui/Field";
 import {
   type AmountValidation,
   type AssetMeta,
   formatBalance,
   pickAmountError,
-} from "@/features/actions/forms/amount-field";
-import { joinHint } from "@/features/actions/forms/fee-hint";
-import { assetUsd } from "@/features/prices/asset-usd";
-import { usePrices } from "@/features/prices/use-prices";
-import { preloadProverWorker } from "@/features/wallet/prover/proverWorker";
-import { formatUsd } from "@/shared/lib/format";
-import { TextField } from "@/shared/ui/Field";
+} from "./amount-field";
+import { joinHint } from "./fee-hint";
 
 export interface AmountFieldProps {
   inputProps: UseFormRegisterReturn;

@@ -2,11 +2,11 @@ import { type EvmAddress, evmAddress } from "@lelantos-org/sdk";
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { useRegisteredAssets } from "@/features/assets/registered-assets";
-import { useActiveChain } from "@/features/chain/ChainProvider";
+import { useActiveChain } from "@/features/chain";
 import { useWallet } from "@/features/wallet";
-import { BALANCE_POLL_MS, BALANCE_STALE_MS, pollInterval, useIsIdle } from "@/shared/lib/activity";
+import { BALANCE_POLL_MS, BALANCE_STALE_MS, usePolling } from "@/shared/lib/activity";
 import { createLogger } from "@/shared/lib/logger";
+import { useRegisteredAssets } from "./registered-assets";
 
 const log = createLogger("balances:transparent");
 
@@ -80,7 +80,6 @@ export function useDepositSourceBalance(
   const { chainId } = useActiveChain();
   const assets = useRegisteredAssets();
   const token = asEth ? undefined : assets.find((a) => a.id === assetId)?.token;
-  const idle = useIsIdle();
 
   const { data } = useQuery<bigint | null>({
     queryKey: sourceBalanceKey(wallet ? chainId : undefined, ethAddress, assetId, asEth),
@@ -96,8 +95,7 @@ export function useDepositSourceBalance(
     // factor, and the one that sends the user's EOA to a third-party RPC on
     // every tick. An unattended tab kept announcing that address every 30s
     // indefinitely.
-    refetchInterval: () => pollInterval(BALANCE_POLL_MS, idle),
-    refetchIntervalInBackground: false,
+    ...usePolling(BALANCE_POLL_MS),
     staleTime: BALANCE_STALE_MS,
   });
 

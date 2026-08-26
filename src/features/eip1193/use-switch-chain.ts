@@ -1,8 +1,8 @@
 import { useCallback } from "react";
 import type { ChainEntry } from "@/config/chains";
-import { walletStore } from "@/features/eip1193/store";
 import { createLogger } from "@/shared/lib/logger";
 import { toastError } from "@/shared/lib/toast";
+import { walletStore } from "./store";
 
 const log = createLogger("eip1193:switch-chain");
 

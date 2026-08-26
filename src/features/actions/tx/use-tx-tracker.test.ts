@@ -11,8 +11,9 @@ const trackTxLifecycle = vi.fn();
 const invalidate = vi.fn();
 const fetchAssetEntry = vi.fn();
 const fetchFeeBps = vi.fn();
+const quoteFee = vi.fn();
 
-vi.mock("@/features/actions/tx/lifecycle", () => ({
+vi.mock("./lifecycle", () => ({
   trackTxLifecycle: (...a: unknown[]) => trackTxLifecycle(...a),
 }));
 vi.mock("@/features/pending-tx/store", () => ({
@@ -25,16 +26,19 @@ vi.mock("@/features/assets/asset-entry", () => ({
 vi.mock("@/features/chain/ChainProvider", () => ({
   useActiveChain: () => ({ chainId: 1n, explorerUrl: undefined }),
 }));
-vi.mock("@/features/wallet", () => ({
+// Mock the leaf, not the barrel: mocking `@/features/wallet` wholesale would
+// also blank the other symbols the barrel re-exports, including the
+// `useInvalidateWalletState` mocked just below.
+vi.mock("@/features/wallet/use-wallet", () => ({
   useWallet: () => ({
-    wallet: { chain: { fetchFeeBps }, balance: () => 0n },
+    wallet: { chain: { fetchFeeBps }, balance: () => 0n, quoteFee },
   }),
 }));
 vi.mock("@/features/wallet/use-wallet-state", () => ({
   useInvalidateWalletState: () => invalidate,
 }));
 
-const { useTxTracker } = await import("@/features/actions/tx/use-tx-tracker");
+const { useTxTracker } = await import("./use-tx-tracker");
 
 const swapArgs = {
   label: "swap",
@@ -49,6 +53,7 @@ beforeEach(() => {
   invalidate.mockReset().mockResolvedValue(undefined);
   fetchAssetEntry.mockReset().mockResolvedValue({ scale: 1n });
   fetchFeeBps.mockReset().mockResolvedValue(25n);
+  quoteFee.mockReset().mockResolvedValue({ options: [], charged: false });
 });
 
 describe("useTxTracker", () => {

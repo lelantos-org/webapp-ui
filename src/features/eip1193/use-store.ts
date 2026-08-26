@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { type ConnectionState, walletStore } from "@/features/eip1193/store";
+import { type ConnectionState, walletStore } from "./store";
 
 /// React-bound view of the wallet store. Selectors should be referentially
 /// stable — return primitives or memoised tuples to avoid extra renders.

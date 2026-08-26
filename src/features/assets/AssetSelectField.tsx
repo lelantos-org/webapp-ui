@@ -1,7 +1,7 @@
 import { forwardRef, type SelectHTMLAttributes } from "react";
-import { type AssetBalanceLabel, assetOptionLabel } from "@/features/assets/asset-option";
-import { DEFAULT_ASSET_ID, useRegisteredAssets } from "@/features/assets/registered-assets";
 import { Field } from "@/shared/ui/Field";
+import { type AssetBalanceLabel, assetOptionLabel } from "./asset-option";
+import { DEFAULT_ASSET_ID, useRegisteredAssets } from "./registered-assets";
 
 export type AssetSelectFieldProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "className"> & {
   label?: string;

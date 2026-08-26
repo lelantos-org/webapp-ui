@@ -1,5 +1,5 @@
-import { useWalletState } from "@/features/wallet/use-wallet-state";
 import { describeError } from "@/shared/lib/errors";
+import { useWalletState } from "./use-wallet-state";
 
 /// Banner shown inside the action forms when the wallet-state sync failed.
 ///

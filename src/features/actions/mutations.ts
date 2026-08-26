@@ -12,6 +12,19 @@ import {
 } from "@lelantos-org/sdk";
 import { type UseMutationResult, useMutation } from "@tanstack/react-query";
 import { useCallback } from "react";
+import { fetchAssetFeeInputs, useInvalidateTransparentBalances } from "@/features/assets";
+import { useActiveChain } from "@/features/chain";
+import { preopenDepositStream } from "@/features/relayer";
+import {
+  approvePermit2,
+  needsPermit2Approval,
+  useInvalidateWalletState,
+  useWallet,
+} from "@/features/wallet";
+import { isDuplicateSpend } from "@/shared/lib/errors";
+import { feeBreakdown } from "@/shared/lib/fees";
+import { createLogger } from "@/shared/lib/logger";
+import { toastError } from "@/shared/lib/toast";
 import type {
   DepositCall,
   ShieldedActions,
@@ -20,26 +33,11 @@ import type {
   TxResult,
   WithAsset,
   WithdrawCall,
-} from "@/features/actions/port";
-import { stepsFor, terminalFor } from "@/features/actions/tx/tx-progress";
-import { type TxProgressApi, useTxProgress } from "@/features/actions/tx/use-tx-progress";
-import {
-  type TrackTxArgs,
-  type TrackTxRequest,
-  useTxTracker,
-} from "@/features/actions/tx/use-tx-tracker";
-import { requireActions, useShieldedActions } from "@/features/actions/use-shielded-actions";
-import { fetchAssetFeeInputs } from "@/features/assets/asset-entry";
-import { useInvalidateTransparentBalances } from "@/features/assets/transparent-balances";
-import { useActiveChain } from "@/features/chain/ChainProvider";
-import { preopenDepositStream } from "@/features/relayer/deposit-stream";
-import { useWallet } from "@/features/wallet";
-import { approvePermit2, needsPermit2Approval } from "@/features/wallet/permit2";
-import { useInvalidateWalletState } from "@/features/wallet/use-wallet-state";
-import { isDuplicateSpend } from "@/shared/lib/errors";
-import { feeBreakdown } from "@/shared/lib/fees";
-import { createLogger } from "@/shared/lib/logger";
-import { toastError } from "@/shared/lib/toast";
+} from "./port";
+import { stepsFor, terminalFor } from "./tx/tx-progress";
+import { type TxProgressApi, useTxProgress } from "./tx/use-tx-progress";
+import { type TrackTxArgs, type TrackTxRequest, useTxTracker } from "./tx/use-tx-tracker";
+import { requireActions, useShieldedActions } from "./use-shielded-actions";
 
 const log = createLogger("actions:spend");
 
@@ -240,7 +238,13 @@ export function useTransfer(): ActionMutation<TransferCall, WithAsset<TransferRe
     label: () => "transfer",
     run: (a, i, progress) => {
       progress.start(stepsFor("transfer"));
-      return a.transfer({ to: i.to, amount: i.amount, asset: i.asset, onPhase: progress.set });
+      return a.transfer({
+        to: i.to,
+        amount: i.amount,
+        asset: i.asset,
+        feeAsset: i.feeAsset,
+        onPhase: progress.set,
+      });
     },
     track: (i, result) => ({
       kind: "transfer",
@@ -256,7 +260,13 @@ export function useWithdraw(): ActionMutation<WithdrawCall, WithAsset<WithdrawRe
     run: (a, i, progress) => {
       progress.start(stepsFor("withdraw"));
       // Both entry points take the same request; only the unwrap differs.
-      const req = { to: i.to, amount: i.amount, asset: i.asset, onPhase: progress.set };
+      const req = {
+        to: i.to,
+        amount: i.amount,
+        asset: i.asset,
+        feeAsset: i.feeAsset,
+        onPhase: progress.set,
+      };
       return i.asEth ? a.withdrawEth(req) : a.withdraw(req);
     },
     track: (i, result) => ({ kind: i.asEth ? "withdrawEth" : "withdraw", result }),
@@ -273,6 +283,7 @@ export function useSwap(): ActionMutation<SwapCall, WithAsset<SwapResult>> {
         assetOut: i.assetOut,
         amount: i.amount,
         quote: i.quote,
+        feeAsset: i.feeAsset,
         onPhase: progress.set,
       });
     },

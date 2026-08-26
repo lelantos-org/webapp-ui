@@ -4,8 +4,8 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainEntry } from "@/config/chains";
-import { walletStore } from "@/features/eip1193/store";
 import { announce } from "@/test/eip6963";
+import { walletStore } from "./store";
 
 const CHAIN = {
   chainId: 31337n,

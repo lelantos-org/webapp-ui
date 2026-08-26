@@ -9,8 +9,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { z } from "zod";
 import { env } from "@/config/env";
-import { useActiveChain } from "@/features/chain/ChainProvider";
-import { pollInterval, useIsIdle } from "@/shared/lib/activity";
+import { useActiveChain } from "@/features/chain";
+import { usePolling } from "@/shared/lib/activity";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("prices");
@@ -65,7 +65,6 @@ async function fetchPrices(): Promise<z.infer<typeof pricesResponse>> {
 /// balances, forms and totals still work without it.
 export function usePrices(): PriceMap {
   const { chainId } = useActiveChain();
-  const idle = useIsIdle();
 
   // Not scoped to the chain: the body covers every chain the relayer serves, so
   // scoping the key would refetch the same document on each network switch.
@@ -73,10 +72,7 @@ export function usePrices(): PriceMap {
     queryKey: ["asset-prices"],
     queryFn: fetchPrices,
     staleTime: 60_000,
-    // A thunk, so react-query redraws the jitter after each fetch rather than
-    // fixing one offset for the session — see `activity.ts`.
-    refetchInterval: () => pollInterval(PRICE_POLL_MS, idle),
-    refetchIntervalInBackground: false,
+    ...usePolling(PRICE_POLL_MS),
   });
 
   const rows = query.data?.prices;

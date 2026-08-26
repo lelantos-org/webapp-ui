@@ -1,47 +1,48 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { ActionForm } from "@/features/actions/forms/ActionForm";
-import { AmountField } from "@/features/actions/forms/AmountField";
-import { NO_META, parseAmountSafe, validateAmount } from "@/features/actions/forms/amount-field";
-import { balanceHint } from "@/features/actions/forms/balance-hint";
-import { feeLine, joinHint, settledFee } from "@/features/actions/forms/fee-hint";
-import { RecipientField } from "@/features/actions/forms/RecipientField";
-import { isEvmAddress, type WithdrawInput, withdrawSchema } from "@/features/actions/forms/schemas";
-import { useAmountControls } from "@/features/actions/forms/use-amount-controls";
-import { useClearFinishedOp } from "@/features/actions/forms/use-clear-finished-op";
-import { useSubmitOnce } from "@/features/actions/forms/use-submit-once";
-import { useWithdraw } from "@/features/actions/mutations";
-import { useFeePreview } from "@/features/actions/use-fee-preview";
-import { AssetPicker } from "@/features/assets/AssetPicker";
+import { useState } from "react";
 import {
+  AssetPicker,
   DEFAULT_ASSET_ID,
-  findAsset,
-  useRegisteredAssets,
-} from "@/features/assets/registered-assets";
-import { useAssetBalance, useAssetBalanceLabel } from "@/features/assets/use-balances";
-import { useEthAssetPicker } from "@/features/assets/use-eth-asset-picker";
-import { SyncErrorNotice } from "@/features/wallet/SyncErrorNotice";
-import { parseAmountForAsset } from "@/shared/lib/format";
+  useAssetBalance,
+  useAssetBalanceLabel,
+  useEthAssetPicker,
+} from "@/features/assets";
+import { SyncErrorNotice, useSpendableMax } from "@/features/wallet";
+import { useWithdraw } from "../mutations";
+import { useFeePreview } from "../use-fee-preview";
+import { ActionForm } from "./ActionForm";
+import { AmountField } from "./AmountField";
+import { NO_META, parseAmountSafe, validateAmount } from "./amount-field";
+import { balanceHint, withheldHint } from "./balance-hint";
+import { FeeSummary } from "./FeeSummary";
+import { feeIncoming, joinHint, shownFee } from "./fee-hint";
+import { RecipientField } from "./RecipientField";
+import { isEvmAddress, type WithdrawInput, withdrawSchema } from "./schemas";
+import { useActionForm } from "./use-action-form";
+import { useFeePanel } from "./use-fee-panel";
+import { useFollowMax } from "./use-follow-max";
 
 export function WithdrawForm() {
-  const { mutation: m, progress } = useWithdraw();
-  const assets = useRegisteredAssets();
-  const form = useForm<WithdrawInput>({
-    resolver: zodResolver(withdrawSchema),
-    defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID, asEth: false },
-  });
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors },
-  } = form;
-  const { clearAmount, setAmount } = useAmountControls(form);
-  const watchedAsset = watch("asset");
+  const action = useWithdraw();
+  const { mutation: m, progress } = action;
+  const { register, watch, setValue, errors, selected, setAmount, clearFinished, onSubmit } =
+    useActionForm<WithdrawInput, Parameters<typeof m.mutateAsync>[0], unknown>({
+      schema: withdrawSchema,
+      defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID, asEth: false },
+      action,
+      send: (values, { asset, amount }) =>
+        m.mutateAsync({
+          amount,
+          asset: asset.id,
+          to: values.to,
+          asEth: values.asEth,
+          // Ignored on the native path, which has no `feeAsset` — see
+          // `WithdrawEthRequest`.
+          feeAsset,
+        }),
+    });
+
   const watchedAsEth = watch("asEth");
-  const { pickerValue, onPickerChange } = useEthAssetPicker(setValue, watchedAsset, watchedAsEth);
-  const selected = findAsset(assets, watchedAsset);
+  const { pickerValue, onPickerChange } = useEthAssetPicker(setValue, watch("asset"), watchedAsEth);
   const row = useAssetBalance(selected?.id);
   const balance = row?.balance;
   const balanceOf = useAssetBalanceLabel();
@@ -49,22 +50,35 @@ export function WithdrawForm() {
   const parsed = parseAmountSafe(watch("amount"), selected);
   const v = validateAmount(parsed, selected, balance);
   const fee = useFeePreview(selected?.id, parsed, "withdraw");
-  const submitDisabled = !v.valid;
-  const clearFinished = useClearFinishedOp(m, progress);
 
-  const onSubmit = handleSubmit(
-    useSubmitOnce(async (values) => {
-      if (!selected) return;
-      const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
-      await m.mutateAsync({
-        amount,
-        asset: selected.id,
-        to: values.to,
-        asEth: values.asEth,
-      });
-      clearAmount();
-    }),
-  );
+  const [feeAsset, setFeeAsset] = useState<bigint | undefined>(undefined);
+  const fees = useFeePanel({
+    kind: "withdraw",
+    selected,
+    amount: parsed,
+    // The displayed figure, which may be held over from the previous amount
+    // while the next is priced. Nothing here gates the submit on it — a
+    // withdraw's protocol fee comes off `publicOut`, not off the cover.
+    protocol: shownFee(fee),
+    protocolPending: feeIncoming(fee),
+    feeAsset,
+    // Withheld on the native path: `withdrawEth` takes no `feeAsset`, so
+    // offering the choice would be offering one that is silently dropped.
+    onFeeAsset: watchedAsEth ? undefined : setFeeAsset,
+  });
+
+  // See the note in `TransferForm`: the balance overstates what a spend can
+  // cover. A withdraw's protocol fee is deducted from `publicOut` rather than
+  // taken from the spend's cover, so only the relayer fee reserves value here.
+  const crossAssetFee = feeAsset !== undefined && feeAsset !== selected?.id;
+  const spendable = useSpendableMax(selected?.id, {
+    crossAssetFee,
+    sameAssetFee: crossAssetFee ? 0n : fees.relayerAmount,
+  });
+
+  // Switching the fee asset moves the ceiling; a figure this wrote before
+  // that change has to move with it. See `use-follow-max.ts`.
+  const { onSetMax } = useFollowMax(spendable?.max, selected, watch("amount"), setAmount);
 
   return (
     <ActionForm
@@ -72,7 +86,7 @@ export function WithdrawForm() {
       busy={m.isPending}
       error={m.error}
       onSubmit={onSubmit}
-      submitDisabled={submitDisabled}
+      submitDisabled={!v.valid}
       progress={progress}
       txHash={m.data?.txHash}
     >
@@ -101,18 +115,17 @@ export function WithdrawForm() {
       <AmountField
         inputProps={register("amount")}
         selected={selected}
-        maxAmount={balance}
+        maxAmount={spendable?.max}
         validation={v}
         formError={errors.amount?.message}
         hint={joinHint(
           balanceHint(balance, row?.pending ?? 0n, row?.outflow ?? 0n, selected ?? NO_META),
-          // Deducted from the gross amount, so the figure worth stating is what
-          // the recipient actually receives.
-          feeLine(settledFee(fee), selected, "receive"),
+          withheldHint(spendable, selected ?? NO_META),
         )}
         amount={parsed}
-        onSetMax={setAmount}
+        onSetMax={onSetMax}
       />
+      <FeeSummary model={fees.model} refreshing={fees.refreshing} feeAsset={fees.feeAsset} />
     </ActionForm>
   );
 }

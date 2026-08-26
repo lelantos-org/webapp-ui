@@ -1,8 +1,8 @@
 import type { Field } from "@lelantos-org/sdk/crypto";
-import { nskFieldFromHex, nskHexFromField } from "@/features/wallet/nsk-codec";
 import { createLogger } from "@/shared/lib/logger";
 import { sessionStore } from "@/shared/lib/storage";
 import { accountDigest } from "@/shared/lib/storage-digest";
+import { nskFieldFromHex, nskHexFromField } from "./nsk-codec";
 
 const log = createLogger("nsk-cache");
 /// `v2` because the key *shape* changed: v1 spelled the address out. Bumping

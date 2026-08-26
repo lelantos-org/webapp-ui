@@ -1,11 +1,7 @@
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import { describe, expect, it } from "vitest";
-import type { Phase } from "@/features/claim-link/phase-machine";
-import {
-  heroSubtitleFor,
-  linkChainIdOf,
-  stepperStateFor,
-} from "@/features/claim-link/phase-presenter";
+import type { Phase } from "./phase-machine";
+import { heroSubtitleFor, linkChainIdOf, stepperStateFor } from "./phase-presenter";
 
 const CHAIN = 31337n;
 const eph = {} as WalletApi;

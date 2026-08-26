@@ -6,10 +6,10 @@ import type { Hex32 } from "@lelantos-org/sdk";
 import type { FlushWait } from "@lelantos-org/sdk/relayer";
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
 import type { ChainEntry } from "@/config/chains";
-import { isTerminal, type TxPhase } from "@/features/actions/tx/tx-progress";
-import { depositStream, preopenDepositStream } from "@/features/relayer/deposit-stream";
+import { depositStream, preopenDepositStream } from "@/features/relayer";
 import { createLogger } from "@/shared/lib/logger";
 import { toastTx } from "@/shared/lib/toast";
+import { isTerminal, type TxPhase } from "./tx-progress";
 
 const log = createLogger("tx:lifecycle");
 

@@ -11,12 +11,12 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChainEntry } from "@/config/chains";
-import type { Connection } from "@/features/wallet/use-connection";
 import { deferred } from "@/test/harness";
+import type { Connection } from "./use-connection";
 
 const buildWallet = vi.fn();
 
-vi.mock("@/features/wallet/buildWallet", () => ({
+vi.mock("./build-wallet", () => ({
   buildWallet: (...args: unknown[]) => buildWallet(...args),
 }));
 vi.mock("@/features/chain/ChainProvider", () => ({
@@ -25,13 +25,13 @@ vi.mock("@/features/chain/ChainProvider", () => ({
 vi.mock("@/features/relayer/deposit-stream", () => ({
   closeDepositStreamsExcept: vi.fn(),
 }));
-vi.mock("@/features/wallet/nsk-session-cache", () => ({
+vi.mock("./nsk-session-cache", () => ({
   getCachedNsk: () => undefined,
 }));
-vi.mock("@/features/wallet/scanner", () => ({
+vi.mock("./scanner", () => ({
   releaseScanner: (...args: unknown[]) => releaseScanner(...args),
 }));
-vi.mock("@/features/wallet/sync-progress-store", () => ({
+vi.mock("./sync-progress-store", () => ({
   syncProgress: { reset: vi.fn(), finished: vi.fn(), scanning: vi.fn() },
 }));
 
@@ -39,7 +39,7 @@ const releaseScanner = vi.fn();
 
 const chain = { chainId: 1n, chainName: "test" } as ChainEntry;
 
-const { useBuildWallet } = await import("@/features/wallet/use-build-wallet");
+const { useBuildWallet } = await import("./use-build-wallet");
 
 const walletFor = (address: string) => ({ address: `shielded:${address}` }) as unknown as WalletApi;
 

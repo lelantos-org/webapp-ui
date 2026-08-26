@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { ChainBadge } from "@/features/chain/ChainBadge";
-import { HealthIndicator } from "@/features/system/HealthIndicator";
-import { ConnectButton } from "@/features/wallet/ConnectButton";
+import { ChainBadge } from "@/features/chain";
+import { HealthIndicator } from "@/features/system";
+import { ConnectButton } from "@/features/wallet";
 import { Backdrop } from "@/shared/ui/Backdrop";
 import { BetaBanner } from "@/shared/ui/BetaBanner";
 

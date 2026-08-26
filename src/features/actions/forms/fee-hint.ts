@@ -1,9 +1,11 @@
-// The protocol-fee line under an amount field, and the rule for when it may
-// be shown at all.
+// The rule for when a fee preview may be shown at all.
+//
+// The fee *lines* moved to `FeeSummary`, which has room to name the protocol
+// and relayer charges separately. What is left here is the staleness gate they
+// are both read through, and the hint joiner the amount field still uses.
 
-import type { FeePreviewResult } from "@/features/actions/use-fee-preview";
 import type { FeeBreakdown } from "@/shared/lib/fees";
-import { formatDecimalCompact } from "@/shared/lib/format";
+import type { FeePreviewResult } from "../use-fee-preview";
 
 /// The preview's data, or `undefined` while the debounce is catching up.
 ///
@@ -15,27 +17,24 @@ export function settledFee(fee: FeePreviewResult): FeeBreakdown | undefined {
   return fee.stale ? undefined : fee.data;
 }
 
-/// Where the fee falls relative to the amount the user typed.
+/// The preview's data for *display*, held-over figures included.
 ///
-/// A deposit is charged the fee *on top* (`total = amount + fee`), so the
-/// figure that matters is what leaves the wallet. A withdraw has it *deducted*
-/// (`total = amount - fee`), so it is what arrives.
-export type FeeSide = "total" | "receive";
+/// The counterpart of `settledFee`, and the distinction is the point: a fee
+/// panel that shows the previous amount's figure for a beat reads as a number
+/// settling, while one that blanks on every keystroke reads as breakage. This
+/// is never the value to gate a submit on.
+export function shownFee(fee: FeePreviewResult): FeeBreakdown | undefined {
+  return fee.data;
+}
 
-/// `fee 0.003 (0.30%) · total 1.003 USDC`, or `undefined` when there is no fee
-/// to state — the chain charges none, or the preview has not settled.
+/// Whether a protocol-fee figure is still on its way.
 ///
-/// Amounts are in ERC20 base units, so they format by the token's decimals
-/// alone, without the circuit-units scale.
-export function feeLine(
-  fee: FeeBreakdown | undefined,
-  asset: { symbol: string; decimals: number } | undefined,
-  side: FeeSide,
-): string | undefined {
-  if (!asset || !fee || fee.fee === 0n) return undefined;
-  const fmt = (v: bigint) => formatDecimalCompact(v, asset.decimals);
-  const bps = (Number(fee.feeBps) / 100).toFixed(2);
-  return `fee ${fmt(fee.fee)} (${bps}%) · ${side} ${fmt(fee.total)} ${asset.symbol}`;
+/// What the panel needs in order to hold a line open for it rather than
+/// growing one when it lands. True only while there is nothing to show *and*
+/// nothing has gone wrong: a failed read collapses the row and lets the retry
+/// notice speak, instead of leaving a placeholder that never resolves.
+export function feeIncoming(fee: FeePreviewResult): boolean {
+  return fee.data === undefined && !fee.isError;
 }
 
 /// Join hint fragments with the separator the forms use, dropping empties.

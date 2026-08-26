@@ -1,16 +1,16 @@
 // Reads Permit2 AllowanceTransfer setup state for the selected ERC20 asset.
 
 import { supportsAllowanceTransfer, type WalletApi } from "@lelantos-org/sdk";
-import { type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type UseQueryResult, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
-import { fetchAssetEntry } from "@/features/assets/asset-entry";
-import { useActiveChain } from "@/features/chain/ChainProvider";
-import { useWallet } from "@/features/wallet";
+import { fetchAssetEntry } from "@/features/assets";
+import { useActiveChain } from "@/features/chain";
 import {
   type Permit2AllowanceState,
   readPermit2AllowanceState,
   SAFETY_BUFFER_SECS,
-} from "@/features/wallet/permit2";
+  useWallet,
+} from "@/features/wallet";
 
 export type SetupStatus = Permit2AllowanceState;
 
@@ -77,6 +77,32 @@ export function evaluateSetup(
   };
 }
 
+/// Per-asset {@link evaluateSetup}. `totals` is optional and keyed by asset id;
+/// an asset with no entry is evaluated as "no amount typed yet", which is an
+/// existence check rather than a comparison against a real total.
+export function evaluateSetupMany(
+  statuses: ReadonlyMap<bigint, SetupStatus | undefined>,
+  totals?: ReadonlyMap<bigint, bigint | undefined>,
+  nowSecs: number = Math.floor(Date.now() / 1000),
+): Map<bigint, SetupNeeds> {
+  const out = new Map<bigint, SetupNeeds>();
+  for (const [asset, status] of statuses) {
+    out.set(asset, evaluateSetup(status, totals?.get(asset), nowSecs));
+  }
+  return out;
+}
+
+/// The one place the probe is defined. Both `useSetupStatus` and
+/// `useSetupStatusMany` call it, so a change to what "setup state" means cannot
+/// land in one hook and not the other.
+async function fetchSetupStatus(
+  wallet: WalletApi,
+  asset: bigint,
+): Promise<SetupStatus | undefined> {
+  const entry = await fetchAssetEntry(wallet, asset);
+  return readPermit2AllowanceState(wallet, entry.token);
+}
+
 /// Probe the AllowanceTransfer state for `asset`. Returns `undefined` for
 /// the native-ETH path (no Permit2 needed) and adapters without AllowanceTransfer.
 export function useSetupStatus(
@@ -93,12 +119,55 @@ export function useSetupStatus(
     enabled,
     queryFn: async () => {
       if (!wallet || asset === undefined) return undefined;
-      const entry = await fetchAssetEntry(wallet, asset);
-      return readPermit2AllowanceState(wallet as WalletApi, entry.token);
+      return fetchSetupStatus(wallet as WalletApi, asset);
     },
     refetchOnWindowFocus: true,
     staleTime: 30_000,
   });
+}
+
+/// Probe several assets at once.
+///
+/// `useQueries`, not one aggregate query: each asset keeps its own cache entry
+/// under `setupStatusKey`, so the prefix-invalidation in
+/// {@link useInvalidateSetupStatus} still reaches them, and a single-asset
+/// deposit form and the multi-token modal share the same cached reads.
+export function useSetupStatusMany(assets: readonly bigint[]): {
+  statuses: Map<bigint, SetupStatus | undefined>;
+  isLoading: boolean;
+  isError: boolean;
+} {
+  const { wallet } = useWallet();
+  const { chainId } = useActiveChain();
+  const enabled = !!wallet && supportsAllowanceTransfer(wallet.chain);
+
+  const results = useQueries({
+    queries: assets.map((asset) => ({
+      queryKey: setupStatusKey(chainId, wallet?.address, asset),
+      enabled,
+      queryFn: async () => {
+        if (!wallet) return undefined;
+        return fetchSetupStatus(wallet as WalletApi, asset);
+      },
+      refetchOnWindowFocus: true,
+      staleTime: 30_000,
+    })),
+  });
+
+  const statuses = new Map<bigint, SetupStatus | undefined>();
+  assets.forEach((asset, i) => {
+    const r = results[i];
+    // Only settled rows are reported. A pending row is not "no setup needed" —
+    // `evaluateSetup(undefined, …)` means "this chain cannot answer", which
+    // would read a still-loading probe as nothing-to-do.
+    if (r?.isSuccess) statuses.set(asset, r.data);
+  });
+
+  return {
+    statuses,
+    isLoading: results.some((r) => r.isLoading),
+    isError: results.some((r) => r.isError),
+  };
 }
 
 /// Invalidator hook used by the setup modal on success.

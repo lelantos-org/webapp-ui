@@ -1,4 +1,4 @@
-import { type ServiceState, useSystemHealth } from "@/features/system/use-system-health";
+import { type ServiceState, useSystemHealth } from "./use-system-health";
 
 /// Single aggregate dot for relayer + fmd reachability.
 export function HealthIndicator() {

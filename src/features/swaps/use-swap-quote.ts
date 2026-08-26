@@ -18,7 +18,7 @@ import { fetchSwapQuote, type SwapQuote, type SwapQuoteRequest } from "@lelantos
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { env } from "@/config/env";
-import { pollInterval, useIsIdle } from "@/shared/lib/activity";
+import { usePolling } from "@/shared/lib/activity";
 import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
 
 export type QuoteRequest = SwapQuoteRequest;
@@ -50,7 +50,6 @@ export type QuoteResult = UseQueryResult<SwapQuote> & { stale: boolean };
 /// `undefined` disables the query outright, which is how the form says the
 /// pair is incomplete, the assets match, or the amount does not validate.
 export function useSwapQuote(request: QuoteRequest | undefined): QuoteResult {
-  const idle = useIsIdle();
   const pinned = usePinnedRequest(request);
   const settled = useDebouncedValue(pinned, DEBOUNCE_MS);
   const stale = settled !== pinned;
@@ -64,8 +63,7 @@ export function useSwapQuote(request: QuoteRequest | undefined): QuoteResult {
       if (!settled) throw new Error("not ready");
       return fetchSwapQuote(baseUrl, settled);
     },
-    refetchInterval: () => pollInterval(REFRESH_MS, idle),
-    refetchIntervalInBackground: false,
+    ...usePolling(REFRESH_MS),
     // Under the refresh interval, so switching tabs and coming back does not
     // buy a quote the running refresh was about to fetch anyway.
     staleTime: REFRESH_MS,

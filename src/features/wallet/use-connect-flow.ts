@@ -8,7 +8,7 @@
 // installed had no say in which of them they were about to sign with.
 
 import { useCallback, useState } from "react";
-import { type Eip6963ProviderDetail, preferredRdns, walletStore } from "@/features/eip1193/store";
+import { type Eip6963ProviderDetail, preferredRdns, walletStore } from "@/features/eip1193";
 
 export interface ConnectFlow {
   /// The wallets to choose between, snapshotted when the picker opened;

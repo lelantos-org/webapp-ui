@@ -1,6 +1,6 @@
 import type { ChainEntry } from "@/config/chains";
-import { useChainRegistry } from "@/features/chain/ChainProvider";
-import { ChainIcon } from "@/features/icons/ChainIcon";
+import { ChainIcon } from "@/features/icons";
+import { useChainRegistry } from "./ChainProvider";
 
 /// The networks this deployment serves, named before a wallet is connected.
 ///

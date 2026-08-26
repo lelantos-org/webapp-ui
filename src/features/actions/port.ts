@@ -47,6 +47,13 @@ export interface TransferRequest {
   to: string;
   amount: bigint;
   asset?: bigint;
+  /// Asset to pay the relayer in. Defaults to the asset being moved.
+  ///
+  /// A different one costs two circuit slots — an input note of that asset and
+  /// an output for its change — which the default 4x4 shape has room for. The
+  /// relayer has to have quoted it, or the SDK rejects the spend before any
+  /// proving starts.
+  feeAsset?: bigint;
   onPhase?: (phase: SpendPhase) => void;
 }
 
@@ -54,6 +61,13 @@ export interface WithdrawRequest {
   to: string;
   amount: bigint;
   asset?: bigint;
+  /// Asset to pay the relayer in. Defaults to the asset being moved.
+  ///
+  /// A different one costs two circuit slots — an input note of that asset and
+  /// an output for its change — which the default 4x4 shape has room for. The
+  /// relayer has to have quoted it, or the SDK rejects the spend before any
+  /// proving starts.
+  feeAsset?: bigint;
   onPhase?: (phase: SpendPhase) => void;
 }
 
@@ -63,6 +77,9 @@ export interface WithdrawEthRequest {
   to: string;
   amount: bigint;
   asset: bigint;
+  /// No `feeAsset`, unlike every other spend: `WithdrawEthOptions` has none.
+  /// The native path binds `NativeAdapter` as both relayer and recipient, so
+  /// the fee is paid in the asset being unwrapped.
   onPhase?: (phase: SpendPhase) => void;
 }
 
@@ -75,6 +92,13 @@ export interface SwapRequest {
   /// Circuit units of `assetIn` (gross publicOut — MASP fee deducted on top).
   amount: bigint;
   quote: SwapQuote;
+  /// Asset to pay the relayer in. Defaults to the asset being moved.
+  ///
+  /// A different one costs two circuit slots — an input note of that asset and
+  /// an output for its change — which the default 4x4 shape has room for. The
+  /// relayer has to have quoted it, or the SDK rejects the spend before any
+  /// proving starts.
+  feeAsset?: bigint;
   onPhase?: (phase: SpendPhase) => void;
 }
 
@@ -100,6 +124,13 @@ export interface TransferCall {
   amount: bigint;
   asset: bigint;
   to: string;
+  /// Asset to pay the relayer in. Defaults to the asset being moved.
+  ///
+  /// A different one costs two circuit slots — an input note of that asset and
+  /// an output for its change — which the default 4x4 shape has room for. The
+  /// relayer has to have quoted it, or the SDK rejects the spend before any
+  /// proving starts.
+  feeAsset?: bigint;
 }
 
 export interface WithdrawCall {
@@ -107,6 +138,13 @@ export interface WithdrawCall {
   asset: bigint;
   to: string;
   asEth: boolean;
+  /// Asset to pay the relayer in. Defaults to the asset being moved.
+  ///
+  /// A different one costs two circuit slots — an input note of that asset and
+  /// an output for its change — which the default 4x4 shape has room for. The
+  /// relayer has to have quoted it, or the SDK rejects the spend before any
+  /// proving starts.
+  feeAsset?: bigint;
 }
 
 export interface GenerateLinkCall {
@@ -119,4 +157,11 @@ export interface SwapCall {
   assetOut: bigint;
   amount: bigint;
   quote: SwapQuote;
+  /// Asset to pay the relayer in. Defaults to the asset being moved.
+  ///
+  /// A different one costs two circuit slots — an input note of that asset and
+  /// an output for its change — which the default 4x4 shape has room for. The
+  /// relayer has to have quoted it, or the SDK rejects the spend before any
+  /// proving starts.
+  feeAsset?: bigint;
 }

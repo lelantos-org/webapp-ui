@@ -1,4 +1,4 @@
-import { useActiveChainOrUndefined } from "@/features/chain/ChainProvider";
+import { useActiveChainOrUndefined } from "./ChainProvider";
 
 /// Which network the app is talking to. Read-only by design.
 ///
