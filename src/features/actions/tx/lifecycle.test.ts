@@ -114,7 +114,7 @@ describe("trackTxLifecycle", () => {
   });
 
   it("settles with a terminal phase when the hard timeout fires", async () => {
-    // Nothing ever resolves; only the hard timer gets us out.
+    // Nothing resolves, so only the hard timer ends the lifecycle.
     const { opts, phases, onSettled } = harness({
       wallet: {
         chain: { waitTxReceipt: vi.fn().mockReturnValue(new Promise(() => {})) },

@@ -1,8 +1,8 @@
 // Turning a token amount into dollars.
 //
-// Split from `use-prices` so the arithmetic is testable without a query, and
-// so the two conventions it encodes live in exactly one place: prices are keyed
-// by lowercased address, and an amount is in circuit units.
+// Split from `use-prices` so the arithmetic is testable without a query, and so
+// the two conventions it encodes live in one place: prices are keyed by
+// lowercased address, and amounts are in circuit units.
 
 import { usdValue } from "@/shared/lib/format";
 import type { PriceMap } from "./use-prices";
@@ -12,8 +12,8 @@ import type { PriceMap } from "./use-prices";
 export interface PricedAsset {
   decimals: number;
   scale: bigint;
-  /// Backing ERC-20 address. Absent on the placeholder metas the forms fall
-  /// back to, which is simply "no price".
+  /// Backing ERC-20 address. Absent on the placeholder metas the forms fall back
+  /// to, which yields no price.
   token?: string;
 }
 
@@ -21,14 +21,14 @@ export interface PricedAsset {
 ///
 /// The lowercasing lives here and nowhere else. The registry hands out
 /// checksummed addresses while the relayer sends lowercase ones, so a lookup
-/// that forgets it silently finds nothing — and a silently unpriced token looks
-/// exactly like one the provider does not cover.
+/// omitting it finds nothing, and an unpriced token is indistinguishable from one
+/// the provider does not cover.
 export function priceOf(prices: PriceMap, token: string | undefined): number | undefined {
   return token ? prices.get(token.toLowerCase())?.priceUsd : undefined;
 }
 
 /// Dollar value of `amount` circuit units of `asset`, or `undefined` when the
-/// asset has no price. Never `0` standing in for "unknown".
+/// asset has no price. Never `0`, which would read as a priced zero.
 export function assetUsd(amount: bigint, asset: PricedAsset, prices: PriceMap): number | undefined {
   const price = priceOf(prices, asset.token);
   return price === undefined ? undefined : usdValue(amount, asset.decimals, asset.scale, price);

@@ -1,8 +1,7 @@
 // Slippage entry for the swap form.
 //
-// Its own file because it owns a self-contained slice of policy — the presets,
-// and the wording that tells the user what each one risks — that has nothing to
-// do with quoting or submitting.
+// Owns a self-contained slice of policy: the presets and the wording describing
+// what each one risks, independent of quoting and submitting.
 
 const SLIPPAGE_PRESETS_BPS = [10, 50, 100] as const;
 
@@ -33,10 +32,9 @@ export function SlippageField({ bps, onChange, error }: SlippageFieldProps) {
           const m = SLIP_META[b];
           const on = bps === b;
           return (
-            // Native radios: the browser supplies arrow-key navigation and
-            // roving focus that the equivalent ARIA pattern would have to
-            // reimplement. The input is visually hidden; the label carries
-            // the styling.
+            // Native radios: the browser supplies the arrow-key navigation and
+            // roving focus an equivalent ARIA pattern would have to reimplement.
+            // The input is visually hidden and the label carries the styling.
             <label key={b} className={`slip__opt ${on ? "slip__opt--on" : ""}`}>
               <input
                 type="radio"

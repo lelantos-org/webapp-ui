@@ -56,7 +56,7 @@ describe("IdbTreePersistence", () => {
   });
 
   it("round-trips leaves and nodes across many chunks", async () => {
-    // Deliberately not a chunk multiple, so the tail record is partial.
+    // Not a chunk multiple, so the tail record is partial.
     const s = state(2500);
     await new IdbTreePersistence(key).save(s);
 

@@ -24,10 +24,10 @@ const TABS = [
 
 const TRANSITION_MS = 360;
 
-/// Warms the route chunk and the prover together: reaching for a tab is the
-/// first observable intent to transact, and every tab leads to a form ending in
-/// a proof. Both calls are idempotent, so repeated hovers cost nothing. On
-/// touch devices `pointerenter` fires on tap.
+/// Warms the route chunk and the prover together: reaching for a tab is the first
+/// observable intent to transact, and every tab leads to a form ending in a
+/// proof. Both calls are idempotent, so repeated hovers cost nothing. On touch
+/// devices `pointerenter` fires on tap.
 function warmTab(to: string): void {
   PREFETCH[to]?.();
   void preloadProverWorker();
@@ -46,9 +46,9 @@ export function HomeLayout() {
   const chainId = useActiveChainOrUndefined()?.chainId;
   const ready = status === "ready" && !!wallet;
 
-  // Keep <Welcome /> mounted briefly after `ready` flips so CSS opacity can
-  // transition out. The connected layout renders simultaneously underneath
-  // (grid-stacked), producing a cross-fade rather than a hard swap.
+  // Keep `<Welcome />` mounted briefly after `ready` flips, so the CSS opacity
+  // transition can complete. The connected layout renders underneath in the same
+  // grid cell, producing a cross-fade rather than a hard swap.
   const [welcomeMounted, setWelcomeMounted] = useState(!ready);
   useEffect(() => {
     if (ready) {
@@ -58,7 +58,8 @@ export function HomeLayout() {
     setWelcomeMounted(true);
   }, [ready]);
 
-  // Pre-warm tab chunks during idle time to avoid first-click Suspense flicker.
+  // Pre-warm tab chunks during idle time, avoiding a Suspense fallback on the
+  // first click.
   useEffect(() => {
     if (!ready) return;
     const run = () => {

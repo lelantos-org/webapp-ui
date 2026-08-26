@@ -66,7 +66,7 @@ describe("useBuildWallet", () => {
     const addrB = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb1";
     const walletA = walletFor(addrA);
     // B's build never settles: it is blocked on an EIP-712 prompt the user has
-    // not answered. That window is exactly when the stale wallet used to show.
+    // not answered. That window is when a stale wallet would be visible.
     const pendingB = deferred<WalletApi>();
     buildWallet.mockImplementation((bundle: { address: string }) =>
       bundle.address === addrA ? Promise.resolve(walletA) : pendingB.promise,
@@ -100,9 +100,9 @@ describe("useBuildWallet", () => {
     });
     expect(result.current.wallet).toBeUndefined();
 
-    // Reconnecting must not unmask the old value: `disconnect` already disposed
-    // its scanner pool and prover, so it is dead, not merely stale. A build that
-    // has not resolved yet leaves `wallet` undefined rather than `ready`.
+    // Reconnecting must not unmask the retained value: `disconnect` disposed its
+    // scanner pool and prover, so it is dead rather than stale. A build that has
+    // not resolved leaves `wallet` undefined rather than `ready`.
     const pending = deferred<WalletApi>();
     buildWallet.mockReturnValue(pending.promise);
     await act(async () => {

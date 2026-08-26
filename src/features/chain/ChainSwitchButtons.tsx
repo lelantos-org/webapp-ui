@@ -4,29 +4,27 @@ import { ChainIcon } from "@/features/icons";
 import { useActiveChainOrUndefined, useChainRegistry } from "./ChainProvider";
 
 export interface ChainSwitchButtonsProps {
-  /// Restrict the offer to one chain — used when a claim link names the chain
-  /// it belongs to. Omitted, every chain the deployment serves is offered.
+  /// Restrict the offer to one chain, as when a claim link names the chain it
+  /// belongs to. Omitted, every chain the deployment serves is offered.
   only?: bigint;
-  /// Centred for the full-screen Welcome panel; `"start"` to line the buttons
-  /// up with the text of a card body. Asked for here rather than overridden
-  /// from the outside, so this component still owns its own layout.
+  /// Centred for the full-screen Welcome panel; `"start"` aligns the buttons with
+  /// the text of a card body. Taken as a prop rather than overridden externally,
+  /// so this component keeps ownership of its layout.
   align?: "center" | "start";
 }
 
-/// Buttons that move the *wallet* to a supported chain.
+/// Buttons that move the wallet to a supported chain.
 ///
 /// Not a chain picker: there is no app-level chain to pick. Each button calls
-/// `wallet_switchEthereumChain`, so the wallet remains the single source of
-/// truth and the app simply follows. That is why this replaced the header
-/// dropdown — the dropdown implied the app had a chain of its own.
+/// `wallet_switchEthereumChain`, keeping the wallet the single source of truth.
 ///
-/// The chain the wallet is already on is omitted rather than disabled: an
+/// The chain the wallet is already on is omitted rather than disabled, since an
 /// inert button invites a click that does nothing.
 export function ChainSwitchButtons({ only, align = "center" }: ChainSwitchButtonsProps) {
   const registry = useChainRegistry();
   const switchChain = useSwitchChain();
-  // `undefined` on an unsupported network, which is exactly when every chain
-  // should be offered.
+  // `undefined` on an unsupported network, which is when every chain should be
+  // offered.
   const active = useActiveChainOrUndefined();
 
   const offered = registry.filter(

@@ -10,15 +10,14 @@ import type { ChainEntry } from "@/config/chains";
 import type { ShieldedActions, WithAsset } from "./port";
 
 /// Adapt the SDK's `WalletApi` to the webapp's `ShieldedActions` port. Pure
-/// translation — no caching, no retries, no logging. Cross-cutting concerns
-/// live above this layer (mutation hooks, instrumentation).
+/// translation: no caching, retries or logging, which belong to the layers above
+/// (mutation hooks, instrumentation).
 ///
-/// SDK results are returned as-is, tagged with an `asset: bigint` (the UI
-/// needs it for pending overlays + lifecycle). The per-kind casts are safe:
-/// `WalletApi` types every action as `Promise<TransactionResult>` (the union)
-/// but each method only ever produces its corresponding variant at runtime.
-/// Casting back to the variant gives call sites the narrowed shape without
-/// a runtime guard.
+/// SDK results are returned as-is, tagged with an `asset: bigint` that pending
+/// overlays and the lifecycle require. The per-kind casts are sound:
+/// `WalletApi` types every action as `Promise<TransactionResult>`, but each
+/// method produces only its corresponding variant at runtime, so casting back
+/// gives call sites the narrowed shape without a runtime guard.
 export function createSdkActions(wallet: WalletApi, chain: ChainEntry): ShieldedActions {
   return {
     deposit: async (r) => {
@@ -57,9 +56,9 @@ export function createSdkActions(wallet: WalletApi, chain: ChainEntry): Shielded
         to: evmAddress(r.to),
         amount: r.amount,
         asset: r.asset,
-        // No `feeAsset`: `WithdrawEthOptions` has none. The native path is
-        // bound to `NativeAdapter` as both relayer and recipient, so the fee
-        // rides in the asset being unwrapped.
+        // No `feeAsset`: `WithdrawEthOptions` has none. The native path binds
+        // `NativeAdapter` as both relayer and recipient, so the fee is paid in
+        // the asset being unwrapped.
         autoConsolidate: true,
         onPhase: r.onPhase,
       })) as WithdrawResult;

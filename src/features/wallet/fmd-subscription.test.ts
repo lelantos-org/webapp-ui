@@ -139,8 +139,8 @@ describe("resolveSyncStrategy", () => {
   });
 
   it("falls back to the firehose when the server reports the subscription inactive", async () => {
-    // `active: false` used to be logged and ignored. The resulting sync does
-    // not error: `listNotes` returns an empty page, the run reports
+    // `active: false` must not be logged and ignored: the resulting sync does
+    // not error, since `listNotes` returns an empty page, the run reports
     // `exhausted` with zero hits, and the user is shown a healthy
     // "synced just now" beside a zero balance — permanently, since the token
     // stayed in localStorage across reloads.

@@ -1,16 +1,16 @@
 // Shared scaffolding for hook tests.
 //
-// Small, but worth centralising: a per-test `QueryClient` with retries left on
-// is a classic source of tests that pass locally and hang in CI, and each copy
-// of the wrapper was one more place to get that wrong.
+// Centralised so every test gets a per-test `QueryClient` with retries disabled;
+// leaving retries on is a common source of tests that pass locally and hang in
+// CI.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, type ReactNode } from "react";
 
 /// `renderHook` wrapper providing a fresh, isolated `QueryClient`.
 ///
-/// Fresh per render so no cache leaks between tests, and `retry: false` so a
-/// deliberately-failing query settles immediately instead of running the
+/// Fresh per render so no cache leaks between tests, with `retry: false` so an
+/// intentionally failing query settles immediately rather than running the
 /// default backoff schedule past the test timeout.
 export function queryWrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({
@@ -30,9 +30,8 @@ export interface Deferred<T> {
 
 /// A promise plus the handles to settle it.
 ///
-/// For holding an async step open across assertions — the point being to
-/// observe what the UI reports *while* the work is in flight, which is where
-/// most of the interesting states live.
+/// Holds an async step open across assertions, so a test can observe what the UI
+/// reports while the work is in flight.
 export function deferred<T>(): Deferred<T> {
   let resolve!: (value: T) => void;
   let reject!: (reason: unknown) => void;

@@ -1,16 +1,13 @@
-// The spine every action form shares, so the three of them differ only where
-// they actually differ.
+// The spine shared by every action form.
 //
-// Deposit, transfer and withdraw were each ~120 lines that opened with the same
-// twenty: build the form against a zod schema, read the registered assets,
-// resolve the selected one, wire the amount controls, clear a finished op, and
-// wrap the submit so it parses the amount, calls the mutation and clears the
-// field. Only the middle of that list is interesting per form, and a change to
-// any of the rest — the submit guard, the reset semantics — meant three edits
-// that could silently diverge.
+// Deposit, transfer and withdraw all build a form against a zod schema, read the
+// registered assets, resolve the selected one, wire the amount controls, clear a
+// finished op, and wrap the submit so it parses the amount, calls the mutation
+// and clears the field. Stating that once keeps the submit guard and reset
+// semantics identical across the three.
 //
-// What stays in the forms: their fields, their hints, and whatever else is
-// genuinely theirs (the ETH picker, the fee preview, the deposit setup flow).
+// The forms keep their own fields, hints, and anything specific to them: the ETH
+// picker, the fee preview, the deposit setup flow.
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -32,19 +29,19 @@ import { useAmountControls } from "./use-amount-controls";
 import { useClearFinishedOp } from "./use-clear-finished-op";
 import { useSubmitOnce } from "./use-submit-once";
 
-/// Every action form is an amount against a chosen asset. Both are strings
-/// because they are bound to inputs; `asset` is parsed by the schema.
+/// Every action form is an amount against a chosen asset. Both are strings, being
+/// bound to inputs; `asset` is parsed by the schema.
 export type ActionFormValues = FieldValues & { amount: string; asset: string };
 
 export interface ActionFormOptions<T extends ActionFormValues, I, R> {
-  /// Input is left open: `asset` carries a zod `.default()`, so the schema's
-  /// input type has it optional while its output does not.
+  /// The input type is left open: `asset` carries a zod `.default()`, so the
+  /// schema's input has it optional while its output does not.
   schema: ZodType<T, ZodTypeDef, unknown>;
   defaultValues: DefaultValues<T>;
   action: ActionMutation<I, R>;
   /// Called with the validated values, the resolved asset, and the amount
-  /// already converted to circuit units. Returning is what clears the amount,
-  /// so a rejected submit leaves the user's entry in place.
+  /// converted to circuit units. Returning clears the amount, so a rejected
+  /// submit leaves the user's entry in place.
   send(values: T, ctx: { asset: RegisteredAsset; amount: bigint }): Promise<unknown>;
 }
 
@@ -54,13 +51,13 @@ export interface ActionFormApi<T extends ActionFormValues> {
   watch: UseFormWatch<T>;
   setValue: UseFormSetValue<T>;
   errors: FieldErrors<T>;
-  /// The asset the picker currently names, or `undefined` before the registry
-  /// has loaded or if it names one the chain does not have.
+  /// The asset the picker names, or `undefined` before the registry has loaded or
+  /// when it names one the chain does not have.
   selected: RegisteredAsset | undefined;
   /// Write an amount the user did not type (the "max" button).
   setAmount(formatted: string): void;
-  /// Clear a finished op's stepper and inline result. Call from whatever the
-  /// user touches first after a completed submit, usually the asset picker.
+  /// Clear a finished op's stepper and inline result. Call from the first control
+  /// the user touches after a completed submit, usually the asset picker.
   clearFinished(): void;
   onSubmit(e?: React.BaseSyntheticEvent): Promise<void>;
 }
@@ -82,16 +79,16 @@ export function useActionForm<T extends ActionFormValues, I, R>({
     formState: { errors },
   } = form;
   const { clearAmount, setAmount } = useAmountControls(form);
-  // `watch` is keyed by `Path<T>`; the constraint above guarantees the field
-  // exists, but the generic cannot see it — the same cast `useAmountControls`
-  // makes for `amount`.
+  // `watch` is keyed by `Path<T>`. The constraint above guarantees the field
+  // exists but the generic cannot express it, so the cast matches the one
+  // `useAmountControls` makes for `amount`.
   const selected = findAsset(assets, watch("asset" as Path<T>) as string);
   const clearFinished = useClearFinishedOp(mutation, progress);
 
   const onSubmit = handleSubmit(
     useSubmitOnce(async (values: T) => {
-      // No asset means the registry has not resolved the picker's value; there
-      // is nothing to send and nothing worth reporting.
+      // No asset means the registry has not resolved the picker's value, so
+      // there is nothing to send.
       if (!selected) return;
       const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
       await send(values, { asset: selected, amount });

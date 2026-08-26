@@ -22,9 +22,9 @@ describe("balanceHint", () => {
   });
 });
 
-// The line that explains a max lower than the balance printed beside it. The
-// failure it replaced was the app's own max being rejected by the app's own
-// selector: "insufficient unspent value for asset 1: have X, need Y".
+// The line explaining a max lower than the balance printed beside it. Without
+// it, the app's own max is rejected by its own selector with "insufficient
+// unspent value for asset 1: have X, need Y".
 describe("withheldHint", () => {
   const spendable = (withheld: Partial<SpendableMax["withheld"]>): SpendableMax =>
     ({

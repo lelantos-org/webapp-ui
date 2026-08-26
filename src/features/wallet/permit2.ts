@@ -1,6 +1,6 @@
-// Helpers around the SDK's optional Permit2 chain methods. Predicate and
-// action are split so callers can pre-decide whether to render an
-// "approving" step before kicking off the tx.
+// Helpers around the SDK's optional Permit2 chain methods. Predicate and action
+// are split so a caller can decide whether to render an "approving" step before
+// starting the transaction.
 
 import {
   type EvmAddress,
@@ -12,9 +12,9 @@ import {
 
 const MAX_UINT256 = tokenAmount((1n << 256n) - 1n);
 
-/// True when payer's allowance for `token` to Permit2 is below `total`;
-/// false when the chain adapter lacks Permit2 helpers (non-EVM), meaning
-/// no approval step is needed.
+/// True when the payer's allowance for `token` to Permit2 is below `total`.
+/// False when the chain adapter lacks Permit2 helpers (non-EVM), where no
+/// approval step applies.
 export async function needsPermit2Approval(
   wallet: WalletApi,
   token: EvmAddress,
@@ -27,8 +27,8 @@ export async function needsPermit2Approval(
   return cur < total;
 }
 
-/// Send a `tokenApprove(MAX)` tx for `token` against Permit2. Caller must
-/// have confirmed the approval is needed via `needsPermit2Approval`.
+/// Send a `tokenApprove(MAX)` tx for `token` against Permit2. Callers must first
+/// confirm the approval is needed via `needsPermit2Approval`.
 export async function approvePermit2(wallet: WalletApi, token: EvmAddress): Promise<void> {
   const chain = wallet.chain;
   if (!chain.tokenApprove || !chain.permit2Address) {
@@ -41,49 +41,44 @@ export async function approvePermit2(wallet: WalletApi, token: EvmAddress): Prom
 // AllowanceTransfer helpers — no per-deposit Permit2 signature needed.
 // ============================================================================
 
-/// `type(uint160).max` — the sentinel Permit2 reads as an unlimited allowance.
+/// `type(uint160).max`, the sentinel Permit2 reads as an unlimited allowance.
 export const UNLIMITED_ALLOWANCE = (1n << 160n) - 1n;
 
-/// Default allowance cap. Unlimited, and deliberately not a function of the
-/// deposit amount.
+/// Default allowance cap: unlimited, and independent of the deposit amount.
 ///
-/// The old heuristic was `depositTotal * 10n`, sized from whatever was typed
-/// in the form when setup ran. That made setup re-trigger mid-session on a
-/// token the user had already authorized: the window drained after ~10
-/// same-sized deposits, and a single larger deposit outran it immediately,
-/// because `evaluateSetup` compares the window against the *current* total.
+/// A cap sized from the current deposit re-triggers setup mid-session, since
+/// `evaluateSetup` compares the window against the current total and any larger
+/// deposit immediately outruns it.
 ///
-/// Permit2 treats `type(uint160).max` as unlimited *and* non-decrementing —
+/// Permit2 treats `type(uint160).max` as unlimited and non-decrementing —
 /// `AllowanceTransfer._transfer` guards the subtraction with
 /// `if (maxAmount != type(uint160).max)` — so the window never drains and
-/// `expiration` becomes the only bound.
+/// `expiration` is the only bound.
 ///
-/// Safe despite the size: `MASP.depositAuthorized` is the sole spender of this
-/// allowance, and it reverts `PayerNotSender` unless `msg.sender == d.payer`.
-/// Nothing moves without a transaction the payer signed themselves. Revisit
-/// this if the pool ever gains a path that pulls the allowance on someone
-/// else's behalf.
+/// `MASP.depositAuthorized` is the sole spender of this allowance and reverts
+/// `PayerNotSender` unless `msg.sender == d.payer`, so nothing moves without a
+/// transaction the payer signed. Revisit if the pool gains a path that pulls the
+/// allowance on another party's behalf.
 export function defaultAllowanceCap(): bigint {
   return UNLIMITED_ALLOWANCE;
 }
 
-/// Default allowance expiry (unix-seconds).
+/// Default allowance expiry (unix seconds).
 ///
-/// A year, not a month. With a non-draining cap this is the only thing that
-/// ends the grant, so it stays finite rather than `type(uint48).max` — but a
-/// 30-day window meant re-signing every month for no benefit the expiry itself
-/// provides.
+/// One year. With a non-draining cap this is the only thing that ends the grant,
+/// so it stays finite rather than `type(uint48).max`, while being long enough to
+/// avoid routine re-signing.
 export function defaultAllowanceExpirationSecs(): number {
   return Math.floor(Date.now() / 1000) + 365 * 24 * 3600;
 }
 
-/// Matches `ALLOWANCE_BUFFER_SECS` in the SDK, which decides the same way.
+/// Matches the SDK's `ALLOWANCE_BUFFER_SECS`, which applies the same rule.
 export const SAFETY_BUFFER_SECS = 60;
 
 /// Both allowances an AllowanceTransfer deposit depends on.
 export interface Permit2AllowanceState {
   /// ERC-20 → Permit2, in token base units. Permit2 pulls through this, so a
-  /// signed window is worthless without it.
+  /// signed window has no effect without it.
   erc20Allowance: bigint;
   /// Permit2 → MASP window: the cap, its expiry, and the nonce to sign next.
   window: { amount: bigint; expiration: number; nonce: number };
@@ -93,16 +88,14 @@ export interface Permit2AllowanceState {
 /// answer — no AllowanceTransfer support, or a registry row with no
 /// `permit2Address` (the field is optional).
 ///
-/// `undefined`, not zeros. Zeros are a real reading meaning "nothing is
-/// approved", and `evaluateSetup` correctly treats them as "setup required" —
-/// so returning them for a chain where setup *cannot run* produced a closed
-/// loop: `SetupNotice` prompts, the setup fails for want of a Permit2 address,
-/// the notice comes back. ERC-20 deposits on that chain were unusable, and the
-/// screen blamed a missing approval.
+/// `undefined` rather than zeros. Zeros are a valid reading meaning nothing is
+/// approved, which `evaluateSetup` treats as "setup required"; returning them
+/// for a chain where setup cannot run would loop `SetupNotice` against a setup
+/// that can never succeed.
 ///
-/// Deliberately returns raw values rather than a verdict: the amount being
-/// deposited changes per keystroke, while these reads are per (payer, token),
-/// so the caller applies the amount via `evaluateSetup`.
+/// Returns raw values rather than a verdict: these reads are per (payer, token)
+/// while the deposit amount changes per keystroke, so the caller applies the
+/// amount via `evaluateSetup`.
 export async function readPermit2AllowanceState(
   wallet: WalletApi,
   token: EvmAddress,
@@ -121,17 +114,17 @@ export async function readPermit2AllowanceState(
 }
 
 export type SetupStep = "approving" | "signing" | "permitting";
-/// Where a `SetupStep` currently is: awaiting the wallet prompt, or waiting
-/// on the chain. Distinct from `onboarding/use-setup-status`'s `SetupStepPhase`,
-/// which is the allowance probe result — hence the narrower name.
+/// Where a `SetupStep` currently is: awaiting the wallet prompt, or waiting on
+/// the chain. Distinct from `onboarding/use-setup-status`'s `SetupStepPhase`,
+/// which reports the allowance probe result.
 export type SetupStepPhase = "wallet" | "confirming";
 
 /// Where a batch setup currently is.
 ///
-/// `approving` is the one step that repeats — the ERC-20 approval is a method
-/// on each token, so N tokens means N prompts — and it is the only variant
-/// carrying a token. `signing` and `permitting` happen once for the whole
-/// batch. Modelled as a union so a reader cannot forget which is which.
+/// `approving` is the only repeating step — the ERC-20 approval is a method on
+/// each token, so N tokens means N prompts — and the only variant carrying a
+/// token. `signing` and `permitting` occur once per batch. Modelled as a union
+/// so the distinction is enforced by the type.
 export type SetupProgress =
   | {
       step: "approving";
@@ -155,16 +148,16 @@ export interface SetupEntry {
 /// entry's `expiration` (which gates the future pulls).
 const SIG_DEADLINE_SECS = 30 * 60;
 
-/// One-time-per-window setup allowing future deposits to pull via
-/// `submitDepositAuthorized` with no per-tx Permit2 sig.
+/// One-time-per-window setup letting future deposits pull via
+/// `submitDepositAuthorized` with no per-tx Permit2 signature.
 ///
-/// N tokens cost N approval txs but only **one** signature and **one** permit
-/// tx: `IAllowanceTransfer.permit` has a `PermitBatch` overload, so steps 2 and
-/// 3 collapse. Step 1 cannot — `approve` lives on each ERC-20 and Permit2 is
-/// not in that call path.
+/// N tokens cost N approval txs but only one signature and one permit tx, since
+/// `IAllowanceTransfer.permit` has a `PermitBatch` overload that collapses steps
+/// 2 and 3. Step 1 cannot collapse: `approve` lives on each ERC-20 and Permit2
+/// is not in that call path.
 ///
-/// `onProgress` fires `wallet` before each sub-step (waiting on the wallet
-/// popup), then `confirming` with the broadcast tx hash for the on-chain ones.
+/// `onProgress` fires `wallet` before each sub-step (awaiting the wallet prompt),
+/// then `confirming` with the broadcast tx hash for the on-chain steps.
 export async function ensurePermit2AuthorizedSetupBatch(
   wallet: WalletApi,
   entries: readonly SetupEntry[],
@@ -183,12 +176,10 @@ export async function ensurePermit2AuthorizedSetupBatch(
       "ensurePermit2AuthorizedSetupBatch: chain adapter lacks Permit2 batch AllowanceTransfer methods",
     );
   }
-  // `.bind`, not destructuring. These are prototype methods on
-  // `ViemChainAdapter` that read `this.ctx`, so pulling them off the object
-  // strips the receiver and every call throws "Cannot read properties of
-  // undefined (reading 'ctx')". Binding here still carries the narrowing from
-  // the guard above into the closures below, which is what the plain
-  // `chain.tokenApprove!(...)` form could not do.
+  // Bound rather than destructured: these are prototype methods on
+  // `ViemChainAdapter` that read `this.ctx`, so detaching them strips the
+  // receiver and every call throws on `undefined`. Binding also carries the
+  // narrowing from the guard above into the closures below.
   const tokenAllowance = chain.tokenAllowance.bind(chain);
   const tokenApprove = chain.tokenApprove.bind(chain);
 
@@ -202,8 +193,8 @@ export async function ensurePermit2AuthorizedSetupBatch(
   for (const [i, entry] of needApproval.entries()) {
     const at = { token: entry.token, index: i + 1, total: needApproval.length };
     onProgress?.({ step: "approving", status: "wallet", ...at });
-    // Sequential, not `Promise.all`: wallets serialise prompts anyway, and
-    // firing them together races the sender's nonce.
+    // Sequential rather than `Promise.all`: wallets serialise prompts anyway,
+    // and firing them together races the sender's nonce.
     await tokenApprove(entry.token, permit2, MAX_UINT256, (hash) => {
       onProgress?.({ step: "approving", status: "confirming", txHash: hash, ...at });
     });
@@ -211,10 +202,10 @@ export async function ensurePermit2AuthorizedSetupBatch(
 
   // Pass 2 — one signature covering every window.
   //
-  // Nonces are read here, after the approvals, rather than alongside the
-  // allowances above: Permit2 keys them by `(owner, token, spender)` and
-  // reverts the whole batch on a single stale entry, so the read wants to sit
-  // as close to the signature as possible.
+  // Nonces are read after the approvals rather than alongside the allowances
+  // above: Permit2 keys them by `(owner, token, spender)` and reverts the whole
+  // batch on a single stale entry, so the read sits as close to the signature as
+  // possible.
   const nonces = await Promise.all(
     entries.map((e) => chain.permit2Allowance(e.token, owner, masp)),
   );
@@ -238,8 +229,8 @@ export async function ensurePermit2AuthorizedSetupBatch(
   });
 }
 
-/// Single-token setup. A one-entry {@link ensurePermit2AuthorizedSetupBatch},
-/// so there is one implementation rather than two that can drift.
+/// Single-token setup, delegating to a one-entry
+/// {@link ensurePermit2AuthorizedSetupBatch} so there is one implementation.
 export async function ensurePermit2AuthorizedSetup(
   wallet: WalletApi,
   token: EvmAddress,

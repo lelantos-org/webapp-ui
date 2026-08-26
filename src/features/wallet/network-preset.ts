@@ -7,9 +7,9 @@ import { env } from "@/config/env";
 ///
 /// `relayerUrl` and `fmdUrl` come from `env` rather than the entry: one
 /// deployment of each serves every chain, selecting by chainId in the path or
-/// query. Only what is genuinely per-chain rides on `ChainEntry`.
+/// query. Only per-chain values ride on `ChainEntry`.
 ///
-/// Still async: `ChainEntry.maspAddress` is resolved from the relayer when the
+/// Async because `ChainEntry.maspAddress` is resolved from the relayer when the
 /// registry loads, and callers already await this.
 export async function networkPreset(chain: ChainEntry): Promise<NetworkPreset> {
   return {

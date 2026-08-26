@@ -1,14 +1,12 @@
 // Recovery list for claim links this browser generated.
 //
-// A claim link's spending key exists in exactly two places: the URL the sender
-// holds, and nowhere else. Before this list, "nowhere else" was literal — the
-// only copy lived in React state that any chain or account switch discarded,
-// with the funds already sent. `link-vault` writes the record before the
-// transfer goes out; this is where the sender gets it back.
+// A claim link's spending key exists only in the URL the sender holds.
+// `link-vault` writes the record before the transfer goes out, and this list is
+// where the sender recovers it if the page state is lost.
 //
-// Records are dropped explicitly, via "done with this". Nothing here can
-// observe whether the recipient has claimed, so the list is the sender's to
-// curate; the vault's TTL is only a backstop.
+// Records are dropped explicitly, via "done with this". Nothing here can observe
+// whether the recipient has claimed, so the list is the sender's to curate and
+// the vault's TTL is only a backstop.
 
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { findAsset, type RegisteredAsset } from "@/features/assets";
@@ -25,13 +23,13 @@ import {
 
 /// Label for a stored record's amount.
 ///
-/// Exported for the test that pins the unregistered-asset branch: `amount` is
-/// in circuit units, and without a registered asset there is nothing to scale
-/// it by. Printing the raw figure bare put a number that could be six orders of
-/// magnitude off right next to properly denominated ones, indistinguishable.
+/// Exported for the test covering the unregistered-asset branch: `amount` is in
+/// circuit units, and without a registered asset there is no scale to apply, so
+/// the raw figure is labelled with the asset id rather than printed bare beside
+/// properly denominated ones.
 ///
-/// `BigInt` cannot throw here — `link-vault` rejects any record whose `amount`
-/// is not a digit string, precisely so this runs safely inside a render.
+/// `BigInt` cannot throw here: `link-vault` rejects any record whose `amount` is
+/// not a digit string, so this is safe inside a render.
 export function describeStoredAmount(
   link: StoredClaimLink,
   assets: readonly RegisteredAsset[],
@@ -73,14 +71,13 @@ export function UnclaimedLinks({ chainId, assets }: UnclaimedLinksProps) {
 
 /// Sweep records past the TTL out of storage, once per mount.
 ///
-/// Expiry is otherwise only enforced on write, so a wallet that sent one link
-/// and stopped kept that record — and its spending key — on disk indefinitely,
-/// invisible behind `selectClaimLinks`' filter. Running it from an effect keeps
-/// the write out of the render pass, which is what made the old
-/// prune-inside-the-read a problem.
+/// Expiry is otherwise enforced only on write, so a wallet that sent one link and
+/// stopped would keep that record — and its spending key — on disk indefinitely,
+/// hidden behind `selectClaimLinks`' filter. Running it from an effect keeps the
+/// write out of the render pass.
 ///
-/// Mount-only is the whole job: every later change to the store goes through
-/// the vault's write path, which prunes on the way past.
+/// Mount-only suffices: every later change to the store goes through the vault's
+/// write path, which prunes as it goes.
 function usePruneOnMount(): void {
   useEffect(() => {
     pruneExpiredClaimLinks();
@@ -108,8 +105,8 @@ function LinkRow({ link, assets }: LinkRowProps) {
     <li className="link-vault__row">
       <span className="link-vault__amount">{amount}</span>
       {/* A record with no `txHash` means the transfer may never have gone out.
-          Said plainly rather than hidden: the alternative to showing it is
-          hiding a link that might be live. */}
+          Shown rather than hidden, since the alternative is concealing a link
+          that may be live. */}
       {link.txHash ? null : (
         <span className="link-vault__badge" title="the transfer may not have been broadcast">
           unconfirmed
@@ -139,8 +136,8 @@ function DefaultActions({ amount, onCopy, onStartForget }: DefaultActionsProps) 
         type="button"
         className="link-vault__act"
         onClick={onCopy}
-        // Every row's button reads "copy"; the amount is what distinguishes
-        // them, and it is in a sibling element the button does not name.
+        // Every row's button reads "copy"; the amount distinguishes them and sits
+        // in a sibling element the button does not otherwise name.
         aria-label={`copy claim link for ${amount}`}
       >
         copy
@@ -161,9 +158,9 @@ interface ConfirmForgetActionsProps {
   onCancel(): void;
 }
 
-/// Second step of the two-step delete. Deliberately holds the same two slots as
-/// `DefaultActions` — `.link-vault__actions` reserves the width, so confirming
-/// on one row cannot shift the rows below it.
+/// Second step of the two-step delete. Holds the same two slots as
+/// `DefaultActions`, and `.link-vault__actions` reserves the width, so confirming
+/// on one row does not shift the rows below.
 function ConfirmForgetActions({ onConfirm, onCancel }: ConfirmForgetActionsProps) {
   return (
     <>

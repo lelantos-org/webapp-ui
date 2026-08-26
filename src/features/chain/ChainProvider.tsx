@@ -1,18 +1,16 @@
-// Which chain the app is on — decided by the connected wallet, not by the app.
+// Which chain the app is on, decided by the connected wallet.
 //
-// There is deliberately no in-app chain selection. A dropdown here would make
-// two sources of truth: the app would claim one chain while the wallet sat on
-// another, balances would follow the app, and the disagreement would only
-// surface as a surprise switch prompt at submit. Reading the wallet's network
-// instead means the two can never disagree, and the user switches chains where
-// they already know how — in their wallet. `ChainSwitchButtons` drives that
-// from inside the app when it is useful, but it moves the *wallet*, not a
-// separate app-level setting.
+// There is no in-app chain selection. An app-level setting would be a second
+// source of truth: the app could claim one chain while the wallet sat on
+// another, with the disagreement surfacing only as a switch prompt at submit.
+// Reading the wallet's network keeps the two in agreement.
+// `ChainSwitchButtons` initiates a switch from inside the app, but it moves the
+// wallet rather than a separate app-level setting.
 //
 // A chain the registry does not describe leaves `active` undefined. That is a
-// real state — the wallet is somewhere this deployment cannot serve — and it
-// is surfaced as the `unsupported-chain` wallet status rather than papered
-// over with a default.
+// distinct state — the wallet is on a network this deployment cannot serve —
+// and is surfaced as the `unsupported-chain` wallet status rather than defaulted
+// away.
 
 import { useQuery } from "@tanstack/react-query";
 import { createContext, type ReactNode, useContext, useMemo, useState } from "react";
@@ -36,29 +34,27 @@ interface ChainContextValue {
 const ChainContext = createContext<ChainContextValue | undefined>(undefined);
 
 export function ChainProvider({ children }: { children: ReactNode }) {
-  // Read once per mount, not per render: this touches localStorage and runs a
-  // zod parse, and its answer cannot change while the tab is open.
+  // Read once per mount rather than per render: this touches localStorage and
+  // runs a zod parse, and its result cannot change while the tab is open.
   const [cached] = useState(readCachedChainRegistry);
 
   const registryQuery = useQuery({
     queryKey: chainRegistryKey,
     queryFn: loadChainRegistry,
-    // `placeholderData`, deliberately not `initialData`. Placeholder data is
-    // never treated as cached, so the fetch below still runs exactly once on
-    // mount and the infinite `staleTime` applies only to what the relayer
-    // actually said. `initialData` would combine with that staleTime to pin a
-    // possibly-months-old registry for the life of the tab.
+    // `placeholderData` rather than `initialData`. Placeholder data is never
+    // treated as cached, so the fetch still runs once on mount and the infinite
+    // `staleTime` applies only to the relayer's response; `initialData` would
+    // combine with that staleTime to pin a potentially months-old registry for
+    // the life of the tab.
     //
-    // What this buys: `isPending` is false from the first render when anything
-    // is cached, so the app paints immediately instead of holding a spinner for
-    // a full round-trip to the relayer.
+    // With anything cached, `isPending` is false from the first render, so the
+    // app paints immediately rather than holding a spinner for a full round-trip.
     placeholderData: cached,
-    // The set of deployed chains does not move under a running tab, and every
-    // wallet-facing read depends on it, so refetching only churns.
+    // The set of deployed chains does not change under a running tab, and every
+    // wallet-facing read depends on it, so refetching adds no value.
     staleTime: Number.POSITIVE_INFINITY,
-    // The whole app is behind this. A single failed attempt should not require
-    // a page reload to get past, and the retry button below covers what these
-    // do not.
+    // The whole app is gated on this, so a single failed attempt should not
+    // require a page reload; the retry button below covers the remaining cases.
     retry: 2,
   });
   const walletChainId = useWalletStore((s) => s.chainId);
@@ -71,22 +67,21 @@ export function ChainProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo(() => ({ registry, active }), [registry, active]);
 
-  // Gated on the registry, not on the wallet: without it nothing can tell a
-  // supported chain from an unsupported one, so rendering the app would mean
-  // guessing. With a cached registry `isPending` is already false here, so this
-  // spinner is only ever shown on a browser that has never reached the relayer.
+  // Gated on the registry rather than the wallet: without it nothing can
+  // distinguish a supported chain from an unsupported one. With a cached
+  // registry `isPending` is already false, so this spinner appears only on a
+  // browser that has never reached the relayer.
   if (registryQuery.isPending) return <ChainNotice>loading chains…</ChainNotice>;
 
-  // The two failure notices are gated on having no registry at all, rather than
-  // on the query's status. A revalidation that fails behind a cached registry
-  // must not replace a working app with an error screen — the cached chains are
-  // still the right ones, and a relayer that is genuinely down surfaces in
-  // `HealthIndicator` and again at the first action that needs it.
+  // The two failure notices are gated on having no registry at all rather than
+  // on the query's status. A revalidation failing behind a cached registry must
+  // not replace a working app with an error screen: the cached chains remain
+  // correct, and a relayer that is down surfaces in `HealthIndicator` and again
+  // at the first action needing it.
   if (registry.length === 0) {
-    // Unreachable and empty are different facts and used to be reported as the
-    // same one: `loadChainRegistry` swallowed its error and resolved `[]`, so a
-    // 502 told the user "the registry is empty" and left them nothing to do but
-    // reload the page by hand.
+    // Unreachable and empty are distinct: `loadChainRegistry` throws for the
+    // former and resolves `[]` for the latter, so a 502 is not reported as an
+    // empty registry and the retry below has something to act on.
     if (registryQuery.error) {
       return (
         <ChainNotice tone="err" onRetry={() => void registryQuery.refetch()}>
@@ -104,8 +99,8 @@ export function ChainProvider({ children }: { children: ReactNode }) {
   return <ChainContext.Provider value={value}>{children}</ChainContext.Provider>;
 }
 
-/// Stands in for the entire app while the registry is unavailable, so it gets
-/// enough layout not to read as a rendering failure.
+/// Stands in for the entire app while the registry is unavailable, with enough
+/// layout not to read as a rendering failure.
 function ChainNotice({
   children,
   tone,
@@ -139,9 +134,8 @@ export function useChainRegistry(): ChainEntry[] {
   return useChainContext().registry;
 }
 
-/// The active chain where one is not guaranteed — the wallet layer, which
-/// renders before a wallet is connected and while it sits on an unsupported
-/// network.
+/// The active chain where one is not guaranteed: the wallet layer, which renders
+/// before a wallet is connected and while it sits on an unsupported network.
 export function useActiveChainOrUndefined(): ChainEntry | undefined {
   return useChainContext().active;
 }
@@ -150,8 +144,8 @@ export function useActiveChainOrUndefined(): ChainEntry | undefined {
 /// `HomeLayout`.
 ///
 /// Throws rather than returning `undefined`: reaching this without a supported
-/// connected chain means the gate was bypassed, and every caller would
-/// otherwise need a branch for a state that cannot legitimately occur there.
+/// connected chain means the gate was bypassed, and every caller would otherwise
+/// need a branch for a state that cannot occur there.
 export function useActiveChain(): ChainEntry {
   const active = useActiveChainOrUndefined();
   if (!active) {

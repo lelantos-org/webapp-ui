@@ -12,25 +12,23 @@ export interface RecipientFieldProps {
   /// The field's live value, watched by the caller. Both the ✓ marker and the
   /// paste button are derived from it.
   value: string;
-  /// Shape check for this form's address flavour — `isEvmAddress` for a
-  /// withdraw, `isShieldedAddress` for a transfer. The schema's own predicate,
-  /// not a looser one: `formError` is empty until the first submit, so a
-  /// prefix test ticks the field green on a half-typed address the form will
-  /// then reject.
+  /// Shape check for this form's address type: `isEvmAddress` for a withdraw,
+  /// `isShieldedAddress` for a transfer. Pass the schema's own predicate rather
+  /// than a looser one — `formError` is empty until the first submit, so a prefix
+  /// test would mark a half-typed address valid.
   isValid(value: string): boolean;
   /// Write a pasted address into the field. Omit to withhold the paste button.
   onPaste?(text: string): void;
   formError?: string;
 }
 
-/// Shared recipient input for Transfer (shielded bech32) and Withdraw
-/// (Ethereum 0x). The address *rule* is caller-owned since each form has its
-/// own; everything downstream of it lives here.
+/// Shared recipient input for Transfer (shielded bech32) and Withdraw (Ethereum
+/// 0x). Each form owns its address rule; everything downstream of it lives here.
 ///
-/// Nobody types an address. It is pasted — and on a phone, long-pressing a
-/// text input for the paste callout is the fiddliest gesture in the flow, on
-/// the field where a mistake sends funds to a stranger. The trailing slot is
-/// free until the address validates, so the button costs no layout.
+/// Addresses are pasted rather than typed, and the platform paste gesture is
+/// awkward on mobile, on the field where a mistake misdirects funds. The
+/// trailing slot is free until the address validates, so the paste button costs
+/// no layout.
 export function RecipientField({
   inputProps,
   label,
@@ -40,14 +38,14 @@ export function RecipientField({
   onPaste,
   formError,
 }: RecipientFieldProps) {
-  // No "has the user typed anything" guard: `isValid` already implies it, since
-  // an empty field cannot pass. A `dirtyFields` check also goes false when the
-  // post-submit reset clears the amount while keeping the recipient, dropping
-  // the marker off an address that is still perfectly valid.
+  // No dirty-field guard: `isValid` implies one, since an empty field cannot
+  // pass. A `dirtyFields` check would also go false when the post-submit reset
+  // clears the amount while keeping the recipient, dropping the marker from a
+  // still-valid address.
   const valid = !formError && isValid(value);
-  // Firefox implements no `readText` at all, and Safari gates it behind a
-  // per-paste user prompt. Absent the API the button is simply not offered —
-  // the field is a plain input and the platform's own paste still works.
+  // Firefox implements no `readText`, and Safari gates it behind a per-paste
+  // prompt. Without the API the button is not offered; the field remains a plain
+  // input and the platform paste still works.
   const canPaste = !!onPaste && typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
 
   return (
@@ -80,9 +78,9 @@ export function RecipientField({
 
 /// Read the clipboard into the field. Never throws.
 ///
-/// A denied permission prompt and a clipboard holding no text both reject or
-/// come back empty; neither is worth more than the toast, and the user can
-/// still paste by hand.
+/// A denied permission prompt and an empty clipboard both reject or return
+/// nothing. Neither warrants more than a toast, and the platform paste remains
+/// available.
 async function pasteInto(write: (text: string) => void): Promise<void> {
   try {
     const text = (await navigator.clipboard.readText()).trim();

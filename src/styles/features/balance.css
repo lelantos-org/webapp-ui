@@ -138,8 +138,7 @@
 @keyframes bal-spin { to { transform: rotate(360deg); } }
 
 /* VALUE CELL. Quieter than the token figure it annotates: the quantity is what
-   the wallet actually holds, the dollar value is an estimate from a third
-   party. */
+   the wallet holds, while the dollar value is a third-party estimate. */
 .bal__usd {
   font-size: 13px;
   color: var(--fg-dim);

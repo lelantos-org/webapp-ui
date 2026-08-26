@@ -20,11 +20,13 @@ const TITLES: Record<ModalScreen, string> = {
 export interface GenerateModalProps {
   screen: ModalScreen;
   amountLabel: string;
-  /// Shown if `amountLabel` is empty (parse hasn't produced a labelled value yet).
+  /// Shown when `amountLabel` is empty, before the parse has produced a labelled
+  /// value.
   rawAmountInput: string;
   steps: Step[];
   activePhase: TxPhase | undefined;
-  /// Applies fade-out animation; parent unmounts after the CSS transition completes.
+  /// Applies the fade-out animation; the parent unmounts after the CSS transition
+  /// completes.
   closing?: boolean;
   onCancel(): void;
   onConfirm(): void;
@@ -33,7 +35,7 @@ export interface GenerateModalProps {
 export function GenerateModal(props: GenerateModalProps) {
   const { screen, closing = false, onCancel } = props;
   // Only the pre-broadcast screen may be dismissed: past it a transfer is in
-  // flight, and the bearer key it produces exists nowhere else yet.
+  // flight and the bearer key it produces exists nowhere else.
   return (
     <Modal
       title={TITLES[screen]}

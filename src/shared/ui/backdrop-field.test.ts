@@ -124,7 +124,7 @@ describe("BackdropField.draw", () => {
     f.draw(ctx);
 
     // Batching invariant: at most 10 link tiers plus one ring per live pulse.
-    // Stroking per link would raise this to the hundreds.
+    // Stroking per link would raise this into the hundreds.
     expect(calls.stroke).toBeLessThanOrEqual(10 + f.pulseCount);
     // All dots go into a single path.
     expect(calls.fill).toBe(1);

@@ -93,9 +93,9 @@ describe("describeError", () => {
 });
 
 describe("prover faults keep their own diagnosis", () => {
-  // Every curated prover line contains the word "prover", so the keyword pass
-  // used to rewrite all of them into "Proof generation failed" — the one fault
-  // an unreachable or 404ing zkey is not.
+  // Every curated prover line contains the word "prover", so an unguarded keyword
+  // pass would rewrite all of them to "Proof generation failed", which an
+  // unreachable or 404ing zkey is not.
   it("a missing artifact is not reported as a failed proof", () => {
     const msg = friendlyMessage(new ProverArtifactsMissingError(["opts.cdn"], "3x3"));
     expect(msg).toMatch(/artifacts missing/i);
@@ -179,9 +179,9 @@ describe("classifyError", () => {
 
   it("does not read the relayer's own refusal as a user cancellation", () => {
     // `describeError` renders a relayer 500 as "Relayer rejected the request…",
-    // which a bare "rejected the request" match claimed as a cancellation — so
-    // a server fault showed "Canceled in wallet." and, because cancellations
-    // are deliberately not logged, left no record at all.
+    // which a bare "rejected the request" match would claim as a cancellation,
+    // reporting a server fault as "Canceled in wallet." and leaving no record,
+    // since cancellations are not logged.
     const serverFault = new NetworkError("RELAYER_FAILED", "/relayer/v1/spend", "HTTP 500", {
       status: 500,
     });

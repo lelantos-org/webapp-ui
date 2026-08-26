@@ -12,7 +12,6 @@
 .mt-2 { margin-top: 6px; }
 .mt-3 { margin-top: 8px; }
 .grow { flex: 1; }
-.nowrap { white-space: nowrap; }
 .m-5 { margin: 20px; }
 
 .muted { color: var(--fg-mute); }

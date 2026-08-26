@@ -10,8 +10,7 @@ interface StoredState {
 /// option of `connect`.
 ///
 /// Without it the SDK keeps the set in memory only, so every page load re-walks
-/// the entire nullifier chunk feed from chunk 0 — the whole spent set, on every
-/// open.
+/// the entire nullifier chunk feed from chunk 0.
 export class IdbNullifierPersistence implements NullifierPersistence {
   constructor(private readonly key: string) {}
 

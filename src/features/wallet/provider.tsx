@@ -17,9 +17,8 @@ import { deriveWalletStatus } from "./wallet-status";
 export function WalletProvider({ children }: { children: ReactNode }) {
   const conn = useConnection();
   const { wallet, error: deriveError, hasCachedKey } = useBuildWallet(conn);
-  // The picker lives here rather than at each connect button: `connect` becomes
-  // "start the flow", so every call site stays a plain onClick and no picker
-  // state has to be threaded through them.
+  // The picker lives here rather than at each connect button, so `connect` means
+  // "start the flow" and no picker state is threaded through the call sites.
   const flow = useConnectFlow();
 
   const status = deriveWalletStatus({
@@ -32,12 +31,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Drop the outgoing account's nsk when the wallet rotates accounts.
   //
-  // The cache is keyed by address and survives for the tab's life, so a session
-  // that touched several accounts used to accumulate one raw spending key per
-  // account in `sessionStorage` — every one of them readable by any script on
-  // the origin, long after the user had moved on. Switching back re-prompts for
-  // a signature, which is the correct price for not leaving spend authority
-  // lying around for accounts that are no longer in use.
+  // The cache is keyed by address and lives for the tab's life, so without this a
+  // session touching several accounts accumulates one raw spending key per
+  // account in `sessionStorage`, readable by any script on the origin. Switching
+  // back re-prompts for a signature.
   const prevAddress = useRef<string | undefined>(conn.address);
   useEffect(() => {
     const prev = prevAddress.current;
@@ -46,18 +43,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [conn.address]);
 
   const disconnect = useCallback(() => {
-    // Every entry, not just the connected address: `clearCachedNsk(address)`
-    // left behind the keys of any account used earlier in the session, so
-    // "disconnect" did not actually revoke what it appeared to.
+    // Every entry, not only the connected address: `clearCachedNsk(address)`
+    // would leave the keys of any account used earlier in the session in place.
     clearAllCachedNsk();
     // The relayer stream is an open SSE connection held for the wallet's
-    // lifetime; drop it rather than leaving it running for a wallet that is
-    // no longer connected.
+    // lifetime, so it is dropped rather than left running after a disconnect.
     closeDepositStreams();
-    // Same for the two worker pools, which between them hold the ~49 MB zkey,
-    // the circuit wasm, a rayon pool and one jubjub wasm instance per scanner
-    // worker. None of it is reachable from a disconnected wallet, and any
-    // subsequent prove follows a fresh connect.
+    // Same for the two worker pools, which together hold the ~49 MB zkey, the
+    // circuit wasm, a rayon pool and one jubjub wasm instance per scanner worker.
+    // None of it is reachable from a disconnected wallet, and any later proof
+    // follows a fresh connect.
     disposeProverWorker();
     releaseScanner(wallet);
     conn.disconnect();

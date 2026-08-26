@@ -1,5 +1,4 @@
-// Split out of `AssetsCard`: it was one 328-line file holding five
-// components, with this one buried in the middle.
+// The shielded balance table, split out of `AssetsCard`.
 
 import { memo } from "react";
 import { Link } from "react-router-dom";
@@ -28,9 +27,8 @@ export function ShieldedTable({
         <p className="empty__sub">
           deposit to mint your first shielded note. balances stay private end-to-end.
         </p>
-        {/* The copy already names the one thing to do; this is it. `/` is the
-            deposit tab, which is a no-op click from the deposit route itself
-            and a real one from any other. */}
+        {/* `/` is the deposit tab: a no-op from the deposit route itself, and a
+            navigation from any other. */}
         <Link to="/" className="btn">
           deposit
         </Link>
@@ -69,12 +67,11 @@ export function ShieldedTable({
 /// One row per asset.
 ///
 /// The figure is updated in place rather than keyed on its own value: keying on
-/// the balance remounted the element on every change, which replayed its
-/// entrance animation each time a tx settled in stages.
+/// the balance would remount the element on every change and replay its entrance
+/// animation as a tx settled in stages.
 ///
-/// Memoized: `row` identities are stable while the balances query is
-/// unchanged, so a re-render of the card for an unrelated reason does not
-/// re-render the table.
+/// Memoised. `row` identities are stable while the balances query is unchanged,
+/// so an unrelated re-render of the card does not re-render the table.
 const ShieldedRowView = memo(function ShieldedRowView({
   row,
   label,
@@ -84,20 +81,19 @@ const ShieldedRowView = memo(function ShieldedRowView({
   row: AssetBalanceView;
   label: string;
   meta: RegisteredAsset | undefined;
-  /// USD per whole token, or `undefined` when nothing knows. Not zero — an
-  /// unpriced asset shows no dollar line at all rather than `$0.00`.
+  /// USD per whole token, or `undefined` when no price is known. Not zero: an
+  /// unpriced asset shows no dollar line rather than `$0.00`.
   price: number | undefined;
 }) {
   const fmt = (v: bigint) =>
     meta ? formatAmountForAsset(v, meta.decimals, meta.scale) : v.toString();
 
-  // Both directions, not one or the other. A single ternary on `outflow`
-  // hid an incoming amount whenever something was also on its way out, so a
-  // swap — which has both legs in flight at once — reported only the debit.
+  // Both directions are rendered. A single branch on `outflow` would hide an
+  // incoming amount whenever something was also leaving, so a swap — which has
+  // both legs in flight — would report only the debit.
   //
-  // One element each, rather than one holding both signed figures: a debit and
-  // a credit are two facts, and running them together — `−1 +2` — read as a
-  // single arithmetic expression.
+  // One element each rather than one holding both signed figures, so a debit and
+  // a credit do not run together as a single expression.
   const settling: SettleLeg[] = [
     row.outflow > 0n ? { dir: "out" as const, text: `−${fmt(row.outflow)}` } : undefined,
     row.pending > 0n ? { dir: "in" as const, text: `+${fmt(row.pending)}` } : undefined,
@@ -111,24 +107,22 @@ const ShieldedRowView = memo(function ShieldedRowView({
     <tr>
       <td>
         <span className="tok">
-          {/* Seeded on the token address where there is one, so two rows that
-              share a symbol still get different marks. */}
+          {/* Seeded on the token address where there is one, so two rows sharing
+              a symbol still get different marks. */}
           <TokenIcon symbol={label} address={meta?.token} />
           <span className="tok__sym mono">{label}</span>
         </span>
       </td>
       <td className="ta-r">
         <span className="bal">
-          {/* Ahead of the figure on its own line, not stacked beneath it. As
-              chips this was a second line in the cell, so every leg that
-              appeared and every one that settled changed the row's height and
-              nudged the whole table — and a swap's two chips wrapped to a
-              third line on a narrow screen. The legs are quiet type on the
-              figure's line now, so the row is one line tall throughout. */}
+          {/* On the figure's own line rather than stacked beneath it. A second
+              line would change the row's height as each leg appeared and
+              settled, shifting the whole table, and a swap's two legs would wrap
+              to a third line on a narrow screen. */}
           {settling.length > 0 ? (
             <span className="bal__flow">
-              {/* The legs are amounts with a colour and a spinner; the word
-                  that makes them mean something is only in the styling. */}
+              {/* The legs are amounts distinguished by colour and a spinner, so
+                  the label is supplied for assistive technology. */}
               <span className="sr-only">settling</span>
               <span className="bal__spin" aria-hidden />
               {settling.map((c) => (
@@ -141,8 +135,8 @@ const ShieldedRowView = memo(function ShieldedRowView({
           <span className="bal__main mono">{fmt(total)}</span>
         </span>
       </td>
-      {/* An unpriced asset gets a dash, not a blank: the column stays a column,
-          and "no price known" is said rather than left to be inferred. */}
+      {/* An unpriced asset gets a dash rather than a blank, so the column keeps
+          its shape and the absence of a price is stated. */}
       <td className="ta-r">
         {usd !== undefined ? (
           <span className="bal__usd mono">{formatUsd(usd)}</span>

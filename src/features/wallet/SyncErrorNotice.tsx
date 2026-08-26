@@ -5,12 +5,10 @@ import { useWalletState } from "./use-wallet-state";
 ///
 /// The forms read `data?.balances ?? []`, so a failed sync is indistinguishable
 /// from an empty wallet: every balance reads as zero and the amount validator
-/// rejects any input as insufficient funds. Rendered as "you have no funds"
-/// that is a wrong and alarming thing to tell someone whose funds are fine and
-/// whose FMD server is merely unreachable.
+/// rejects input as insufficient funds. This states the difference.
 ///
-/// Renders nothing while a sync is succeeding, and nothing on the first load
-/// (there is a skeleton for that) — only once a sync has actually errored.
+/// Renders nothing while a sync is succeeding, and nothing on first load, which
+/// has its own skeleton; only once a sync has errored.
 export function SyncErrorNotice() {
   const { error } = useWalletState();
   if (!error) return null;

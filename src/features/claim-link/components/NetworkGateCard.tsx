@@ -1,13 +1,13 @@
 import { ChainSwitchButtons } from "@/features/chain";
 import type { ChainMismatch } from "../chain-guard";
 
-/// The stop between "connect" and "scan": the wallet is somewhere the link's
+/// The stop between connect and scan: the wallet is on a chain where the link's
 /// notes do not exist.
 ///
-/// Built on the same grammar as `BadLinkCard` — mark, short title, one line of
-/// why, one action — because it is the same kind of card: the flow has halted
-/// and there is exactly one thing to do. Warn rather than error: nothing has
-/// gone wrong, and the link is still good.
+/// Uses the same structure as `BadLinkCard` — mark, short title, one line of
+/// explanation, one action — since both mark a halted flow with a single
+/// remedy. A warning rather than an error: nothing has failed and the link is
+/// still valid.
 export function NetworkGateCard({ mismatch }: { mismatch: ChainMismatch }) {
   return (
     <div className="card gate gate--warn">

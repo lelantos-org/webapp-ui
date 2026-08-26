@@ -147,9 +147,9 @@ describe("retry", () => {
   });
 
   it("goes back to need-wallet with the secret it retained", () => {
-    // `error` used to be terminal, and the URL fragment is scrubbed on mount —
-    // so a transient RPC failure during the scan ended the claim for good, and
-    // reloading destroyed the secret rather than recovering it.
+    // Without this transition `error` is terminal, and since the URL fragment is
+    // scrubbed on mount, a transient RPC failure during the scan would end the
+    // claim and a reload would destroy the secret.
     expect(reduce(failed(), { t: "retry" })).toEqual({
       kind: "need-wallet",
       nskHex: "ab",

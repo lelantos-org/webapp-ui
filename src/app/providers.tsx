@@ -15,8 +15,8 @@ const queryClient = new QueryClient({
   },
 });
 
-/// Boot the wallet store once at mount: EIP-6963 discovery plus silent
-/// reconnect to the last connected wallet. Prompts only if the site's
+/// Boot the wallet store once at mount: EIP-6963 discovery plus a silent
+/// reconnect to the last connected wallet. Prompts only when the site's
 /// permission has been revoked.
 function WalletBoot({ children }: { children: ReactNode }) {
   useEffect(() => {
@@ -30,10 +30,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        {/* Router above `ChainProvider` so `RouteErrorBoundary` — which resets
-            on the location — and any future route-driven chain selection have one.
-            (An earlier note here claimed `ChainProvider` reads and writes
-            `?chain=`; it does neither, the chain comes from the wallet.) */}
+        {/* Router above `ChainProvider`, so `RouteErrorBoundary` — which resets
+            on the location — has one available. `ChainProvider` itself reads no
+            route state; the chain comes from the wallet. */}
         <BrowserRouter>
           <ChainProvider>
             <WalletBoot>

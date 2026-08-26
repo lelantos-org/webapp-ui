@@ -5,9 +5,9 @@ import { useClearFinishedOp } from "./use-clear-finished-op";
 
 type Mutation = ActionMutation<unknown, unknown>["mutation"];
 
-/// The hook reads four things off its arguments. Standing up a real
-/// `useMutation` would drag in a QueryClient and a wallet to say nothing
-/// more about the gate than these stubs do.
+/// The hook reads four values off its arguments. A real `useMutation` would
+/// require a QueryClient and a wallet without exercising the gate any further
+/// than these stubs do.
 function harness(done: boolean) {
   const resetMutation = vi.fn();
   const resetProgress = vi.fn();

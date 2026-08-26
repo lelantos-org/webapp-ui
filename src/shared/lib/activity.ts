@@ -17,8 +17,8 @@ const ACTIVITY_EVENTS = ["pointerdown", "keydown", "scroll", "focus"] as const;
  * Quiet period before the page counts as unattended.
  *
  * Long enough that reading a balance without interacting does not trip it. The
- * backdrop applies its own, shorter budget: resuming an animation is cheap,
- * resuming a data poll is not.
+ * backdrop applies its own, shorter budget, since resuming an animation is
+ * cheaper than resuming a data poll.
  */
 const IDLE_AFTER_MS = 2 * 60_000;
 
@@ -28,27 +28,26 @@ export const IDLE_POLL_FACTOR = 4;
 /**
  * Fraction by which `jitter` may shorten or lengthen an interval.
  *
- * Kept small on purpose. The point is to blur a cadence, not to defer work:
+ * Kept small: the goal is to blur a cadence, not to defer work.
  * `selection.ts` applies a spend cooldown keyed on `firstSeenBlock`, and a
  * staler nullifier view raises the odds of building a spend against a note
- * already spent elsewhere. ±20% costs at most six seconds on the 30s polls and
- * leaves that margin intact.
+ * already spent elsewhere. ±20% costs at most six seconds on the 30s polls,
+ * leaving that margin intact.
  */
 const JITTER_FRAC = 0.2;
 
 /**
  * `baseMs` perturbed by up to ±`frac`.
  *
- * Every poll in the app is otherwise exactly periodic — 30s sync, 30s balances,
- * 15s health — which hands a passive observer (the edge, an ISP) a clean device
- * fingerprint and a way to cut one long-lived connection into distinct
- * sessions. The app never sees a client IP; the components in front of it do,
- * and cadence is what lets them join requests that carry no identifier.
+ * Polls are otherwise exactly periodic (30s sync, 30s balances, 15s health),
+ * which gives a passive observer such as the edge or an ISP a device
+ * fingerprint and a way to segment one long-lived connection into sessions.
+ * The app never sees a client IP, but the components in front of it do, and
+ * cadence is what lets them join requests carrying no identifier.
  *
  * Call this per tick, not once per mount. React Query accepts a function for
- * `refetchInterval` and re-invokes it after each fetch, so a value fixed at
- * mount would be a constant offset — itself a stable per-session fingerprint,
- * and a more distinctive one than the round number it replaced.
+ * `refetchInterval` and re-invokes it after each fetch; a value fixed at mount
+ * becomes a constant offset, which is itself a stable per-session fingerprint.
  */
 export function jitter(baseMs: number, frac = JITTER_FRAC): number {
   return Math.round(baseMs * (1 + (Math.random() * 2 - 1) * frac));
@@ -58,12 +57,10 @@ export function jitter(baseMs: number, frac = JITTER_FRAC): number {
  * The interval a poll should use right now: `baseMs`, widened while idle, then
  * jittered.
  *
- * Both adjustments in one call so neither can be applied without the other.
- * They were open-coded at each query, and `transparent-balances` had drifted to
- * a bare `refetchInterval: POLL_MS` — the one poller with no idle factor, and
- * the one that sends the user's EOA to a third-party RPC on every tick, so an
- * unattended tab kept announcing that address every 30s indefinitely. A helper
- * makes that omission unrepresentable rather than merely reviewable.
+ * Both adjustments are applied in one call so neither can be used without the
+ * other. Omitting the idle factor keeps an unattended tab polling at full rate,
+ * which for `transparent-balances` means announcing the user's EOA to a
+ * third-party RPC every 30s indefinitely.
  *
  * Pass it as a thunk — `refetchInterval: () => pollInterval(POLL_MS, idle)` —
  * so React Query re-draws the jitter after each fetch.
@@ -79,17 +76,12 @@ export interface PollingOptions {
 }
 
 /**
- * Every option a polled query needs, so none of them can be left out.
+ * Every option a polled query needs, bundled so none can be left out.
  *
- * `pollInterval` above made the idle factor and the jitter inseparable, but the
- * three things that actually *deliver* them stayed open-coded at each call
- * site: the `useIsIdle()` subscription, the thunk, and
- * `refetchIntervalInBackground: false`. Each is easy to omit and none of them
- * fails loudly — a bare value instead of a thunk freezes the jitter into a
- * fixed per-session offset, which is a more distinctive fingerprint than the
- * round number it replaced; a missing background flag keeps polling a hidden
- * tab. Spreading one object makes all three unrepresentable, for the same
- * reason `pollInterval` exists at all.
+ * `pollInterval` binds the idle factor to the jitter, but three things deliver
+ * them and each fails silently if omitted: the `useIsIdle()` subscription, the
+ * thunk (a bare value freezes the jitter into a fixed per-session offset), and
+ * `refetchIntervalInBackground: false` (without it a hidden tab keeps polling).
  *
  * Usage: `...usePolling(BALANCE_POLL_MS)` inside the `useQuery` options.
  */
@@ -102,39 +94,37 @@ export function usePolling(baseMs: number): PollingOptions {
 }
 
 /**
- * Cadence for the two queries that answer "what does this wallet hold" — the
- * shielded note sync and the transparent chain reads.
+ * Cadence for the two queries that answer what a wallet holds: the shielded note
+ * sync and the transparent chain reads.
  *
- * One constant rather than one per query. They are read side by side (a
+ * One constant rather than one per query. The two are read side by side — a
  * deposit form validates against the transparent balance while the portfolio
- * shows the shielded one), so a drift between them shows up as two figures
- * refreshing at visibly different times, and the two copies this replaced had
- * already grown separate rationales for the same number.
+ * shows the shielded one — so any drift between them appears as two figures
+ * refreshing at visibly different times.
  */
 export const BALANCE_POLL_MS = 30_000;
 
 /**
  * Cadence of the `/v1/head` watermark poll.
  *
- * Six times the rate of `BALANCE_POLL_MS` for a fraction of its cost: the
- * endpoint is two indexed `MAX()`s and a handful of bytes, where a balance
- * refresh is a full `syncNotes` plus a recompute over every unspent note. New
- * value is therefore *detected* in about five seconds while the expensive work
- * runs only when something actually moved — strictly less often than the old
- * unconditional 30s poll.
+ * Six times the rate of `BALANCE_POLL_MS` at a fraction of the cost: the
+ * endpoint is two indexed `MAX()`s and a few bytes, where a balance refresh is a
+ * full `syncNotes` plus a recompute over every unspent note. New value is
+ * detected within about five seconds while the expensive work runs only when
+ * something moved.
  *
  * Goes through `pollInterval` like every other poll here, so the jitter and
- * idle-widening above apply to it unchanged.
+ * idle-widening apply unchanged.
  */
 export const HEAD_POLL_MS = 5_000;
 
 /**
  * Window in which a remount reuses a cached balance instead of re-reading.
  *
- * Well under `BALANCE_POLL_MS`, so the polling cadence is unaffected. It exists
- * because the forms are routes: navigating between deposit and withdraw
- * remounts their queries repeatedly, and every balance-changing op invalidates
- * explicitly, so the window cannot mask a figure the user has just changed.
+ * Well under `BALANCE_POLL_MS`, so the polling cadence is unaffected. The forms
+ * are routes, so navigating between deposit and withdraw remounts their queries
+ * repeatedly; every balance-changing op invalidates explicitly, so the window
+ * cannot mask a figure the user has just changed.
  */
 export const BALANCE_STALE_MS = 10_000;
 
@@ -147,8 +137,8 @@ function notifyActivity(): void {
 /**
  * Call `fn` on every input event until the returned function is invoked.
  *
- * Exposes the raw signal rather than derived state; consumers needing "quiet
- * for N ms" build it from this, as `useIsIdle` does below.
+ * Exposes the raw signal rather than derived state; consumers needing a quiet
+ * period build it from this, as `useIsIdle` does below.
  */
 export function onActivity(fn: () => void): () => void {
   if (subscribers.size === 0 && typeof window !== "undefined") {
@@ -198,7 +188,7 @@ function subscribeIdle(fn: () => void): () => void {
     stopWatching = undefined;
     if (idleTimer) clearTimeout(idleTimer);
     idleTimer = undefined;
-    // Reset: with nothing subscribed the flag is not maintained.
+    // With nothing subscribed the flag is no longer maintained, so reset it.
     idle = false;
   };
 }
@@ -212,7 +202,7 @@ const getIdleOnServer = (): boolean => false;
  *
  * Reactive: a query reading this recomputes `refetchInterval` when it flips, so
  * returning to the tab restores the shorter interval immediately rather than at
- * the end of the current one.
+ * the end of the current interval.
  */
 export function useIsIdle(): boolean {
   return useSyncExternalStore(subscribeIdle, getIdle, getIdleOnServer);

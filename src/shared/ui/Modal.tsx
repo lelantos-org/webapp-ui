@@ -1,15 +1,12 @@
 // The shell every modal in the app shares: a portal, the dimmed overlay, the
 // dialog panel and its title.
 //
-// It exists because the three modals that predate it — onboarding setup, the
-// wallet picker, claim-link generation — each rebuilt the same markup, and the
-// keyboard behaviour drifted between them: two handled Escape and trapped Tab,
-// the third handled neither, so it was dismissable by mouse only and Tab walked
-// straight out into the locked page behind.
+// Centralised so the markup and keyboard behaviour — Escape to dismiss, Tab
+// trapped inside the panel — are identical across every modal.
 //
-// Deliberately not owned here: the exit *timing*. A caller drives its own
-// (`useExitTransition`, or a stage machine that keeps the modal mounted through
-// a fade) and reports the result as `exiting`; this only renders it.
+// Exit timing is not owned here: a caller drives its own, via
+// `useExitTransition` or a stage machine that keeps the modal mounted through a
+// fade, and reports the result as `exiting`.
 
 import { type ReactNode, useCallback, useEffect, useId, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -19,25 +16,25 @@ import { FOCUSABLE_SELECTOR, trapFocus } from "@/shared/ui/focus-trap";
 export interface ModalProps {
   title: string;
   children: ReactNode;
-  /// Escape and backdrop clicks call this. Omit for a modal with no dismiss
-  /// path of its own — one whose only exits are its own buttons.
+  /// Escape and backdrop clicks call this. Omit for a modal whose only exits are
+  /// its own buttons.
   onDismiss?(): void;
   /// A flow is running and must not be interrupted: shows the busy cursor and
   /// closes every dismiss path.
   busy?: boolean;
-  /// Plays the exit animation. Also closes the dismiss paths, so a second
-  /// Escape cannot queue a second close behind the one already playing.
+  /// Plays the exit animation. Also closes the dismiss paths, so a second Escape
+  /// cannot queue another close behind the one already playing.
   exiting?: boolean;
-  /// Id of the element inside `children` that describes the dialog, wired to
+  /// Id of the element inside `children` describing the dialog, wired to
   /// `aria-describedby`. A panel that swaps screens should move the id with the
-  /// copy, so the description a screen reader announces matches what is shown.
+  /// copy, so the announced description matches what is shown.
   describedBy?: string;
   /// Re-runs the mount focus when it changes.
   ///
   /// A modal that swaps its own content — setup moving from intro to running —
-  /// unmounts the element it had focused, and focus falls back to `<body>`.
-  /// `trapFocus` keys off `document.activeElement` being inside the panel, so
-  /// from there it traps nothing.
+  /// unmounts the focused element, and focus falls back to `<body>`. `trapFocus`
+  /// keys off `document.activeElement` being inside the panel, so it would then
+  /// trap nothing.
   focusKey?: unknown;
 }
 
@@ -74,10 +71,10 @@ function ModalShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [dismissable, onDismiss]);
 
-  // `[data-primary]` is the caller's nomination for the action a keyboard user
-  // most likely wants; `:not([disabled])` because a screen may render it behind
-  // a confirmation the user has not given yet, and focusing a disabled button
-  // silently leaves focus on `<body>`.
+  // `[data-primary]` is the caller's nomination for the likely keyboard action.
+  // `:not([disabled])` because a screen may render it behind a confirmation the
+  // user has not yet given, and focusing a disabled button leaves focus on
+  // `<body>`.
   // biome-ignore lint/correctness/useExhaustiveDependencies: `focusKey` is the re-run trigger, not a value the effect reads
   useEffect(() => {
     const root = panelRef.current;

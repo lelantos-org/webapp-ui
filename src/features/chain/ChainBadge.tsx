@@ -1,17 +1,14 @@
 import { useActiveChainOrUndefined } from "./ChainProvider";
 
-/// Which network the app is talking to. Read-only by design.
+/// Which network the app is connected to. Read-only: the wallet's network is the
+/// single source of truth, so there is nothing to select here.
 ///
-/// The wallet's network is the single source of truth, so there is nothing to
-/// pick here — this reports, it does not configure.
+/// Renders the label and name only. The surrounding pill and status dot belong to
+/// `hdr__status` in `Layout`, which groups this with the health indicator so the
+/// two read as one status rather than two widgets.
 ///
-/// Renders the label and name only: the surrounding pill and the status dot
-/// belong to `hdr__status` in `Layout`, which groups this with the health
-/// indicator. They are one fact from the user's side — "am I connected, and to
-/// what" — and were two competing widgets when each drew its own chrome.
-///
-/// Nothing when the wallet is absent or on an unsupported chain; `Welcome` is
-/// already covering the screen with that reason.
+/// Renders nothing when the wallet is absent or on an unsupported chain, which
+/// `Welcome` already covers.
 export function ChainBadge() {
   const chain = useActiveChainOrUndefined();
   if (!chain) return null;

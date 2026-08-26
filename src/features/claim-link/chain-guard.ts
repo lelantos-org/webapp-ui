@@ -1,10 +1,10 @@
 // Does the wallet sit on the chain the link's notes live on?
 //
-// The scan does not need it — the ephemeral wallet reads through the link
-// chain's own `rpcUrl` — but the sweep does: it spends notes in that chain's
-// pool through the wallet's provider. On the wrong network that spend either
-// reverts or lands nowhere, so the claim is refused before it is attempted
-// rather than surfaced as an opaque transaction failure.
+// The scan does not need it, since the ephemeral wallet reads through the link
+// chain's own `rpcUrl`, but the sweep does: it spends notes in that chain's pool
+// through the wallet's provider. On the wrong network that spend reverts or
+// lands nowhere, so the claim is refused before it is attempted rather than
+// surfacing as an opaque transaction failure.
 
 import type { ChainEntry } from "@/config/chains";
 
@@ -18,21 +18,20 @@ export interface ChainMismatch {
 
 /// A chain's name, falling back to its id.
 ///
-/// The fallback is the case that matters: a wallet on a network the
-/// deployment does not serve has no `ChainEntry` anywhere, and "your wallet is
-/// on undefined" is how that reads if the caller forgets.
+/// The fallback covers a wallet on a network the deployment does not serve, which
+/// has no `ChainEntry` to name.
 export function chainLabel(registry: ChainEntry[], chainId: bigint): string {
   const known = registry.find((c) => c.chainId === chainId);
   return known?.chainName ?? `chain ${chainId}`;
 }
 
-/// The mismatch to resolve before claiming, or `undefined` when there is
-/// nothing to resolve *yet*.
+/// The mismatch to resolve before claiming, or `undefined` when there is nothing
+/// to resolve yet.
 ///
-/// `link` is `undefined` until the fragment is decoded, and stays undefined
-/// for a link naming a chain the registry does not describe — switching
-/// cannot fix that one, and the flow already fails it with "this app does not
-/// serve chain N". `walletChainId` is `undefined` until a wallet connects.
+/// `link` is `undefined` until the fragment is decoded, and stays undefined for a
+/// link naming a chain the registry does not describe; switching cannot fix that
+/// case, which the flow reports separately. `walletChainId` is `undefined` until
+/// a wallet connects.
 export function chainMismatch(
   registry: ChainEntry[],
   link: ChainEntry | undefined,

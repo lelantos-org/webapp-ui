@@ -12,12 +12,12 @@ const ARITY = 4;
 /// Stored records to deserialize between yields back to the event loop.
 ///
 /// A full tree requires ~1M leaf parses plus ~350K node parses. Yielding does
-/// not reduce that cost; it prevents it forming a single multi-second task
-/// blocking paint and input for the duration of a wallet build.
+/// not reduce that cost, but keeps it from forming a single multi-second task
+/// that blocks paint and input for the duration of a wallet build.
 const PARSE_YIELD_EVERY = 64;
 
-/// Hand the event loop a turn. Prefers the scheduler API where it exists; the
-/// `setTimeout` fallback is the same idea with a worse priority.
+/// Hand the event loop a turn. Prefers the scheduler API where available and
+/// falls back to `setTimeout`, which yields at a lower priority.
 function yieldToMain(): Promise<void> {
   const scheduler = (globalThis as { scheduler?: { yield?: () => Promise<void> } }).scheduler;
   if (scheduler?.yield) return scheduler.yield();
@@ -39,26 +39,25 @@ function pacer(): () => Promise<void> {
 
 /// Every record under `prefix`, as `[suffix, value]` pairs.
 ///
-/// One `getAllKeys` + one `getAll` rather than a `get` per record. A 1M-leaf
+/// One `getAllKeys` plus one `getAll` rather than a `get` per record. A 1M-leaf
 /// tree holds ~1000 leaf records and a comparable number of node buckets, and
-/// each individual `get` costs its own transaction and structured-clone hop —
-/// so a per-record read blocks a wallet build for ~1000 event-loop turns.
+/// each `get` costs its own transaction and structured-clone hop, so a
+/// per-record read blocks a wallet build for ~1000 event-loop turns.
 ///
 /// The bound is safe against neighbouring keys: a longer store key sharing this
-/// one's prefix continues with a hex digit where the range expects `:`, which
-/// sorts above the upper bound. The `:hdr` and `:nodes:` records fall outside a
+/// prefix continues with a hex digit where the range expects `:`, which sorts
+/// above the upper bound. The `:hdr` and `:nodes:` records fall outside a
 /// `:leaves:` range for the same reason.
 ///
-/// Both calls run in **one** transaction, so the arrays line up index-for-index.
-/// `db.getAllKeys` / `db.getAll` each open their own transaction, which left a
-/// window for another tab's `save()` to add a record between them: the arrays
-/// then differ in length and every entry past the insertion point is paired
-/// with the wrong value. That surfaces as a plausible-looking tree with wrong
-/// leaves — a wrong root and a rejected spend — rather than as an error.
+/// Both calls run in one transaction so the arrays line up index-for-index.
+/// Separate transactions would leave a window for another tab's `save()` to
+/// insert a record between them, pairing every entry past the insertion point
+/// with the wrong value — a plausible-looking tree with a wrong root and a
+/// rejected spend, reported as no error at all.
 ///
-/// The order is IndexedDB's lexicographic key order and is *not* numeric —
-/// `:10` sorts before `:2` — so callers must key off the parsed suffix rather
-/// than trusting the sequence.
+/// The order is IndexedDB's lexicographic key order, not numeric (`:10` sorts
+/// before `:2`), so callers must key off the parsed suffix rather than the
+/// sequence.
 async function readRange<T>(
   db: IDBPDatabase<WalletSchema>,
   prefix: string,
@@ -78,11 +77,10 @@ async function readRange<T>(
 /// Chunks and buckets are written from 0 upwards and never removed, so a hole
 /// marks the end of the run rather than something to read past.
 ///
-/// A range read cannot express this: `getAll` returns the records on either
-/// side of a hole with nothing to mark it, so walking its result directly
-/// joins across the gap and yields a tree that appears whole. The result
-/// surfaces later as a wrong Merkle root and a rejected spend, not as an
-/// error.
+/// A range read cannot express this: `getAll` returns the records on either side
+/// of a hole with nothing marking it, so walking its result joins across the gap
+/// and yields a tree that appears whole, surfacing later as a wrong Merkle root
+/// and a rejected spend.
 function* contiguousFrom<T>(
   indexed: ReadonlyMap<number, T>,
   limit = Number.POSITIVE_INFINITY,
@@ -140,28 +138,28 @@ type TreeWriteStore = IDBPObjectStore<WalletSchema, ["tree"], "tree", "readwrite
 
 /// bigint as `0x`-prefixed hex.
 ///
-/// Hex, not decimal: formatting a 254-bit bigint as decimal is repeated
-/// division by 10, while hex is a bit-shift, and the result is ~64 chars
-/// instead of ~77.
+/// Hex rather than decimal: formatting a 254-bit bigint as decimal is repeated
+/// division by 10 where hex is a bit-shift, and the result is ~64 chars instead
+/// of ~77.
 ///
-/// The `0x` prefix is load-bearing on the way back in: `BigInt` accepts both
-/// spellings, so a bare hex string whose digits happened to be all-decimal
-/// would read back as a different number.
+/// The `0x` prefix is required on the way back in. `BigInt` accepts both
+/// spellings, so a bare hex string with all-decimal digits would read back as a
+/// different number.
 const enc = (v: bigint): string => `0x${v.toString(16)}`;
 
 /// IndexedDB-backed Merkle tree persistence for the `treePersistence` option
 /// of `connect`.
 ///
-/// Append-only and chunked, rather than one record per save. The tree reaches
-/// 1M leaves plus ~350K memoised internal nodes, and rewriting all of it on
-/// every sync — which also happens on every spend — costs a full serialize of
-/// ~100 MB of strings regardless of how many leaves actually changed.
+/// Append-only and chunked rather than one record per save. The tree reaches 1M
+/// leaves plus ~350K memoised internal nodes, so rewriting all of it on every
+/// sync — which happens on every spend — costs a full serialize of ~100 MB of
+/// strings regardless of how many leaves changed.
 ///
-/// Both feeds only ever grow at the tail, which is what makes the delta safe
-/// to compute rather than diff: a leaf record below `syncedCount` can never
-/// change again, and an internal node is final once its whole subtree is
-/// filled. So a save rewrites only the records at or after the previous
-/// `syncedCount`, turning an O(n) write into O(delta).
+/// Both feeds grow only at the tail, which makes the delta computable without a
+/// diff: a leaf record below `syncedCount` can never change again, and an
+/// internal node is final once its subtree is full. A save therefore rewrites
+/// only the records at or after the previous `syncedCount`, turning an O(n)
+/// write into O(delta).
 export class IdbTreePersistence implements TreePersistence {
   /// `syncedCount` as of the last write, so the next one knows where the
   /// untouched prefix ends. Seeded by `load`.
@@ -192,8 +190,8 @@ export class IdbTreePersistence implements TreePersistence {
   }
 
   /// Leaves in order, or `null` if the stored records do not account for all
-  /// `leafCount` of them — a partially cleared store. Returning the truncated
-  /// prefix would present a valid-looking but wrong tree.
+  /// `leafCount` of them, as in a partially cleared store. Returning the
+  /// truncated prefix would present a valid-looking but wrong tree.
   private async loadLeaves(
     db: IDBPDatabase<WalletSchema>,
     leafCount: number,
@@ -232,7 +230,7 @@ export class IdbTreePersistence implements TreePersistence {
     const tx = db.transaction(TREE_STORE, "readwrite");
     const store = tx.objectStore(TREE_STORE);
 
-    // Everything before this is already durable and can no longer change.
+    // Everything before this is durable and can no longer change.
     const firstDirtyLeaf = Math.min(this.persistedCount, state.leaves.length);
     const firstChunk = Math.floor(firstDirtyLeaf / LEAF_CHUNK);
     const lastChunk = Math.ceil(state.leaves.length / LEAF_CHUNK);
@@ -250,9 +248,8 @@ export class IdbTreePersistence implements TreePersistence {
       leafCount: state.leaves.length,
       ...(depth === undefined ? {} : { depth }),
     };
-    // Header last: it is what `load` trusts for the chunk count, so writing it
-    // only after the chunks land keeps a torn write from advertising records
-    // that are not there.
+    // Header last: `load` trusts it for the chunk count, so writing it after the
+    // chunks land keeps a torn write from advertising records that are absent.
     await store.put(hdr, this.hdrKey());
     await tx.done;
 
@@ -264,15 +261,14 @@ export class IdbTreePersistence implements TreePersistence {
     nodes: MerkleNode[],
     firstDirtyLeaf: number,
   ): Promise<void> {
-    // Bucket *every* node, then write only the buckets that contain something
-    // new.
+    // Bucket every node, then write only the buckets containing something new.
     //
-    // Both halves matter. Filtering entries before bucketing would drop the
-    // clean nodes that share a bucket with a dirty one, since a `put` replaces
-    // the whole record — so a bucket is only ever written complete. Skipping
-    // wholly-clean buckets is what keeps the write O(delta): a node at `level`
-    // covering only leaves below `firstDirtyLeaf` is final, because its
-    // subtree is full and the tree only appends.
+    // Both halves are required. Filtering entries before bucketing would drop
+    // clean nodes sharing a bucket with a dirty one, since a `put` replaces the
+    // whole record; a bucket is only ever written complete. Skipping wholly
+    // clean buckets keeps the write O(delta), as a node at `level` covering only
+    // leaves below `firstDirtyLeaf` is final: its subtree is full and the tree
+    // only appends.
     const byBucket = new Map<string, { entries: StoredNode[]; dirty: boolean }>();
 
     for (const { level, index, value } of nodes) {
@@ -294,9 +290,8 @@ export class IdbTreePersistence implements TreePersistence {
   }
 }
 
-/// Deepest level present, which is the tree depth whenever a root has been
-/// computed — and the only thing `load` needs in order to know how many levels
-/// to read back.
+/// Deepest level present. Equals the tree depth once a root has been computed,
+/// and is all `load` needs to know how many levels to read back.
 function maxLevel(nodes: MerkleNode[]): number {
   let hi = 0;
   for (const n of nodes) if (n.level > hi) hi = n.level;

@@ -3,8 +3,8 @@
 // `WasmProver` and the rust pkg out of the main bundle.
 
 // 4x4 is the SDK's default shape and what the deployed verifier accepts. These
-// must stay in step with it: the wallet never passes `shape`, so a mismatch
-// here builds witnesses of the wrong arity and every proof is rejected.
+// artifacts must match it: a mismatch builds witnesses of the wrong arity and
+// every proof is rejected.
 import circuitUrl from "@lelantos-org/circuits/4x4/4x4.wasm?url";
 import zkeyUrl from "@lelantos-org/circuits/4x4/4x4_final.zkey?url";
 import { type ProverArtifacts, WorkerProver } from "@lelantos-org/sdk/prover";
@@ -20,10 +20,10 @@ const proverArtifacts: ProverArtifacts = {
 
 /// True only when the device reports 4 GB or less.
 ///
-/// `deviceMemory` is Chromium-only and coarse. An absent value means unknown
-/// and is treated as not low: Safari and Firefox report nothing, so treating
-/// absence as low-memory would withhold the preload from those browsers
-/// entirely and impose the first-prove latency on all of them.
+/// `deviceMemory` is Chromium-only and coarse. An absent value means unknown and
+/// is treated as not low: Safari and Firefox report nothing, so treating absence
+/// as low memory would withhold the preload from those browsers and impose the
+/// first-prove latency on all of them.
 function isLowMemoryDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
@@ -62,15 +62,14 @@ export function getProverWorker(): WorkerProver {
   return cached;
 }
 
-/// Warm the worker (build `WasmProver`, fetch zkey + circuit wasm, init the
-/// rayon pool). Idempotent; call from a non-blocking path to avoid 5–10 s of
+/// Warm the worker: build `WasmProver`, fetch the zkey and circuit wasm, and init
+/// the rayon pool. Idempotent; call from a non-blocking path to avoid 5–10s of
 /// setup latency on the first prove.
 ///
-/// Triggered by intent to transact — hovering or focusing an action tab,
-/// focusing an amount input — rather than by wallet construction. A session
-/// that only reads a balance therefore never loads the ~53 MB of artefacts or
-/// spawns the rayon pool, and the interval between hover and submit covers the
-/// setup window.
+/// Triggered by intent to transact — hovering or focusing an action tab, or
+/// focusing an amount input — rather than by wallet construction, so a session
+/// that only reads a balance never loads the ~53 MB of artifacts or spawns the
+/// rayon pool. The interval between hover and submit covers the setup window.
 export function preloadProverWorker(): Promise<void> {
   if (preloadPromise) return preloadPromise;
   if (isLowMemoryDevice()) {
@@ -93,8 +92,8 @@ export function disposeProverWorker(): void {
   if (!cached) return;
   cached.dispose();
   cached = null;
-  // Cleared alongside `cached`: a resolved `preloadPromise` outliving the
-  // worker it warmed would make the next `preloadProverWorker()` a no-op
-  // against a newly constructed worker, moving the setup cost into `prove()`.
+  // Cleared alongside `cached`: a resolved `preloadPromise` outliving the worker
+  // it warmed would make the next `preloadProverWorker()` a no-op against a newly
+  // constructed worker, moving the setup cost into `prove()`.
   preloadPromise = null;
 }

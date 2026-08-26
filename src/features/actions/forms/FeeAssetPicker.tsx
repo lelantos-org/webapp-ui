@@ -1,23 +1,18 @@
 // Which token pays the relayer.
 //
-// This was a bare `<select>` on the relayer row, and the choice it presents is
-// not one a `<select>` can present: the assets differ in what the relay costs
-// in each, in what this wallet holds of each, and in whether the second covers
-// the first. All a native option list could carry was a symbol and the word
-// "insufficient", so the figures the decision actually turns on were not on
-// screen at the moment of deciding.
+// A listbox rather than a native `<select>`, because the options differ in what
+// the relay costs in each asset, what this wallet holds of each, and whether the
+// second covers the first. A native option list can carry only a symbol, leaving
+// the figures the decision turns on off screen.
 //
-// A listbox instead, with the price and the balance on every row. Affordable
-// options stay selectable, unaffordable ones stay *visible* — an option the
-// relayer takes but the wallet cannot cover is worth seeing, because "top this
-// up" is a real answer to it and a hidden row cannot suggest one.
+// Affordable options are selectable; unaffordable ones stay visible, since
+// topping one up is a valid response and a hidden row cannot suggest it.
 //
-// The list is portalled to `<body>` and anchored to the trigger's viewport
-// rect rather than positioned inside the row it belongs to. It has to be: the
-// fee panel animates its own height through a wrapper carrying
-// `overflow: hidden` (see `FeeSummary`), which clips any descendant reaching
-// past the panel — and this list is taller than the panel by design. Nothing
-// short of leaving the subtree escapes that clip. See `useAnchoredPopover`.
+// The list is portalled to `<body>` and anchored to the trigger's viewport rect
+// rather than positioned inside its row. The fee panel animates its height
+// through a wrapper carrying `overflow: hidden` (see `FeeSummary`), which clips
+// any descendant reaching past the panel, and this list is taller than the panel
+// by design. See `useAnchoredPopover`.
 
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -52,9 +47,9 @@ export function FeeAssetPicker({ choice }: FeeAssetPickerProps) {
 
   const selectedIndex = options.findIndex((o) => o.id === value);
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
-  // Where the keyboard is, which is not where the selection is: arrowing
-  // through the list must be able to pass over an option before committing to
-  // it, including an unaffordable one — announcing it is the point.
+  // Where the keyboard is, which is distinct from the selection: arrowing
+  // through the list passes over options — including unaffordable ones, so they
+  // are announced — before committing to any.
   const [active, setActive] = useState(0);
 
   const openList = () => {
@@ -73,8 +68,8 @@ export function FeeAssetPicker({ choice }: FeeAssetPickerProps) {
     close();
   };
 
-  // Opening from the button hands the list the keyboard, so the arrow keys go
-  // somewhere useful without a second press.
+  // Opening from the button moves focus to the list, so the arrow keys act on it
+  // without a second press.
   useEffect(() => {
     if (open) listRef.current?.focus();
   }, [open]);
@@ -103,8 +98,8 @@ export function FeeAssetPicker({ choice }: FeeAssetPickerProps) {
       case "Escape":
         close();
         break;
-      // Leaving the popover is dismissing it, and Tab is on its way somewhere
-      // — so no refocus, and no `preventDefault` either.
+      // Leaving the popover dismisses it, and Tab is already moving focus, so
+      // neither refocus nor `preventDefault` applies.
       case "Tab":
         close(false);
         return;
@@ -172,7 +167,7 @@ interface OptionProps {
   id: string;
   option: FeeAssetOption;
   selected: boolean;
-  /// Where the keyboard is. Not focus — see the note on the element itself.
+  /// Where the keyboard is, which is not focus; see the note on the element.
   active: boolean;
   onHover(): void;
   onPick(): void;
@@ -181,10 +176,9 @@ interface OptionProps {
 /// One asset, its price, and whether this wallet can cover it.
 function Option({ id, option: o, selected, active, onHover, onPick }: OptionProps) {
   return (
-    // The listbox pattern proper: the container holds focus and points at the
-    // current row with `aria-activedescendant`, so an option is neither
-    // focusable nor separately key-handled. Both rules below assume the
-    // roving-tabindex pattern instead.
+    // The listbox pattern: the container holds focus and points at the current
+    // row with `aria-activedescendant`, so an option is neither focusable nor
+    // separately key-handled. Both rules below assume roving tabindex instead.
     // biome-ignore lint/a11y/useFocusableInteractive: focus stays on the listbox by design
     // biome-ignore lint/a11y/useKeyWithClickEvents: keys are handled once, on the listbox
     <div

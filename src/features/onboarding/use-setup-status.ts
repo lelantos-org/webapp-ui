@@ -1,4 +1,4 @@
-// Reads Permit2 AllowanceTransfer setup state for the selected ERC20 asset.
+// Reads Permit2 AllowanceTransfer setup state for the selected ERC-20 asset.
 
 import { supportsAllowanceTransfer, type WalletApi } from "@lelantos-org/sdk";
 import { type UseQueryResult, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,10 +14,10 @@ import {
 
 export type SetupStatus = Permit2AllowanceState;
 
-/// Keyed by chain, not by MASP address. The allowance window is a fact about
-/// (chain, payer, asset): Permit2 and the pool are deployed per chain, and the
-/// payer address is the same on all of them, so the chainId is what keeps one
-/// chain's "setup complete" from being read as another's.
+/// Keyed by chain rather than by MASP address. The allowance window is a fact
+/// about (chain, payer, asset): Permit2 and the pool are deployed per chain and
+/// the payer address is the same on all of them, so the chainId keeps one
+/// chain's completed setup from being read as another's.
 export const setupStatusKey = (chainId?: bigint, payer?: string, asset?: bigint) =>
   [
     "permit2-setup-status",
@@ -31,7 +31,7 @@ export interface SetupNeeds {
   needsErc20Approve: boolean;
   /// Permit2 → MASP window is missing, too small, or about to expire.
   needsAllowancePermit: boolean;
-  /// Either of the above; the deposit cannot proceed until setup runs.
+  /// Either of the above: the deposit cannot proceed until setup runs.
   needsSetup: boolean;
 }
 
@@ -44,21 +44,21 @@ export const NO_SETUP_NEEDS: SetupNeeds = {
 /// Decide what the user must authorize before depositing `total` (amount plus
 /// protocol fee, in token base units).
 ///
-/// Both allowances are compared against the real total, matching
-/// `pickDepositStrategy` in the SDK: it takes the AllowanceTransfer path only
-/// when the window covers `total`, and otherwise falls back to the per-deposit
-/// witness path, which needs an ERC-20 allowance of its own. A check against
-/// any lower threshold passes here and then fails on-chain.
+/// Both allowances are compared against the real total, matching the SDK's
+/// `pickDepositStrategy`: it takes the AllowanceTransfer path only when the
+/// window covers `total`, otherwise falling back to the per-deposit witness
+/// path, which needs an ERC-20 allowance of its own. A check against any lower
+/// threshold passes here and then fails on-chain.
 ///
 /// Before an amount is typed there is no total to compare against, but a token
-/// with nothing approved at all still needs setup — zero covers no amount. The
-/// probe then behaves as an existence check and tightens to the exact total as
-/// soon as the fee preview resolves.
-/// `undefined` status means the probe could not answer — this chain has no
-/// Permit2 to authorize against — so there is nothing for setup to do. That is
-/// the opposite of the all-zero reading it used to receive in that case, which
-/// says "nothing is approved yet" and puts the deposit behind a setup flow that
-/// cannot succeed.
+/// with nothing approved still needs setup, since zero covers no amount. The
+/// probe then acts as an existence check and tightens to the exact total once
+/// the fee preview resolves.
+///
+/// An `undefined` status means the probe could not answer — this chain has no
+/// Permit2 to authorize against — so there is nothing for setup to do. An
+/// all-zero reading would instead mean nothing is approved yet, putting the
+/// deposit behind a setup flow that cannot succeed.
 export function evaluateSetup(
   status: SetupStatus | undefined,
   total: bigint | undefined,
@@ -78,8 +78,8 @@ export function evaluateSetup(
 }
 
 /// Per-asset {@link evaluateSetup}. `totals` is optional and keyed by asset id;
-/// an asset with no entry is evaluated as "no amount typed yet", which is an
-/// existence check rather than a comparison against a real total.
+/// an asset with no entry is evaluated as though no amount had been typed, which
+/// is an existence check rather than a comparison against a real total.
 export function evaluateSetupMany(
   statuses: ReadonlyMap<bigint, SetupStatus | undefined>,
   totals?: ReadonlyMap<bigint, bigint | undefined>,
@@ -92,9 +92,9 @@ export function evaluateSetupMany(
   return out;
 }
 
-/// The one place the probe is defined. Both `useSetupStatus` and
-/// `useSetupStatusMany` call it, so a change to what "setup state" means cannot
-/// land in one hook and not the other.
+/// The single definition of the probe. Both `useSetupStatus` and
+/// `useSetupStatusMany` call it, so a change to what setup state means applies to
+/// both.
 async function fetchSetupStatus(
   wallet: WalletApi,
   asset: bigint,
@@ -103,8 +103,9 @@ async function fetchSetupStatus(
   return readPermit2AllowanceState(wallet, entry.token);
 }
 
-/// Probe the AllowanceTransfer state for `asset`. Returns `undefined` for
-/// the native-ETH path (no Permit2 needed) and adapters without AllowanceTransfer.
+/// Probe the AllowanceTransfer state for `asset`. Returns `undefined` for the
+/// native-ETH path, which needs no Permit2, and for adapters without
+/// AllowanceTransfer.
 export function useSetupStatus(
   asset: bigint | undefined,
   opts: { asEth?: boolean } = {},
@@ -128,10 +129,10 @@ export function useSetupStatus(
 
 /// Probe several assets at once.
 ///
-/// `useQueries`, not one aggregate query: each asset keeps its own cache entry
-/// under `setupStatusKey`, so the prefix-invalidation in
-/// {@link useInvalidateSetupStatus} still reaches them, and a single-asset
-/// deposit form and the multi-token modal share the same cached reads.
+/// `useQueries` rather than one aggregate query: each asset keeps its own cache
+/// entry under `setupStatusKey`, so the prefix invalidation in
+/// {@link useInvalidateSetupStatus} reaches them and the single-asset deposit
+/// form and the multi-token modal share the same cached reads.
 export function useSetupStatusMany(assets: readonly bigint[]): {
   statuses: Map<bigint, SetupStatus | undefined>;
   isLoading: boolean;
@@ -157,9 +158,9 @@ export function useSetupStatusMany(assets: readonly bigint[]): {
   const statuses = new Map<bigint, SetupStatus | undefined>();
   assets.forEach((asset, i) => {
     const r = results[i];
-    // Only settled rows are reported. A pending row is not "no setup needed" —
-    // `evaluateSetup(undefined, …)` means "this chain cannot answer", which
-    // would read a still-loading probe as nothing-to-do.
+    // Only settled rows are reported. `evaluateSetup(undefined, …)` means the
+    // chain cannot answer, so reporting a pending row would read a still-loading
+    // probe as requiring no setup.
     if (r?.isSuccess) statuses.set(asset, r.data);
   });
 
@@ -173,10 +174,9 @@ export function useSetupStatusMany(assets: readonly bigint[]): {
 /// Invalidator hook used by the setup modal on success.
 ///
 /// With no asset, invalidates every asset for this (chain, payer). The key is
-/// always four elements, so passing `undefined` produced `[…, null]` — which is
-/// not a *prefix* of `[…, "5"]`, so React Query matched nothing and the call
-/// silently did no work. Dropping the trailing element makes the no-asset form
-/// a real prefix, which is what the optional parameter implies.
+/// always four elements, so passing `undefined` yields `[…, null]`, which is not
+/// a prefix of `[…, "5"]` and would match nothing. Dropping the trailing element
+/// makes the no-asset form an actual prefix.
 export function useInvalidateSetupStatus(): (asset?: bigint) => Promise<void> {
   const { wallet } = useWallet();
   const { chainId } = useActiveChain();

@@ -1,27 +1,27 @@
 import { toast } from "sonner";
 import { reportError } from "@/shared/lib/report-error";
 
-/// Pure: the explorer base is a per-chain fact, so it is passed in rather
-/// than read from a module global. `undefined` when the chain has no explorer
-/// configured, which callers render as plain text instead of a link.
+/// Pure: the explorer base is per-chain, so it is passed in rather than read from
+/// a module global. `undefined` when the chain has no explorer configured, which
+/// callers render as plain text instead of a link.
 export function txExplorerUrl(explorerUrl: string | undefined, txHash: string): string | undefined {
   if (!explorerUrl) return undefined;
   return `${explorerUrl.replace(/\/$/, "")}/tx/${txHash}`;
 }
 
 export interface TxToastHandle {
-  /// Phase 2 — receipt mined.
+  /// Phase 2: receipt mined.
   mined(blockNumber: number): void;
-  /// Phase 3 — relayer flushBatch landed (deposits only).
+  /// Phase 3: the relayer's `flushBatch` landed. Deposits only.
   flushed(blockNumber: number): void;
-  /// Replace description with error and mark toast failed.
+  /// Replace the description with an error and mark the toast failed.
   failed(error: unknown): void;
-  /// Soft timeout — for unflushed deposits past the tracker deadline.
+  /// Soft timeout, for unflushed deposits past the tracker deadline.
   timedOut(): void;
 }
 
-/// Tx toast that emits only on failure or soft timeout; success phases are
-/// shown inline by the form's `Stepper`.
+/// Tx toast that emits only on failure or soft timeout. Success phases are shown
+/// inline by the form's `Stepper`.
 export function toastTx(
   label: string,
   txHash: string,
@@ -38,10 +38,10 @@ export function toastTx(
 
   return {
     mined() {
-      // Inline stepper already shows "on-chain"; no toast.
+      // The inline stepper already shows "on-chain", so no toast is emitted.
     },
     flushed() {
-      // Inline stepper already shows "flushed"; no toast.
+      // The inline stepper already shows "flushed", so no toast is emitted.
     },
     failed(error) {
       const { kind, message } = reportError(`${label} failed`, error);

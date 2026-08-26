@@ -1,5 +1,4 @@
-// Split out of `AssetsCard`: it was one 328-line file holding five
-// components, with this one buried in the middle.
+// The portfolio's headline USD figure, split out of `AssetsCard`.
 
 import { useMemo } from "react";
 import type { PriceMap } from "@/features/prices";
@@ -10,17 +9,16 @@ import type { AssetBalanceView } from "./use-balances";
 
 /// Aggregate USD, as the card's headline figure.
 ///
-/// Its own band above the table rather than a 13px span wedged into the header
-/// row: this is the one number the card exists to report, and it was being set
-/// smaller than the per-row balances underneath it.
+/// Rendered in its own band above the table, since it is the primary figure the
+/// card reports.
 ///
 /// Absent entirely until something is priced, so a chain the provider does not
-/// cover — the local anvil stack included — shows the card exactly as before
-/// rather than an empty `$0.00`.
+/// cover — including the local anvil stack — renders the card without an empty
+/// `$0.00`.
 ///
-/// When some held asset has no price the figure is marked approximate and the
-/// omission is named. A total that silently leaves out an asset is a wrong
-/// number presented as a right one.
+/// When a held asset has no price, the figure is marked approximate and the
+/// omission is named, rather than presenting an incomplete total as a complete
+/// one.
 export function PortfolioTotal({
   rows,
   byId,
@@ -44,9 +42,8 @@ export function PortfolioTotal({
       <div className="pf-sum__body">
         <span className="pf-sum__label">total value</span>
         <span className="pf-sum__val mono">
-          {/* The tilde is the whole warning at a glance; the chip beside it
-              carries the same fact in words for anyone reading, or listening,
-              rather than scanning. */}
+          {/* The tilde marks the figure as approximate at a glance; the chip
+              below states the same in words. */}
           {unpriced > 0 ? (
             <span className="pf-sum__approx" aria-hidden>
               ≈
@@ -65,11 +62,11 @@ export function PortfolioTotal({
   );
 }
 
-/// Split a rendered USD figure into its dollars and its cents, so the cents can
-/// be set smaller and the eye lands on the magnitude.
+/// Split a rendered USD figure into dollars and cents, so the cents can be set
+/// smaller and the magnitude reads first.
 ///
-/// A string with no two-digit decimal tail — `formatUsd`'s `<$0.01` — comes
-/// back whole rather than being cut at an arbitrary dot.
+/// A string with no two-digit decimal tail, such as `formatUsd`'s `<$0.01`, is
+/// returned whole rather than cut at an arbitrary dot.
 function splitUsd(s: string): [dollars: string, cents: string] {
   const dot = s.lastIndexOf(".");
   if (dot < 0 || s.length - dot !== 3) return [s, ""];

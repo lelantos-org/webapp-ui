@@ -16,12 +16,11 @@ const listeners = new Set<() => void>();
 
 /// Which sync owns the counter right now.
 ///
-/// The store is a module singleton with one counter, but syncs overlap: a
-/// chain switch starts a new one while the old one is still paging, and the
-/// old one's `finished()` used to zero the live one's counter mid-flight. The
-/// counter exists precisely to distinguish a long sync from a hang, so blanking
-/// it is the one failure it must not have. Late emissions from a superseded
-/// owner are ignored.
+/// The store is a module singleton with one counter, but syncs overlap: a chain
+/// switch starts a new sync while the previous one is still paging. Without an
+/// owner, the older sync's `finished()` would zero the live counter mid-flight,
+/// which is what distinguishes a long sync from a hang. Late emissions from a
+/// superseded owner are ignored.
 let owner: string | undefined;
 
 function emit(next: SyncProgress): void {
@@ -38,7 +37,7 @@ const getSnapshot = (): SyncProgress => snapshot;
 
 /// Publisher side, driven by the SDK's `onProgress` callback.
 ///
-/// `token` identifies the sync — `(chainId, address)` at the call sites. A
+/// `token` identifies the sync, `(chainId, address)` at the call sites. A
 /// `scanning` call claims the counter; `finished` releases it only if it still
 /// holds it.
 export const syncProgress = {
@@ -51,8 +50,8 @@ export const syncProgress = {
     owner = undefined;
     emit(IDLE);
   },
-  /// Release the counter whoever holds it. For teardown paths (chain switch,
-  /// disconnect) where no sync of our own is in flight to name.
+  /// Release the counter regardless of owner. For teardown paths — chain switch,
+  /// disconnect — where there is no in-flight sync to name.
   reset(): void {
     owner = undefined;
     emit(IDLE);
@@ -61,10 +60,9 @@ export const syncProgress = {
 
 /// Live note-scan progress.
 ///
-/// The SDK already emitted per-page progress and nothing consumed it, so the
-/// initial sync — the longest wait in the app — was an undifferentiated
-/// spinner. A cold sync now pages the whole feed, which makes that worse: a
-/// number that moves is the only thing distinguishing it from a hang.
+/// Surfaces the SDK's per-page progress. A cold sync pages the whole feed and is
+/// the longest wait in the app, so a moving count is what distinguishes it from
+/// a hang.
 export function useSyncProgress(): SyncProgress {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }

@@ -1,15 +1,14 @@
 // EIP-6963 announcement fixtures.
 //
-// Three test files drive wallet discovery by dispatching the announce event,
-// and each had grown its own copy of these — including its own spelling of the
-// event name, which is the one string that has to stay in step with
-// `features/eip1193/discovery.ts`.
+// Several test files drive wallet discovery by dispatching the announce event.
+// Sharing the fixtures keeps one spelling of the event name, which must stay in
+// step with `features/eip1193/discovery.ts`.
 
 import { vi } from "vitest";
 import type { Eip6963ProviderDetail } from "@/features/eip1193";
 
-/// An announced wallet. `name` defaults to the rdns, which is all the tests
-/// that only care about identity need.
+/// An announced wallet. `name` defaults to the rdns, which suffices for tests
+/// that only assert on identity.
 export function detail(uuid: string, rdns: string, name = rdns, icon = ""): Eip6963ProviderDetail {
   return { info: { uuid, name, icon, rdns }, provider: { request: vi.fn() } };
 }

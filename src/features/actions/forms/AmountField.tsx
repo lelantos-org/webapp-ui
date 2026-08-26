@@ -17,10 +17,10 @@ export interface AmountFieldProps {
   /// What the "max" button writes, in circuit units; the button is withheld
   /// when it is `undefined`.
   ///
-  /// Not simply "the balance". For a spend the two coincide, but a deposit is
-  /// charged the protocol fee *on top*, so its max is the largest amount whose
-  /// `amount + fee` still fits — see `depositMaxAmount`. The balance the user
-  /// reads travels separately in `hint`.
+  /// Not the balance. For a spend the two coincide, but a deposit is charged the
+  /// protocol fee on top, so its max is the largest amount whose `amount + fee`
+  /// still fits; see `depositMaxAmount`. The displayed balance travels separately
+  /// in `hint`.
   maxAmount: bigint | undefined;
   validation: AmountValidation;
   formError?: string;
@@ -44,8 +44,8 @@ export function AmountField({
   onSetMax,
 }: AmountFieldProps) {
   const prices = usePrices();
-  // Absent whenever anything is unknown — no asset, no address, no price, or
-  // nothing typed yet. Never `$0.00` standing in for "we could not price this".
+  // Absent whenever an input is unknown: no asset, no address, no price, or
+  // nothing typed. Never `$0.00`, which would read as a priced zero.
   const value =
     selected && amount !== undefined && amount > 0n
       ? assetUsd(amount, selected, prices)
@@ -58,8 +58,8 @@ export function AmountField({
       placeholder={selected ? `1.0 ${selected.symbol ?? ""}`.trim() : "1.0"}
       inputMode="decimal"
       autoComplete="off"
-      // Backstop for the tab-hover warm in `HomeLayout`: keyboard navigation
-      // reaches this field without hovering a tab. Idempotent.
+      // Backstop for the tab-hover warm in `HomeLayout`, since keyboard
+      // navigation reaches this field without hovering a tab. Idempotent.
       onFocus={() => void preloadProverWorker()}
       error={pickAmountError(formError, validation)}
       hint={joinHint(hint, usd)}

@@ -1,8 +1,8 @@
 /* TOKEN AND CHAIN MARKS — the coloured square beside a symbol or network name.
  *
- * A component rather than part of `balance.css` because two features draw it:
- * the portfolio table and the claim page, which each used to hand-draw their
- * own and had drifted to different sizes, letter counts and radii.
+ * A component rather than part of `balance.css`, because two features draw it:
+ * the portfolio table and the claim page, which must agree on size, letter count
+ * and radius.
  *
  * The colour arrives as `--mono-h/s/l` from `monogramStyle`: a brand colour for
  * something the bundle recognises, otherwise a hue derived from the token

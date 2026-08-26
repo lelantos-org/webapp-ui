@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { ChainIcon } from "./ChainIcon";
 import { TokenIcon } from "./TokenIcon";
 
-/// The marks are `aria-hidden`, so no accessible query can reach them. That is
-/// as much the behaviour under test as anything else — see the decorative case.
+/// The marks are `aria-hidden`, so no accessible query reaches them; that is
+/// itself part of the behaviour under test. See the decorative case.
 function mark(container: HTMLElement, selector: string): HTMLElement {
   const el = container.querySelector<HTMLElement>(selector);
   if (!el) throw new Error(`no ${selector} rendered`);

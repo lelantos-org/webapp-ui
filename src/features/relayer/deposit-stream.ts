@@ -10,16 +10,16 @@ const streams = new Map<bigint, DepositStream>();
 /// The open stream for `chainId`, opening one if needed.
 ///
 /// A closed stream is replaced rather than reused: the transport gives up
-/// permanently on a fatal error (a relayer without the endpoint answers 404),
-/// so reusing it would report every later deposit as unobserved for the rest
-/// of the page's life. Reopening costs one request and recovers if the
-/// relayer comes back.
+/// permanently on a fatal error, such as the 404 a relayer without the endpoint
+/// returns, so reusing it would report every later deposit as unobserved for the
+/// life of the page. Reopening costs one request and recovers if the relayer
+/// returns.
 export function depositStream(chainId: bigint): DepositStream {
   const open = streams.get(chainId);
   if (open && !open.isClosed) return open;
-  // Closed here means "gave up retrying", which does not guarantee the
-  // underlying `EventSource` was torn down. Dropping the reference without
-  // closing it left an orphaned connection per replacement.
+  // Closed here means the transport gave up retrying, which does not guarantee
+  // the underlying `EventSource` was torn down. Dropping the reference without
+  // closing it would orphan a connection per replacement.
   open?.close();
   const fresh = new DepositStream(env.relayerUrl, chainId);
   streams.set(chainId, fresh);
@@ -38,9 +38,9 @@ export function closeDepositStreams(): void {
   streams.clear();
 }
 
-/// Drop the streams for every chain but `chainId`. Call on a chain switch:
-/// the old chain's SSE connection is held open for the life of the page
-/// otherwise, and nothing is left watching it for flush events.
+/// Drop the streams for every chain but `chainId`. Call on a chain switch, since
+/// the previous chain's SSE connection would otherwise stay open for the life of
+/// the page with nothing watching it for flush events.
 export function closeDepositStreamsExcept(chainId: bigint): void {
   for (const [id, stream] of streams) {
     if (id === chainId) continue;

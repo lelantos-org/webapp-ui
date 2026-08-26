@@ -1,10 +1,9 @@
 // Post-generation view for a claim link.
 //
-// The screen has one job: get the link to its recipient. So it reads top to
-// bottom as what / risk / action, and everything that is not that is either
-// demoted or gone. The URL itself is an escape hatch, not the headline — it is
-// masked by default and unreadable when it is, so giving it the most visual
-// weight (as the old card did) spent the page's focus on nothing.
+// The screen has one job: get the link to its recipient. It reads top to bottom
+// as what, risk, action. The URL is an escape hatch rather than the headline —
+// it is masked by default and unreadable while masked — so it is demoted below
+// the actions.
 
 import { useId, useState } from "react";
 import { createLogger } from "@/shared/lib/logger";
@@ -33,8 +32,8 @@ export function ClaimLinkResult({ url, amountLabel, onReset }: ClaimLinkResultPr
     try {
       await navigator.share({ url, title: "claim link", text: `claim ${amountLabel}` });
     } catch (e) {
-      // Cancelling the share sheet rejects, and is the common case — so this is
-      // not reported to the user, only recorded.
+      // Cancelling the share sheet rejects and is the common case, so it is
+      // recorded rather than reported to the user.
       log.debug("share dismissed", e);
     }
   }
@@ -46,9 +45,8 @@ export function ClaimLinkResult({ url, amountLabel, onReset }: ClaimLinkResultPr
       </h3>
       {amountLabel ? <p className="claim-result__amount mono">{amountLabel}</p> : null}
 
-      {/* Ahead of the buttons on purpose: this is a bearer secret, and the
-          consequence of sending it carelessly is unrecoverable. Reading it
-          after the copy would be reading it too late. */}
+      {/* Placed ahead of the buttons: this is a bearer secret and sending it
+          carelessly is unrecoverable, so the warning must precede the copy. */}
       <p className="claim-result__warn">
         Anyone who opens this link claims the funds. It works <strong>once</strong> and cannot be
         cancelled — send it through a channel you trust.
@@ -63,8 +61,9 @@ export function ClaimLinkResult({ url, amountLabel, onReset }: ClaimLinkResultPr
             share…
           </button>
         ) : null}
-        {/* Fixed slot rather than a label swap on the button: the confirmation
-            does not shift the layout, and a screen reader hears it announced. */}
+        {/* A fixed slot rather than a label swap on the button, so the
+            confirmation does not shift the layout and is announced by a screen
+            reader. */}
         <span className="claim-result__copied" role="status" aria-live="polite">
           {copied ? "copied ✓" : ""}
         </span>

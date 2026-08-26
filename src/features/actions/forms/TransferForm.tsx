@@ -40,8 +40,8 @@ export function TransferForm() {
   const v = validateAmount(parsed, selected, balance);
   const assetField = register("asset");
 
-  // Left unset until the user picks: `undefined` means "the asset being sent",
-  // which is the SDK's own default and stays correct when they change assets.
+  // Left unset until the user picks. `undefined` means the asset being sent,
+  // which is the SDK's default and stays correct across asset changes.
   const [feeAsset, setFeeAsset] = useState<bigint | undefined>(undefined);
   const fees = useFeePanel({
     kind: "transfer",
@@ -53,20 +53,19 @@ export function TransferForm() {
     onFeeAsset: setFeeAsset,
   });
 
-  // Not the balance. The selector refuses reserved, cooling-down and dust
-  // notes, and a spend can only consume `nIn` of what is left — so a max wired
-  // to the balance writes an amount the selector then rejects. See
-  // `wallet/spendable.ts`.
+  // Not the balance: the selector refuses reserved, cooling-down and dust notes,
+  // and a spend can consume only `nIn` of what remains, so a max wired to the
+  // balance would write an amount the selector rejects. See `wallet/spendable.ts`.
   const crossAssetFee = feeAsset !== undefined && feeAsset !== selected?.id;
   const spendable = useSpendableMax(selected?.id, {
     crossAssetFee,
-    // A same-asset relayer fee comes out of this spend's own target, so the
-    // most that can be *sent* is the ceiling less the fee.
+    // A same-asset relayer fee comes out of this spend's own target, so the most
+    // that can be sent is the ceiling less the fee.
     sameAssetFee: crossAssetFee ? 0n : fees.relayerAmount,
   });
 
-  // Switching the fee asset moves the ceiling; a figure this wrote before
-  // that change has to move with it. See `use-follow-max.ts`.
+  // Switching the fee asset moves the ceiling, so a figure written before that
+  // change must move with it. See `use-follow-max.ts`.
   const { onSetMax } = useFollowMax(spendable?.max, selected, watch("amount"), setAmount);
 
   return (

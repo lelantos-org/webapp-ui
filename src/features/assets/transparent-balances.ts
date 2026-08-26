@@ -27,20 +27,19 @@ const sourceBalanceKey = (
 
 /// Chain reads, both reporting an unavailable balance as `undefined`.
 ///
-/// Not `0n`. The rest of this module — and `validateDepositAmount`, which skips
-/// the check entirely on `undefined` — is built on "undefined means not known".
-/// Collapsing a failed read to zero instead asserts the user holds nothing, so
-/// every amount came back "exceeds available balance" and the deposit button
-/// stayed dead until the poll recovered, blaming the balance rather than the
-/// read. It also hid a genuinely missing adapter entrypoint.
+/// Not `0n`: this module and `validateDepositAmount`, which skips the check on
+/// `undefined`, treat it as "not known". Collapsing a failed read to zero would
+/// assert the user holds nothing, rejecting every amount as exceeding the
+/// balance until the poll recovered, and would hide a missing adapter entry
+/// point.
 type Chain = WalletApi["chain"];
-/// Derived from the adapter signature, so a change to it surfaces here rather
+/// Derived from the adapter signature, so a change there surfaces here rather
 /// than at the call site.
 type TokenRef = Parameters<NonNullable<Chain["tokenBalanceOf"]>>[0];
 
-/// `null`, not `undefined`: React Query rejects an `undefined` query result
-/// outright. The hook maps it back to `undefined` at its boundary, which is the
-/// spelling the rest of the app uses for "not known".
+/// `null` rather than `undefined`, which React Query rejects as a query result.
+/// The hook maps it back to `undefined` at its boundary, the spelling the rest of
+/// the app uses for "not known".
 function readNative(chain: Chain, account: EvmAddress): Promise<bigint | null> {
   const read = chain.nativeBalance;
   if (!read) return Promise.resolve(null);
@@ -67,8 +66,8 @@ function readToken(chain: Chain, token: TokenRef, account: EvmAddress): Promise<
 /// spending.
 ///
 /// `undefined` while the read is in flight, and also when it failed or the
-/// adapter cannot answer — callers distinguish "not yet known" from "zero" and
-/// avoid rejecting an amount against a balance they do not have.
+/// adapter cannot answer, so callers distinguish "not yet known" from zero and do
+/// not reject an amount against a balance they do not have.
 ///
 /// Reads only the balance it returns, keyed per asset: selecting a different
 /// asset costs one cold read and is cached thereafter.
@@ -91,10 +90,9 @@ export function useDepositSourceBalance(
       if (token === undefined) throw new Error("not ready");
       return readToken(wallet.chain, token, account);
     },
-    // Was a bare interval — the only poller in the app without the idle
-    // factor, and the one that sends the user's EOA to a third-party RPC on
-    // every tick. An unattended tab kept announcing that address every 30s
-    // indefinitely.
+    // Through `usePolling` like every other poll: this one sends the user's EOA
+    // to a third-party RPC on each tick, so an unattended tab must not keep
+    // announcing that address at full cadence.
     ...usePolling(BALANCE_POLL_MS),
     staleTime: BALANCE_STALE_MS,
   });
@@ -104,9 +102,9 @@ export function useDepositSourceBalance(
 
 /// Drop every cached source balance for the active wallet.
 ///
-/// Called after a deposit, the one action that moves funds out of the
-/// transparent balance; `BALANCE_STALE_MS` would otherwise hold the pre-deposit figure
-/// on screen.
+/// Called after a deposit, the one action that moves funds out of the transparent
+/// balance. `BALANCE_STALE_MS` would otherwise hold the pre-deposit figure on
+/// screen.
 export function useInvalidateTransparentBalances(): () => Promise<void> {
   const qc = useQueryClient();
   const { wallet, ethAddress } = useWallet();

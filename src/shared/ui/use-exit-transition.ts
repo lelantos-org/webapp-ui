@@ -39,7 +39,8 @@ export function useExitTransition(durationMs: number): ExitTransition {
     (done: () => void) => {
       if (started.current) return;
       started.current = true;
-      // No animation to wait for — a delay here is just an unresponsive close.
+      // No animation to wait for; a delay here would only make the close feel
+      // unresponsive.
       if (prefersReducedMotion()) {
         done();
         return;

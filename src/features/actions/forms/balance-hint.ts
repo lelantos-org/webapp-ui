@@ -4,12 +4,12 @@ import type { SpendableMax } from "@lelantos-org/sdk/wallet";
 import { formatAmountForAsset } from "@/shared/lib/format";
 import type { AssetMeta } from "./amount-field";
 
-// Re-exported so existing `balance-hint` importers keep one import; the type
-// itself belongs with the amount parsing that defines it.
+// Re-exported so `balance-hint` importers need one import; the type belongs with
+// the amount parsing that defines it.
 export type { AssetMeta };
 
-/// Build the secondary "balance N · settling ±M" line shown under the
-/// amount field. Returns `undefined` while the balance is still loading.
+/// Build the secondary `balance N · settling ±M` line shown under the amount
+/// field. Returns `undefined` while the balance is loading.
 export function balanceHint(
   balance: bigint | undefined,
   pending: bigint,
@@ -26,15 +26,13 @@ export function balanceHint(
 
 /// Names value the balance counts but a spend cannot reach, and why.
 ///
-/// Without this the max button simply writes a smaller number than the balance
-/// printed above it, which reads as a bug — and the failure it replaced was the
-/// app's own max being rejected by the app's own selector.
+/// Without it the max button writes a smaller number than the balance printed
+/// above it, with nothing to explain the difference.
 ///
-/// The causes are not interchangeable, which is why they are named rather than
-/// summed: `slots` means the value is there and reachable by consolidating,
-/// while the other three mean it needs time. Reports the largest single cause
-/// rather than a list — the hint sits inline under the amount field, and three
-/// clauses there is a paragraph nobody reads.
+/// The causes are named rather than summed because they are not
+/// interchangeable: `slots` means the value is reachable by consolidating, while
+/// the other three mean it needs time. Reports the largest single cause, since
+/// the hint is one inline line under the amount field.
 export function withheldHint(
   spendable: SpendableMax | undefined,
   meta: AssetMeta,
@@ -42,8 +40,8 @@ export function withheldHint(
   if (!spendable) return undefined;
   const { reserved, cooldown, dust, slots } = spendable.withheld;
   const causes = [
-    // Ordered by how actionable each is, which breaks ties toward the one the
-    // user can do something about.
+    // Ordered by how actionable each is, so ties resolve toward the cause the
+    // user can act on.
     { value: slots, why: "needs consolidating" },
     { value: cooldown, why: "still settling" },
     { value: reserved, why: "awaiting an earlier send" },

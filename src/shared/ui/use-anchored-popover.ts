@@ -1,17 +1,15 @@
 // A floating element anchored to the trigger that opened it, in viewport
 // coordinates.
 //
-// For a popover that cannot be positioned where it belongs in the DOM. The
-// case that needed it: an element inside a panel that animates its own height
-// through `overflow: hidden` is clipped to that panel, and no amount of
-// `position: absolute` escapes an overflow ancestor. The way out is to portal
-// the element to `<body>` and place it against the trigger's rect — which is
-// what this measures, and re-measures whenever the rect can have moved.
+// For a popover that cannot be positioned where it belongs in the DOM: an
+// element inside a panel animating its height through `overflow: hidden` is
+// clipped to that panel, and `position: absolute` does not escape an overflow
+// ancestor. The element is portalled to `<body>` and placed against the
+// trigger's rect, re-measured whenever that rect can have moved.
 //
-// Deliberately not a general placement engine. It anchors below the trigger,
-// flips above where that does not fit, and clamps into the viewport. Anything
-// wanting collision-aware placement against arbitrary boundaries wants a
-// library, not this.
+// Not a general placement engine. It anchors below the trigger, flips above
+// where that does not fit, and clamps into the viewport; collision-aware
+// placement against arbitrary boundaries needs a library.
 
 import {
   type CSSProperties,
@@ -35,17 +33,17 @@ interface Placement {
 }
 
 export interface AnchoredPopover<A extends HTMLElement, F extends HTMLElement> {
-  /// Put on the trigger. Its rect is what the floating element is placed
-  /// against, and a pointer press inside it is not a dismissal.
+  /// Put on the trigger. Its rect is what the floating element is placed against,
+  /// and a pointer press inside it is not a dismissal.
   anchorRef: RefObject<A>;
   /// Put on the floating element, along with `style`.
   floatRef: RefObject<F>;
-  /// Opened upwards, because there was more room above than below. Only an
-  /// entrance animation cares — it should rise from the side it came from.
+  /// Opened upwards, because there was more room above than below. Relevant only
+  /// to an entrance animation, which should rise from the anchored side.
   flipped: boolean;
-  /// Coordinates once measured; hidden before. The measurement runs in a
-  /// layout effect, so the unplaced frame is never painted — this is what
-  /// keeps it invisible in a browser that somehow paints one anyway.
+  /// Coordinates once measured, hidden before. The measurement runs in a layout
+  /// effect so the unplaced frame is not painted; the hidden style covers a
+  /// browser that paints one regardless.
   style: CSSProperties;
 }
 
@@ -53,9 +51,8 @@ export interface AnchoredPopover<A extends HTMLElement, F extends HTMLElement> {
  * @param open whether the floating element is rendered. Placement is dropped
  * when it is not, so the next open measures rather than reusing stale
  * coordinates.
- * @param onDismiss called on a pointer press outside both elements. Read
- * through a ref, so passing a fresh closure every render does not re-subscribe
- * the listeners.
+ * @param onDismiss called on a pointer press outside both elements. Read through
+ * a ref, so a fresh closure each render does not re-subscribe the listeners.
  */
 export function useAnchoredPopover<A extends HTMLElement, F extends HTMLElement>(
   open: boolean,
@@ -79,9 +76,8 @@ export function useAnchoredPopover<A extends HTMLElement, F extends HTMLElement>
 
     const below = vh - rect.bottom - GAP - MARGIN;
     const above = rect.top - GAP - MARGIN;
-    // Downwards unless it does not fit and there is genuinely more room the
-    // other way. One that flips for a few pixels is worse than one that
-    // scrolls where it is.
+    // Downwards unless it does not fit and there is more room above, so a few
+    // pixels of overflow do not trigger a flip.
     const flipped = height > below && above > below;
     const top = flipped
       ? Math.max(MARGIN, rect.top - GAP - height)
@@ -92,9 +88,8 @@ export function useAnchoredPopover<A extends HTMLElement, F extends HTMLElement>
     setPlacement({ top, left, flipped });
   }, []);
 
-  // A layout effect, because the size being measured is the rendered element's
-  // own: it has to exist before it can be placed, and it has to be placed
-  // before the browser paints it.
+  // A layout effect, because the size measured is the rendered element's own: it
+  // must exist before it can be placed, and be placed before the browser paints.
   useLayoutEffect(() => {
     if (open) reposition();
     else setPlacement(null);
@@ -104,17 +99,17 @@ export function useAnchoredPopover<A extends HTMLElement, F extends HTMLElement>
     if (!open) return;
     const onPointer = (e: PointerEvent) => {
       const target = e.target as Node;
-      // Both are asked, because the floating element is portalled out of the
-      // trigger's subtree — one `contains` no longer covers the pair.
+      // Both are checked, since the floating element is portalled out of the
+      // trigger's subtree and one `contains` does not cover the pair.
       if (anchorRef.current?.contains(target) || floatRef.current?.contains(target)) return;
       dismiss.current();
     };
-    // `pointerdown`, not `click`: a press that starts inside the popover and
-    // ends outside it is a drag-selection of its text, not a dismissal.
+    // `pointerdown` rather than `click`: a press starting inside the popover and
+    // ending outside is a drag-selection of its text, not a dismissal.
     window.addEventListener("pointerdown", onPointer);
-    // Placed against a rect, so it has to be re-placed whenever that rect can
-    // have moved. Capturing, because a scroll inside some ancestor's own
-    // scroll container never reaches `window` by bubbling.
+    // Placed against a rect, so it is re-placed whenever that rect can have
+    // moved. Capturing, because a scroll inside an ancestor's own scroll
+    // container never reaches `window` by bubbling.
     window.addEventListener("scroll", reposition, true);
     window.addEventListener("resize", reposition);
     return () => {

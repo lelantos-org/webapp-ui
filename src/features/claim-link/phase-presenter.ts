@@ -19,12 +19,11 @@ export interface StepperState {
 
 /// The chain the link names, for the phases that know it.
 ///
-/// `undefined` only before the fragment is decoded, or when it could not be.
-/// `done` and `error` keep it: the asset symbol and decimals come from that
-/// chain's token list, so dropping it on `done` made the success card — the
-/// common path, not an edge case — read `1000000000000000000 asset#5` in place
-/// of `1.0 WETH`. An exhaustive switch rather than an `in` check, so adding a
-/// phase is a compile error here instead of a silently-unlabelled asset list.
+/// `undefined` only before the fragment is decoded, or when decoding failed.
+/// `done` and `error` retain it: the asset symbol and decimals come from that
+/// chain's token list, so dropping it would leave the success card showing raw
+/// circuit units and an `asset#<id>` label. An exhaustive switch rather than an
+/// `in` check, so adding a phase is a compile error here.
 export function linkChainIdOf(phase: Phase): bigint | undefined {
   switch (phase.kind) {
     case "need-wallet":
@@ -43,9 +42,9 @@ export function linkChainIdOf(phase: Phase): bigint | undefined {
 
 /// `blocked` is the wallet being on a chain other than the link's.
 ///
-/// It outranks the phase because the flow genuinely stops there: nothing is
-/// scanned and nothing can be spent until the wallet moves, so showing "scan
-/// for note" in progress would describe work that is not happening.
+/// It outranks the phase because the flow stops there: nothing is scanned and
+/// nothing can be spent until the wallet moves, so showing "scan for note" in
+/// progress would describe work that is not running.
 export function stepperStateFor(phase: Phase, blocked = false): StepperState {
   if (blocked && phase.kind !== "done" && phase.kind !== "error") {
     return { current: "network", failed: false, done: false };
@@ -65,22 +64,22 @@ export function stepperStateFor(phase: Phase, blocked = false): StepperState {
     case "done":
       return { current: "claim", failed: false, done: true };
     case "error":
-      // A scan that failed did not reach the claim step, and marking the wrong
-      // one red tells the user the spend was attempted when it was not.
+      // A failed scan never reached the claim step, so marking that step failed
+      // would imply a spend was attempted.
       return { current: phase.from === "scan" ? "scan" : "claim", failed: true, done: false };
   }
 }
 
 /// `blocked` drops the phase's own line rather than replacing it: the network
-/// gate card names both chains and offers the switch, and a hero repeating
-/// that in different words reads as two separate problems.
+/// gate card already names both chains and offers the switch, and repeating that
+/// here would read as two separate problems.
 export function heroSubtitleFor(phase: Phase, blocked = false): string | undefined {
   if (blocked && phase.kind !== "done" && phase.kind !== "error") return undefined;
   switch (phase.kind) {
     case "reading-fragment":
       return "reading the bearer secret from the URL fragment.";
     case "bad-link":
-      // A reload is the common way to land here, and it did not break anything.
+      // A reload is the common route to this state, and nothing has failed.
       return phase.reason === "missing"
         ? "the secret is only ever in the address bar, and only for a moment."
         : "this link can't be parsed.";

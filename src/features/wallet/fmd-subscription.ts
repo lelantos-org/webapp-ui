@@ -13,39 +13,35 @@ import { localStore, readJson, writeJson } from "@/shared/lib/storage";
 import { accountDigest } from "@/shared/lib/storage-digest";
 
 const log = createLogger("fmd-sub");
-// Namespaced by cache format: entries hold the capability token that
-// addresses the subscription.
-//
-// `v3` because the key shape changed — v2 spelled the address out, so the key
-// names alone enumerated every account this browser had connected. See
+// Namespaced by cache format; entries hold the capability token addressing the
+// subscription. The address is digested rather than spelled out, so the key
+// names do not enumerate the accounts this browser has connected — see
 // `accountDigest`. A miss costs one idempotent POST.
 const PREFIX = "lelantos:fmd-sub:v3:";
 
 /// Decoys a match set is expected to retain, mirroring the server's
-/// `MIN_EXPECTED_DECOYS`. A γ is acceptable while `noteCount * 2^-γ` stays at
-/// or above this.
+/// `MIN_EXPECTED_DECOYS`. A γ is acceptable while `noteCount * 2^-γ` stays at or
+/// above this.
 ///
-/// The server does not *reject* a pool below the floor — it clamps its
-/// advertised ceiling to `GAMMA_MIN` and accepts γ=1 at any note count,
-/// including zero. This client is deliberately stricter: at γ=1 the match set
-/// is half the pool, so registering one tells the discovery service that the
-/// wallet's notes are among those — for a pool this small, weaker than
-/// telling it nothing and taking the firehose. See `maxDetectionGamma`.
+/// The server does not reject a pool below the floor: it clamps its advertised
+/// ceiling to `GAMMA_MIN` and accepts γ=1 at any note count. This client is
+/// stricter, because at γ=1 the match set is half the pool, so registering one
+/// reveals more to the discovery service than taking the firehose. See
+/// `maxDetectionGamma`.
 const DECOY_FLOOR = 64;
 
 /// Per-(chain, address) memo of the subscription token last confirmed with the
 /// server, and when.
 ///
-/// The token itself is a pure function of the wallet key and never changes; the
-/// *subscription* it addresses can expire or be revoked server-side. So this is
-/// a hint with an expiry, not an answer: past the TTL the token is re-confirmed
-/// through the idempotent create call. Trusting it indefinitely turned an
-/// expired subscription into a permanent, silent zero balance, because an
-/// inactive subscription answers `listNotes` with an empty page rather than an
-/// error.
+/// The token is a pure function of the wallet key and never changes, but the
+/// subscription it addresses can expire or be revoked server-side. This is
+/// therefore a hint with an expiry: past the TTL the token is re-confirmed
+/// through the idempotent create call. Trusting it indefinitely would turn an
+/// expired subscription into a silent zero balance, since an inactive
+/// subscription answers `listNotes` with an empty page rather than an error.
 ///
-/// Grouped into one object so the value key and its timestamp key cannot drift
-/// apart — they are written, read and cleared together or not at all.
+/// Grouped into one object so the token and its expiry are written, read and
+/// cleared together.
 const tokenCache = {
   key: (chainId: bigint, ethAddr: string) =>
     `${PREFIX}${chainId.toString(16)}:${accountDigest(ethAddr)}`,
@@ -69,21 +65,21 @@ const tokenCache = {
   },
 };
 
-/// Nominal lifetime of a cached token before it is re-confirmed with the
-/// server. Re-confirming costs one idempotent POST per day.
+/// Nominal lifetime of a cached token before it is re-confirmed with the server,
+/// at a cost of one idempotent POST per day.
 ///
-/// Jittered once, at write, into the entry's `expiresAt`. An exact 24h TTL
-/// makes the re-confirm land at the same wall-clock offset every day, which is
-/// a per-wallet schedule the discovery service can recognise without reading
-/// the token it carries. Drawing the jitter at the *comparison* instead would
-/// re-roll the deadline on every read, so one entry could answer "valid" and
-/// then "expired" microseconds apart.
+/// Jittered once at write time into the entry's `expiresAt`. An exact 24h TTL
+/// would land the re-confirm at the same wall-clock offset every day, a
+/// per-wallet schedule the discovery service could recognise without reading the
+/// token. Jittering at comparison time instead would re-roll the deadline on
+/// every read, letting one entry answer "valid" and then "expired" microseconds
+/// apart.
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface CacheEntry {
   token: string;
-  /// Absolute deadline, not a write timestamp: the jitter is baked in here so
-  /// an entry's lifetime is decided once.
+  /// Absolute deadline rather than a write timestamp, so the jitter is applied
+  /// once and the entry's lifetime is fixed.
   expiresAt: number;
 }
 
@@ -104,13 +100,13 @@ export function clearCachedSubscription(chainId: bigint, ethAddr: string): void 
 /// Largest γ keeping `noteCount` above the decoy floor, capped at the sender's
 /// γ. Returns 0 when the pool is too small for any acceptable value.
 ///
-/// Detecting below the sender's γ is lossless — it only widens the match set —
-/// so trimming γ costs bandwidth, never notes.
+/// Detecting below the sender's γ is lossless, widening the match set only, so
+/// trimming γ costs bandwidth rather than notes.
 ///
 /// Agrees with the server's `max_gamma_for` at every pool size at or above
 /// `DECOY_FLOOR * 2 ** GAMMA_MIN`. Below that the server clamps to `GAMMA_MIN`
-/// while this returns 0, which is the one intentional divergence: a 0 means
-/// "do not subscribe at all" rather than "subscribe at the weakest γ".
+/// while this returns 0, meaning "do not subscribe" rather than "subscribe at
+/// the weakest γ".
 export function maxDetectionGamma(noteCount: number): number {
   if (noteCount < DECOY_FLOOR * 2 ** GAMMA_MIN) return 0;
   return Math.min(FMD_DEFAULT_GAMMA, Math.floor(Math.log2(noteCount / DECOY_FLOOR)));
@@ -118,11 +114,10 @@ export function maxDetectionGamma(noteCount: number): number {
 
 /// Why the wallet is taking the full note firehose instead of FMD matches.
 ///
-/// Worth distinguishing because the two cost wildly different amounts.
-/// `poolTooSmall` is bounded by the decoy floor itself — fewer than
-/// `DECOY_FLOOR * 2 ** GAMMA_MIN` notes exist to scan, so the firehose is
-/// effectively free. `unavailable` carries no such bound: on a full-sized pool
-/// it means trial-decrypting every note in the system.
+/// The two differ greatly in cost. `poolTooSmall` is bounded by the decoy floor:
+/// fewer than `DECOY_FLOOR * 2 ** GAMMA_MIN` notes exist to scan, so the
+/// firehose is cheap. `unavailable` has no such bound and, on a full-sized pool,
+/// means trial-decrypting every note in the system.
 export type FullSyncReason = "poolTooSmall" | "unavailable";
 
 /// The chosen strategy, plus why it was chosen when it is the fallback.
@@ -134,10 +129,10 @@ export interface SyncPlan {
 
 /// Pick the note-sync strategy for this wallet.
 ///
-/// Prefers server-side FMD filtering, which needs a subscription. The exact γ
-/// ceiling is the server's policy rather than a client-side invariant, so a
-/// rejected or unreachable subscription degrades to the full note firehose:
-/// slower, but correct and strictly more private.
+/// Prefers server-side FMD filtering, which requires a subscription. The γ
+/// ceiling is server policy rather than a client-side invariant, so a rejected
+/// or unreachable subscription degrades to the full note firehose: slower, but
+/// correct and more private.
 export async function resolveSyncStrategy(
   fmdUrl: string,
   chainId: bigint,
@@ -158,14 +153,13 @@ export async function resolveSyncStrategy(
 /// the capability token addressing it, or `undefined` when the pool is below
 /// the decoy floor and no subscription should exist yet.
 ///
-/// `undefined` rather than a throw: a pool that has not grown to the floor is
-/// the ordinary state of a new deployment, not a failure, and conflating it
-/// with an unreachable discovery service costs the caller the ability to tell
-/// a free fallback from a ruinous one.
+/// `undefined` rather than a throw: a pool below the floor is the ordinary state
+/// of a new deployment, and conflating it with an unreachable discovery service
+/// would stop the caller distinguishing a cheap fallback from an expensive one.
 ///
 /// The token is derived from `ivk` at the default epoch, making it a pure
-/// function of the wallet key. The cache only avoids a redundant POST;
-/// losing it costs one idempotent re-registration.
+/// function of the wallet key. The cache only avoids a redundant POST; losing it
+/// costs one idempotent re-registration.
 async function ensureFmdSubscription(
   fmdUrl: string,
   chainId: bigint,
@@ -202,11 +196,11 @@ async function ensureFmdSubscription(
     active: sub.active,
     leafCount,
   });
-  // An inactive subscription is not usable, and — unlike an unreachable server
-  // — it fails silently: `listNotes` returns an empty page, the sync reports
-  // `exhausted` with zero hits, and the user is shown a healthy "synced just
-  // now" beside a zero balance. Throwing routes it to the `unavailable`
-  // fallback, which takes the firehose and warns.
+  // An inactive subscription is unusable and, unlike an unreachable server,
+  // fails silently: `listNotes` returns an empty page, the sync reports
+  // `exhausted` with zero hits, and the UI shows "synced just now" beside a zero
+  // balance. Throwing routes it to the `unavailable` fallback, which takes the
+  // firehose and warns.
   if (!sub.active) {
     tokenCache.clear(chainId, ethAddr);
     throw new Error("FMD subscription is not active");

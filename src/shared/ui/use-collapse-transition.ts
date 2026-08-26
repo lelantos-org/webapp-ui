@@ -1,21 +1,21 @@
 // Lets an element play a CSS height collapse when a prop says it is gone.
 //
-// The sibling of `useExitTransition`, and the difference is who decides. That
-// one is for a caller holding a close *callback*: it flips a class, waits, and
-// calls back. This one is for a caller holding an open *prop* it does not
-// control — the content simply disappears, and the element still has to be
-// rendered for long enough to animate away.
+// The counterpart of `useExitTransition`, differing in who decides. That one
+// serves a caller holding a close callback: it flips a class, waits, then calls
+// back. This one serves a caller holding an open prop it does not control, where
+// the content disappears and the element must stay rendered long enough to
+// animate away.
 
 import { useEffect, useState } from "react";
 import { prefersReducedMotion } from "@/shared/lib/motion";
 
 export interface CollapseTransition {
-  /// Keep rendering. Outlives `open` by the collapse, so there is something
-  /// left to animate away.
+  /// Keep rendering. Outlives `open` by the collapse duration, so there is
+  /// something left to animate away.
   mounted: boolean;
-  /// Drive the open class from this. Lags `open` by a frame on the way in, so
-  /// the element has a closed state to transition *from* — an element that
-  /// mounts already-open has nothing to interpolate and simply appears.
+  /// Drives the open class. Lags `open` by a frame on the way in, so the element
+  /// has a closed state to transition from; one that mounts already open has
+  /// nothing to interpolate.
   expanded: boolean;
 }
 
@@ -33,7 +33,7 @@ export function useCollapseTransition(open: boolean, durationMs: number): Collap
       return () => cancelAnimationFrame(frame);
     }
     setExpanded(false);
-    // Nothing to wait out — holding the node would only delay its removal.
+    // Nothing to wait out; holding the node would only delay its removal.
     if (prefersReducedMotion()) {
       setMounted(false);
       return;

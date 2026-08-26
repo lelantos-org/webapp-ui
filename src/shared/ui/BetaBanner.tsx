@@ -1,9 +1,8 @@
 /// Standing risk disclosure, pinned above the header on every route.
 ///
-/// Deliberately not dismissible: the warning is about money, and a banner the
-/// user can close is a banner they close once and never see again on the visit
-/// where it would have mattered. It is one line tall so the cost of leaving it
-/// up is a strip of chrome rather than a chunk of the fold.
+/// Not dismissible: the warning concerns funds at risk, and a dismissed banner
+/// stays dismissed for the visit where it matters. One line tall, so leaving it
+/// up costs a strip of chrome rather than a portion of the fold.
 export function BetaBanner() {
   return (
     <div className="beta-banner" role="note">

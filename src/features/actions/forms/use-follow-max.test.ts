@@ -42,8 +42,7 @@ describe("useFollowMax", () => {
   });
 
   it("leaves an amount the user typed alone", () => {
-    // Now too large, but validation says so — silently editing what someone
-    // typed is worse than showing them it is wrong.
+    // Now too large, but validation reports it; a typed value is not rewritten.
     const h = harness(100n);
     h.clickMax("100");
     h.setField("57");

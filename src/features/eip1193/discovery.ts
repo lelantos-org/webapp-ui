@@ -1,11 +1,9 @@
 // EIP-6963 provider discovery.
 //
-// Split from the connection store because it is a separate concern with a
-// separate lifetime: discovery is a page-lifetime listener over an event any
-// wallet extension may fire at any moment, while the store is about the one
-// provider that ended up latched. Keeping them together meant a 400-line module
-// where "which wallets exist" and "which wallet are we using" shared a mutable
-// bag of state.
+// Split from the connection store: discovery is a page-lifetime listener over an
+// event any wallet extension may fire at any time, while the store tracks the
+// single provider that ended up latched. Keeping them apart separates which
+// wallets exist from which wallet is in use.
 
 import { createLogger } from "@/shared/lib/logger";
 
@@ -31,10 +29,9 @@ export class ProviderRegistry {
 
   /// Ask wallets to announce, wiring the listener on the first call.
   ///
-  /// Safe to call repeatedly — boot reaches it from three places. Only the
-  /// request event repeats: registering the handler more than once would turn a
-  /// single announce into one notification per prior call, re-rendering every
-  /// subscriber that many times.
+  /// Safe to call repeatedly; boot reaches it from three places. Only the request
+  /// event repeats, since registering the handler more than once would turn a
+  /// single announce into one notification per prior call.
   start(): void {
     if (typeof window === "undefined") return;
     if (!this.wired) {
@@ -62,15 +59,13 @@ export class ProviderRegistry {
 
   /// Choose a provider.
   ///
-  /// With `rdns`, only an exact match — never a substitute. Falling through to
-  /// the MetaMask-preferring branch when the named wallet had not announced yet
-  /// silently attached a *different* wallet: a different EOA, hence a different
-  /// nsk and a different shielded address, none of it chosen by the user. It
-  /// has to fail closed and let the caller wait or give up.
+  /// With `rdns`, only an exact match; never a substitute. Falling through to the
+  /// preference order when the named wallet has not yet announced would attach a
+  /// different wallet — a different EOA, and so a different nsk and shielded
+  /// address — so this fails closed and leaves the caller to wait or give up.
   ///
-  /// Without `rdns`, prefer MetaMask, then whatever announced first. This is
-  /// the last resort, reached only when the caller had no wallet to name —
-  /// which in practice means nothing had announced yet when it asked.
+  /// Without `rdns`, prefer MetaMask, then whatever announced first. Reached only
+  /// when the caller had no wallet to name.
   pick(rdns?: string): Eip6963ProviderDetail | undefined {
     if (rdns) return this.find(rdns);
     const list = this.list();
@@ -84,9 +79,8 @@ export class ProviderRegistry {
   /// Resolve as soon as `choose` finds a provider, or after `timeoutMs` with
   /// whatever it returns by then.
   ///
-  /// Waiting on the announce event rather than sleeping a fixed interval: an
-  /// extension that announces a few ms late is now waited for, instead of
-  /// losing a race whose loser used to be silently substituted.
+  /// Waits on the announce event rather than sleeping a fixed interval, so an
+  /// extension announcing a few ms late is still found.
   waitFor(
     choose: () => Eip6963ProviderDetail | undefined,
     timeoutMs: number,
@@ -113,8 +107,7 @@ export class ProviderRegistry {
   /// Forget every announced wallet and unwire the listener.
   ///
   /// For tests: the registry is a singleton, so without this each case inherits
-  /// the previous one's announcements and the assertions only hold in file
-  /// order.
+  /// the previous one's announcements and assertions become order-dependent.
   reset(): void {
     this.seen.clear();
     if (this.wired && typeof window !== "undefined") {

@@ -9,10 +9,10 @@ interface Props {
   fallback?: (args: { error: unknown; reset(): void }) => ReactNode;
   /// Clears a latched error whenever this value changes.
   ///
-  /// The alternative — keying the boundary itself — throws away and rebuilds
-  /// the whole subtree on every change, which for a route boundary means the
-  /// entire page remounts on every navigation. Resetting through state keeps
-  /// the children mounted and only drops the error.
+  /// Keying the boundary itself would discard and rebuild the whole subtree on
+  /// every change, remounting the entire page on each navigation for a route
+  /// boundary. Resetting through state keeps the children mounted and drops only
+  /// the error.
   resetKey?: unknown;
 }
 
@@ -22,8 +22,8 @@ interface State {
   resetKey?: unknown;
 }
 
-/// Async errors (e.g. `useEffect` callbacks, mutations) are NOT caught here —
-/// those surface via toasts in the mutation layer.
+/// Async errors — `useEffect` callbacks, mutations — are not caught here; they
+/// surface as toasts in the mutation layer.
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { resetKey: this.props.resetKey };
 

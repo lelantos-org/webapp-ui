@@ -3,7 +3,8 @@ import { useCompactNotes, useHardRefresh, useWalletState } from "@/features/wall
 import { relativeTime } from "@/shared/lib/format";
 import { toastError, toastInfo } from "@/shared/lib/toast";
 
-/// Header for the Portfolio card: sync status + refresh / hard refresh / compact actions.
+/// Header for the Portfolio card: sync status, plus the refresh, hard-refresh and
+/// compact actions.
 export function PortfolioActions() {
   const shielded = useWalletState();
   const hard = useHardRefresh();
@@ -66,8 +67,8 @@ export function PortfolioActions() {
   );
 }
 
-/// "synced 2m ago". Owns its own tick so the 10s refresh re-renders this span
-/// alone rather than the balance table above it.
+/// Renders the relative sync time. Owns its own tick, so the 10s refresh
+/// re-renders this span alone rather than the balance table above it.
 ///
 /// Mounted only while there is a `syncedAt` and no sync in flight, so the timer
 /// stops as soon as either changes.

@@ -81,8 +81,8 @@ describe("Modal", () => {
 
   it("falls back to the first focusable when the primary is disabled", () => {
     // The confirm screen gates its primary on a checkbox. Focusing a disabled
-    // button silently leaves focus on `<body>`, from where `trapFocus` — which
-    // keys off the active element being inside the panel — traps nothing.
+    // button leaves focus on `<body>`, from where `trapFocus` — which keys off
+    // the active element being inside the panel — traps nothing.
     render(
       <Modal title="Confirm">
         <input type="checkbox" aria-label="agree" />
@@ -106,8 +106,8 @@ describe("Modal", () => {
     const { rerender } = render(<Panel step="begin" />);
     expect(screen.getByRole("button", { name: "begin" })).toHaveFocus();
 
-    // The element holding focus is unmounted by the swap; without the re-run
-    // focus falls back to `<body>` and Tab walks out of the dialog.
+    // The element holding focus is unmounted by the swap; without the re-run,
+    // focus falls back to `<body>` and Tab leaves the dialog.
     rerender(<Panel step="retry" />);
 
     expect(screen.getByRole("button", { name: "retry" })).toHaveFocus();

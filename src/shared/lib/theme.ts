@@ -1,11 +1,11 @@
 // Palette tokens read back out of the stylesheet.
 //
 // A `<canvas>` cannot reference a CSS custom property, so anything painting
-// outside of CSS has to resolve `--accent` itself rather than hard-coding a
-// second copy of it that drifts when the palette changes.
+// outside CSS resolves `--accent` itself rather than holding a second copy that
+// drifts when the palette changes.
 
-/// Matches `--accent` in styles.css; used only when the property cannot be read
-/// (jsdom, or a call before the stylesheet applies).
+/// Matches `--accent` in styles.css. Used only when the property cannot be read,
+/// as in jsdom or a call made before the stylesheet applies.
 const ACCENT_FALLBACK: [number, number, number] = [79, 70, 229];
 
 export function accentRgb(): [number, number, number] {

@@ -32,9 +32,8 @@ describe("nsk session cache", () => {
   });
 
   it("clears every account, not just the connected one", () => {
-    // A session that touched several accounts used to keep one raw spending key
-    // per account after "disconnect", because only the current address was
-    // cleared.
+    // Clearing only the current address would leave one raw spending key per
+    // account touched during the session after a disconnect.
     cacheNsk(ADDR_A, nsk(1n));
     cacheNsk(ADDR_B, nsk(2n));
 

@@ -5,10 +5,9 @@ const entry = (chainId: bigint, chainName: string): ChainEntry =>
   ({ chainId, chainName }) as ChainEntry;
 
 describe("chainKey", () => {
-  // The value matters less than its being the only spelling. Five key formats
-  // used to derive their own — two in decimal, three in hex — so the same
-  // chain wrote itself two ways across IndexedDB, sessionStorage and
-  // localStorage.
+  // The exact radix matters less than there being only one: without a single
+  // spelling, the same chain writes itself two ways across IndexedDB,
+  // sessionStorage and localStorage.
   it("is hex, without a 0x prefix", () => {
     expect(chainKey(31337n)).toBe("7a69");
     expect(chainKey(1n)).toBe("1");
@@ -61,9 +60,8 @@ describe("toChainEntry", () => {
     expect(e.treeDepth).toBe(10);
   });
 
-  // The relayer is the only source. Build-time values used to stand in for
-  // whichever chain the bundle was configured for, which let a deployment run
-  // on stale baked-in addresses while looking correctly configured.
+  // The relayer is the only source. A build-time fallback would let a deployment
+  // run on stale baked-in addresses while appearing correctly configured.
   it("has no build-time fallback: an undescribed chain is unusable", () => {
     const r = toChainEntry({ chainId: 31337 });
     expect(r.ok).toBe(false);
@@ -110,9 +108,9 @@ describe("toChainEntry with unparseable fields", () => {
   };
 
   it("skips a row with a malformed address instead of throwing", () => {
-    // `evmAddress` throws, and this mapping runs outside the fetch's try — so
-    // one chain publishing a bad address used to reject the whole registry and
-    // show "no chains available" for *every* chain.
+    // `evmAddress` throws, and this mapping runs outside the fetch's try, so
+    // without a per-row result one chain publishing a bad address would reject
+    // the whole registry.
     const result = toChainEntry({ ...good, maspAddress: "not-an-address" } as never);
     expect(result.ok).toBe(false);
   });

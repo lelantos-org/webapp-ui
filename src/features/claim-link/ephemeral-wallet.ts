@@ -1,4 +1,6 @@
-// TODO(v2): optional password-encrypted fragment (XChaCha20-Poly1305 + Argon2id).
+// Ephemeral bearer wallets behind claim links: generating a link, scanning its
+// notes, sweeping them to a connected wallet, and clearing what the link leaves
+// behind.
 
 import { connect, deriveKeysFromNsk, type TransferResult, type WalletApi } from "@lelantos-org/sdk";
 import { type Field, randomFr } from "@lelantos-org/sdk/core";
@@ -34,10 +36,9 @@ export interface GenerateClaimLinkArgs {
   ///
   /// Read immediately before the transfer rather than at render: the caller's
   /// `useActiveChain()` is seconds stale by the time proving finishes, and a
-  /// `chainChanged` in that window produced a link stamped with chain A for a
-  /// transfer that landed on chain B — the exact mismatch `codec.ts` says the
-  /// chain field exists to prevent, where the claimer scans the wrong pool and
-  /// is told "nothing to claim".
+  /// `chainChanged` in that window would stamp the link with one chain for a
+  /// transfer that landed on another. The claimer would then scan the wrong pool
+  /// and be told there is nothing to claim.
   currentChainId?: () => bigint | undefined;
 }
 
@@ -45,15 +46,13 @@ export interface GenerateClaimLinkResult {
   url: string;
   /// Alias for `tx.txHash`.
   txHash: string;
-  /// Full SDK transfer receipt (own commitments, inputSum/change).
+  /// Full SDK transfer receipt: own commitments, `inputSum` and change.
   tx: TransferResult;
   nskEphHex: string;
   ephAddress: string;
-  /// Handle into `link-vault` for the record written before the broadcast.
-  ///
-  /// The sender-side form no longer forgets it on reset — dropping a record is
-  /// `UnclaimedLinks`' job, behind an explicit confirmation — so this is the
-  /// correlation handle, not a delete token.
+  /// Correlation handle into `link-vault` for the record written before the
+  /// broadcast. Dropping a record is `UnclaimedLinks`' responsibility, behind an
+  /// explicit confirmation, so this is not a delete token.
   recordId: string;
 }
 
@@ -66,9 +65,9 @@ export async function generateClaimLink(
   const nskEphHex = nskHexFromField(nskEph);
   const url = `${window.location.origin}/claim#${encodeClaimPayload(args.chainId, nskEphHex)}`;
 
-  // Persisted *before* the broadcast. After it, the only copy of this key was
-  // React state that any chain or account switch discards — and the funds are
-  // already gone by then. See `link-vault`.
+  // Persisted before the broadcast: afterwards the only copy of this key would
+  // be React state, which any chain or account switch discards once the funds
+  // have moved. See `link-vault`.
   const recordId = rememberClaimLink({
     url,
     chainId: args.chainId,
@@ -83,8 +82,8 @@ export async function generateClaimLink(
     );
   }
 
-  // `WalletApi.transfer` types the return as the union; transfer always
-  // produces the TransferResult variant at runtime.
+  // `WalletApi.transfer` types the return as the union, but always produces the
+  // `TransferResult` variant at runtime.
   const tx = (await senderWallet.transfer({
     to: ephAddress,
     amount: args.amount,
@@ -99,26 +98,24 @@ export async function generateClaimLink(
 
 /// Namespace for one link's ephemeral note store.
 ///
-/// The suffix is a digest of the bearer key, never the key itself. This used to
-/// be `nskEphHex.slice(0, 16)` — 8 bytes of the spending key written verbatim
-/// as an IndexedDB record name, on a page whose entire design (see
-/// `scrubLocationHash`) is about keeping that value out of persistence. It also
-/// leaked onto the screen: `describeError` passes short raw messages straight
-/// through, so an idb failure naming the store rendered the fragment in the
-/// error card.
+/// The suffix is a digest of the bearer key, never the key itself. Writing key
+/// bytes into an IndexedDB record name would persist the value this page is
+/// designed to keep out of storage (see `scrubLocationHash`), and would surface
+/// it on screen, since `describeError` passes short raw messages through and an
+/// idb failure names the store.
 ///
-/// Shares `storageDigest` with the per-account keys, so the two namespaces
-/// cannot drift into disagreeing about what a digest is.
+/// Shares `storageDigest` with the per-account keys, so both namespaces agree on
+/// what a digest is.
 function ephNoteStoreKey(chainId: bigint, nskEphHex: string): string {
   return `notes:eph:${chainKey(chainId)}:${storageDigest(nskEphHex)}`;
 }
 
 /// Read the link's notes with a throwaway wallet built from its bearer key.
 ///
-/// Carries no `treePersistence` or `nullifierPersistence`: the wallet exists
-/// for one sweep, and persisting its tree would write a second copy of the feed
-/// into IndexedDB under a key never read again. The feed is therefore re-walked
-/// on each visit, which is what the scanner and sync strategy below address.
+/// Carries no `treePersistence` or `nullifierPersistence`: the wallet exists for
+/// one sweep, and persisting its tree would write a second copy of the feed into
+/// IndexedDB under a key never read again. The feed is re-walked on each visit,
+/// which the scanner and sync strategy below account for.
 ///
 /// Callers own the returned wallet and must pass it to `releaseScanner`.
 export async function buildEphemeralWallet(
@@ -129,18 +126,18 @@ export async function buildEphemeralWallet(
   const nsk = nskFieldFromHex(nskEphHex);
   if (!nsk.ok) throw new Error(describeClaimError(nsk.error));
 
-  // Both arguments are required to keep the scan off the main thread. Without
-  // a strategy `connect` defaults to `{ kind: "full" }`, trial-decrypting every
-  // note in the pool, and without a `scanner` it defaults to the inline
+  // Both arguments are required to keep the scan off the main thread. Without a
+  // strategy `connect` defaults to `{ kind: "full" }`, trial-decrypting every
+  // note in the pool; without a `scanner` it defaults to the inline
   // `LocalScanner`, which runs that work on the calling thread.
   //
-  // Subscribing discloses to the discovery service that a detection key is
-  // watching this ephemeral address — the same trade the main wallet makes.
-  // `resolveSyncStrategy` declines to subscribe on a pool below the decoy
-  // floor, where the full scan is cheap and disclosing nothing is more private.
+  // Subscribing discloses to the discovery service that a detection key watches
+  // this ephemeral address, the same trade the main wallet makes.
+  // `resolveSyncStrategy` declines to subscribe on a pool below the decoy floor,
+  // where the full scan is cheap and disclosing nothing is more private.
   //
-  // Namespaced under the ephemeral address rather than the connected EOA, so
-  // the token cache entry is separate from the main wallet's.
+  // Namespaced under the ephemeral address rather than the connected EOA, so the
+  // token cache entry is separate from the main wallet's.
   const ephAddress = await deriveEphemeralAddress(nsk.value);
   const plan = await resolveSyncStrategy(env.fmdUrl, chain.chainId, nsk.value, ephAddress);
 
@@ -152,8 +149,8 @@ export async function buildEphemeralWallet(
     rpcUrl: chain.rpcUrl,
     prover: getProverWorker(),
     noteStore: new IdbNoteStore(ephNoteStoreKey(chain.chainId, nskEphHex)),
-    // Below the wallet default: this scans a small window for a single note,
-    // on a short-lived page.
+    // Below the wallet default: this scans a small window for a single note on a
+    // short-lived page.
     scanner: createScanner(2),
     syncStrategy: plan.strategy,
   });
@@ -199,16 +196,15 @@ export async function sweepEphemeral(
 
 /// Drop everything this link left behind once it has been swept.
 ///
-/// Deletes the record rather than blanking it. Overwriting with an empty file
-/// left the key in place indefinitely; the store is a cache of one spent link
-/// and there is nothing to keep. The FMD subscription token registered for the
-/// ephemeral address goes too — a one-shot link should not leave a permanent
+/// Deletes the record rather than blanking it: the store caches one spent link
+/// and nothing in it is worth keeping. The FMD subscription token registered for
+/// the ephemeral address is dropped too, so a one-shot link leaves no permanent
 /// entry tying that address to this browser.
 export async function clearEphemeralStore(chainId: bigint, nskEphHex: string): Promise<void> {
   const nsk = nskFieldFromHex(nskEphHex);
   if (nsk.ok) clearCachedSubscription(chainId, await deriveEphemeralAddress(nsk.value));
-  // IdbNoteStore writes into the shared `lelantos-wallet` DB under per-key
-  // entries, so removing ours leaves every other wallet intact.
+  // `IdbNoteStore` writes into the shared `lelantos-wallet` DB under per-key
+  // entries, so removing this one leaves every other wallet intact.
   const store = new IdbNoteStore(ephNoteStoreKey(chainId, nskEphHex));
   await store.destroy();
 }

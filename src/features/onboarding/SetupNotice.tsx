@@ -6,8 +6,8 @@ export interface SetupNoticeProps {
   /// The ERC-20 → Permit2 approval is still outstanding, so setup runs an
   /// extra on-chain step before the signature.
   needsErc20Approve: boolean;
-  /// The allowances could not be read. Setup is still offered — running it is
-  /// the way out, and refusing to offer it would strand the deposit.
+  /// The allowances could not be read. Setup is still offered, since running it
+  /// is the way forward and withholding it would strand the deposit.
   unknown?: boolean;
   onRun(): void;
 }
@@ -17,8 +17,8 @@ export interface SetupNoticeProps {
 /// strand the form behind a disabled submit button.
 ///
 /// The underlying failure is logged rather than rendered: a viem revert runs to
-/// several hundred characters of ABI and call data, which buries the one thing
-/// the user can act on.
+/// several hundred characters of ABI and call data, obscuring the actionable
+/// part.
 export function SetupNotice({ asset, needsErc20Approve, unknown, onRun }: SetupNoticeProps) {
   if (unknown) {
     return (

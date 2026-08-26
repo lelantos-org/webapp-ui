@@ -1,11 +1,10 @@
 // What "max" should write into an amount field, and why it sits below the
 // balance printed beside it.
 //
-// Delegates to `wallet.spendableMax`, which reads the same note set the coin
-// selector reads and applies the same rules. That is the whole point: this
-// figure is written into a field the selector then has to honour, so anything
-// computed independently of it can — and did — produce an amount the selector
-// refuses, reported to the user as `insufficient unspent value`.
+// Delegates to `wallet.spendableMax`, which reads the same note set as the coin
+// selector and applies the same rules. The figure is written into a field the
+// selector must then honour, so anything computed independently of it can
+// produce an amount the selector refuses as `insufficient unspent value`.
 
 import { assetId, TRANSACT_4X4 } from "@lelantos-org/sdk";
 import type { SpendableMax } from "@lelantos-org/sdk/wallet";
@@ -16,9 +15,9 @@ import { useWalletState } from "./use-wallet-state";
 
 export type { SpendableMax };
 
-/// The shape the prover worker is built against — `build-wallet.ts` passes the
-/// same constant to `connect`, and the two must agree or the max is computed
-/// against an arity the circuit does not have.
+/// The shape the prover worker is built against. `build-wallet.ts` passes the
+/// same constant to `connect`; the two must agree or the max is computed against
+/// an arity the circuit does not have.
 const N_IN = TRANSACT_4X4.nIn;
 
 export interface SpendableMaxOpts {
@@ -26,8 +25,8 @@ export interface SpendableMaxOpts {
   /// `prepareSpend` reserves one input slot for its cover and leaves `nIn - 1`
   /// for the asset being sent.
   crossAssetFee?: boolean;
-  /// Fee taken from *this* asset, in circuit units. Non-zero only for a
-  /// same-asset fee, which comes out of the spend's own target.
+  /// Fee taken from this asset, in circuit units. Non-zero only for a same-asset
+  /// fee, which comes out of the spend's own target.
   sameAssetFee?: bigint | undefined;
 }
 
@@ -35,9 +34,9 @@ export interface SpendableMaxOpts {
  * The largest amount of `asset` a spend can cover right now, and what is
  * holding the rest back.
  *
- * `undefined` while unknown — no wallet, no asset, or the read has not landed
- * — which the amount field reads as "withhold the max button" rather than as
- * zero.
+ * `undefined` while unknown: no wallet, no asset, or the read has not landed.
+ * The amount field withholds the max button in that case rather than treating it
+ * as zero.
  */
 export function useSpendableMax(
   asset: bigint | undefined,
@@ -45,8 +44,8 @@ export function useSpendableMax(
 ): SpendableMax | undefined {
   const { wallet } = useWallet();
   const { chainId } = useActiveChain();
-  // Not for its balances — for its `syncedAt`, which is the moment the note
-  // file last changed. Also means this inherits the sync's invalidation, so a
+  // Read for `syncedAt` rather than for the balances: it marks when the note file
+  // last changed, and it makes this inherit the sync's invalidation, so a
   // completed transfer refreshes the max without a second poll.
   const syncedAt = useWalletState().data?.syncedAt;
 
@@ -65,9 +64,9 @@ export function useSpendableMax(
       if (!wallet || asset === undefined) throw new Error("not ready");
       return wallet.spendableMax(assetId(asset), {
         maxInputs: crossAssetFee ? N_IN - 1 : N_IN,
-        // `fee`, the same option a spend takes: `selectNotes` covers a
-        // same-asset fee by raising the threshold, so the most that can be
-        // *sent* is the ceiling less the fee.
+        // `fee`, the same option a spend takes: `selectNotes` covers a same-asset
+        // fee by raising the threshold, so the most that can be sent is the
+        // ceiling less the fee.
         fee: sameAssetFee,
       });
     },

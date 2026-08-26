@@ -7,8 +7,8 @@ import { loadChainRegistry, readCachedChainRegistry } from "@/config/chains";
 import { env } from "@/config/env";
 import { localStore } from "@/shared/lib/storage";
 
-// Mirrors REGISTRY_CACHE_KEY in config/chains.ts, which is deliberately not
-// exported — the key is an implementation detail. Built from `env.relayerUrl`
+// Mirrors REGISTRY_CACHE_KEY in config/chains.ts, which is not exported: the key
+// is an implementation detail. Built from `env.relayerUrl`
 // rather than written out, because that value is absolutised by
 // `toAbsoluteUrl` and so differs between jsdom and a real deployment; a
 // hardcoded literal here silently addressed a key nothing else used, and the

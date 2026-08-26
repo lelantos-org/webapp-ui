@@ -6,10 +6,9 @@ export interface ConnectGateProps {
   onConnect(): void;
 }
 
-/// A chain mismatch is deliberately not handled here. Deriving the destination
-/// address needs a signature but not a particular network; `ClaimPage` offers
-/// the switch separately, because only the sweep signs against the link's
-/// chain.
+/// A chain mismatch is not handled here: deriving the destination address needs a
+/// signature but no particular network. `ClaimPage` offers the switch separately,
+/// since only the sweep signs against the link's chain.
 export function ConnectGate({ status, onConnect }: ConnectGateProps) {
   return (
     <div className="card">

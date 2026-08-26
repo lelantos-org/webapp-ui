@@ -60,15 +60,13 @@ export function ScanningCard() {
   );
 }
 
-/// Two failures wearing one card.
+/// Two failures sharing one card.
 ///
-/// `missing` is overwhelmingly a reload: the page strips the fragment from the
+/// `missing` is almost always a reload: the page strips the fragment from the
 /// address bar on mount so the secret never reaches history, which means the
-/// URL the browser reloads no longer has it. Nothing is lost — the original
-/// link still works — and the old copy ("ask the sender to regenerate. each
-/// claim link is single-use") told exactly the wrong story to someone holding
-/// live funds. Warn rather than error, on the same reasoning as
-/// `NetworkGateCard`: the flow has stopped, but nothing has broken.
+/// reloaded URL no longer carries it. Nothing is lost, since the original link
+/// still works, so this is a warning rather than an error — as in
+/// `NetworkGateCard`, the flow has stopped but nothing has broken.
 export function BadLinkCard({ error, reason }: { error: string; reason: BadLinkReason }) {
   const missing = reason === "missing";
   return (
@@ -102,10 +100,9 @@ export function BadLinkCard({ error, reason }: { error: string; reason: BadLinkR
   );
 }
 
-/// `onRetry` was declared here and never rendered, which made every failure
-/// terminal: the URL fragment is scrubbed on mount, so reloading destroys the
-/// secret rather than recovering it, and a transient RPC error during the scan
-/// ended the claim for good.
+/// `onRetry` must be rendered wherever it is supplied. The URL fragment is
+/// scrubbed on mount, so a reload destroys the secret rather than recovering it,
+/// and without a retry a transient RPC error during the scan would be terminal.
 export function ErrorCard({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div className="card gate">

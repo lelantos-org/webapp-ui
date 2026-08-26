@@ -132,12 +132,11 @@
 /* RECOVERY LIST
    Claim links this browser generated and has not been told to forget.
 
-   Its own classes rather than the `.row` / `.btn` utilities it used to borrow.
-   Those carry a phone breakpoint in `responsive.css` — `.row > .btn { flex: 1 1
-   100% }`, written for the copy field, where the button belongs under the input
-   — which stretched every row's "copy" to full width and stacked each entry
-   into four ragged lines. `.row`'s `align-items: stretch` also left the amount
-   sitting at the top of a 38px row while the buttons filled it. */
+   Its own classes rather than the `.row` and `.btn` utilities. Those carry a
+   phone breakpoint in `responsive.css` (`.row > .btn { flex: 1 1 100% }`)
+   written for a stacked field-and-button pair, which would stretch each row's
+   copy button to full width, and `.row`'s `align-items: stretch` would leave the
+   amount at the top of the row while the buttons filled it. */
 .link-vault {
   display: grid;
   gap: 8px;

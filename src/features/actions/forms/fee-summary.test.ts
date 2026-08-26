@@ -169,8 +169,8 @@ describe("feeSummary", () => {
   });
 
   it("omits a zero fee rather than showing a zero row", () => {
-    // A subsidised chain charges nothing; "0.00" reads as "we could not price
-    // this" rather than "this is free".
+    // A subsidised chain charges nothing, and "0.00" reads as a failed pricing
+    // rather than as free.
     const m = feeSummary({
       kind: "withdraw",
       amount: AMOUNT,
@@ -228,8 +228,8 @@ describe("feeSummary", () => {
     });
 
     it("refuses to total or headline a sum it does not have", () => {
-      // Both are figures the reader would act on. A partial sum that corrects
-      // itself a moment later is worse than an obvious gap.
+      // Both are figures the reader acts on, so a partial sum that corrects
+      // itself a moment later is withheld in favour of a visible gap.
       expect(pendingBoth()?.total?.amount).toBeUndefined();
       expect(pendingBoth()?.headline?.amount).toBeUndefined();
     });
@@ -291,8 +291,8 @@ describe("feeSummary", () => {
     });
 
     it("does not claim a cross-asset fee when there is no relayer row at all", () => {
-      // The panel's note names `rows.find(key === "relayer")`, so a flag set
-      // without one printed "your undefined balance".
+      // The panel's note names `rows.find(key === "relayer")`, so setting the
+      // flag without such a row would print an undefined symbol.
       const m = feeSummary({
         kind: "withdraw",
         amount: AMOUNT,

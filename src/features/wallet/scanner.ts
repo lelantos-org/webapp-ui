@@ -44,13 +44,13 @@ export function createScanner(size: number = defaultSize()): WorkerPoolScanner {
 /// Release a wallet's scanner workers.
 ///
 /// Required on every path that abandons a wallet: disconnect, chain switch,
-/// claim-page unmount. A `WalletApi` going out of scope does not release them —
-/// they are live workers, each holding a jubjub wasm instance, and persist
-/// until disposed.
+/// claim-page unmount. A `WalletApi` going out of scope does not release them:
+/// they are live workers, each holding a jubjub wasm instance, and persist until
+/// disposed.
 ///
-/// Idempotent, and neither throws nor rejects. Callers are teardown paths such
-/// as React cleanups and disconnect handlers, where a rejection has no handler;
-/// the workers are unreachable regardless, so a failure is logged only.
+/// Idempotent, and neither throws nor rejects. Callers are teardown paths such as
+/// React cleanups and disconnect handlers, where a rejection has no handler, and
+/// the workers are unreachable regardless, so a failure is only logged.
 export function releaseScanner(wallet: WalletApi | undefined): void {
   const scanner = wallet?.scanner;
   if (!scanner?.dispose) return;

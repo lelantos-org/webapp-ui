@@ -26,8 +26,8 @@ const SHARED_STEPS: { id: SetupStep; label: string }[] = [
   { id: "permitting", label: "submit allowances on-chain" },
 ];
 
-/// The approval line names its token and its position, because it is the step
-/// that repeats — without that, N identical prompts look like one stuck prompt.
+/// The approval line names its token and position, since it is the repeating
+/// step; without them, N identical prompts read as one stuck prompt.
 function runningCopy(p: SetupProgress, symbolOf: (t: string) => string): string {
   if (p.step === "approving") {
     const sym = symbolOf(p.token);
@@ -42,9 +42,9 @@ function runningCopy(p: SetupProgress, symbolOf: (t: string) => string): string 
     : "Submitted. Waiting for block confirmation…";
 }
 
-/// The honest cost of a run: the approvals are the part that does not batch,
-/// so N tokens means N prompts plus the two shared steps. Shared with
-/// `SetupAllModal`, which quotes the same figure before the flow starts.
+/// The cost of a run: approvals do not batch, so N tokens means N prompts plus
+/// the two shared steps. Shared with `SetupAllModal`, which quotes the same
+/// figure before the flow starts.
 export function setupCostLine(approvals: number): string {
   const a = approvals > 0 ? `${approvals} approval${approvals === 1 ? "" : "s"}, ` : "";
   return `${a}1 signature, 1 transaction`;
@@ -58,20 +58,20 @@ function initialProgress(toApprove: readonly RegisteredAsset[]): SetupProgress {
     : { step: "signing", status: "wallet" };
 }
 
-/// Stepper row id for one token's approval. Shared by the row and the
-/// highlight so a rename cannot desync them.
+/// Stepper row id for one token's approval. Shared by the row and the highlight,
+/// so a rename cannot desynchronise them.
 const approvalStepId = (assetId: bigint | undefined) => `approving:${assetId}`;
 
 const EXPIRY_DAYS = 365;
 const DONE_AUTOCLOSE_MS = 1500;
 
 export interface SetupFlowProps {
-  /// Tokens to authorize. One entry is the deposit-form path and behaves as it
-  /// always has; N entries collapse the signature and the permit tx into one
-  /// each, which is the whole reason this takes an array.
+  /// Tokens to authorize. One entry is the deposit-form path; N entries collapse
+  /// the signature and the permit tx into one each, which is why this takes an
+  /// array.
   assets: RegisteredAsset[];
-  /// Whether `asset` still needs the ERC20 → Permit2 approval. Per-asset
-  /// because that step is the one that does not batch.
+  /// Whether `asset` still needs the ERC-20 → Permit2 approval. Per-asset,
+  /// because that step does not batch.
   needsErc20Approve(assetId: bigint): boolean;
   onSuccess(): void;
   onCancel(): void;
@@ -102,9 +102,9 @@ export function SetupFlow({ assets, needsErc20Approve, onSuccess, onCancel }: Se
   const symbolList = assets.map((a) => a.symbol).join(", ");
   const costLine = `${setupCostLine(toApprove.length)}.`;
 
-  // One approval row per token that needs one — they are separate wallet
-  // prompts, so collapsing them into a single "authorize" row would show a
-  // finished step while more prompts were still coming.
+  // One approval row per token that needs one. They are separate wallet prompts,
+  // so a single combined row would show a finished step while further prompts
+  // were still coming.
   const visibleSteps: StepperItem[] = [
     ...toApprove.map((a) => ({ id: approvalStepId(a.id), label: `authorize ${a.symbol}` })),
     ...SHARED_STEPS,
@@ -113,13 +113,13 @@ export function SetupFlow({ assets, needsErc20Approve, onSuccess, onCancel }: Se
     progress.step === "approving"
       ? approvalStepId(assetByToken(progress.token)?.id)
       : progress.step;
-  // Both the running and failed screens want the human label for wherever the
-  // flow currently is, and `visibleSteps` already holds exactly that.
+  // The running and failed screens both need the label for the current step,
+  // which `visibleSteps` already holds.
   const currentLabel = visibleSteps.find((s) => s.id === currentStepId)?.label ?? progress.step;
 
-  // The flow is running and the wallet is mid-prompt: no dismiss path is open,
-  // and the overlay says so with a busy cursor. `Modal` closes them for the
-  // duration of the exit too.
+  // While the flow is running and the wallet is mid-prompt no dismiss path is
+  // open, and the overlay indicates this with a busy cursor. `Modal` also closes
+  // those paths for the duration of the exit.
   const locked = !(screen === "intro" || screen === "failed" || screen === "done");
 
   const requestCancel = useCallback(() => exit(onCancel), [exit, onCancel]);
@@ -141,7 +141,7 @@ export function SetupFlow({ assets, needsErc20Approve, onSuccess, onCancel }: Se
         },
       );
       if (cancelledRef.current) return;
-      // Each asset keeps its own cache entry, so each needs its own invalidate.
+      // Each asset keeps its own cache entry, so each needs its own invalidation.
       await Promise.all(assets.map((a) => invalidate(a.id)));
       setScreen("done");
     } catch (e) {

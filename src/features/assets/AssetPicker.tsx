@@ -1,5 +1,5 @@
-// "ETH (native)" is encoded as `asset = WETH.id` plus an `asEth` flag by
-// the Deposit/Withdraw forms.
+// "ETH (native)" is encoded by the deposit and withdraw forms as
+// `asset = WETH.id` plus an `asEth` flag.
 
 import { useActiveChain } from "@/features/chain";
 import { Field } from "@/shared/ui/Field";
@@ -9,10 +9,11 @@ import { DEFAULT_ASSET_ID, useRegisteredAssets } from "./registered-assets";
 export const ETH_OPTION = "eth";
 
 export interface AssetPickerProps {
-  /// Either `ETH_OPTION` or the asset id as decimal string.
+  /// Either `ETH_OPTION` or the asset id as a decimal string.
   value: string;
   onChange(value: string): void;
-  /// Prepend an "ETH (native)" option when a WETH-tagged asset exists in the registry.
+  /// Prepend an "ETH (native)" option when the registry holds a WETH-tagged
+  /// asset.
   showEth?: boolean;
   /// Balance to show beside each symbol. See `AssetBalanceLabel`.
   balanceOf?: AssetBalanceLabel;
@@ -31,8 +32,8 @@ export function AssetPicker({
   const list = useRegisteredAssets();
   // Native-ETH deposit and withdraw both run through `NativeAdapter`. A chain
   // with no adapter deployed has no entry point for them, so the option is
-  // withheld rather than offered and then failed at submit. Read per render
-  // because which chain is active now moves.
+  // withheld rather than offered and rejected at submit. Read per render, since
+  // the active chain can change.
   const nativeEthSupported = useActiveChain().nativeAdapterAddress !== undefined;
   const fallback = list.length === 0;
   const weth = showEth && nativeEthSupported ? list.find((a) => a.isWeth) : undefined;

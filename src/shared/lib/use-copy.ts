@@ -16,12 +16,11 @@ export interface CopyHandle {
 
 /// Clipboard write with a self-clearing "copied" flag.
 ///
-/// Four components had grown their own version of this, and they had drifted:
-/// two left the reset timer running after unmount, none cancelled a previous
-/// timer, so copying twice in quick succession let the first copy's expiry cut
-/// the second confirmation short. `navigator.clipboard` is also absent outside
-/// a secure context and rejects when the document is not focused, so the
-/// failure path is not hypothetical.
+/// Centralised so the reset timer is cleared on unmount and a previous timer is
+/// cancelled before a new one starts; otherwise copying twice in quick succession
+/// lets the first copy's expiry cut the second confirmation short.
+/// `navigator.clipboard` is also absent outside a secure context and rejects when
+/// the document is not focused, so the failure path is reachable.
 export function useCopy(value: string): CopyHandle {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

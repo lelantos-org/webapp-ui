@@ -82,10 +82,9 @@ describe("evaluateSetup on a chain that cannot answer", () => {
   it("asks for no setup when the probe returned nothing", () => {
     // `readPermit2AllowanceState` returns `undefined` when the chain has no
     // AllowanceTransfer support or the registry row omits `permit2Address`. It
-    // used to return all-zero allowances instead, which read as "nothing is
-    // approved" — so the form demanded a setup flow that could not possibly
-    // succeed, failed, and demanded it again. ERC-20 deposits were unusable on
-    // that chain, and the screen blamed a missing approval.
+    // Returning all-zero allowances instead would read as nothing approved, so
+    // the form would demand a setup flow that cannot succeed, fail, and demand
+    // it again, leaving ERC-20 deposits unusable on that chain.
     expect(evaluateSetup(undefined, 1_000n)).toEqual(NO_SETUP_NEEDS);
   });
 
@@ -95,10 +94,10 @@ describe("evaluateSetup on a chain that cannot answer", () => {
   });
 });
 
-// The window used to be sized as `depositTotal * 10n` at the moment setup ran,
-// so it drained after ~10 same-sized deposits and a single larger deposit
-// outran it outright — both re-opening the setup modal on a token the user had
-// already authorized. `defaultAllowanceCap` now returns `type(uint160).max`,
+// A window sized as `depositTotal * 10n` at the moment setup ran would drain
+// after roughly ten same-sized deposits, and a single larger deposit would outrun
+// it, both re-opening the setup modal on an already-authorized token.
+// `defaultAllowanceCap` returns `type(uint160).max`,
 // which Permit2 reads as unlimited and never decrements.
 describe("evaluateSetup with an unlimited window", () => {
   const unlimited = (expiration = FAR): SetupStatus => ({

@@ -10,7 +10,7 @@ export { NSK_HEX_LEN, nskFieldFromHex, nskHexFromField } from "@/features/wallet
 /// key that spends them.
 export interface ClaimPayload {
   chainId: bigint;
-  /// Ephemeral nsk, still hex — the ephemeral wallet is built from the string.
+  /// Ephemeral nsk, kept as hex: the ephemeral wallet is built from the string.
   nskHex: string;
 }
 
@@ -18,14 +18,13 @@ export type ClaimParseError = NskParseError | "malformed" | "invalid-chain";
 
 /// `<chainIdHex>:<nskHex>`.
 ///
-/// The chain is part of the payload because the key alone does not say where
-/// the notes live. Without it a link made on one chain, opened against
-/// another, scans the wrong pool and reports "nothing to claim" — which is
+/// The chain is part of the payload because the key alone does not identify
+/// where the notes live. Without it, a link made on one chain and opened against
+/// another scans the wrong pool and reports nothing to claim, which is
 /// indistinguishable from an already-claimed link.
 ///
-/// Unversioned by choice, so links from before this format do not parse. That
-/// is acceptable while the deployment is a devnet; a version prefix is what
-/// this would need to grow one.
+/// Unversioned, so links in any other format do not parse. Adding a version
+/// prefix is the change this would need to support migration.
 export function encodeClaimPayload(chainId: bigint, nskHex: string): string {
   return `${chainId.toString(16)}:${nskHex}`;
 }
@@ -40,8 +39,8 @@ export function parseClaimFragment(hash: string): Result<ClaimPayload, ClaimPars
 
   let chainId: bigint;
   try {
-    // Hex, matching `encodeClaimPayload`; `BigInt` needs the prefix to read it
-    // as such, and rejects anything non-numeric.
+    // Hex, matching `encodeClaimPayload`. `BigInt` requires the prefix to read it
+    // as hex and rejects anything non-numeric.
     chainId = BigInt(`0x${chainHex}`);
   } catch {
     return err("invalid-chain");

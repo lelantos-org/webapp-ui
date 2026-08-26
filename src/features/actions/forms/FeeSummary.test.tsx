@@ -85,7 +85,7 @@ describe("FeeSummary", () => {
   it("opens the asset picker clear of the wrapper that clips the panel", async () => {
     // The panel animates its own height through `overflow: hidden`, which
     // clipped the picker's list to the panel — and the list is taller than the
-    // panel on purpose. Leaving the subtree is the only thing that escapes it.
+    // panel by design. Leaving the subtree is the only way to escape the clip.
     render(<FeeSummary model={model(204_200n)} feeAsset={twoAssets} />);
     await userEvent.click(screen.getByRole("button"));
 

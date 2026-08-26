@@ -70,10 +70,11 @@
   opacity: 0.85;
 }
 
-/* The action ("view") button, sized like `.btn--sm` rather than sonner's solid
-   default, and tinted by the toast it sits in. The one selector here that
-   needs `:root`: sonner styles this at `[data-sonner-toast][data-styled='true']
-   [data-button]`, three attributes, so three of ours would only tie. */
+/* The action ("view") button: compact and outlined rather than sonner's solid
+   default, tinted by the toast it sits in. The only selector here needing
+   `:root`, because sonner styles this at
+   `[data-sonner-toast][data-styled='true'] [data-button]` — three attributes,
+   which three of ours would only tie. */
 :root [data-sonner-toaster] [data-sonner-toast] [data-button] {
   background: transparent;
   border: 1px solid currentColor;

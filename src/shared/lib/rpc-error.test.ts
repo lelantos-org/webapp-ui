@@ -48,8 +48,8 @@ describe("hasRpcCode", () => {
 
 describe("rpcErrorMessage", () => {
   it("prefers the innermost message over the generic wrapper", () => {
-    // "Internal JSON-RPC error." is what the user used to be told; the line
-    // worth showing is one level down.
+    // "Internal JSON-RPC error." is the outer wrapper's text; the line worth
+    // showing is one level down.
     expect(rpcErrorMessage(wrapped)).toBe("User rejected the request.");
   });
 

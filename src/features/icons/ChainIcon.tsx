@@ -5,8 +5,8 @@ import { chainBrand } from "./registry";
 export interface ChainIconProps {
   chainId: bigint;
   /// Human label from the registry. Supplies the two letters for a chain the
-  /// bundle does not recognise, so a newly onboarded network reads as itself
-  /// rather than as a generic dot.
+  /// bundle does not recognise, so a newly onboarded network is identifiable
+  /// rather than generic.
   chainName: string;
   className?: string;
 }
@@ -14,12 +14,12 @@ export interface ChainIconProps {
 /// The mark beside a network's name.
 ///
 /// Seeded on the chain id rather than the name: the id is what the deployment
-/// keys on everywhere else, and a name is an operator-supplied string that can
-/// be reworded — `chains.public.name` in the relayer's config — without the
-/// network having become a different one.
+/// keys on elsewhere, while the name is operator-supplied
+/// (`chains.public.name` in the relayer's config) and can be reworded without the
+/// network changing.
 ///
-/// Decorative, for the same reason as `TokenIcon`: every call site prints the
-/// chain name beside it.
+/// Decorative, as with `TokenIcon`: every call site prints the chain name beside
+/// it.
 export function ChainIcon({ chainId, chainName, className }: ChainIconProps) {
   const brand = chainBrand(chainId);
 

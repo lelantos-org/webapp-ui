@@ -1,7 +1,7 @@
 // The pool decides whether a produced value is adopted or disposed, and it is
 // the only thing standing between a superseded wallet build and a leaked pool
-// of wasm-holding workers. Its invariant is one sentence — dispose exactly when
-// nobody adopted — and every case below is a way that has gone wrong.
+// of wasm-holding workers. Its invariant is to dispose exactly when no caller
+// adopted, and each case below covers one way that can fail.
 
 import { describe, expect, it, vi } from "vitest";
 import { deferred } from "@/test/harness";

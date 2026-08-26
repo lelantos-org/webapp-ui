@@ -22,10 +22,9 @@ const WRAPPED = Symbol.for("lelantos.perf.wrapped");
 /// Monkey-patch SDK collaborators on `wallet` to log per-call timings.
 ///
 /// Idempotent per method. Not every collaborator is per-wallet — `wallet.prover`
-/// is the module-level worker singleton — so without the guard each chain
-/// switch and each claim-link build added another wrapper layer on top of the
-/// previous one, duplicating every timing line and retaining the scope of every
-/// wallet ever built.
+/// is the module-level worker singleton — so without the guard each chain switch
+/// and each claim-link build would add another wrapper layer, duplicating every
+/// timing line and retaining the scope of every wallet built.
 export function instrumentWallet(wallet: WalletApi): void {
   const wrapMethod = <T extends object, K extends keyof T>(obj: T, key: K, label: string) => {
     const orig = obj[key] as unknown as (...a: unknown[]) => Promise<unknown>;

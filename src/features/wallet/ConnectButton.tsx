@@ -25,9 +25,9 @@ export function ConnectButton() {
       </span>
     );
   }
-  // One chip, not an address beside a button: the word "disconnect" was the
-  // widest thing in the bar and is a rare action, so it becomes an icon that
-  // keeps its accessible name.
+  // One chip rather than an address beside a button: disconnect is a rare action
+  // and its label is the widest element in the bar, so it is rendered as an icon
+  // that keeps its accessible name.
   return (
     <span className="pill account">
       <span className="mono account__addr">{shortAddr(ethAddress)}</span>
@@ -47,7 +47,7 @@ export function ConnectButton() {
 function DisconnectIcon() {
   return (
     // Decorative: `aria-hidden` keeps it out of the accessibility tree and the
-    // wrapping button carries the name, so a <title> would be inert markup.
+    // wrapping button carries the name, so a `<title>` would add nothing.
     // biome-ignore lint/a11y/noSvgWithoutTitle: labelled by the parent button
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden>
       <path

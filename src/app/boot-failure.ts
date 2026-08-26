@@ -1,16 +1,16 @@
 // The panel shown when the app cannot start at all.
 //
-// Plain DOM, and deliberately not React: `config/env` parses at module-
-// evaluation time, so a missing or malformed `VITE_*` throws before
-// `createRoot` is ever called and long before any `ErrorBoundary` exists. The
-// result was otherwise a white screen with the explanation only in the console.
+// Plain DOM rather than React: `config/env` parses at module-evaluation time, so
+// a missing or malformed `VITE_*` throws before `createRoot` is called and
+// before any `ErrorBoundary` exists. Without this the failure renders as a blank
+// page with the explanation only in the console.
 //
-// Styled inline rather than through `styles.css`. This is the one screen that
-// has to render when the rest of the app has not, so it depends on nothing that
-// could itself be the thing that failed.
+// Styled inline rather than through `styles.css`. This screen must render when
+// the rest of the app has not, so it depends on nothing that could itself have
+// failed.
 
-/// Inline styles, as property maps rather than one `cssText` blob — the blob is
-/// a string the type checker cannot see into and the editor cannot format.
+/// Inline styles as property maps rather than a `cssText` blob, which is a string
+/// the type checker cannot inspect and the formatter cannot reach.
 const STYLES = {
   wrap: {
     maxWidth: "40rem",
@@ -38,8 +38,8 @@ function element<K extends keyof HTMLElementTagNameMap>(
 ): HTMLElementTagNameMap[K] {
   const el = document.createElement(tag);
   Object.assign(el.style, style);
-  // `append`, not `innerHTML`: the message quotes configuration values, and
-  // this is the one render path with no framework escaping anything.
+  // `append` rather than `innerHTML`: the message quotes configuration values,
+  // and this is the one render path with no framework escaping.
   el.append(text);
   return el;
 }

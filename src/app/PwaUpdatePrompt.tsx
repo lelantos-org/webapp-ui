@@ -12,12 +12,11 @@ const SNOOZE_MS = 30 * 60_000;
 ///
 /// Pairs with `registerType: "prompt"`. The new service worker stays in
 /// `waiting` until `updateServiceWorker(true)` runs, so the running page keeps
-/// its own precache and its lazy route chunks stay fetchable. Accepting swaps
-/// the worker and reloads, which is the only point at which the old caches are
+/// its precache and its lazy route chunks stay fetchable. Accepting swaps the
+/// worker and reloads, which is the only point at which stale caches are
 /// cleaned up.
 ///
-/// Deliberately not auto-dismissed: a user mid-transaction should be the one
-/// deciding when the page reloads.
+/// Never auto-dismissed: a user mid-transaction decides when the page reloads.
 export function PwaUpdatePrompt() {
   const {
     needRefresh: [needRefresh],
@@ -31,10 +30,9 @@ export function PwaUpdatePrompt() {
     },
   });
 
-  // Dismissing hides the toast for a while rather than for good. `setNeedRefresh(false)`
-  // was permanent: nothing re-raised it, so one accidental swipe on mobile left
-  // the waiting worker waiting and pinned the user to the old build until every
-  // tab was closed.
+  // Dismissing snoozes the toast rather than clearing it. `setNeedRefresh(false)`
+  // is permanent and nothing re-raises it, so an accidental swipe would pin the
+  // user to the current build until every tab was closed.
   const [snoozedAt, setSnoozedAt] = useState<number | undefined>(undefined);
 
   useEffect(() => {

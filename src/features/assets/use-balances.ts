@@ -1,15 +1,13 @@
 // The display balance: what the wallet holds, plus what is on its way.
 //
-// Composition, deliberately kept out of both halves. `useWalletState` answers
-// only "what has this wallet decrypted"; `features/pending-tx` holds only what
-// is in flight. Folding the overlay into the wallet made `features/wallet`
-// import the module that submits transactions — which already imports the
-// wallet — and left the wallet unable to state what it actually holds without
-// subtracting a concern it did not own.
+// The composition is kept out of both halves. `useWalletState` answers only what
+// this wallet has decrypted; `features/pending-tx` holds only what is in flight.
+// Folding the overlay into the wallet would make `features/wallet` import the
+// module that submits transactions, which already imports the wallet.
 //
-// It lives with assets because an asset balance is what it produces, and
-// because `features/assets` is downstream of both halves: putting it beside
-// the submitters instead only moved the cycle to `assets <-> actions`.
+// It lives under `features/assets`, which is downstream of both halves and is
+// where an asset balance belongs; placing it beside the submitters would move
+// the cycle to `assets <-> actions`.
 
 import type { UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
@@ -34,9 +32,9 @@ import type { AssetBalanceLabel } from "./asset-option";
 
 /// How soon to nudge a resync after a watermark-bound entry appears.
 ///
-/// Swap B-notes are flushed asynchronously by the relayer, so the only way to
-/// see them land is to look again. Without this the balance sits on the
-/// wallet's 30s cadence and the "settling" hint appears to stall.
+/// Swap B-notes are flushed asynchronously by the relayer, so observing them
+/// requires looking again. Without this the balance follows the wallet's 30s
+/// cadence and the "settling" hint appears to stall.
 const SETTLING_POLL_MS = 5_000;
 
 /// Ceiling for the backoff below, matching the wallet query's own cadence so
@@ -45,27 +43,25 @@ const SETTLING_POLL_MAX_MS = 30_000;
 
 /// One settling poll per page, shared by every `useBalances` caller.
 ///
-/// `useBalances` is called by every consumer of a balance — `AssetsCard` and
-/// whichever form is mounted, at least — and each one used to own its own
-/// timer. Every tick runs a full `syncNotes` on the main thread, so two
-/// consumers meant two of the most expensive operation in the app on
-/// overlapping schedules, each with its own independent backoff.
+/// `useBalances` is called by every balance consumer — `AssetsCard` and
+/// whichever form is mounted, at least — and each tick runs a full `syncNotes`
+/// on the main thread. A per-caller timer would run the most expensive operation
+/// in the app on several overlapping schedules with independent backoffs.
 ///
-/// A closure rather than loose module-level mutables: the timer, its backoff
-/// and its subscriber count are one piece of state with one invariant (the
-/// timer runs exactly while `refs > 0`), and keeping them together is what
-/// makes that checkable.
+/// A closure rather than module-level mutables: the timer, its backoff and its
+/// subscriber count form one piece of state with one invariant, that the timer
+/// runs exactly while `refs > 0`.
 function createSettlingPoll() {
   let refs = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let delay = SETTLING_POLL_MS;
-  /// The most recently registered invalidator; they are equivalent, all closing
-  /// over the same query key.
+  /// The most recently registered invalidator. All are equivalent, closing over
+  /// the same query key.
   let invalidate: (() => Promise<void>) | undefined;
 
   // `delay` is the backoff floor; the timer fires on a jittered draw around it
-  // so the settling burst is not a metronome either. The backoff itself stays
-  // exact — jittering the accumulator would compound.
+  // so the settling burst is not exactly periodic. The backoff itself stays
+  // exact, since jittering the accumulator would compound.
   const schedule = () => {
     timer = setTimeout(() => {
       pruneExpired();
@@ -78,11 +74,11 @@ function createSettlingPoll() {
   return {
     /// Join the poll; returns the leave function.
     ///
-    /// Backs off rather than holding at 5s: the note is either flushed within a
+    /// Backs off rather than holding at 5s: a note is either flushed within a
     /// few seconds or not at all, and an unflushed one would otherwise run a
-    /// full `syncNotes` every 5s for the rest of the session. `pruneExpired` is
-    /// the hard stop — once it drops the last watermark entry the callers
-    /// unsubscribe and the timer is cleared.
+    /// full `syncNotes` every 5s for the rest of the session. `pruneExpired`
+    /// provides the hard stop — once it drops the last watermark entry the
+    /// callers unsubscribe and the timer is cleared.
     join(next: () => Promise<void>): () => void {
       invalidate = next;
       refs += 1;
@@ -120,9 +116,9 @@ export interface BalancesState extends Omit<WalletState, "balances"> {
 
 /// Confirmed balances with the in-flight overlay applied.
 ///
-/// Also owns the two side effects that overlay implies: clearing
-/// watermark-bound entries once a sync has credited them, and resyncing
-/// faster while any remain.
+/// Also owns the two side effects the overlay implies: clearing watermark-bound
+/// entries once a sync has credited them, and resyncing faster while any
+/// remain.
 export function useBalances(): UseQueryResult<BalancesState> {
   const query = useWalletState();
   const { wallet } = useWallet();
@@ -131,8 +127,8 @@ export function useBalances(): UseQueryResult<BalancesState> {
   const pending = usePendingByAsset(chainId);
   const allPending = usePending();
 
-  // Only this chain's entries: another chain's in-flight swap is not something
-  // this query can observe settling.
+  // Only this chain's entries; this query cannot observe another chain's
+  // in-flight swap settling.
   const hasWatermarkPending = useMemo(() => {
     for (const e of allPending.values()) {
       if (e.chainId === chainId && e.clearWhenBalanceAtLeast !== undefined) return true;
@@ -140,16 +136,16 @@ export function useBalances(): UseQueryResult<BalancesState> {
     return false;
   }, [allPending, chainId]);
 
-  // Keyed on `syncedAt` so this runs once per completed sync — the only moment
-  // a watermark can newly be satisfied.
+  // Keyed on `syncedAt` so this runs once per completed sync, the only point at
+  // which a watermark can newly be satisfied.
   const syncedAt = query.data?.syncedAt;
   useEffect(() => {
     if (!wallet || syncedAt === undefined) return;
     pruneByBalances(chainId, (asset) => wallet.balance(asset));
   }, [wallet, chainId, syncedAt]);
 
-  // Joins the shared poll rather than starting one: see `joinSettlingPoll`.
-  // `hasWatermarkPending` going false is the hard stop, as before.
+  // Joins the shared poll rather than starting one. `hasWatermarkPending` going
+  // false is the hard stop.
   useEffect(() => {
     if (!hasWatermarkPending) return;
     return settlingPoll.join(invalidate);
@@ -165,16 +161,15 @@ export function useBalances(): UseQueryResult<BalancesState> {
 
 /// The display row for one asset.
 ///
-/// `undefined` means the balance is genuinely unknown — no sync has succeeded
-/// yet, or the last one failed; `SyncErrorNotice` is what says so on screen.
+/// `undefined` means the balance is unknown: no sync has succeeded yet, or the
+/// last one failed. `SyncErrorNotice` reports that on screen.
 ///
-/// Once a sync *has* succeeded, an asset with no row is a zero balance and is
-/// reported as one. Returning `undefined` there conflated the two: `computeBalances`
-/// only emits assets holding unspent notes, so for a token the user holds none
-/// of, `validateAmount` skipped the balance check entirely, the submit button
-/// stayed live, the hint line vanished and the `max` button disappeared with no
-/// explanation — and the first feedback was the SDK's `InsufficientCoverError`
-/// after a proof had already been generated.
+/// Once a sync has succeeded, an asset with no row is a zero balance and is
+/// reported as one. `computeBalances` emits only assets holding unspent notes,
+/// so returning `undefined` for a token the user holds none of would make
+/// `validateAmount` skip the balance check, leaving the submit button live and
+/// the hint and `max` controls absent until the SDK raised
+/// `InsufficientCoverError` after generating a proof.
 export function useAssetBalance(assetId: bigint | undefined): AssetBalanceView | undefined {
   const data = useBalances().data;
   if (assetId === undefined || !data) return undefined;
@@ -189,8 +184,8 @@ export function useAssetBalance(assetId: bigint | undefined): AssetBalanceView |
   );
 }
 
-/// An asset with only in-flight value still needs a row, or a first deposit
-/// shows nothing at all until the scanner catches up.
+/// An asset with only in-flight value still needs a row; otherwise a first
+/// deposit shows nothing until the scanner catches up.
 function mergePending(state: WalletState, pending: Map<bigint, PendingTotals>): BalancesState {
   const seen = new Set<bigint>();
   const merged: AssetBalanceView[] = state.balances.map((b) => {
@@ -210,20 +205,19 @@ function mergePending(state: WalletState, pending: Map<bigint, PendingTotals>): 
 /// Formatted shielded balance per asset, for labelling a picker's options.
 ///
 /// Confirmed balance only, without the in-flight overlay `useBalances` adds:
-/// this labels a menu of things the user can spend right now, and value that
-/// is still settling is not that. The portfolio card is where the pending
-/// figure belongs, and it says "settling" beside it.
+/// this labels a menu of what can be spent now, which excludes settling value.
+/// The portfolio card carries the pending figure, marked "settling".
 ///
 /// `undefined` until a sync has succeeded, so the options read as bare symbols
-/// rather than claiming a balance of zero for every asset while loading.
+/// rather than claiming a zero balance for every asset while loading.
 ///
 /// Compact rather than exact: an 18-decimal balance rendered in full is wider
 /// than the select it sits in.
 export function useAssetBalanceLabel(): AssetBalanceLabel {
   const { data } = useBalances();
-  // Indexed once rather than scanned per option, as `AssetsCard` does for the
-  // same reason: a picker calls this for every registered asset on every
-  // render of the form around it.
+  // Indexed once rather than scanned per option, as in `AssetsCard`: a picker
+  // calls this for every registered asset on every render of the surrounding
+  // form.
   return useMemo((): AssetBalanceLabel => {
     if (!data) return () => undefined;
     const byAsset = new Map(data.balances.map((b) => [b.asset, b.balance]));

@@ -7,16 +7,15 @@ import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
 const log = createLogger("route-boundary");
 
 /// Session key marking that a reload was already attempted for a chunk error.
-/// Without it a chunk that is genuinely missing — a bad deploy rather than a
-/// stale one — would reload forever.
+/// Without it, a chunk that is genuinely missing — a bad deploy rather than a
+/// stale one — would reload indefinitely.
 const RELOADED_KEY = "lelantos:chunk-reload";
 
 /// True for the failure a `React.lazy` import throws when its hashed chunk is
 /// no longer on the server.
 ///
-/// Matched on message text because there is no typed error for it: browsers
-/// report a dynamic-import failure as a plain `TypeError`, with wording that
-/// differs per engine.
+/// Matched on message text because there is no typed error: browsers report a
+/// dynamic-import failure as a plain `TypeError`, worded differently per engine.
 function isChunkLoadError(error: unknown): boolean {
   const msg = describeError(error);
   return (
@@ -39,33 +38,30 @@ function markReloaded(): void {
   try {
     sessionStorage.setItem(RELOADED_KEY, "1");
   } catch {
-    // Private mode with storage disabled: the guard is best-effort, and
-    // failing open here only costs one extra reload attempt.
+    // Private mode with storage disabled. The guard is best-effort, and failing
+    // open costs one extra reload attempt.
   }
 }
 
 /// Error boundary for the lazy route tree.
 ///
-/// Mounted *inside* `BrowserRouter`, around `<Suspense>`. The app-level
+/// Mounted inside `BrowserRouter`, around `<Suspense>`. The app-level
 /// `ErrorBoundary` sits above the router, so a route chunk failing there blanks
-/// the entire app — and its `reset()` re-renders the same tree that just threw,
-/// so the fallback's "try again" cannot recover. Scoping a boundary to the
-/// routes keeps the layout and navigation alive.
+/// the whole app, and its `reset()` re-renders the tree that threw. Scoping a
+/// boundary to the routes keeps the layout and navigation alive.
 ///
-/// A stale chunk after a deploy is the common case and is fixed by a reload,
-/// so that is done once, automatically.
+/// A stale chunk after a deploy is the common case and is fixed by reloading
+/// once, automatically.
 ///
-/// Navigating away clears a latched error. `<Routes>` lives inside this
-/// boundary: without that, a failed `/swap` chunk kept the error card on screen
-/// after the user clicked "transfer" — the URL changed and the page did not.
-/// The fallback's own `reset()` cannot fix it either, since it re-renders the
-/// very subtree that threw.
+/// Navigating away clears a latched error, which requires `<Routes>` to live
+/// inside this boundary; otherwise a failed chunk keeps the error card on screen
+/// after the user navigates elsewhere, and the fallback's `reset()` cannot help,
+/// since it re-renders the subtree that threw.
 ///
-/// This is `resetKey`, not `key`. Keying the boundary on the location also
-/// worked, but it remounted everything below it on *every* navigation — so
-/// switching tabs tore down `HomeLayout`, replaying its entrance animation,
-/// re-firing the route `<Suspense>` fallback and refetching balances. The whole
-/// page blinked on each tab click. `resetKey` drops only the error.
+/// Uses `resetKey` rather than `key`. Keying the boundary on the location would
+/// remount everything below it on every navigation, tearing down `HomeLayout`,
+/// replaying its entrance animation, re-firing the route `<Suspense>` fallback
+/// and refetching balances. `resetKey` drops only the error.
 export function RouteErrorBoundary({ children }: { children: ReactNode }) {
   const { key } = useLocation();
   return (
@@ -102,10 +98,9 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
 
 /// Reloads once for a stale chunk, from an effect.
 ///
-/// The reload used to run inline in the fallback's render. React 18's
-/// StrictMode double-invokes render and throws the first result away, so the
-/// discarded pass still wrote the `alreadyReloaded` flag — spending the single
-/// retry the guard exists to ration. Side effects belong after commit.
+/// Not inline in the fallback's render: StrictMode double-invokes render and
+/// discards the first result, so a discarded pass would still write the
+/// `alreadyReloaded` flag and spend the single retry the guard rations.
 function ChunkReload({ error }: { error: unknown }) {
   useEffect(() => {
     log.info("stale route chunk; reloading once", error);

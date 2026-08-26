@@ -106,9 +106,9 @@ describe("jitter", () => {
     expect(seen.size).toBeGreaterThan(50);
   });
 
-  /// The whole point: a value fixed once per mount would be a constant offset,
-  /// which is a more distinctive fingerprint than the round number it replaced.
-  /// Callers pass a function to `refetchInterval` so this is re-drawn per tick.
+  /// A value fixed once per mount would be a constant offset, and so a stable
+  /// per-session fingerprint. Callers pass a function to `refetchInterval`, so
+  /// this is re-drawn per tick.
   it("draws a fresh value on every call", () => {
     const a = jitter(BASE);
     const b = jitter(BASE);

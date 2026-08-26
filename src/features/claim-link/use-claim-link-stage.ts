@@ -9,10 +9,10 @@ import { useIsMounted } from "@/shared/lib/use-is-mounted";
 
 export type ClaimLinkStage = "form" | "confirm" | "running" | "success" | "closing" | "result";
 
-/// Time the success animation is visible before the modal starts fading.
-/// Aligned with `claim-success` CSS so the tick has time to draw. Not an
-/// `animationDelay`: this is reading time for the result, which a reduced-motion
-/// user needs just the same.
+/// Time the success animation is visible before the modal starts fading. Aligned
+/// with the `claim-success` CSS so the tick has time to draw. Not an
+/// `animationDelay`, since this is reading time for the result, which applies
+/// under reduced motion as well.
 export const SUCCESS_DWELL_MS = 1100;
 
 /// Stages during which the modal portal stays mounted.
@@ -24,18 +24,16 @@ export interface ClaimLinkStageApi {
   closing: boolean;
   toForm(): void;
   toConfirm(): void;
-  /// Async transition: running → success → closing → result; manages the
-  /// post-success dwell + fade-out windows.
+  /// Async transition running → success → closing → result, covering the
+  /// post-success dwell and fade-out windows.
   runWith<T>(work: () => Promise<T>): Promise<T>;
 }
 
 export function useClaimLinkStage(): ClaimLinkStageApi {
   const [stage, setStage] = useState<ClaimLinkStage>("form");
 
-  // The dwell below runs for over a second after the transfer resolves, and it
-  // used to keep setting state regardless of whether the component was still
-  // mounted. That window is precisely when the link is most at risk of being
-  // lost, so it is worth not fighting React over it.
+  // The dwell below runs for over a second after the transfer resolves, so state
+  // updates are gated on the component still being mounted.
   const isMounted = useIsMounted();
 
   const setStageIfMounted = useCallback(

@@ -1,14 +1,11 @@
-// Centralized logger. `debug` / `info` are off (even in dev) unless
-// `VITE_DEBUG=true`, `?debug=1` in the URL, or `localStorage["lelantos:debug"]="1"`.
-// `warn` / `error` always fire.
+// Centralized logger. `debug` and `info` are off, including in dev, unless
+// `VITE_DEBUG=true`, `?debug=1` is in the URL, or
+// `localStorage["lelantos:debug"] === "1"`. `warn` and `error` always fire.
 //
-// `?debug=1` holds for the tab only. It used to be persisted to localStorage,
-// which meant anyone who could get a user to open one link — a claim link with
-// `?debug=1` appended, say — turned verbose logging on permanently for that
-// origin, and the query string is stripped from the address bar immediately
-// afterwards, so the URL looked clean while the flag was already set. The
-// explicit `window.__lelantosDebug(true)` toggle still persists, because there
-// the user asked for it.
+// `?debug=1` holds for the tab only and is never persisted: a link carrying it
+// would otherwise enable verbose logging permanently for the origin, while the
+// query string is stripped from the address bar immediately afterwards. The
+// explicit `window.__lelantosDebug(true)` toggle does persist.
 
 type Level = "debug" | "info" | "warn" | "error";
 
@@ -24,7 +21,7 @@ function readDebugFlag(): boolean {
     // ignore URL parse errors
   }
   // Read directly rather than through `shared/lib/storage`, which logs through
-  // this module — the import would be a cycle.
+  // this module and would form an import cycle.
   try {
     return window.localStorage?.getItem(DEBUG_KEY) === "1";
   } catch {
@@ -32,15 +29,15 @@ function readDebugFlag(): boolean {
   }
 }
 
-/// Memoised after the first read; `window.__lelantosDebug` is the only thing
-/// that changes it afterwards.
+/// Memoised after the first read; only `window.__lelantosDebug` changes it
+/// afterwards.
 let debugCached: boolean | undefined;
 function debugEnabled(): boolean {
   if (debugCached === undefined) debugCached = readDebugFlag();
   return debugCached;
 }
 
-/// Expose runtime toggle for ops / debugging. `window.__lelantosDebug(true)`.
+/// Runtime toggle for operations and debugging: `window.__lelantosDebug(true)`.
 if (typeof window !== "undefined") {
   (window as unknown as { __lelantosDebug?: (on: boolean) => void }).__lelantosDebug = (on) => {
     debugCached = on;
@@ -84,19 +81,15 @@ export function createLogger(scope: string): Logger {
   };
 }
 
-/// Lets callers skip expensive log-arg construction when debug is off.
-export function isDebugEnabled(): boolean {
-  return debugEnabled();
-}
-
-/// Prefixes of noisy SDK / WASM-worker `console.log` lines; ungateable from
-/// outside the SDK, so `console.log` is patched to drop them while debug is off.
+/// Prefixes of noisy SDK and WASM-worker `console.log` lines. They cannot be
+/// gated from outside the SDK, so `console.log` is patched to drop them while
+/// debug is off.
 const NOISY_PREFIXES = ["[WasmProver]", "[worker-perf]", "[rayon-main"];
 
 let consoleFilterInstalled = false;
 
-/// Idempotent; call once at boot. Re-evaluates the debug flag on every call
-/// so the runtime toggle (`window.__lelantosDebug(true)`) applies without reload.
+/// Idempotent; call once at boot. The debug flag is re-evaluated per line, so the
+/// runtime toggle applies without a reload.
 export function installConsoleFilter(): void {
   if (consoleFilterInstalled || typeof console === "undefined") return;
   consoleFilterInstalled = true;

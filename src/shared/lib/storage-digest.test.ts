@@ -16,10 +16,10 @@ describe("storageDigest", () => {
     expect(storageDigest("abc")).toBe(SHA256_ABC.slice(0, 16));
   });
 
-  /// `claimLink.ts` previously computed this with `crypto.subtle.digest` over
-  /// `TextEncoder`-encoded bytes. Records written under that spelling must land
-  /// in the same namespace, or a link's notes become unreachable.
-  it("matches the WebCrypto spelling it replaced", async () => {
+  /// Records may also have been written using `crypto.subtle.digest` over
+  /// `TextEncoder`-encoded bytes. Both spellings must land in the same namespace,
+  /// or a link's notes become unreachable.
+  it("matches the WebCrypto spelling", async () => {
     const value = "deadbeef".repeat(8);
     const bytes = new TextEncoder().encode(value);
     const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));

@@ -1,5 +1,5 @@
-// The quote panel: what the swap will actually credit, and how stale the
-// figure behind it is.
+// The quote panel: what the swap will credit, and how stale the figure behind it
+// is.
 
 import type { SwapQuote } from "@lelantos-org/sdk/quoter";
 import { swapCredit } from "@/features/actions";
@@ -10,13 +10,13 @@ interface QuoteCardProps {
   outDecimals: number;
   outScale: bigint;
   outSymbol: string;
-  /// Protocol fee, needed to size the B-note. `undefined` until the read
-  /// lands, in which case the card says so rather than showing a figure the
-  /// wallet will not honour.
+  /// Protocol fee, needed to size the B-note. `undefined` until the read lands,
+  /// in which case the card reports that rather than showing a figure the wallet
+  /// will not honour.
   feeBps: bigint | undefined;
-  /// What the relayer charges to flush the leg-2 deposit, in circuit units of
-  /// the out asset. Also part of the B-note's size — see below. `undefined`
-  /// until its quote lands, and treated like `feeBps`.
+  /// What the relayer charges to flush the leg-2 deposit, in circuit units of the
+  /// out asset. Also part of the B-note's size, and treated like `feeBps` while
+  /// `undefined`.
   outDepositFee: bigint | undefined;
   ageSecs: number;
   stale: boolean;
@@ -38,14 +38,14 @@ export function QuoteCard({
   onRefresh,
   refreshing,
 }: QuoteCardProps) {
-  // What the wallet is actually credited.
+  // What the wallet is credited.
   //
-  // Not `minOut / outScale`. `swapCredit` is the sizing `executeSwap` encodes
-  // as the deposit leg's `publicIn` — the leg-2 protocol fee and the relayer's
-  // flush note both come out of it, so `minOut / scale` overstates the credit
-  // by both. It is also a *fixed* amount rather than a floor, so this one
-  // number is both what you receive and the minimum; showing `expectedOut` as
-  // "you receive" promised upside that never arrives.
+  // Not `minOut / outScale`: `swapCredit` is the sizing `executeSwap` encodes as
+  // the deposit leg's `publicIn`, and both the leg-2 protocol fee and the
+  // relayer's flush note come out of it, so `minOut / scale` overstates the
+  // credit by both. It is a fixed amount rather than a floor, so this figure is
+  // both what is received and the minimum; `expectedOut` would imply upside that
+  // does not reach the wallet.
   const received =
     feeBps === undefined || outDepositFee === undefined
       ? undefined
@@ -84,7 +84,7 @@ export function QuoteCard({
           </span>
         </div>
         <div className="quote__row">
-          {/* Slippage is a revert threshold here, not a range of outcomes: the
+          {/* Slippage is a revert threshold rather than a range of outcomes: the
               amount above is fixed, and the trade reverts if the venue cannot
               cover it. */}
           <span className="muted">Reverts below</span>

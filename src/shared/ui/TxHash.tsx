@@ -3,15 +3,14 @@ import { useCopy } from "@/shared/lib/use-copy";
 
 export interface TxHashProps {
   hash: string;
-  /// Explorer link for `hash`. Omitted when the chain has no explorer
-  /// configured — the row still renders, copy still works.
+  /// Explorer link for `hash`. Omitted when the chain has no explorer configured;
+  /// the row still renders and copy still works.
   url?: string;
 }
 
-/// One tx hash, rendered as a left-aligned row: label, truncated hash, copy,
-/// explorer. A full 66-char hash wrapped mid-string reads as ragged text and
-/// nobody transcribes one by eye anyway — the copy button is the real action,
-/// and the untruncated value stays reachable via `title` and the clipboard.
+/// One tx hash, as a left-aligned row: label, truncated hash, copy, explorer. A
+/// full 66-character hash wraps mid-string, so it is truncated; the untruncated
+/// value stays reachable through `title` and the clipboard.
 export function TxHash({ hash, url }: TxHashProps) {
   const { copy, copied } = useCopy(hash);
 

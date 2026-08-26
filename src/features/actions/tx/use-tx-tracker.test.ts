@@ -67,10 +67,11 @@ describe("useTxTracker", () => {
   });
 
   it("still tracks the tx when the post-submit chain read fails", async () => {
-    // `fetchFeeBps` blipping used to reject out of `onSuccess`, which
-    // react-query awaits inside its own `try` — flipping an already-broadcast
-    // swap to `error`: red stepper, "swap failed" toast, `m.data` discarded so
-    // no explorer link, no pending overlay, and no lifecycle watch at all.
+    // A failing `fetchFeeBps` must not reject out of `onSuccess`, which
+    // react-query awaits inside its own `try`; that would flip an
+    // already-broadcast swap to `error` — red stepper, "swap failed" toast,
+    // `m.data` discarded so no explorer link, no pending overlay and no
+    // lifecycle watch.
     fetchFeeBps.mockRejectedValue(new Error("rpc rate limited"));
     const { result } = renderHook(() => useTxTracker(), { wrapper: queryWrapper });
 

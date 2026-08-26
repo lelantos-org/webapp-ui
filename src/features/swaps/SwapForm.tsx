@@ -32,8 +32,8 @@ import { SlippageField } from "./SlippageField";
 import { type SwapInput, swapSchema } from "./schemas";
 import { QUOTE_STALE_SECS, useSwapQuote } from "./use-swap-quote";
 
-/// Any asset other than `DEFAULT_ASSET_ID`, so the pair starts valid: a swap
-/// needs two distinct assets, and a matching pair leaves the quote request
+/// Any asset other than `DEFAULT_ASSET_ID`, so the pair starts valid. A swap
+/// needs two distinct assets; a matching pair leaves the quote request
 /// `undefined`.
 const DEFAULT_SWAP_ASSET_OUT_ID = "2";
 const DEFAULT_SLIPPAGE_BPS = 50;
@@ -76,14 +76,13 @@ export function SwapForm() {
   const v = validateAmount(parsed, inAsset, inBalance);
 
   // The quote binds a route into the proof, so it is fetched for one exact
-  // (pair, amount, slippage) and nothing else. Passing `undefined` until every
-  // part is present is what keeps the query off — and because the request *is*
-  // the cache key, changing any part invalidates the old quote by construction.
-  // This used to be a ref tracking the previous tuple and calling `reset()`.
+  // (pair, amount, slippage). Passing `undefined` until every part is present
+  // keeps the query off, and because the request is the cache key, changing any
+  // part invalidates the previous quote by construction.
   //
-  // MetaQuoter quotes against token base units. MASP skims its fee off the
-  // gross publicOut before the wrapper sees the input, so the true adapter-side
-  // input is slightly less; the user's `slippageBps` floor absorbs it.
+  // MetaQuoter quotes against token base units. MASP skims its fee off the gross
+  // publicOut before the wrapper sees the input, so the adapter-side input is
+  // slightly lower; the user's `slippageBps` floor absorbs the difference.
   const request =
     inAsset && outAsset && wAssetIn !== wAssetOut && v.valid && parsed !== undefined
       ? {
@@ -95,20 +94,20 @@ export function SwapForm() {
         }
       : undefined;
   const quoteQ = useSwapQuote(request);
-  // Suppressed while the debounce catches up: `data` then describes an earlier
-  // amount, and submitting against it would prove the wrong route.
+  // Suppressed while the debounce catches up, since `data` then describes an
+  // earlier amount and submitting against it would prove the wrong route.
   const quote = quoteQ.stale ? undefined : quoteQ.data;
 
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const quoteAge = quote ? quoteAgeSecs(quote, now) : undefined;
   const feeBps = useFeeBps();
-  // Leg 2 is a deposit, and the relayer's charge for flushing it comes out of
-  // the B-note rather than being billed separately — so it belongs to the
-  // credited figure `QuoteCard` computes, not to the fee panel below.
+  // Leg 2 is a deposit, and the relayer's charge for flushing it comes out of the
+  // B-note rather than being billed separately, so it belongs to the credited
+  // figure `QuoteCard` computes rather than to the fee panel below.
   const outDepositFee = useDepositFee(outAsset?.id);
-  // Relayer fee only. The protocol fee on leg 2 is already inside the credited
-  // figure `QuoteCard` shows (`sizeBNote`), so stating it again here would
-  // double-count it to the reader.
+  // Relayer fee only: the protocol fee on leg 2 is already inside the credited
+  // figure `QuoteCard` shows (`sizeBNote`), so repeating it here would
+  // double-count it.
   const [feeAsset, setFeeAsset] = useState<bigint | undefined>(undefined);
   const fees = useFeePanel({
     kind: "swap",
@@ -121,10 +120,9 @@ export function SwapForm() {
   const quoteStale = quoteAge !== undefined && quoteAge > QUOTE_STALE_SECS;
 
   // `now` drives the quote's age counter only, so it ticks only while a quote
-  // exists and is under QUOTE_STALE_SECS. Ungated, this re-renders the whole
-  // form subtree once a second for the lifetime of the route. Resynced on
-  // entry, so a quote arriving after a pause is not measured against a stale
-  // clock.
+  // exists and is under `QUOTE_STALE_SECS`; ungated, it would re-render the whole
+  // form subtree once a second for the life of the route. Resynced on entry, so a
+  // quote arriving after a pause is not measured against a stale clock.
   useEffect(() => {
     if (!quote || quoteStale) return;
     setNow(Math.floor(Date.now() / 1000));
@@ -142,9 +140,9 @@ export function SwapForm() {
       if (!inAsset || !outAsset || !quote) return;
       const amount = parseAmountForAsset(values.amount, inAsset.decimals, inAsset.scale);
       await m.mutateAsync({ assetIn: inAsset.id, assetOut: outAsset.id, amount, quote, feeAsset });
-      // The quote is bound to this exact amount, so clearing the amount is also
-      // what retires it: the request goes `undefined`, the query goes idle, and
-      // the pair and slippage — the user's standing choices — survive.
+      // The quote is bound to this exact amount, so clearing the amount retires
+      // it: the request becomes `undefined` and the query goes idle, while the
+      // pair and slippage are preserved.
       clearAmount();
     }),
   );
@@ -202,12 +200,10 @@ export function SwapForm() {
       />
       <input type="hidden" {...register("slippageBps", { valueAsNumber: true })} />
       <div className="stack stack--sm">
-        {/* No "get quote" button any more — the query fetches as soon as the
-            pair and amount are valid, and refreshes itself before the quote
-            expires. What is left is the state in between, which used to be the
-            button's label and would otherwise be a blank gap under the form.
-            `QuoteCard` carries its own refresh once there is a card to put it
-            on. */}
+        {/* No "get quote" button: the query fetches as soon as the pair and
+            amount are valid and refreshes before the quote expires. This covers
+            the interval before the first card arrives; `QuoteCard` carries its
+            own refresh control thereafter. */}
         {quoting && !quote ? (
           <div className="muted txt-sm">
             <span className="spinner" aria-hidden /> fetching quote…

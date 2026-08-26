@@ -3,14 +3,11 @@ import { z } from "zod";
 
 /// A service URL, checked for shape as well as presence.
 ///
-/// `min(1)` alone accepted `" "` and `htp://relayer`: both resolve against the
-/// page origin without complaint and then 404 every call at runtime, which
-/// surfaces as a confusing failure deep in the app rather than as a
-/// misconfiguration at boot. The refine runs *after* `toAbsoluteUrl`, so a
-/// legitimate page-relative value like `/relayer` still passes.
-/// `.trim()` first: `min(1)` accepted `" "`, which `toAbsoluteUrl` then resolves
-/// to the page origin — a perfectly valid URL pointing at the app itself, so
-/// every service call 404s at runtime instead of failing at boot.
+/// Trimmed before the length check, since `" "` would otherwise pass and resolve
+/// to the page origin — a valid URL pointing at the app itself, so every service
+/// call 404s at runtime rather than failing at boot. The protocol check runs
+/// after `toAbsoluteUrl`, so a page-relative value such as `/relayer` still
+/// passes.
 const url = z
   .string()
   .transform((v) => v.trim())
@@ -28,9 +25,9 @@ function isHttpUrl(value: string): boolean {
 const HTTP_URL_MESSAGE = "must resolve to an http(s) URL";
 
 // An unset Docker build arg or CI variable reaches Vite as an empty string
-// rather than as `undefined`. Blank therefore has to mean "absent", or
-// declaring an optional setting without a value would fail validation and
-// break boot instead of just leaving its feature switched off.
+// rather than `undefined`. Blank must therefore mean absent, or declaring an
+// optional setting without a value would fail validation and break boot instead
+// of leaving its feature switched off.
 const blankAsAbsent = z
   .string()
   .optional()
@@ -44,22 +41,21 @@ function opt<T extends z.ZodTypeAny>(schema: T) {
   return blankAsAbsent.pipe(schema.optional());
 }
 
-// Base URL of a backend service. Deployments point these at dev-server /
-// nginx proxy paths (`/fmd`, `/relayer`), but the SDK's HTTP client and viem
-// both build requests with `new URL(base + path)`, which throws on a
-// page-relative base. Resolve against the page origin so both spellings work.
+// Base URL of a backend service. Deployments point these at dev-server or nginx
+// proxy paths (`/fmd`, `/relayer`), but the SDK's HTTP client and viem build
+// requests with `new URL(base + path)`, which throws on a page-relative base.
+// Resolving against the page origin makes both spellings work.
 const serviceUrl = url.transform(toAbsoluteUrl).refine(isHttpUrl, HTTP_URL_MESSAGE);
 const optServiceUrl = opt(z.string().transform(toAbsoluteUrl).refine(isHttpUrl, HTTP_URL_MESSAGE));
 
-/// Exported for tests; `env` below is the parsed singleton.
-/// Only what is global to the deployment.
+/// Settings global to the deployment. Exported for tests; `env` below is the
+/// parsed singleton.
 ///
-/// Everything per-chain — chain id and name, RPC, contract addresses, tree
-/// depth, explorer — comes from the relayer's `/chains` at runtime, so one
-/// build serves every deployment. These three are what remain: the services
-/// themselves, which are shared across chains and cannot be discovered from
-/// inside the app. `relayerUrl` in particular is the bootstrap that makes the
-/// rest discoverable.
+/// Everything per-chain — chain id and name, RPC, contract addresses, tree depth,
+/// explorer — comes from the relayer's `/chains` at runtime, so one build serves
+/// every deployment. What remains are the services themselves, which are shared
+/// across chains and cannot be discovered from inside the app; `relayerUrl` is
+/// the bootstrap that makes the rest discoverable.
 export const Schema = z.object({
   relayerUrl: serviceUrl,
   fmdUrl: serviceUrl,
@@ -69,8 +65,8 @@ export const Schema = z.object({
 
 export type Env = z.infer<typeof Schema>;
 
-/// Thrown when the deployment is misconfigured. Named so `main` can tell it
-/// apart from a genuine crash and say something useful.
+/// Thrown when the deployment is misconfigured. Named so `main` can distinguish
+/// it from a crash and report accordingly.
 export class EnvConfigError extends Error {
   constructor(message: string) {
     super(message);
@@ -87,7 +83,7 @@ function parseEnv(): Env {
   const result = Schema.safeParse(raw);
   if (!result.success) {
     // `i.path[0]` is empty for an issue raised inside a piped optional schema,
-    // which produced a bare `VITE_:` label naming nothing.
+    // which would otherwise produce a bare `VITE_:` label naming no field.
     const issues = result.error.issues
       .map((i) => {
         const field = String(i.path[0] ?? "");

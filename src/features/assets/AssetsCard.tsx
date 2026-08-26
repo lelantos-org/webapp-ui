@@ -13,8 +13,8 @@ export function AssetsCard() {
   const assets = useRegisteredAssets();
   const prices = usePrices();
 
-  // Single index, replacing a linear `assets.find` per row per render. Also
-  // gives the rows stable prop identities, which is what makes memoizing them
+  // A single index rather than a linear `assets.find` per row per render. It also
+  // gives the rows stable prop identities, which is what makes memoising them
   // effective.
   const byId = useMemo(() => {
     const m = new Map<bigint, RegisteredAsset>();
@@ -54,9 +54,9 @@ export function AssetsCard() {
 /// Stable identity for the no-data case; see `NO_ASSETS`.
 const EMPTY_ROWS: AssetBalanceView[] = [];
 
-/// Counts from the in-flight sync, so the first load is not a bare spinner.
-/// A cold sync scans the whole note feed and can run for minutes; without a
-/// number moving there is nothing to distinguish it from a hang.
+/// Counts from the in-flight sync, so the first load is not a bare spinner. A
+/// cold sync scans the whole note feed and can run for minutes, and a moving
+/// count is what distinguishes it from a hang.
 function SyncProgressLine() {
   const { active, scanned, hits } = useSyncProgress();
   if (!active || scanned === 0) return null;

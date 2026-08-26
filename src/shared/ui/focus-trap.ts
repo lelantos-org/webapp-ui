@@ -1,23 +1,21 @@
 // Keyboard containment for modal dialogs.
 //
-// `aria-modal` tells assistive tech the rest of the page is inert; it does not
-// stop Tab from walking out of the dialog into the page behind it. Every modal
-// has to do that itself, so it lives here rather than in whichever one needed
-// it first.
+// `aria-modal` marks the rest of the page inert for assistive technology but does
+// not stop Tab leaving the dialog, so every modal must contain focus itself.
 
 /// Everything Tab can reach, in DOM order.
 ///
 /// Exported so a dialog's mount-focus pass picks the same first element this
-/// wraps to. The two disagreeing means focus can start on something the trap
-/// does not consider "first", and the first Shift+Tab escapes the dialog.
+/// wraps to. If the two disagree, focus can start on an element the trap does not
+/// treat as first and the initial Shift+Tab leaves the dialog.
 export const FOCUSABLE_SELECTOR =
   "button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])";
 
 /// Cycle Tab and Shift+Tab within `root`. Wire to the dialog's `onKeyDown`.
 ///
-/// Keys off `document.activeElement` being the first or last focusable inside
-/// the dialog, so the caller must also focus something inside on mount —
-/// otherwise focus sits on `<body>` and this traps nothing.
+/// Keys off `document.activeElement` being the first or last focusable inside the
+/// dialog, so the caller must also focus something inside on mount; otherwise
+/// focus sits on `<body>` and nothing is trapped.
 export function trapFocus(e: React.KeyboardEvent, root: HTMLElement | null): void {
   if (e.key !== "Tab" || !root) return;
   const focusables = root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);

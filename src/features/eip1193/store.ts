@@ -29,25 +29,24 @@ const STORAGE_KEY = "lelantos:wallet:rdns";
 
 /// The wallet last chosen, kept across disconnects.
 ///
-/// A separate key because the two have opposite lifetimes: `STORAGE_KEY` is a
-/// session latch that `disconnect` must clear, while this is a preference whose
-/// whole purpose is to outlive one. Sharing them meant the picker had nothing
-/// to order by in the case it exists for — the connect right after a disconnect.
+/// A separate key, since the two have opposite lifetimes: `STORAGE_KEY` is a
+/// session latch that `disconnect` clears, while this is a preference that must
+/// outlive a session so the picker can order by it on the connect following a
+/// disconnect.
 const PREFERRED_KEY = "lelantos:wallet:preferred-rdns";
 
-/// How long to wait for the wanted wallet to announce before giving up.
+/// How long to wait for the requested wallet to announce before giving up.
 ///
-/// Replaces the fixed sleeps this module used to do. Extensions announce on
-/// their own schedule, and the previous 60/120ms sleeps decided the outcome by
-/// whoever won that race rather than by what the user picked.
+/// Extensions announce on their own schedule, so the wait is bounded by time
+/// rather than resolved by whichever provider announces first.
 const ANNOUNCE_WAIT_MS = 400;
 
 /// Parse a chain id off an EIP-1193 event or RPC result.
 ///
-/// The spec says `chainChanged` carries a `0x`-prefixed hex string, but wallets
-/// in the wild also emit bare decimal. Assuming radix 16 turns `"137"` into
-/// `311`, which drops the whole app to `unsupported-chain` with no diagnostic —
-/// so branch on the prefix instead.
+/// The spec says `chainChanged` carries a `0x`-prefixed hex string, but some
+/// wallets emit bare decimal. Assuming radix 16 would turn `"137"` into `311`
+/// and drop the app to `unsupported-chain` with no diagnostic, so the radix is
+/// chosen by the prefix.
 export function parseChainId(value: unknown): number | undefined {
   if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
   if (typeof value !== "string") return undefined;
@@ -81,16 +80,16 @@ type Listener = () => void;
 class WalletStore {
   private state: ConnectionState = initial;
   private listeners = new Set<Listener>();
-  /// Detaches the active provider's event handlers; prevents listener leaks
-  /// on switch/disconnect.
+  /// Detaches the active provider's event handlers, preventing listener leaks on
+  /// switch and disconnect.
   private detach: (() => void) | null = null;
   private readonly registry = new ProviderRegistry();
-  /// Guards `connect` against re-entry; see the note there.
+  /// Guards `connect` against re-entry.
   private connecting = false;
 
   constructor() {
-    // Mirror announcements into `discovered` so React subscribers see them
-    // through the one store they already read.
+    // Mirror announcements into `discovered` so React subscribers observe them
+    // through the store they already read.
     this.registry.subscribe(() => this.set({ discovered: this.registry.list() }));
   }
 
@@ -116,17 +115,17 @@ class WalletStore {
     return this.registry.pick(rdns);
   }
 
-  /// Pop the wallet's connect prompt for the given (or default) provider
-  /// and latch it as the active one. Persists rdns so reloads stay connected.
+  /// Raise the wallet's connect prompt for the given (or default) provider and
+  /// latch it as the active one. Persists `rdns` so reloads stay connected.
   connect = async (rdns?: string): Promise<void> => {
     if (typeof window === "undefined") return;
-    // Re-entrancy guard. Without it a double-click issued two
+    // Re-entrancy guard: without it a double-click issues two
     // `eth_requestAccounts` prompts and two `attach()` calls for one intent.
     if (this.connecting) return;
     this.connecting = true;
-    // Set before the announce wait, not after it. The connect button reads
-    // `status`, and this used to sit on `idle` for the whole discovery window,
-    // rendering as though the click had done nothing.
+    // Set before the announce wait rather than after: the connect button reads
+    // `status`, and staying on `idle` for the discovery window would render as
+    // though the click had no effect.
     this.set({ status: "connecting", error: undefined });
     try {
       if (this.registry.list().length === 0) this.startDiscovery();
@@ -163,9 +162,9 @@ class WalletStore {
     this.startDiscovery();
     const rdns = localStore.get(STORAGE_KEY);
     if (!rdns) return;
-    // Wait for *this* wallet to announce. `pickProvider` no longer substitutes,
-    // so a late announce costs a wait rather than silently resuming into
-    // whichever other wallet happened to be quicker.
+    // Wait for this specific wallet to announce. `pickProvider` does not
+    // substitute, so a late announce costs a wait rather than resuming into
+    // whichever other wallet announced first.
     const pick = await this.registry.waitFor(() => this.registry.pick(rdns), ANNOUNCE_WAIT_MS);
     if (!pick) {
       log.debug("resume: no announced provider matched stored rdns", rdns);
@@ -183,9 +182,9 @@ class WalletStore {
         log.debug("resume: wallet returned no chain id; staying idle");
         return;
       }
-      // A resume that finishes after an explicit connect must not clobber it:
-      // `attach` overwrites address and chainId wholesale, and the stored rdns
-      // reflects the *previous* session, not the one the user just chose.
+      // A resume finishing after an explicit connect must not overwrite it:
+      // `attach` replaces address and chainId wholesale, and the stored rdns
+      // refers to the previous session rather than the one just chosen.
       if (this.connecting || this.state.status === "connected") {
         log.debug("resume: superseded by an explicit connect; discarding");
         return;
@@ -202,10 +201,10 @@ class WalletStore {
   /// `chainChanged` listener updates state when the wallet finishes, so
   /// callers need no further sync.
   ///
-  /// Takes the whole `ChainEntry`, not an id: the `wallet_addEthereumChain`
-  /// fallback has to describe the chain being added. Reading the name, RPC and
-  /// explorer off a build-time singleton instead would register every chain
-  /// under whichever one the bundle was built for.
+  /// Takes the whole `ChainEntry` rather than an id, because the
+  /// `wallet_addEthereumChain` fallback must describe the chain being added.
+  /// Sourcing the name, RPC and explorer from a build-time singleton would
+  /// register every chain under a single configuration.
   switchChain = async (chain: ChainEntry): Promise<void> => {
     const provider = this.state.provider;
     if (!provider) {
@@ -219,8 +218,8 @@ class WalletStore {
       });
     } catch (err) {
       if (!isUnrecognizedChain(err)) throw err;
-      // `warn`, not `debug`: `debug` needs VITE_DEBUG or `?debug=1`, so a
-      // user-reported failure arrives with the whole fallback invisible.
+      // `warn` rather than `debug`: `debug` requires VITE_DEBUG or `?debug=1`,
+      // so a user-reported failure would arrive with the fallback invisible.
       const target = { chainId: hexId, chainName: chain.chainName, rpcUrl: chain.rpcUrl };
       log.warn("chain unknown to the wallet; adding it", target);
       try {
@@ -233,20 +232,20 @@ class WalletStore {
               nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
               rpcUrls: [chain.rpcUrl],
               // Spread rather than an explicit `undefined`: wallets validate
-              // this field's type when the key is present, and some refuse the
-              // whole request over it.
+              // this field's type whenever the key is present, and some reject
+              // the whole request over it.
               ...(chain.explorerUrl ? { blockExplorerUrls: [chain.explorerUrl] } : {}),
             },
           ],
         });
       } catch (addErr) {
-        // The likely faults are all invisible from the message alone: the
-        // wallet refusing custom networks, the RPC URL being unreachable from
-        // the browser, or the RPC answering with a different chain id.
+        // The likely faults are indistinguishable from the message alone: the
+        // wallet refusing custom networks, an RPC URL unreachable from the
+        // browser, or an RPC answering with a different chain id.
         log.warn("add chain failed", target, addErr);
         throw addErr;
       }
-      // Some wallets add without switching — retry explicitly.
+      // Some wallets add without switching, so retry the switch explicitly.
       try {
         await provider.request({
           method: "wallet_switchEthereumChain",
@@ -275,7 +274,7 @@ class WalletStore {
     });
   };
 
-  /// Wire the picked provider as the active one + attach event listeners.
+  /// Wire the picked provider as the active one and attach its event listeners.
   /// Idempotent: detaches any prior provider's handlers first.
   private attach(detail: Eip6963ProviderDetail, address: `0x${string}`, chainId: number): void {
     this.detach?.();
@@ -326,9 +325,9 @@ class WalletStore {
 
   /// Restore the store to its boot state.
   ///
-  /// Exists for tests: this module exports a singleton, so without a reset each
-  /// case inherits the previous one's `discovered` list and `seen` map, and the
-  /// assertions only hold in file order.
+  /// Exists for tests. This module exports a singleton, so without a reset each
+  /// case inherits the previous one's `discovered` list and `seen` map, making
+  /// assertions order-dependent.
   resetForTest = (): void => {
     this.detach?.();
     this.detach = null;
@@ -338,9 +337,8 @@ class WalletStore {
     for (const l of this.listeners) l();
   };
 
-  /// Name the wallet the way the user saw it in the picker. `rdns` is an
-  /// implementation detail that means nothing on screen, and this string is
-  /// rendered verbatim by `Welcome`.
+  /// Name the wallet as it appeared in the picker. `rdns` is an implementation
+  /// detail, and this string is rendered verbatim by `Welcome`.
   private notFoundMessage(rdns?: string): string {
     if (!rdns) {
       return "No EVM wallet detected. Install MetaMask, Rabby or another browser wallet.";
@@ -359,21 +357,20 @@ export const walletStore = new WalletStore();
 
 /// The wallet chosen last time, if any. Survives a disconnect.
 ///
-/// For ordering the picker. The keys themselves stay private so nothing else
-/// grows an opinion about how the preference is stored.
+/// Used to order the picker. The storage keys stay private to this module.
 export function preferredRdns(): string | undefined {
   return localStore.get(PREFERRED_KEY);
 }
 
 /// The wallet's current chain, read at call time rather than at render.
 ///
-/// For the last-moment checks before a spend. A component's `useActiveChain()`
-/// is a render-time snapshot, and proof generation plus relayer submission take
-/// many seconds — long enough for a wallet-initiated `chainChanged` to land in
-/// between and put the transaction on a chain the notes do not live on.
+/// For last-moment checks before a spend. `useActiveChain()` is a render-time
+/// snapshot, while proof generation and relayer submission take seconds — long
+/// enough for a wallet-initiated `chainChanged` to land in between and place the
+/// transaction on a chain the notes do not live on.
 ///
-/// `bigint` because that is what the chain registry and every call site use;
-/// the store holds a `number` only because that is what EIP-1193 reports.
+/// Returns `bigint`, matching the chain registry and call sites; the store holds
+/// a `number` because that is what EIP-1193 reports.
 export function currentWalletChainId(): bigint | undefined {
   const id = walletStore.getState().chainId;
   return id === undefined ? undefined : BigInt(id);

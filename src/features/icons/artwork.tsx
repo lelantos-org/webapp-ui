@@ -1,28 +1,28 @@
 // Vendor token and network artwork, inlined.
 //
 // Extracted from `@web3icons/core` (MIT) and committed rather than depended on:
-// the package ships 77 MB of SVG for 5,364 assets, of which this deployment
-// needs eleven. Inline JSX rather than `.svg` files because a file import is a
-// subresource, and Vite only inlines one below `assetsInlineLimit` (4 KB) —
-// a logo that creeps past it would silently become a network request, which is
-// the one thing this layer must never do. See `registry.ts` for why.
+// the package ships 77 MB of SVG for 5,364 assets, of which this deployment needs
+// eleven. Inline JSX rather than `.svg` files, because a file import is a
+// subresource and Vite inlines one only below `assetsInlineLimit` (4 KB), so a
+// logo growing past that would become a network request — see `registry.ts`.
 //
 // The marks are the trademarks of their respective projects, reproduced to
-// identify the assets a user holds. Nothing here is our own branding.
+// identify the assets a user holds.
 //
-// Regenerating: pull `@web3icons/core`, take `dist/svgs/{tokens,networks}/branded/`,
-// drop `class`/`xmlns`/`width`/`height`, and camel-case the hyphenated
-// attributes. Keep the 24x24 viewBox — the CSS sizes the box, not the artwork.
+// To regenerate: pull `@web3icons/core`, take
+// `dist/svgs/{tokens,networks}/branded/`, drop `class`, `xmlns`, `width` and
+// `height`, and camel-case the hyphenated attributes. Keep the 24x24 viewBox;
+// the CSS sizes the box rather than the artwork.
 
 import type { ReactElement } from "react";
 
-// `aria-hidden="true"` on every mark, not a `<title>`: the symbol or chain name
-// is always rendered as text beside it, so a title would make a screen reader
-// read each asset twice. `focusable="false"` keeps IE-era SVG out of the tab
-// order. Spelled out rather than shorthand because biome's `noSvgWithoutTitle`
-// only recognises the explicit form.
+// `aria-hidden="true"` on every mark rather than a `<title>`: the symbol or chain
+// name is always rendered as text beside it, so a title would make a screen
+// reader read each asset twice. `focusable="false"` keeps legacy SVG out of the
+// tab order. Both are spelled out because biome's `noSvgWithoutTitle` recognises
+// only the explicit form.
 
-/// Token artwork by uppercased symbol. WETH shares ether's mark: it is ether.
+/// Token artwork by uppercased symbol. WETH shares ether's mark.
 export const TOKEN_ART: Readonly<Record<string, ReactElement>> = {
   ETH: (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">

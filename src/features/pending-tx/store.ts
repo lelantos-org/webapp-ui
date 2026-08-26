@@ -1,16 +1,14 @@
-// In-flight tx inflows that the local wallet hasn't yet observed via FMD
-// scan. Keeps the displayed balance from "disappearing" between the
-// moment input notes are marked spent and the moment the change/self
-// notes are decrypted.
+// In-flight tx inflows the local wallet has not yet observed via an FMD scan.
+// Keeps the displayed balance stable between the moment input notes are marked
+// spent and the moment the change and self notes are decrypted.
 //
-// Entries are keyed by `(chainId, txHash, asset)` so a single tx can credit
-// multiple assets (e.g. swap: leg-1 change + leg-2 B-note).
+// Entries are keyed by `(chainId, txHash, asset)`, so one tx can credit several
+// assets — a swap credits leg-1 change and a leg-2 B-note.
 //
 // The chainId is part of the key rather than the store being cleared on a
-// switch: asset ids are only unique within a chain, so an entry for asset 1 on
+// switch: asset ids are unique only within a chain, so an entry for asset 1 on
 // one chain would otherwise inflate asset 1's balance on another. Keying also
-// means an in-flight tx survives the user looking at a different chain and
-// coming back, which clearing would throw away.
+// lets an in-flight tx survive the user visiting another chain and returning.
 
 import { useMemo, useSyncExternalStore } from "react";
 import { chainKey } from "@/config/chains";
@@ -18,14 +16,14 @@ import { chainKey } from "@/config/chains";
 export interface PendingShape {
   /// Asset id this entry credits.
   asset: bigint;
-  /// Amount the wallet expects to recover once the FMD scanner indexes
-  /// the produced own-outputs. Drives balance stability.
+  /// Amount the wallet expects to recover once the FMD scanner indexes the
+  /// produced own-outputs.
   pendingIn: bigint;
-  /// Amount leaving the wallet. Drives the `-X settling` UI sign.
+  /// Amount leaving the wallet. Determines the sign of the settling hint.
   outflow: bigint;
-  /// Watermark for outputs the lifecycle tracker can't observe (e.g. swap
-  /// B-note flushed async by the relayer). Entry self-clears once the
-  /// confirmed balance crosses this threshold.
+  /// Watermark for outputs the lifecycle tracker cannot observe, such as a swap
+  /// B-note flushed asynchronously by the relayer. The entry self-clears once
+  /// the confirmed balance crosses this threshold.
   clearWhenBalanceAtLeast?: bigint;
 }
 
@@ -34,7 +32,7 @@ export interface PendingEntry extends PendingShape {
   id: string;
   /// Chain the tx was submitted on.
   chainId: bigint;
-  /// Originating tx hash. Multiple entries may share this (multi-asset tx).
+  /// Originating tx hash. Several entries may share one, for a multi-asset tx.
   txHash: string;
   /// Wall-clock deadline, set only on watermark-bound entries. See
   /// `WATERMARK_TTL_MS`.
@@ -44,9 +42,9 @@ export interface PendingEntry extends PendingShape {
 /// Lifetime of a watermark-bound entry.
 ///
 /// A watermark clears only by observing the balance cross it, so an output the
-/// relayer never flushes would keep its entry, and the faster resync cadence it
-/// drives, alive for the rest of the session. Past this the entry is dropped
-/// and the display falls back to what the wallet has decrypted.
+/// relayer never flushes would keep its entry — and the faster resync cadence it
+/// drives — alive for the rest of the session. Past this deadline the entry is
+/// dropped and the display falls back to what the wallet has decrypted.
 const WATERMARK_TTL_MS = 10 * 60_000;
 
 function expiryOf(shape: PendingShape): number | undefined {
@@ -75,13 +73,7 @@ export function pendingKey(chainId: bigint, txHash: string, asset: bigint): stri
   return `${chainKey(chainId)}:${txHash}:${asset}`;
 }
 
-export function addPending(chainId: bigint, txHash: string, shape: PendingShape): void {
-  const id = pendingKey(chainId, txHash, shape.asset);
-  entries.set(id, { id, chainId, txHash, ...shape, expiresAt: expiryOf(shape) });
-  bump();
-}
-
-/// Bulk add. Single bump() so subscribers see all entries in one tick.
+/// Bulk add, with a single `bump()` so subscribers see every entry in one tick.
 export function addPendingMany(chainId: bigint, txHash: string, shapes: PendingShape[]): void {
   if (shapes.length === 0) return;
   for (const s of shapes) {
@@ -91,10 +83,10 @@ export function addPendingMany(chainId: bigint, txHash: string, shapes: PendingS
   bump();
 }
 
-/// Lifecycle-driven clear: remove every entry for `txHash` that ISN'T
-/// bound to a balance watermark. Watermark entries self-clear via
-/// `pruneByBalances` because their commitment can't be observed by the
-/// `ownCommitments` lifecycle (e.g. swap B-note flushed async by the relayer).
+/// Lifecycle-driven clear: remove every entry for `txHash` that is not bound to
+/// a balance watermark. Watermark entries self-clear via `pruneByBalances`,
+/// since the `ownCommitments` lifecycle cannot observe their commitment — as
+/// with a swap B-note flushed asynchronously by the relayer.
 export function clearPending(chainId: bigint, txHash: string): void {
   let removed = false;
   for (const [k, e] of entries) {
@@ -106,11 +98,12 @@ export function clearPending(chainId: bigint, txHash: string): void {
   if (removed) bump();
 }
 
-/// Walk watermark-bound entries; clear those whose asset's confirmed
-/// balance has reached the threshold. Called by `useWalletState` after
-/// each sync so swap B-notes self-clear once the scanner credits them.
-/// `balanceOf` reads the active chain's wallet, so only that chain's entries
-/// are eligible: another chain's watermark cannot be judged against it.
+/// Walk watermark-bound entries and clear those whose asset's confirmed balance
+/// has reached the threshold. Called after each sync so swap B-notes self-clear
+/// once the scanner credits them.
+///
+/// `balanceOf` reads the active chain's wallet, so only that chain's entries are
+/// eligible; another chain's watermark cannot be judged against it.
 export function pruneByBalances(chainId: bigint, balanceOf: (asset: bigint) => bigint): void {
   let removed = false;
   for (const [k, e] of entries) {
@@ -128,7 +121,7 @@ export function pruneByBalances(chainId: bigint, balanceOf: (asset: bigint) => b
 ///
 /// Counterpart to `pruneByBalances`, which clears entries the wallet has
 /// confirmed. Called from the settling poll, so the poll an entry keeps alive
-/// is also what retires it.
+/// also retires it.
 export function pruneExpired(now: number = Date.now()): void {
   let removed = false;
   for (const [k, e] of entries) {
@@ -145,19 +138,17 @@ export function usePending(): ReadonlyMap<string, PendingEntry> {
 }
 
 export interface PendingTotals {
-  /// Sum of `pendingIn` across all in-flight entries for this asset. Keeps
-  /// the displayed balance stable while outputs propagate.
+  /// Sum of `pendingIn` across all in-flight entries for this asset. Keeps the
+  /// displayed balance stable while outputs propagate.
   pendingIn: bigint;
-  /// Sum of `outflow` across all in-flight entries. When > 0, the UI
-  /// renders the hint as "-outflow settling" (money on its way out);
-  /// otherwise as "+pendingIn settling" (money on its way in).
+  /// Sum of `outflow` across all in-flight entries. When positive the hint reads
+  /// `-outflow settling`; otherwise `+pendingIn settling`.
   outflow: bigint;
 }
 
-/// Aggregate pending entries per asset. Used by the wallet-state hook to
-/// keep balances stable across an in-flight tx and by forms to display
-/// the directional "settling" hint. Memoized on the raw snapshot so
-/// callers' downstream `useMemo`s don't re-run on every render.
+/// Aggregate pending entries per asset, keeping balances stable across an
+/// in-flight tx and driving the directional settling hint. Memoised on the raw
+/// snapshot so downstream `useMemo`s do not re-run on every render.
 export function usePendingByAsset(chainId: bigint): Map<bigint, PendingTotals> {
   const map = usePending();
   return useMemo(() => {

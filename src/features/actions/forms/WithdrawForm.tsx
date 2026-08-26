@@ -35,7 +35,7 @@ export function WithdrawForm() {
           asset: asset.id,
           to: values.to,
           asEth: values.asEth,
-          // Ignored on the native path, which has no `feeAsset` — see
+          // Ignored on the native path, which has no `feeAsset`; see
           // `WithdrawEthRequest`.
           feeAsset,
         }),
@@ -56,28 +56,28 @@ export function WithdrawForm() {
     kind: "withdraw",
     selected,
     amount: parsed,
-    // The displayed figure, which may be held over from the previous amount
-    // while the next is priced. Nothing here gates the submit on it — a
-    // withdraw's protocol fee comes off `publicOut`, not off the cover.
+    // The displayed figure, which may be held over from the previous amount while
+    // the next is priced. It does not gate the submit: a withdraw's protocol fee
+    // comes off `publicOut` rather than the cover.
     protocol: shownFee(fee),
     protocolPending: feeIncoming(fee),
     feeAsset,
-    // Withheld on the native path: `withdrawEth` takes no `feeAsset`, so
-    // offering the choice would be offering one that is silently dropped.
+    // Withheld on the native path: `withdrawEth` takes no `feeAsset`, so the
+    // choice would be dropped rather than applied.
     onFeeAsset: watchedAsEth ? undefined : setFeeAsset,
   });
 
-  // See the note in `TransferForm`: the balance overstates what a spend can
-  // cover. A withdraw's protocol fee is deducted from `publicOut` rather than
-  // taken from the spend's cover, so only the relayer fee reserves value here.
+  // As in `TransferForm`, the balance overstates what a spend can cover. A
+  // withdraw's protocol fee is deducted from `publicOut` rather than taken from
+  // the spend's cover, so only the relayer fee reserves value here.
   const crossAssetFee = feeAsset !== undefined && feeAsset !== selected?.id;
   const spendable = useSpendableMax(selected?.id, {
     crossAssetFee,
     sameAssetFee: crossAssetFee ? 0n : fees.relayerAmount,
   });
 
-  // Switching the fee asset moves the ceiling; a figure this wrote before
-  // that change has to move with it. See `use-follow-max.ts`.
+  // Switching the fee asset moves the ceiling, so a figure written before that
+  // change must move with it. See `use-follow-max.ts`.
   const { onSetMax } = useFollowMax(spendable?.max, selected, watch("amount"), setAmount);
 
   return (

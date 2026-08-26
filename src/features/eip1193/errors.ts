@@ -11,11 +11,10 @@ const UNRECOGNIZED_CHAIN = 4902;
 
 /// Did the wallet refuse because the chain is unknown to it?
 ///
-/// Wallets say this three ways: the bare code the spec describes, the same code
-/// wrapped in a generic `-32603`, and — for wallets that send no usable code —
-/// only in the message. Missing any of them skips `wallet_addEthereumChain` and
-/// tells the user `Unrecognized chain ID "0x7a69"` about a chain the app had
-/// the RPC URL to add for them.
+/// Wallets report this three ways: the bare code from the spec, the same code
+/// wrapped in a generic `-32603`, and, for wallets sending no usable code, in the
+/// message alone. Missing any of them skips `wallet_addEthereumChain` and reports
+/// an unrecognised chain the app had the RPC URL to add.
 export function isUnrecognizedChain(err: unknown): boolean {
   if (hasRpcCode(err, UNRECOGNIZED_CHAIN)) return true;
   return /unrecognized chain/i.test(rpcErrorMessage(err) ?? "");

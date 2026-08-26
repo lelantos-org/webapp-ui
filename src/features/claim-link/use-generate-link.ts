@@ -1,10 +1,9 @@
 // The claim-link mutation.
 //
-// Lives here rather than in `features/actions/mutations` because it is the
-// only mutation whose body is claim-link logic: keeping it there made
-// `features/actions` import `features/claim-link`, which already imports
-// `features/actions` for the shared form and progress machinery. The
-// dependency now runs one way.
+// Lives here rather than in `features/actions/mutations`, whose other mutations
+// carry no claim-link logic. Placing it there would make `features/actions`
+// import `features/claim-link`, which already imports `features/actions` for the
+// shared form and progress machinery.
 
 import type { TransferResult } from "@lelantos-org/sdk";
 import { useMutation } from "@tanstack/react-query";
@@ -33,12 +32,11 @@ export function useGenerateLink(): ActionMutation<GenerateLinkCall, GenerateClai
     mutationFn: async (i) => {
       if (!wallet) throw new Error("wallet not ready");
       progress.start(stepsFor("transfer"));
-      // `chain` is read at render, but the transfer lands seconds later, after
-      // proving. `currentChainId` lets `generateClaimLink` confirm the wallet
-      // has not moved before it spends — otherwise the link is stamped with one
-      // chain and the funds land on another, and the claimer scans the wrong
-      // pool and is told "nothing to claim", which is indistinguishable from an
-      // already-claimed link.
+      // `chain` is read at render, while the transfer lands seconds later after
+      // proving. `currentChainId` lets `generateClaimLink` confirm the wallet has
+      // not moved before it spends; otherwise the link is stamped with one chain
+      // and the funds land on another, leaving the claimer scanning the wrong
+      // pool.
       return generateClaimLink(wallet, {
         amount: i.amount,
         asset: i.asset,
@@ -48,12 +46,12 @@ export function useGenerateLink(): ActionMutation<GenerateLinkCall, GenerateClai
       });
     },
     onSuccess: (r, i) => {
-      // claimLink.tx is the SDK TransferResult; tag with the asset id so
-      // the tracker can drive the pending-tx overlay + lifecycle.
+      // `r.tx` is the SDK `TransferResult`; tagging it with the asset id lets the
+      // tracker drive the pending-tx overlay and the lifecycle.
       const tagged: WithAsset<TransferResult> = Object.assign(r.tx, { asset: i.asset });
-      // Through the shared boundary, not a bare `void track(...)`: see
-      // `trackPostSubmit`. Floating it turned any rejection into an unhandled
-      // one, on the path that has just produced a bearer key.
+      // Through the shared boundary rather than a bare `void track(...)`; see
+      // `trackPostSubmit`. Floating it would turn any rejection into an unhandled
+      // one on the path that has just produced a bearer key.
       trackPostSubmit(track, {
         label: "claim link",
         kind: "transfer",

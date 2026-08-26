@@ -1,6 +1,6 @@
 // Drives the broadcast → mined → flushed toast lifecycle for a tx.
-// Fire-and-forget: callers `void trackTxLifecycle(...)` and let it
-// settle in the background.
+// Fire-and-forget: callers `void trackTxLifecycle(...)` and let it settle in the
+// background.
 
 import type { Hex32 } from "@lelantos-org/sdk";
 import type { FlushWait } from "@lelantos-org/sdk/relayer";
@@ -21,28 +21,28 @@ export interface TrackOpts {
   wallet: WalletApi;
   label: string;
   txHash: Hex32;
-  /// Deposit/swap-only. When present, mining is followed by a wait for the
-  /// relayer's flushBatch to clear this id before scanning for own outputs.
-  /// This is the on-chain deposit id, which the relayer publishes on its SSE
-  /// stream as `deposit_id`.
+  /// Deposit and swap only. When present, mining is followed by a wait for the
+  /// relayer's `flushBatch` to clear this id before scanning for own outputs.
+  /// This is the on-chain deposit id, published on the relayer's SSE stream as
+  /// `deposit_id`.
   depositId?: bigint;
-  /// Commitments produced for this wallet that must land in the local note
-  /// store before the balance is declared "settled". Empty for transfers
-  /// where neither output goes to self.
+  /// Commitments produced for this wallet that must land in the local note store
+  /// before the balance is declared settled. Empty for transfers where neither
+  /// output goes to self.
   ownCommitments?: Hex32[];
-  /// Called whenever the tx reaches a state that should retrigger a
-  /// wallet-state refresh (mined, flushed, scanner caught up). Errors are
-  /// swallowed; the caller's react-query layer is the source of truth.
+  /// Called whenever the tx reaches a state that should retrigger a wallet-state
+  /// refresh: mined, flushed, or scanner caught up. Errors are swallowed; the
+  /// caller's react-query layer is the source of truth.
   onProgress?: () => void;
-  /// Called once the lifecycle reaches a terminal state. Use to clear
-  /// pending-tx overlays. Always fires exactly once.
+  /// Called once the lifecycle reaches a terminal state, to clear pending-tx
+  /// overlays. Always fires exactly once.
   onSettled?: () => void;
-  /// Optional phase signal for in-form steppers. Fired at each transition
-  /// (mined, flushed, settled, failed). Errors swallowed.
+  /// Optional phase signal for in-form steppers, fired at each transition:
+  /// mined, flushed, settled, failed. Errors are swallowed.
   onPhase?: (phase: TxPhase) => void;
-  /// Chain the tx was submitted on. Passed in rather than read from a global
-  /// so a lifecycle that outlives a chain switch keeps watching its own chain,
-  /// and links to that chain's explorer rather than the one now selected.
+  /// Chain the tx was submitted on. Passed in rather than read from a global, so
+  /// a lifecycle outliving a chain switch keeps watching its own chain and links
+  /// to that chain's explorer.
   chain: ChainEntry;
 }
 
@@ -65,18 +65,17 @@ export async function trackTxLifecycle(opts: TrackOpts): Promise<void> {
   const t = toastTx(opts.label, opts.txHash, opts.chain.explorerUrl);
   // Bound once so the narrowing survives into the callbacks below.
   const { depositId, ownCommitments } = opts;
-  // Open the SSE source before waiting for receipt so a fast relayer
-  // can't publish flush before the listener is attached.
+  // Open the SSE source before waiting for the receipt, so a fast relayer cannot
+  // publish the flush before the listener is attached.
   if (depositId !== undefined) preopenDepositStream(opts.chain.chainId);
   let settled = false;
   /// Whether a terminal phase has already reached the form.
   ///
-  /// `settle` fills the gap when one has not. Three exits used to settle
-  /// without ever emitting a phase — the hard timeout, an adapter with no
-  /// `waitTxReceipt`, and the `ok` path when there was nothing to wait for —
-  /// which left `useTxProgress.done` false forever. The stepper then span on a
-  /// mid-list step with no way to clear it, because `useClearFinishedOp` is
-  /// gated on `done`; only a page reload got rid of it.
+  /// `settle` emits a fallback phase when none has. Without it, the exits that
+  /// settle without emitting — the hard timeout, an adapter with no
+  /// `waitTxReceipt`, and the `ok` path with nothing to wait for — would leave
+  /// `useTxProgress.done` false, stranding the stepper on a mid-list step that
+  /// `useClearFinishedOp` cannot clear.
   let emittedTerminal = false;
   const phase = (p: TxPhase) => {
     if (isTerminal(p)) emittedTerminal = true;
@@ -99,8 +98,8 @@ export async function trackTxLifecycle(opts: TrackOpts): Promise<void> {
     }
   };
   const hardTimer = setTimeout(() => {
-    // The tx was broadcast and we simply stopped watching. Say so rather than
-    // leaving the toast silent and the stepper mid-flight.
+    // The tx was broadcast and watching stopped. Reported, rather than leaving
+    // the toast silent and the stepper mid-flight.
     t.timedOut();
     settle("hard-timeout", "unknown");
   }, LIFECYCLE_HARD_TIMEOUT_MS);
@@ -114,7 +113,7 @@ export async function trackTxLifecycle(opts: TrackOpts): Promise<void> {
 
   try {
     if (!opts.wallet.chain.waitTxReceipt) {
-      // Nothing was ever observed, so the outcome is genuinely unknown.
+      // Nothing was observed, so the outcome is unknown.
       settle("no-receipt-adapter", "unknown");
       return;
     }
@@ -133,13 +132,11 @@ export async function trackTxLifecycle(opts: TrackOpts): Promise<void> {
       const wait: FlushWait = await withAbortTimeout(FLUSH_TIMEOUT_MS, (signal) =>
         depositStream(opts.chain.chainId).awaitFlush(depositId, { signal }),
       );
-      // The tx is already mined by this point, so an unobserved flush is not
-      // a failed deposit — and `phase("failed")` used to sit right here,
-      // painting the stepper red under a toast that correctly called it a
-      // warning. `unknown` is the honest terminal: done watching, outcome not
-      // observed, explorer link in the toast. A dead feed (a relayer that does
-      // not serve the endpoint) falls through to the scanner wait, which
-      // settles the balance either way.
+      // The tx is already mined here, so an unobserved flush is not a failed
+      // deposit. `unknown` is the correct terminal: watching has stopped, the
+      // outcome was not observed, and the toast carries the explorer link. A dead
+      // feed — a relayer not serving the endpoint — falls through to the scanner
+      // wait, which settles the balance either way.
       if (wait.kind === "aborted") {
         t.timedOut();
         settle("flush-timeout", "unknown");
@@ -162,12 +159,12 @@ export async function trackTxLifecycle(opts: TrackOpts): Promise<void> {
         phase("settled");
         tick();
       } catch {
-        // Best-effort — pending overlay falls back to react-query polling.
+        // Best-effort: the pending overlay falls back to react-query polling.
       }
     }
-    // Mined and nothing left to wait for. `settled` rather than `unknown`:
-    // block inclusion was observed, so the scanner catching up is a matter of
-    // time rather than an open question.
+    // Mined with nothing left to wait for. `settled` rather than `unknown`,
+    // since block inclusion was observed and the scanner catching up is a matter
+    // of time.
     settle("ok", "settled");
   } catch (err) {
     t.failed(err);

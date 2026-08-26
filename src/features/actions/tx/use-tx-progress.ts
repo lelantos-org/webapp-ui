@@ -1,27 +1,25 @@
-// Tiny progress-state hook: each mutation hook owns one and exposes it
-// alongside the react-query result. The form reads `phase` + `steps` +
-// `done` to drive the inline `<Stepper>`.
+// Progress state for one op: each mutation hook owns an instance and exposes it
+// alongside the react-query result. The form reads `phase`, `steps` and `done`
+// to drive the inline `<Stepper>`.
 
 import { useCallback, useRef, useState } from "react";
 import { isTerminal, type Step, type TxPhase } from "./tx-progress";
 
 export interface StartOpts {
-  /// Phase that closes out the stepper. Defaults to the last step's id
-  /// (spend ops' last step IS the terminal). Deposits override with
-  /// `flushed` so the `mined` phase advances the stepper without
-  /// prematurely marking step 3 as done.
+  /// Phase that closes out the stepper. Defaults to the last step's id, which is
+  /// the terminal for a spend. Deposits override with `flushed`, so the `mined`
+  /// phase advances the stepper without marking the last step done.
   terminal?: TxPhase;
 }
 
 export interface TxProgress {
-  /// Current phase, or undefined when idle / before the first call.
+  /// Current phase, or `undefined` while idle or before the first call.
   phase: TxPhase | undefined;
-  /// Ordered step list for the active op (set when the mutation starts).
+  /// Ordered step list for the active op, set when the mutation starts.
   steps: Step[];
-  /// Terminal-phase reached. Set when set(p) receives a terminal phase
-  /// (flushed/settled/failed) even if `p` isn't in the step list — lets
-  /// the form mark the last step as done without leaking out-of-list ids
-  /// into `phase`.
+  /// A terminal phase has been reached. Set when `set` receives one — flushed,
+  /// settled or failed — even if it is not in the step list, letting the form
+  /// mark the last step done without admitting out-of-list ids into `phase`.
   done: boolean;
 }
 
@@ -35,25 +33,24 @@ export function useTxProgress(): TxProgressApi {
   const [phase, setPhase] = useState<TxPhase | undefined>(undefined);
   const [steps, setSteps] = useState<Step[]>([]);
   const [done, setDone] = useState(false);
-  // Mirror steps in a ref so `set` (captured by long-lived async callers
-  // like the SDK's onPhase or lifecycle tracker) always sees the latest
-  // list. Without this, `set` is bound at click time when steps is still
-  // [] and silently drops every transition.
+  // Steps are mirrored in a ref so `set`, captured by long-lived async callers
+  // such as the SDK's `onPhase` or the lifecycle tracker, always sees the current
+  // list. Bound at click time it would see an empty list and drop every
+  // transition.
   const stepsRef = useRef<Step[]>([]);
-  // Phase that closes the stepper. Defaults to the last step id at
-  // start-time. Deposits override with `flushed` so the `mined` phase
-  // (which sits ON the last step) does not prematurely complete it.
+  // Phase that closes the stepper, defaulting to the last step id at start.
+  // Deposits override with `flushed`, so the `mined` phase — which sits on the
+  // last step — does not complete it early.
   const terminalRef = useRef<TxPhase | undefined>(undefined);
-  // Drop phase transitions that aren't in the active step list. Lifecycle
-  // fires "settled" for any op with own commitments (incl. deposits whose
-  // step list ends before settled); without this guard the Stepper would
-  // regress to all-pending when an out-of-list phase arrives.
+  // Phase transitions outside the active step list are dropped. The lifecycle
+  // fires "settled" for any op with own commitments, including deposits whose
+  // step list ends earlier; without this guard the stepper would regress to
+  // all-pending when such a phase arrives.
   const set = useCallback((p: TxPhase) => {
     const list = stepsRef.current;
-    // Done when the configured terminal phase fires (spend ops use their
-    // last step id; deposits use `flushed`), or any of the global
-    // terminal phases (flushed/settled/failed) — the latter covers
-    // out-of-list catch-up emissions.
+    // Done when the configured terminal phase fires — the last step id for a
+    // spend, `flushed` for a deposit — or when any global terminal phase does,
+    // which covers out-of-list catch-up emissions.
     if (isTerminal(p) || p === terminalRef.current) setDone(true);
     setPhase((prev) => {
       if (p === "failed") return p;

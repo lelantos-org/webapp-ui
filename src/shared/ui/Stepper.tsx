@@ -65,9 +65,10 @@ export function Stepper({ steps, current, failed = false, done = false }: Steppe
   );
 }
 
-/// The one sentence worth reading aloud, or "" before anything has started.
+/// A single sentence describing the stepper's state, or "" before anything has
+/// started.
 function announce(steps: StepperItem[], currentIdx: number, flags: Flags): string {
-  // `stateAt` puts a pre-step failure on index 0; anything else with no current
+  // `stateAt` places a pre-step failure on index 0; anything else with no current
   // step has nothing to report yet.
   const idx = currentIdx === -1 ? (flags.failed ? 0 : -1) : currentIdx;
   const step = idx === -1 ? undefined : steps[idx];
@@ -85,8 +86,8 @@ function announce(steps: StepperItem[], currentIdx: number, flags: Flags): strin
 
 function stateAt(i: number, currentIdx: number, { failed, done }: Flags): StepState {
   if (currentIdx === -1) {
-    // A failure before any step reported in still has to show as one; this used
-    // to render every step as merely pending, so the op looked idle.
+    // A failure occurring before any step reported in must still render as a
+    // failure, rather than leaving every step pending and the op looking idle.
     return failed && i === 0 ? "failed" : "pending";
   }
   if (i < currentIdx) return "done";

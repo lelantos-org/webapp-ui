@@ -13,19 +13,19 @@ export interface ActionFormProps {
   error?: unknown;
   onSubmit(e: React.FormEvent): void;
   children: ReactNode;
-  /// Form-level disable (insufficient balance, missing context, etc).
-  /// `busy` already disables submit during in-flight ops.
+  /// Form-level disable, such as an insufficient balance or missing context.
+  /// `busy` already disables submit during an in-flight op.
   submitDisabled?: boolean;
-  /// Optional inline stepper. Rendered between fields and submit button
+  /// Optional inline stepper, rendered between the fields and the submit button
   /// when the active op publishes a non-empty step list.
   progress?: { steps: Step[]; phase: TxPhase | undefined; done: boolean };
-  /// Last broadcast tx hash. Rendered as an explorer link below the stepper
-  /// when present and no new submit is in flight.
+  /// Last broadcast tx hash. Rendered as an explorer link below the stepper when
+  /// present and no new submit is in flight.
   txHash?: string;
 }
 
-/// Pure layout — field state, async lifecycle, and toasts live elsewhere.
-/// Inline error stays visible until the next submit, outliving the toast
+/// Layout only: field state, async lifecycle and toasts live elsewhere. The
+/// inline error stays visible until the next submit, outliving the toast's
 /// auto-dismiss.
 export function ActionForm({
   title,
@@ -43,10 +43,9 @@ export function ActionForm({
   const showTx = !!txHash && !busy;
   const showStepper = !!progress && progress.steps.length > 0;
   const failed = progress?.phase === "failed";
-  // When stepper is `done`, force `current` to the last step id so the
-  // Stepper marks every step as done. Otherwise `current` may still be
-  // mid-list when a terminal phase (flushed/settled) arrived but its id
-  // wasn't in the step list.
+  // When the stepper is `done`, `current` is forced to the last step id so every
+  // step is marked done. Otherwise `current` can still sit mid-list, having
+  // received a terminal phase whose id is not in the step list.
   const lastStepId = progress?.steps[progress.steps.length - 1]?.id;
   const stepCurrent = progress?.done && lastStepId ? lastStepId : progress?.phase;
   const done = !!progress?.done && !failed;

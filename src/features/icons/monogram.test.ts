@@ -72,8 +72,8 @@ describe("monogramStyle", () => {
   });
 
   it("holds saturation and lightness fixed across derived marks", () => {
-    // Hashing these too would make some tokens read as emphasised and others
-    // as disabled — meaning the colour is not entitled to carry.
+    // Hashing these too would make some tokens read as emphasised and others as
+    // disabled, which the colour is not meant to convey.
     const a = vars("0xaaa");
     const b = vars("0xbbb");
     expect(a["--mono-s"]).toBe(b["--mono-s"]);

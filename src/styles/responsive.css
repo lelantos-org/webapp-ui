@@ -59,7 +59,7 @@
 
   .seg__b { font-size: 10px; padding: 6px 8px; letter-spacing: 0.05em; }
 
-  /* CopyField row stacks: input full width on top, button below. */
+  /* Inline rows stack: field full width on top, button below. */
   .row { flex-wrap: wrap; }
   .row > .grow { flex: 1 1 100%; min-width: 0; }
   .row > .btn { flex: 1 1 100%; }

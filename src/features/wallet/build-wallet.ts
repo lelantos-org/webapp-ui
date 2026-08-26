@@ -45,9 +45,9 @@ async function resolveNsk(signer: EthSigner, ethAddr: string): Promise<Field> {
   return nsk;
 }
 
-/// `NetworkPreset` types the deployment addresses as nullable — `null` marks a
-/// network the pool is not deployed on. `connect` rejects those too, but the
-/// adapter is built first, so the check has to happen here.
+/// `NetworkPreset` types the deployment addresses as nullable, where `null` marks
+/// a network the pool is not deployed on. `connect` rejects those as well, but
+/// the adapter is built first, so the check happens here.
 function requireAddress(value: string | null, field: string): string {
   if (!value) throw new Error(`network preset has no ${field}; pool is not deployed on this chain`);
   return value;
@@ -56,14 +56,14 @@ function requireAddress(value: string | null, field: string): string {
 /// Namespace persisted stores per (chain, account) so switching either does
 /// not read another wallet's notes or Merkle tree.
 ///
-/// Unlike the nsk, these genuinely are per-chain: the notes, the tree and the
-/// spent set describe one pool on one chain, even though the key that decrypts
-/// them is the same everywhere.
+/// Unlike the nsk, these are per-chain: the notes, the tree and the spent set
+/// describe one pool on one chain, even though the key decrypting them is the
+/// same everywhere.
 ///
-/// The address is digested rather than written out — see `accountDigest`. The
-/// nullifier store holds a global feed rather than anything wallet-specific,
-/// but it is keyed the same way so one wallet's records share a namespace and
-/// `db.ts`'s version drop clears them together.
+/// The address is digested rather than written out; see `accountDigest`. The
+/// nullifier store holds a global feed rather than wallet-specific data, but is
+/// keyed the same way so one wallet's records share a namespace and `db.ts`'s
+/// version drop clears them together.
 function storeKey(kind: "notes" | "tree" | "nullifiers", chainId: bigint, ethAddr: string): string {
   return `${kind}:${chainKey(chainId)}:${accountDigest(ethAddr)}`;
 }
@@ -72,13 +72,13 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
   const ethAddr = bundle.address;
   const signer = new Eip1193Signer(bundle.provider, evmAddress(ethAddr), chain.chainId);
 
-  // Ask before anything is written, so the note/tree/nullifier stores and the
-  // ~49 MB zkey land in storage that is already exempt from eviction. Not
-  // awaited: Chrome decides on an engagement heuristic and Safari may prompt,
-  // and neither outcome should hold up the wallet.
-  // `.catch`, not just `void`: `void` silences the lint, not the rejection, and
-  // `navigator.storage.persist()` throws outright in some sandboxed and
-  // privacy-mode contexts.
+  // Requested before anything is written, so the note, tree and nullifier stores
+  // and the ~49 MB zkey land in storage exempt from eviction. Not awaited:
+  // Chrome decides on an engagement heuristic and Safari may prompt, and neither
+  // should hold up the wallet.
+  //
+  // `.catch` rather than a bare `void`, since `navigator.storage.persist()`
+  // throws in some sandboxed and privacy-mode contexts.
   void requestPersistentStorage()
     .then((granted: boolean) => {
       if (!granted) log.info("storage persistence not granted; caches may be evicted");
@@ -88,7 +88,7 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
   const nsk = await resolveNsk(signer, ethAddr);
 
   // Settled before `connect`, since the "matches" strategy addresses its
-  // subscription by a token that has to be registered first.
+  // subscription by a token that must be registered first.
   const [network, plan] = await Promise.all([
     networkPreset(chain),
     timed("fmd.resolveSyncStrategy", () =>
@@ -97,18 +97,15 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
   ]);
   const syncStrategy = plan.strategy;
 
-  // Only the `unavailable` fallback is worth alarming about. With a correct
-  // sync cursor the firehose trial-decrypts every note in the system rather
-  // than the first page of them, so on a full-sized pool this is the
-  // difference between a sync measured in seconds and one measured in
-  // minutes. Loud on purpose.
+  // Only the `unavailable` fallback warrants a warning. The firehose
+  // trial-decrypts every note in the system, so on a full-sized pool this is the
+  // difference between a sync measured in seconds and one measured in minutes.
   //
-  // `poolTooSmall` is the same code path at a pool below the decoy floor,
-  // where "every note in the system" is under a couple of hundred of them and
-  // the sync is imperceptible — the ordinary state of a fresh deployment.
-  // Reporting degraded privacy there would be false: declining to subscribe
-  // is the more private choice, which is why `resolveSyncStrategy` makes it.
-  // It is logged at info by `ensureFmdSubscription`, with the counts.
+  // `poolTooSmall` is the same code path on a pool below the decoy floor, where
+  // the full set is a few hundred notes and the sync is imperceptible — the
+  // ordinary state of a fresh deployment. Declining to subscribe there is the
+  // more private choice, so it is logged at info by `ensureFmdSubscription`
+  // with the counts rather than surfaced as degraded privacy.
   if (plan.fallback === "unavailable") {
     log.error("FMD subscription unavailable; scanning every note in the pool");
     toast.warning("Private sync is degraded", {
@@ -118,9 +115,9 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
   }
 
   // Built here rather than left to `connect`: `NetworkPreset` carries no
-  // `nativeAdapterAddress`, so the adapter it would build reports native-ETH
-  // deposits and `withdrawEth` as unsupported. Everything else matches the
-  // SDK's own defaults.
+  // `nativeAdapterAddress`, so the adapter `connect` would build reports
+  // native-ETH deposits and `withdrawEth` as unsupported. Everything else
+  // matches the SDK's defaults.
   const chainAdapter = new ViemChainAdapter({
     rpcUrl: chain.rpcUrl,
     signer,
@@ -130,11 +127,11 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
     nativeAdapterAddress: chain.nativeAdapterAddress,
   });
 
-  // Hoisted out of the `connect` argument list, and disposed if `connect`
-  // throws. The pool spawns eagerly, so its workers exist before `connect` is
-  // entered; passed inline, a rejection (bad RPC, relayer 500, a tree-cache
-  // load that throws) left them with no reference and no owner. `useBuildWallet`
-  // retries on the next connection change, so that leaked a pool per attempt.
+  // Hoisted out of the `connect` argument list so it can be disposed if
+  // `connect` throws. The pool spawns eagerly, so its workers exist before
+  // `connect` is entered; constructed inline, a rejection — a bad RPC, a relayer
+  // 500, a tree-cache load that throws — would leave them unreferenced, leaking
+  // a pool per `useBuildWallet` retry.
   const scanner = createScanner();
   let wallet: WalletApi;
   try {
@@ -142,10 +139,9 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
       connect({
         network,
         nsk,
-        // Stated rather than inherited. The prover worker bundles the 4x4
-        // artifacts, and the two have to agree or every proof is built at the
-        // wrong arity — so this does not ride on whichever shape the installed
-        // SDK happens to default to.
+        // Stated rather than inherited: the prover worker bundles the 4x4
+        // artifacts, and the two must agree or every proof is built at the wrong
+        // arity.
         shape: TRANSACT_4X4,
         chain: chainAdapter,
         prover: getProverWorker(),
@@ -167,7 +163,7 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
 
   instrumentWallet(wallet);
   log.info("ready", wallet.address);
-  // The prover is not warmed here; it is warmed on intent to transact. See
+  // The prover is warmed on intent to transact rather than here. See
   // `preloadProverWorker`.
   return wallet;
 }

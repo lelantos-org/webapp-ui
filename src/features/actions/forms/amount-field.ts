@@ -14,14 +14,14 @@ export interface AssetMeta {
   decimals: number;
   scale: bigint;
   symbol?: string;
-  /// Backing ERC-20 address, used to look up a USD price. Optional because the
-  /// placeholder metas the forms fall back to describe no real token; a meta
-  /// without one simply renders no dollar figure.
+  /// Backing ERC-20 address, used to look up a USD price. Optional: the
+  /// placeholder metas the forms fall back to describe no real token, and a meta
+  /// without one renders no dollar figure.
   token?: string;
 }
 
-/// Permissive parse: returns `undefined` rather than throwing on partial /
-/// invalid input so the form can still render while the user types.
+/// Permissive parse: returns `undefined` rather than throwing on partial or
+/// invalid input, so the form can render while the user types.
 export function parseAmountSafe(
   input: string,
   selected: AssetMeta | undefined,
@@ -37,13 +37,13 @@ export function parseAmountSafe(
 export interface AmountValidation {
   /// `parsed * scale` would overflow MASP's `uint48` publicIn cap.
   tooLarge: boolean;
-  /// Spend ops only — `parsed > balance`.
+  /// Spend ops only: `parsed > balance`.
   insufficient: boolean;
-  /// Deposits only — an amount is entered but the protocol fee is not known
-  /// yet, so `amount + fee` cannot be checked against the balance. Distinct
-  /// from `insufficient`, which is a statement about the user's funds.
+  /// Deposits only: an amount is entered but the protocol fee is not yet known,
+  /// so `amount + fee` cannot be checked against the balance. Distinct from
+  /// `insufficient`, which is a statement about the user's funds.
   feeUnknown: boolean;
-  /// Convenience: form has a non-zero, in-range, balance-covered amount whose
+  /// True when the form holds a non-zero, in-range, balance-covered amount whose
   /// total cost is known.
   valid: boolean;
 }
@@ -63,23 +63,21 @@ export function validateAmount(
 
 /// Deposit's balance check, which differs from a spend's in two ways.
 ///
-/// The funding source is the public wallet, whose balance is in token base
-/// units rather than the circuit units a shielded balance carries — so the
-/// comparison is made in base units instead of converting and losing the
-/// remainder. And the protocol fee is charged *on top* for a deposit
-/// (`total = inAmt + fee`), so validating the amount alone would accept a
-/// deposit of the entire balance and let it fail at submit.
+/// The funding source is the public wallet, whose balance is in token base units
+/// rather than the circuit units a shielded balance carries, so the comparison
+/// is made in base units rather than converting and losing the remainder. The
+/// protocol fee is also charged on top for a deposit (`total = inAmt + fee`), so
+/// validating the amount alone would accept a deposit of the entire balance and
+/// fail at submit.
 ///
-/// Skips the check entirely until the balance is known, and reports an unknown
-/// fee as `feeUnknown` rather than validating the bare amount.
-///
-/// The fallback to the un-feed amount was the bug: `total ?? amountBase` made
-/// the whole balance a valid deposit for the 300ms debounce plus the RPC — and
-/// permanently, if the fee query errored, since `fee.data` then stays
-/// `undefined` forever. Clicking through cost a Permit2 signature and a
-/// `transferFrom` that reverts for `amount + fee`. `setup.blocked` did not
-/// cover it either: `evaluateSetup` falls back to `target = total ?? 1n`, so
-/// any non-zero allowance reads as "no setup needed".
+/// Skips the check until the balance is known, and reports an unknown fee as
+/// `feeUnknown` rather than validating the bare amount. Falling back to the
+/// fee-free amount would mark the whole balance valid for the debounce plus the
+/// RPC — and permanently if the fee query errors — costing a Permit2 signature
+/// and a `transferFrom` that reverts for `amount + fee`. `setup.blocked` does
+/// not cover that case either, since `evaluateSetup` falls back to
+/// `target = total ?? 1n` and any non-zero allowance then reads as "no setup
+/// needed".
 export function validateDepositAmount(
   parsed: bigint | undefined,
   selected: AssetMeta | undefined,
@@ -95,8 +93,8 @@ export function validateDepositAmount(
   return { ...v, insufficient, valid: !insufficient };
 }
 
-/// Pick the most actionable amount-field error string. Form-validation
-/// errors (zod) win over derived ones.
+/// Pick the most actionable amount-field error string. Form-validation errors
+/// (zod) take precedence over derived ones.
 export function pickAmountError(
   formErr: string | undefined,
   v: AmountValidation,
@@ -104,28 +102,28 @@ export function pickAmountError(
   if (formErr) return formErr;
   if (v.tooLarge) return "amount exceeds asset cap";
   if (v.insufficient) return "exceeds available balance";
-  // Not an error the user can act on, and it clears on its own within a few
-  // hundred ms — the disabled submit button is the whole signal.
+  // `feeUnknown` is not actionable and clears within a few hundred ms; the
+  // disabled submit button carries the signal.
   return undefined;
 }
 
-/// The largest deposit the wallet's balance can actually cover, in circuit
-/// units — or `undefined` when there is nothing to compute it from.
+/// The largest deposit the wallet's balance can cover, in circuit units, or
+/// `undefined` when there is nothing to compute it from.
 ///
-/// A deposit is charged the protocol fee *on top* (`total = inAmt + fee`), so
-/// "max" is not the balance: depositing the whole balance costs a Permit2
-/// signature and then reverts on a `transferFrom` for `amount + fee`. The
-/// figure wanted is the largest `amount` whose `total` still fits.
+/// A deposit is charged the protocol fee on top (`total = inAmt + fee`), so the
+/// maximum is not the balance: depositing the whole balance costs a Permit2
+/// signature and then reverts on a `transferFrom` for `amount + fee`. The figure
+/// wanted is the largest `amount` whose `total` still fits.
 ///
 /// Solved, then corrected in both directions. `inAmt ≈ balance * BPS /
-/// (BPS + feeBps)` inverts the fee, but `applyFee` truncates, so the algebra
-/// can land either side of the true maximum by a unit — over, which would
-/// revert, and under, which quietly short-changes the user. Both loops re-check
-/// against the same `feeBreakdown` the form and the mutation use rather than
-/// trusting the inverse of a lossy function, and each runs a step or two.
+/// (BPS + feeBps)` inverts the fee, but `applyFee` truncates, so the algebra can
+/// land a unit either side of the true maximum — over, which reverts, or under,
+/// which short-changes the user. Both loops re-check against the same
+/// `feeBreakdown` the form and the mutation use rather than trusting the inverse
+/// of a lossy function, and each runs a step or two.
 ///
-/// Clamped to the `uint48` publicIn cap: a balance above it would otherwise
-/// produce a "max" that `validateAmount` immediately rejects as too large.
+/// Clamped to the `uint48` publicIn cap, since a balance above it would produce
+/// a maximum that `validateAmount` rejects as too large.
 export function depositMaxAmount(
   balanceBase: bigint | undefined,
   scale: bigint,
@@ -133,8 +131,8 @@ export function depositMaxAmount(
   /// The relayer's flat charge in token base units, which Permit2 pulls
   /// alongside the amount and the protocol fee (`resolveDepositFee`).
   ///
-  /// Flat, not proportional: the relayer prices gas rather than value, so it
-  /// comes off the top of the balance before the proportional fee is solved
+  /// Flat rather than proportional: the relayer prices gas rather than value, so
+  /// it comes off the top of the balance before the proportional fee is solved
   /// for, rather than joining the ratio below.
   relayerReserve = 0n,
 ): bigint | undefined {
@@ -159,6 +157,6 @@ export function formatBalance(balance: bigint, selected: AssetMeta): string {
   return formatAmountForAsset(balance, selected.decimals, selected.scale);
 }
 
-/// Default meta for `balanceHint` when the registry hasn't loaded yet —
-/// shows raw integer (no decimals known).
+/// Default meta for `balanceHint` before the registry has loaded. Renders a raw
+/// integer, since no decimals are known.
 export const NO_META: AssetMeta = { decimals: 0, scale: 1n };

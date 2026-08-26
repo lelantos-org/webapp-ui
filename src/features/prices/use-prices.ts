@@ -1,8 +1,8 @@
 // Spot USD prices for the registered assets, from the relayer's `/v1/prices`.
 //
-// A separate query from the chain registry on purpose. `ChainProvider` holds
+// A separate query from the chain registry: `ChainProvider` holds
 // `["chain-registry"]` at `staleTime: Infinity` because chain config does not
-// move; a price does, so it gets its own route and its own cadence. See the
+// change, while a price does, so prices get their own route and cadence. See the
 // `PricesResponse` doc comment on the relayer side.
 
 import { useQuery } from "@tanstack/react-query";
@@ -34,7 +34,7 @@ export const pricesResponse = z.object({ prices: z.array(priceRow) });
 
 export type PriceRow = z.infer<typeof priceRow>;
 
-/// One token's quote. `priceAt` is the provider's timestamp, not our fetch
+/// One token's quote. `priceAt` is the provider's timestamp rather than the fetch
 /// time, so a caller can age it.
 export interface TokenPrice {
   priceUsd: number;
@@ -43,9 +43,9 @@ export interface TokenPrice {
 
 /// Prices for the active chain, keyed by lowercased token address.
 ///
-/// A token absent from the map has **no known price** — a local test token, or
-/// any token on a chain the provider does not cover. That is not zero, and a
-/// caller must render nothing rather than `$0.00`.
+/// A token absent from the map has no known price: a local test token, or any
+/// token on a chain the provider does not cover. That is distinct from zero, so
+/// a caller must render nothing rather than `$0.00`.
 export type PriceMap = ReadonlyMap<string, TokenPrice>;
 
 const EMPTY: PriceMap = new Map();
@@ -60,14 +60,14 @@ async function fetchPrices(): Promise<z.infer<typeof pricesResponse>> {
 
 /// USD prices for the active chain's tokens.
 ///
-/// Never surfaces an error to the caller. A dead relayer, a dead provider or a
-/// malformed body all degrade to an empty map, which renders as no USD at all —
-/// balances, forms and totals still work without it.
+/// Never surfaces an error to the caller. An unreachable relayer, an unreachable
+/// provider, and a malformed body all degrade to an empty map, which renders as
+/// no USD; balances, forms and totals work without it.
 export function usePrices(): PriceMap {
   const { chainId } = useActiveChain();
 
-  // Not scoped to the chain: the body covers every chain the relayer serves, so
-  // scoping the key would refetch the same document on each network switch.
+  // Not scoped to the chain: the body covers every chain the relayer serves, so a
+  // chain-scoped key would refetch the same document on each network switch.
   const query = useQuery({
     queryKey: ["asset-prices"],
     queryFn: fetchPrices,
@@ -90,13 +90,13 @@ export function usePrices(): PriceMap {
 
 /// Narrow the relayer's all-chains body to one chain, keyed for lookup.
 ///
-/// The body covers every chain the relayer serves, and a token address is only
-/// meaningful with its chain: the same address is a different asset elsewhere,
-/// and nothing stops two chains listing the same one. Dropping the other chains'
-/// rows here is what keeps a wallet from pricing a balance off another network.
+/// The body covers every chain the relayer serves, and a token address is
+/// meaningful only with its chain: the same address denotes a different asset
+/// elsewhere, and two chains may list the same one. Dropping the other chains'
+/// rows keeps a wallet from pricing a balance against another network.
 ///
 /// Keys are lowercased because the registry's addresses are checksummed and the
-/// relayer's are not; callers look up with `.toLowerCase()` to match.
+/// relayer's are not; callers look up with `.toLowerCase()`.
 export function toPriceMap(rows: readonly PriceRow[], chainId: bigint): PriceMap {
   const m = new Map<string, TokenPrice>();
   for (const r of rows) {

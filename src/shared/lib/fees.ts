@@ -5,16 +5,17 @@ import { applyFee, BPS_DENOMINATOR } from "@lelantos-org/sdk/core";
 
 /// The basis-point denominator `applyFee` — and `MASP._takeFee` — divide by.
 ///
-/// Re-exported from the SDK rather than spelled `10_000n` locally: it is a
-/// property of the contract, and a local copy would go on agreeing with a
-/// changed one only by luck. Same reasoning as `PUBLIC_IN_MAX` in `format`.
+/// Re-exported from the SDK rather than written as `10_000n` here: it is a
+/// property of the contract, so a local copy could silently diverge. Same
+/// reasoning as `PUBLIC_IN_MAX` in `format`.
 export { BPS_DENOMINATOR };
 
 export type FeeMode = "deposit" | "withdraw";
 
 export interface FeeBreakdown {
-  /// Asset scale × user amount, in token base units. For deposits this is
-  /// what the contract escrows; for withdraws it's the gross unshield amount.
+  /// Asset scale times the user amount, in token base units. For a deposit this
+  /// is what the contract escrows; for a withdraw it is the gross unshield
+  /// amount.
   inAmt: bigint;
   /// Fee in token base units.
   fee: bigint;

@@ -1,9 +1,9 @@
 /* The itemised fee panel above an action's submit button.
  *
- * Deliberately quieter than `.quote`: that panel is the subject of the swap
- * screen, whereas this one sits under a form whose amount field is the
- * subject. Same vocabulary — bordered block, label/value rows, one emphasised
- * bottom line — a step down in contrast.
+ * Quieter than `.quote`, which is the subject of the swap screen, whereas this
+ * panel sits under a form whose amount field is the subject. Same vocabulary —
+ * bordered block, label and value rows, one emphasised bottom line — a step down
+ * in contrast.
  */
 /* The panel's height, animated. `grid-template-rows: 0fr -> 1fr` is the one
    way to transition to a content-sized height without measuring it in JS; the
@@ -194,9 +194,9 @@
 
 /* Portalled to `<body>` and placed in viewport coordinates by the component,
    because the fee panel's height animation wraps it in `overflow: hidden` and
-   would otherwise clip it to the panel — which this list is deliberately
-   taller than. `fixed`, so the coordinates it is given are the ones it was
-   measured against, with no offset parent in between.
+   would otherwise clip it to the panel, which this list is taller than by
+   design. `fixed`, so the coordinates it is given are the ones it was measured
+   against, with no offset parent in between.
    `top`/`left` come from the component; everything else is here. */
 .feepick__pop {
   position: fixed;

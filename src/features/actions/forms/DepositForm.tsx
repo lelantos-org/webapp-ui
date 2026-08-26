@@ -33,18 +33,17 @@ export function DepositForm() {
   const watchedAsEth = watch("asEth");
   const { pickerValue, onPickerChange } = useEthAssetPicker(setValue, watch("asset"), watchedAsEth);
 
-  // `amount` here is the whole amount-and-fee view, not the figure being sent.
+  // The whole amount-and-fee view, not the figure being sent.
   const amount = useDepositAmount(selected, { asEth: watchedAsEth, input: watch("amount") });
   const setup = useDepositSetup(selected?.id, { asEth: watchedAsEth, total: amount.total });
   // No `onFeeAsset`: a deposit's relayer note is minted in the deposited asset
-  // (`resolveDepositFee`), so there is nothing to choose.
+  // (`resolveDepositFee`), so there is no choice to offer.
   const fees = useFeePanel({
     kind: "deposit",
     selected,
     amount: amount.parsed,
-    // The displayed figure, not the one the submit is gated on: the panel
-    // keeps the last amount's fee on screen while the next is priced rather
-    // than blanking on every keystroke.
+    // The displayed figure rather than the one gating the submit: the panel
+    // keeps the last amount's fee on screen while the next is priced.
     protocol: amount.feeShown,
     protocolPending: amount.feePending,
   });
@@ -58,9 +57,9 @@ export function DepositForm() {
       submitLabel="deposit"
       busy={m.isPending}
       // A failed allowance probe is reported by `SetupNotice`, which states the
-      // real reason and offers the way out. Routing it here instead would run
-      // it through `friendlyMessage`, whose keyword match turns a failed
-      // `allowance` read into "approval missing" and hides the actual fault.
+      // reason and offers a remedy. Routing it here would run it through
+      // `friendlyMessage`, whose keyword match turns a failed `allowance` read
+      // into "approval missing" and hides the underlying fault.
       error={m.error}
       onSubmit={onSubmit}
       submitDisabled={submitDisabled}
@@ -89,8 +88,8 @@ export function DepositForm() {
         onSetMax={setAmount}
       />
       <FeeSummary model={fees.model} refreshing={fees.refreshing} />
-      {/* Without this the form is simply dead: an unreadable fee leaves the
-          amount unvalidatable, and nothing retries it. See `feeFailed`. */}
+      {/* Without this the form cannot proceed: an unreadable fee leaves the
+          amount unvalidatable and nothing retries it. See `feeFailed`. */}
       {amount.feeFailed && amount.parsed !== undefined ? (
         <Notice title="Can't read the network fee" actionLabel="retry" onAction={amount.retryFee}>
           The deposit can't be checked against your balance until it loads.
@@ -122,9 +121,8 @@ export function DepositForm() {
 
 /// The mode-and-balance line under the amount field.
 ///
-/// Fees used to ride here too. They moved to `FeeSummary`, which has room to
-/// name both of them and to say which is which — a deposit is charged the
-/// protocol fee *and* the relayer's, and one figure could not carry that.
+/// Fees are stated by `FeeSummary`, which has room to name the protocol and
+/// relayer charges separately.
 function depositHint(
   selected: RegisteredAsset | undefined,
   asEth: boolean,
@@ -132,8 +130,8 @@ function depositHint(
 ): string | undefined {
   if (!selected) return undefined;
   const mode = asEth ? "wraps ETH → WETH then deposits" : `${selected.symbol} via Permit2`;
-  // The source balance is the public wallet's, already in base units — format
-  // by the token's decimals alone, without the circuit-units scale.
+  // The source balance is the public wallet's and already in base units, so it
+  // is formatted by the token's decimals alone, without the circuit-unit scale.
   const sym = asEth ? "ETH" : selected.symbol;
   const balance =
     sourceBalance === undefined

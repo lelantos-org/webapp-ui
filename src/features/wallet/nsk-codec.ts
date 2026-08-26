@@ -1,9 +1,9 @@
 // Hex encoding for the shielded spending key.
 //
-// Lives with the wallet, not with claim links: the key is the wallet's, and
-// the per-tab session cache encodes it too. Keeping it in `claim-link/codec`
-// made `features/wallet` import `features/claim-link`, which already imports
-// `features/wallet` — a module cycle over what is really a wallet primitive.
+// Lives with the wallet rather than with claim links: the key is the wallet's,
+// and the per-tab session cache encodes it too. Keeping it in `claim-link/codec`
+// would make `features/wallet` import `features/claim-link`, which already
+// imports `features/wallet`.
 
 import { type Field, fromLeBytes, toLeBytes } from "@lelantos-org/sdk/crypto";
 import { err, ok, type Result } from "@/shared/lib/result";

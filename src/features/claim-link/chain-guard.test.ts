@@ -53,8 +53,9 @@ describe("chainMismatch", () => {
     );
   });
 
-  // Neither is fixable by switching: no wallet is connected yet, or the link
-  // names a chain nobody serves — the flow fails that link on its own.
+  // Neither is fixable by switching: either no wallet is connected yet, or the
+  // link names a chain the deployment does not serve, which the flow rejects
+  // separately.
   it("stays clear with no wallet and with no link chain", () => {
     expect(chainMismatch(REGISTRY, LOCAL, undefined)).toBeUndefined();
     expect(chainMismatch(REGISTRY, undefined, 11155111)).toBeUndefined();
