@@ -41,9 +41,9 @@ export function useFeePreview(
   mode: FeeMode = DEFAULT_MODE,
 ): FeePreviewResult {
   const { wallet } = useWallet();
-  // Asset ids are unique only within a chain, and `feeBps` is read from that
+  // Asset ids are unique only within a chain, and the rate is read from that
   // chain's pool, so the same `(asset, amount)` denotes a different value
-  // elsewhere.
+  // elsewhere. `mode` is in the key too: the two legs are priced apart.
   const { chainId } = useActiveChain();
   const settled = useDebouncedValue(amount, DEBOUNCE_MS);
 
@@ -60,7 +60,7 @@ export function useFeePreview(
       if (!wallet || asset === undefined || settled === undefined) {
         throw new Error("not ready");
       }
-      const { scale, feeBps } = await fetchAssetFeeInputs(wallet, asset);
+      const { scale, feeBps } = await fetchAssetFeeInputs(wallet, asset, mode);
       return feeBreakdown({ amount: settled, scale, feeBps, mode });
     },
     staleTime: 30_000,
@@ -80,20 +80,22 @@ export function useFeePreview(
   return useMemo(() => ({ ...query, stale }) as FeePreviewResult, [query, stale]);
 }
 
-/// The pool's protocol fee, in basis points.
+/// One asset's protocol fee for one leg, in basis points.
 ///
-/// Chain-wide rather than per-asset (`MASP.feeBps()`), so it is keyed on the
-/// chain alone and shared by every consumer. Separate from `useFeePreview`, which
-/// concerns one amount and is debounced against the amount field.
-export function useFeeBps(): bigint | undefined {
+/// Per asset and per leg: contracts 0.5.0 replaced the pool-wide `MASP.feeBps()`
+/// with rates carried on the registry entry, so this is keyed on the asset as
+/// well as the chain. Separate from `useFeePreview`, which concerns one amount
+/// and is debounced against the amount field; this one is amount-independent and
+/// so is cached for longer.
+export function useAssetFeeBps(asset: bigint | undefined, mode: FeeMode): bigint | undefined {
   const { wallet } = useWallet();
   const { chainId } = useActiveChain();
   const { data } = useQuery<bigint>({
-    queryKey: ["fee-bps", chainId.toString()],
-    enabled: !!wallet,
+    queryKey: ["fee-bps", chainId.toString(), asset?.toString() ?? null, mode],
+    enabled: !!wallet && asset !== undefined,
     queryFn: async () => {
-      if (!wallet) throw new Error("not ready");
-      return wallet.chain.fetchFeeBps();
+      if (!wallet || asset === undefined) throw new Error("not ready");
+      return (await fetchAssetFeeInputs(wallet, asset, mode)).feeBps;
     },
     staleTime: 5 * 60_000,
   });

@@ -6,7 +6,7 @@
 // selector must then honour, so anything computed independently of it can
 // produce an amount the selector refuses as `insufficient unspent value`.
 
-import { assetId, TRANSACT_4X4 } from "@lelantos-org/sdk";
+import { assetId, TRANSACT_4X6 } from "@lelantos-org/sdk";
 import type { SpendableMax } from "@lelantos-org/sdk/wallet";
 import { useQuery } from "@tanstack/react-query";
 import { useActiveChain } from "@/features/chain";
@@ -18,7 +18,7 @@ export type { SpendableMax };
 /// The shape the prover worker is built against. `build-wallet.ts` passes the
 /// same constant to `connect`; the two must agree or the max is computed against
 /// an arity the circuit does not have.
-const N_IN = TRANSACT_4X4.nIn;
+const N_IN = TRANSACT_4X6.nIn;
 
 export interface SpendableMaxOpts {
   /// The relayer is being paid in an asset this spend is not moving, so

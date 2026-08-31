@@ -4,7 +4,7 @@ import {
   Eip1193Signer,
   type EthSigner,
   evmAddress,
-  TRANSACT_4X4,
+  TRANSACT_4X6,
 } from "@lelantos-org/sdk";
 import { ViemChainAdapter } from "@lelantos-org/sdk/chain";
 import { requestPersistentStorage } from "@lelantos-org/sdk/core";
@@ -53,19 +53,32 @@ function requireAddress(value: string | null, field: string): string {
   return value;
 }
 
-/// Namespace persisted stores per (chain, account) so switching either does
-/// not read another wallet's notes or Merkle tree.
+/// Namespace persisted stores per (deployment, account) so switching either
+/// does not read another wallet's notes or Merkle tree.
 ///
 /// Unlike the nsk, these are per-chain: the notes, the tree and the spent set
 /// describe one pool on one chain, even though the key decrypting them is the
 /// same everywhere.
 ///
-/// The address is digested rather than written out; see `accountDigest`. The
-/// nullifier store holds a global feed rather than wallet-specific data, but is
-/// keyed the same way so one wallet's records share a namespace and `db.ts`'s
-/// version drop clears them together.
-function storeKey(kind: "notes" | "tree" | "nullifiers", chainId: bigint, ethAddr: string): string {
-  return `${kind}:${chainKey(chainId)}:${accountDigest(ethAddr)}`;
+/// The chain id alone does not identify the pool. Redeploy the MASP under the
+/// same id — every `anvil` restart, every devnet reset, every re-indexed
+/// backend — and the leaves behind these keys describe a tree that no longer
+/// exists. The Merkle feed is append-only, so a stale tree is not something a
+/// resync can repair: it surfaces as a local root the chain has never held and
+/// a spend that refuses to prepare. Folding the MASP address in gives each
+/// deployment its own namespace, which turns that into a cold sync instead.
+///
+/// Both addresses are digested rather than written out; see `accountDigest`.
+/// The nullifier store holds a global feed rather than wallet-specific data,
+/// but is keyed the same way so one wallet's records share a namespace and
+/// `db.ts`'s version drop clears them together.
+function storeKey(
+  kind: "notes" | "tree" | "nullifiers",
+  chainId: bigint,
+  maspAddress: string,
+  ethAddr: string,
+): string {
+  return `${kind}:${chainKey(chainId)}:${accountDigest(maspAddress)}:${accountDigest(ethAddr)}`;
 }
 
 export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): Promise<WalletApi> {
@@ -118,11 +131,12 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
   // `nativeAdapterAddress`, so the adapter `connect` would build reports
   // native-ETH deposits and `withdrawEth` as unsupported. Everything else
   // matches the SDK's defaults.
+  const maspAddress = requireAddress(network.maspAddress, "maspAddress");
   const chainAdapter = new ViemChainAdapter({
     rpcUrl: chain.rpcUrl,
     signer,
     chainId: network.chainId,
-    maspAddress: requireAddress(network.maspAddress, "maspAddress"),
+    maspAddress,
     permit2Address: network.permit2Address,
     nativeAdapterAddress: chain.nativeAdapterAddress,
   });
@@ -139,16 +153,26 @@ export async function buildWallet(bundle: ConnectionBundle, chain: ChainEntry): 
       connect({
         network,
         nsk,
-        // Stated rather than inherited: the prover worker bundles the 4x4
+        // Stated rather than inherited: the prover worker bundles the 4x6
         // artifacts, and the two must agree or every proof is built at the wrong
-        // arity.
-        shape: TRANSACT_4X4,
+        // arity. Currently the only shape the circuits package publishes keys
+        // for, so the default would do — but naming it is what pins the artifact
+        // pair the worker loads.
+        shape: TRANSACT_4X6,
+        // Every asset gets a ladder, derived by the SDK from its own `scale`
+        // and `decimals`. Named rather than left to default because it is a
+        // privacy setting: `wallet.asset().ladder` is what the spend path
+        // splits change against, so turning it off changes what the chain
+        // publishes, not just what the form offers.
+        denominations: true,
         chain: chainAdapter,
         prover: getProverWorker(),
-        noteStore: new IdbNoteStore(storeKey("notes", chain.chainId, ethAddr)),
-        treePersistence: new IdbTreePersistence(storeKey("tree", chain.chainId, ethAddr)),
+        noteStore: new IdbNoteStore(storeKey("notes", chain.chainId, maspAddress, ethAddr)),
+        treePersistence: new IdbTreePersistence(
+          storeKey("tree", chain.chainId, maspAddress, ethAddr),
+        ),
         nullifierPersistence: new IdbNullifierPersistence(
-          storeKey("nullifiers", chain.chainId, ethAddr),
+          storeKey("nullifiers", chain.chainId, maspAddress, ethAddr),
         ),
         scanner,
         syncStrategy,

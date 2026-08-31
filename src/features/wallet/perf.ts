@@ -41,7 +41,6 @@ export function instrumentWallet(wallet: WalletApi): void {
   wrapMethod(wallet.noteSource, "listNotes", "noteSource.listNotes");
   for (const k of [
     "fetchAsset",
-    "fetchFeeBps",
     "signPermit2",
     "payerAddress",
     "maspAddress",

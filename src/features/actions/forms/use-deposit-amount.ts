@@ -11,7 +11,7 @@
 import type { RegisteredAsset } from "@/features/assets";
 import { useDepositSourceBalance, useRegisteredAssets } from "@/features/assets";
 import type { FeeBreakdown } from "@/shared/lib/fees";
-import { useFeeBps, useFeePreview } from "../use-fee-preview";
+import { useAssetFeeBps, useFeePreview } from "../use-fee-preview";
 import { feeOptionFor, resolveFeeOption, useFeeQuote } from "../use-fee-quote";
 import {
   type AmountValidation,
@@ -77,9 +77,11 @@ export function useDepositAmount(
   const parsed = parseAmountSafe(input, selected);
   const fee = useFeePreview(selected?.id, parsed);
   const sourceBalance = useDepositSourceBalance(selected?.id, asEth);
-  // Chain-wide and independent of the amount, unlike the debounced preview
-  // above, which cannot size a "max" that must exist before anything is typed.
-  const feeBps = useFeeBps();
+  // Independent of the amount, unlike the debounced preview above, which cannot
+  // size a "max" that must exist before anything is typed. The deposit leg's
+  // rate specifically: it is charged on top of the amount, so it is what a
+  // "max" has to leave room for.
+  const feeBps = useAssetFeeBps(selected?.id, "deposit");
 
   // A deposit's relayer note is minted in the deposited asset, so there is one
   // option to read rather than a choice. Amount-independent, like `feeBps` above,

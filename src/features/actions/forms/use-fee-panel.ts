@@ -5,18 +5,18 @@
 // function of gas and is keyed on the chain and kind alone. Joining them here
 // keeps that difference in one place rather than in three forms.
 //
-// It also joins what is known early. `feeBps` and the registry are chain-wide
-// and cached by the time a form mounts, so the panel can state which rows are
-// coming, and in which token, before either fee query answers. See the note on
-// arrival times in `fee-summary.ts`.
+// It also joins what is known early. The registry and the asset's protocol rate
+// are amount-independent, and cached by the time a form mounts, so the panel can
+// state which rows are coming, and in which token, before either fee query
+// answers. See the note on arrival times in `fee-summary.ts`.
 
 import { useMemo } from "react";
 import type { RegisteredAsset } from "@/features/assets";
 import { useRegisteredAssets } from "@/features/assets";
 import type { FeeBreakdown } from "@/shared/lib/fees";
-import { useFeeBps } from "../use-fee-preview";
+import { useAssetFeeBps } from "../use-fee-preview";
 import { feeOptionFor, resolveFeeOption, useFeeQuote } from "../use-fee-quote";
-import { type FeeKind, type FeeSummaryModel, feeSummary } from "./fee-summary";
+import { type FeeKind, type FeeSummaryModel, feeModeFor, feeSummary } from "./fee-summary";
 
 /// One asset the relayer will take, joined to the registry entry that lets the
 /// picker render it.
@@ -95,7 +95,7 @@ export function useFeePanel({
 }: FeePanelInputs): FeePanel {
   const registry = useRegisteredAssets();
   const quote = useFeeQuote(kind);
-  const feeBps = useFeeBps();
+  const feeBps = useAssetFeeBps(selected?.id, feeModeFor(kind));
 
   // The paying asset: the chosen one, or, as in the SDK, the asset being moved.
   const payingWith = feeAsset ?? selected?.id;

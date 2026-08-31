@@ -10,7 +10,6 @@ const addPendingMany = vi.fn();
 const trackTxLifecycle = vi.fn();
 const invalidate = vi.fn();
 const fetchAssetEntry = vi.fn();
-const fetchFeeBps = vi.fn();
 const quoteFee = vi.fn();
 
 vi.mock("./lifecycle", () => ({
@@ -31,7 +30,7 @@ vi.mock("@/features/chain/ChainProvider", () => ({
 // `useInvalidateWalletState` mocked just below.
 vi.mock("@/features/wallet/use-wallet", () => ({
   useWallet: () => ({
-    wallet: { chain: { fetchFeeBps }, balance: () => 0n, quoteFee },
+    wallet: { chain: {}, balance: () => 0n, quoteFee },
   }),
 }));
 vi.mock("@/features/wallet/use-wallet-state", () => ({
@@ -51,8 +50,11 @@ beforeEach(() => {
   addPendingMany.mockReset();
   trackTxLifecycle.mockReset();
   invalidate.mockReset().mockResolvedValue(undefined);
-  fetchAssetEntry.mockReset().mockResolvedValue({ scale: 1n });
-  fetchFeeBps.mockReset().mockResolvedValue(25n);
+  // `depositBps` rides on the entry since contracts 0.5.0 — leg 2 mints the
+  // B-note as a deposit, so it is the rate `sizeBNote` prices against. Omitting
+  // it makes the success path throw inside `sizeBNote` and degrade to the
+  // caught branch, which passes these assertions for the wrong reason.
+  fetchAssetEntry.mockReset().mockResolvedValue({ scale: 1n, depositBps: 25n, withdrawBps: 30n });
   quoteFee.mockReset().mockResolvedValue({ options: [], charged: false });
 });
 
@@ -67,12 +69,12 @@ describe("useTxTracker", () => {
   });
 
   it("still tracks the tx when the post-submit chain read fails", async () => {
-    // A failing `fetchFeeBps` must not reject out of `onSuccess`, which
+    // A failing registry read must not reject out of `onSuccess`, which
     // react-query awaits inside its own `try`; that would flip an
     // already-broadcast swap to `error` — red stepper, "swap failed" toast,
     // `m.data` discarded so no explorer link, no pending overlay and no
     // lifecycle watch.
-    fetchFeeBps.mockRejectedValue(new Error("rpc rate limited"));
+    fetchAssetEntry.mockRejectedValue(new Error("rpc rate limited"));
     const { result } = renderHook(() => useTxTracker(), { wrapper: queryWrapper });
 
     await expect(result.current(swapArgs as never)).resolves.toBeUndefined();

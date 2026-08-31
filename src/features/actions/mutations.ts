@@ -174,7 +174,9 @@ export function useDeposit(): ActionMutation<DepositCall> {
         });
       }
 
-      const { scale, feeBps, token } = await fetchAssetFeeInputs(w, i.asset);
+      // The deposit leg: this sizes the Permit2 window, and the pool pulls the
+      // principal plus that leg's fee.
+      const { scale, feeBps, token } = await fetchAssetFeeInputs(w, i.asset, "deposit");
       const { total } = feeBreakdown({ amount: i.amount, scale, feeBps, mode: "deposit" });
 
       // AllowanceTransfer mode needs no per-deposit Permit2 signature. The

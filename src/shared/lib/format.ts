@@ -136,11 +136,16 @@ export function formatAmountForAsset(
 }
 
 /// `${formattedAmount} ${symbol}` for a registered asset.
+///
+/// `symbol` is optional so the placeholder metas the forms fall back to render
+/// a bare figure rather than a trailing `undefined`. Three callers were writing
+/// that conditional out by hand; it belongs beside the formatter it guards.
 export function formatAssetAmount(
   amount: bigint,
-  asset: { decimals: number; scale: bigint; symbol: string },
+  asset: { decimals: number; scale: bigint; symbol?: string | undefined },
 ): string {
-  return `${formatAmountForAsset(amount, asset.decimals, asset.scale)} ${asset.symbol}`;
+  const formatted = formatAmountForAsset(amount, asset.decimals, asset.scale);
+  return asset.symbol ? `${formatted} ${asset.symbol}` : formatted;
 }
 
 export function isPositiveIntegerString(s: string): boolean {

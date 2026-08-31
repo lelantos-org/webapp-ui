@@ -21,7 +21,9 @@ const DB_NAME = "lelantos-wallet";
 ///   5 — nullifiers truncated to 10 bytes; records dropped, not migrated
 ///   6 — record keys digest the EOA instead of spelling it out; records
 ///       dropped, not migrated
-const VERSION = 6;
+///   7 — record keys carry the pool deployment as well as the chain; records
+///       dropped, not migrated
+const VERSION = 7;
 
 export const NOTE_STORE = "notes";
 export const TREE_STORE = "tree";
@@ -91,6 +93,15 @@ export function walletDb(): Promise<IDBPDatabase<WalletSchema>> {
       // v5 records are keyed by a full-length address. Re-keying them would
       // require holding both spellings to find each record, and keeping them
       // would leave plaintext key names on disk for the life of the wallet.
+      //
+      // v6 records name a chain but not a deployment, so a pool redeployed
+      // under the same chain id — the ordinary state of a local devnet — reads
+      // back the previous deployment's notes and Merkle tree. That surfaces as
+      // a local root the chain has never held and a spend that cannot be
+      // prepared, and no amount of syncing repairs it: the feed is append-only.
+      // The v7 key carries the deployment, so a redeploy lands in a fresh
+      // namespace; the records under the old one are dropped here because
+      // nothing can tell which deployment they came from.
       //
       // Everything here is a cache of chain state, so dropping it costs one
       // resync.

@@ -13,13 +13,22 @@ import { ActionForm } from "./ActionForm";
 import { AmountField } from "./AmountField";
 import { NO_META, parseAmountSafe, validateAmount } from "./amount-field";
 import { balanceHint, withheldHint } from "./balance-hint";
+import { DenominationField } from "./DenominationField";
 import { FeeSummary } from "./FeeSummary";
 import { feeIncoming, joinHint, shownFee } from "./fee-hint";
+import { feeModeFor } from "./fee-summary";
 import { RecipientField } from "./RecipientField";
 import { isEvmAddress, type WithdrawInput, withdrawSchema } from "./schemas";
 import { useActionForm } from "./use-action-form";
 import { useFeePanel } from "./use-fee-panel";
 import { useFollowMax } from "./use-follow-max";
+import { useLadder } from "./use-ladder";
+
+/// Stated once. `useFeePreview` wants the chain leg and `useFeePanel` wants the
+/// form kind; spelling `"withdraw"` at both invites the two to drift apart, and
+/// nothing would catch a form previewing one leg while its panel labelled the
+/// other.
+const KIND = "withdraw" as const;
 
 export function WithdrawForm() {
   const action = useWithdraw();
@@ -49,11 +58,11 @@ export function WithdrawForm() {
 
   const parsed = parseAmountSafe(watch("amount"), selected);
   const v = validateAmount(parsed, selected, balance);
-  const fee = useFeePreview(selected?.id, parsed, "withdraw");
+  const fee = useFeePreview(selected?.id, parsed, feeModeFor(KIND));
 
   const [feeAsset, setFeeAsset] = useState<bigint | undefined>(undefined);
   const fees = useFeePanel({
-    kind: "withdraw",
+    kind: KIND,
     selected,
     amount: parsed,
     // The displayed figure, which may be held over from the previous amount while
@@ -79,6 +88,10 @@ export function WithdrawForm() {
   // Switching the fee asset moves the ceiling, so a figure written before that
   // change must move with it. See `use-follow-max.ts`.
   const { onSetMax } = useFollowMax(spendable?.max, selected, watch("amount"), setAmount);
+
+  // Bounded by the same ceiling as the max button: a denomination the selector
+  // would refuse is not a private amount, it is a failed spend. See `ladder.ts`.
+  const ladder = useLadder({ selected, amount: parsed, max: spendable?.max });
 
   return (
     <ActionForm
@@ -125,6 +138,10 @@ export function WithdrawForm() {
         amount={parsed}
         onSetMax={onSetMax}
       />
+      {/* `setAmount` rather than `onSetMax`: `useFollowMax` rewrites whatever the
+          max button last wrote when the ceiling moves, and a chosen
+          denomination must not drift off the ladder behind the user's back. */}
+      <DenominationField model={ladder} onPick={(d) => setAmount(d.text)} />
       <FeeSummary model={fees.model} refreshing={fees.refreshing} feeAsset={fees.feeAsset} />
     </ActionForm>
   );

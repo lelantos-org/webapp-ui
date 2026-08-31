@@ -30,7 +30,7 @@ const stubs = vi.hoisted(() => ({
 vi.mock("../use-fee-preview", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../use-fee-preview")>()),
   useFeePreview: () => stubs.preview,
-  useFeeBps: () => stubs.feeBps,
+  useAssetFeeBps: () => stubs.feeBps,
 }));
 
 /// The relayer's flat charge for flushing the deposit. Real `resolveFeeOption`
@@ -103,7 +103,7 @@ describe("useDepositAmount", () => {
     expect(deposit({ asEth: true, balance: 1_000n, feeBps: FEE_BPS }).maxAmount).toBeUndefined();
   });
 
-  it("offers no max before the chain-wide fee is known", () => {
+  it("offers no max before the asset's fee rate is known", () => {
     expect(deposit({ balance: 1_000n, feeBps: undefined }).maxAmount).toBeUndefined();
   });
 

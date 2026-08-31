@@ -1,0 +1,67 @@
+/* The withdrawal denomination picker under the amount field.
+ *
+ * Chips rather than a `<select>`: the whole point is that the set is small,
+ * shared and worth reading at a glance, and a collapsed control hides it. A
+ * wrapping row, since a ladder runs to about fifteen entries at its widest and
+ * a horizontal scroller would put the largest ones out of sight. */
+.den { gap: 8px; }
+
+.den__hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* A `<fieldset>`, so the chips group as the single choice they are. The UA
+   border, padding and `min-inline-size: min-content` all have to go — the last
+   would otherwise stop the row wrapping. */
+.den__opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.den__opt {
+  padding: 5px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg-1);
+  color: var(--fg-dim);
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: border-color 120ms var(--ease-soft), color 120ms var(--ease-soft),
+    background 120ms var(--ease-soft);
+}
+.den__opt:hover {
+  border-color: var(--accent-dim);
+  color: var(--fg);
+}
+.den__opt:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.den__opt--chosen {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.06);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* The denomination the notice names. Dashed rather than filled, so it reads as
+   an offer next to the solid ring the current choice carries. */
+.den__opt--suggested {
+  border-style: dashed;
+  border-color: var(--warn);
+  color: var(--warn);
+}
+
+.den__hint { line-height: 1.4; }

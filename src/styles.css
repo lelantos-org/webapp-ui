@@ -28,6 +28,8 @@
 @import "./styles/components/empty.css";
 @import "./styles/components/stepper.css";
 @import "./styles/components/fee-summary.css";
+@import "./styles/components/denominations.css";
+@import "./styles/components/tag.css";
 @import "./styles/components/spinner.css";
 @import "./styles/components/skeleton.css";
 @import "./styles/components/token-mark.css";

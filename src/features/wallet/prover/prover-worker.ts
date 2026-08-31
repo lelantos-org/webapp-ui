@@ -2,11 +2,12 @@
 // "module" })` pattern and emits a separate worker chunk, keeping
 // `WasmProver` and the rust pkg out of the main bundle.
 
-// 4x4 is the SDK's default shape and what the deployed verifier accepts. These
-// artifacts must match it: a mismatch builds witnesses of the wrong arity and
-// every proof is rejected.
-import circuitUrl from "@lelantos-org/circuits/4x4/4x4.wasm?url";
-import zkeyUrl from "@lelantos-org/circuits/4x4/4x4_final.zkey?url";
+// 4x6 is the SDK's default shape, the only one `@lelantos-org/circuits` still
+// publishes keys for, and what the deployed verifier accepts. These artifacts
+// must match the `shape` passed to `connect` in `build-wallet.ts`: a mismatch
+// builds witnesses of the wrong arity and every proof is rejected.
+import circuitUrl from "@lelantos-org/circuits/4x6/4x6.wasm?url";
+import zkeyUrl from "@lelantos-org/circuits/4x6/4x6_final.zkey?url";
 import { type ProverArtifacts, WorkerProver } from "@lelantos-org/sdk/prover";
 import { createLogger } from "@/shared/lib/logger";
 import { asSdkWorker } from "@/shared/lib/worker";

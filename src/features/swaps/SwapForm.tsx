@@ -8,9 +8,9 @@ import {
   FeeSummary,
   parseAmountSafe,
   useAmountControls,
+  useAssetFeeBps,
   useClearFinishedOp,
   useDepositFee,
-  useFeeBps,
   useFeePanel,
   useSubmitOnce,
   useSwap,
@@ -100,7 +100,12 @@ export function SwapForm() {
 
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
   const quoteAge = quote ? quoteAgeSecs(quote, now) : undefined;
-  const feeBps = useFeeBps();
+  // The **out** asset's **deposit** rate, because that is what it prices: leg 2
+  // mints the B-note as a deposit of `outAsset`, and `sizeBNote` solves for the
+  // value whose Permit2 pull clears `minOut`. The in-asset's rate, or the
+  // withdraw leg's, sizes the note against the wrong percentage and the pull
+  // lands under `minOut` — which the wrapper reverts as `MaspPullBelowMinOut`.
+  const feeBps = useAssetFeeBps(outAsset?.id, "deposit");
   // Leg 2 is a deposit, and the relayer's charge for flushing it comes out of the
   // B-note rather than being billed separately, so it belongs to the credited
   // figure `QuoteCard` computes rather than to the fee panel below.

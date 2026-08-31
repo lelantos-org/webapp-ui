@@ -1,0 +1,20 @@
+/* A one-word verdict badge, sitting beside the label of the control it judges.
+   The slippage row drew this first and `toast.css` already follows its palette
+   as the canonical "fine"/"careful" pair; the denomination picker wanted the
+   same idea, so it is a class rather than a fourth copy. `--ok` and `--warn`
+   are the only two tones any caller has needed. */
+.tag {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+.tag--ok {
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.08);
+}
+.tag--warn {
+  color: var(--warn);
+  background: rgba(var(--warn-rgb), 0.1);
+}

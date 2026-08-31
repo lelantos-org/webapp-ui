@@ -45,7 +45,7 @@ export interface TransferRequest {
   /// Asset to pay the relayer in. Defaults to the asset being moved.
   ///
   /// A different asset costs two circuit slots — an input note of that asset and
-  /// an output for its change — which the default 4x4 shape accommodates. The
+  /// an output for its change — which the default 4x6 shape accommodates. The
   /// relayer must have quoted it, or the SDK rejects the spend before proving
   /// starts.
   feeAsset?: bigint;
@@ -59,7 +59,7 @@ export interface WithdrawRequest {
   /// Asset to pay the relayer in. Defaults to the asset being moved.
   ///
   /// A different asset costs two circuit slots — an input note of that asset and
-  /// an output for its change — which the default 4x4 shape accommodates. The
+  /// an output for its change — which the default 4x6 shape accommodates. The
   /// relayer must have quoted it, or the SDK rejects the spend before proving
   /// starts.
   feeAsset?: bigint;
@@ -90,7 +90,7 @@ export interface SwapRequest {
   /// Asset to pay the relayer in. Defaults to the asset being moved.
   ///
   /// A different asset costs two circuit slots — an input note of that asset and
-  /// an output for its change — which the default 4x4 shape accommodates. The
+  /// an output for its change — which the default 4x6 shape accommodates. The
   /// relayer must have quoted it, or the SDK rejects the spend before proving
   /// starts.
   feeAsset?: bigint;
@@ -122,7 +122,7 @@ export interface TransferCall {
   /// Asset to pay the relayer in. Defaults to the asset being moved.
   ///
   /// A different asset costs two circuit slots — an input note of that asset and
-  /// an output for its change — which the default 4x4 shape accommodates. The
+  /// an output for its change — which the default 4x6 shape accommodates. The
   /// relayer must have quoted it, or the SDK rejects the spend before proving
   /// starts.
   feeAsset?: bigint;
@@ -136,7 +136,7 @@ export interface WithdrawCall {
   /// Asset to pay the relayer in. Defaults to the asset being moved.
   ///
   /// A different asset costs two circuit slots — an input note of that asset and
-  /// an output for its change — which the default 4x4 shape accommodates. The
+  /// an output for its change — which the default 4x6 shape accommodates. The
   /// relayer must have quoted it, or the SDK rejects the spend before proving
   /// starts.
   feeAsset?: bigint;
@@ -155,7 +155,7 @@ export interface SwapCall {
   /// Asset to pay the relayer in. Defaults to the asset being moved.
   ///
   /// A different asset costs two circuit slots — an input note of that asset and
-  /// an output for its change — which the default 4x4 shape accommodates. The
+  /// an output for its change — which the default 4x6 shape accommodates. The
   /// relayer must have quoted it, or the SDK rejects the spend before proving
   /// starts.
   feeAsset?: bigint;

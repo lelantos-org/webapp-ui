@@ -93,9 +93,8 @@ async function prepareCtx(
   if (!wallet) return { kind: "swap", result: args.result };
   try {
     const { assetOut, quote } = args.swap;
-    const [entryOut, feeBps, depositFees] = await Promise.all([
+    const [entryOut, depositFees] = await Promise.all([
       fetchAssetEntry(wallet, assetOut),
-      wallet.chain.fetchFeeBps(),
       // Priced as a deposit, because leg 2 is one: the relayer's flush note is
       // minted in the deposited asset, so this is the same quote
       // `resolveDepositFee` read when `executeSwap` sized the B-note.
@@ -109,7 +108,11 @@ async function prepareCtx(
         bNoteValue: swapCredit({
           minOut: quote.minOut,
           scaleOut: entryOut.scale,
-          feeBps,
+          // Same leg, same reason: the B-note is a deposit of the out asset, so
+          // that asset's deposit rate is what the watermark is computed at.
+          // Carried on the entry since contracts 0.5.0, so it costs no extra
+          // round trip.
+          feeBps: entryOut.depositBps,
           depositFee: depositFeeFor(depositFees, assetOut),
         }),
         assetOutBaseline: wallet.balance(assetOut),

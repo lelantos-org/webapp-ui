@@ -36,7 +36,7 @@
 // placeholder, so the panel's shape is fixed once the kind and paying asset are
 // known and only the figures fill in afterwards.
 
-import type { FeeBreakdown } from "@/shared/lib/fees";
+import type { FeeBreakdown, FeeMode } from "@/shared/lib/fees";
 
 export type FeeKind = "deposit" | "transfer" | "withdraw" | "swap";
 
@@ -97,9 +97,9 @@ export interface FeeSummaryInput {
   relayer:
     | { amount: bigint; asset: { symbol: string; decimals: number; scale: bigint } }
     | undefined;
-  /// The pool's rate, in basis points.
+  /// The asset's rate for this kind's leg, in basis points.
   ///
-  /// Read per chain rather than per amount (`useFeeBps`), so it is cached by
+  /// Read per asset and per leg rather than per amount (`useAssetFeeBps`), so it is cached by
   /// the time a form renders. It labels the protocol row before `protocol` has
   /// priced anything, and `0n` suppresses the row entirely.
   feeBps?: bigint | undefined;
@@ -131,6 +131,29 @@ function protocolSign(kind: FeeKind): "plus" | "minus" | undefined {
       return "minus";
     case "transfer":
       return undefined;
+  }
+}
+
+/// Which of the asset's two rates a kind is charged at.
+///
+/// Switched on `kind` directly rather than read off `protocolSign`. The two
+/// agree today — "plus" is the deposit leg charged on top, "minus" the withdraw
+/// leg skimmed out — but `protocolSign` picks a `+`/`−` glyph, and letting a
+/// presentation choice decide which rate is fetched from chain means a kind
+/// rendered unsigned would silently change the query. The rates are per asset
+/// and per leg since contracts 0.5.0 and differ routinely, so reading the wrong
+/// one labels the row with a percentage the figure beside it will not match.
+/// `transfer` gets no protocol row at all, so its mode is never read; it is
+/// mapped rather than left to a default so adding a kind is a compile error
+/// here.
+export function feeModeFor(kind: FeeKind): FeeMode {
+  switch (kind) {
+    case "deposit":
+      return "deposit";
+    case "withdraw":
+    case "swap":
+    case "transfer":
+      return "withdraw";
   }
 }
 

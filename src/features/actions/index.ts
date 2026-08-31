@@ -24,5 +24,5 @@ export type { Step, TxPhase } from "./tx/tx-progress";
 export { stepsFor } from "./tx/tx-progress";
 export { useTxProgress } from "./tx/use-tx-progress";
 export { useTxTracker } from "./tx/use-tx-tracker";
-export { useFeeBps } from "./use-fee-preview";
+export { useAssetFeeBps } from "./use-fee-preview";
 export { useDepositFee } from "./use-fee-quote";

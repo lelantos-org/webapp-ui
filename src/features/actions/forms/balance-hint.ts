@@ -1,7 +1,7 @@
 // Shared "balance + settling" hint formatter for action forms.
 
 import type { SpendableMax } from "@lelantos-org/sdk/wallet";
-import { formatAmountForAsset } from "@/shared/lib/format";
+import { formatAmountForAsset, formatAssetAmount } from "@/shared/lib/format";
 import type { AssetMeta } from "./amount-field";
 
 // Re-exported so `balance-hint` importers need one import; the type belongs with
@@ -18,10 +18,12 @@ export function balanceHint(
 ): string | undefined {
   if (balance === undefined) return undefined;
   const fmt = (v: bigint) => formatAmountForAsset(v, meta.decimals, meta.scale);
-  const sym = meta.symbol ? ` ${meta.symbol}` : "";
-  if (outflow > 0n) return `balance ${fmt(balance)}${sym} · settling -${fmt(outflow)}`;
-  if (pending > 0n) return `balance ${fmt(balance)}${sym} · settling +${fmt(pending)}`;
-  return `balance ${fmt(balance)}${sym}`;
+  // Only the leading figure carries the symbol; the settling delta reads as a
+  // adjustment to it, not a second quantity.
+  const withSymbol = formatAssetAmount(balance, meta);
+  if (outflow > 0n) return `balance ${withSymbol} · settling -${fmt(outflow)}`;
+  if (pending > 0n) return `balance ${withSymbol} · settling +${fmt(pending)}`;
+  return `balance ${withSymbol}`;
 }
 
 /// Names value the balance counts but a spend cannot reach, and why.
@@ -50,7 +52,5 @@ export function withheldHint(
   const worst = causes.reduce((a, b) => (b.value > a.value ? b : a));
   if (worst.value <= 0n) return undefined;
 
-  const sym = meta.symbol ? ` ${meta.symbol}` : "";
-  const amount = formatAmountForAsset(worst.value, meta.decimals, meta.scale);
-  return `${amount}${sym} ${worst.why}`;
+  return `${formatAssetAmount(worst.value, meta)} ${worst.why}`;
 }

@@ -23,7 +23,8 @@ export interface FeeBreakdown {
   ///   deposit  → `inAmt + fee` (payer is debited, fee added on top)
   ///   withdraw → `inAmt - fee` (recipient is credited, fee deducted)
   total: bigint;
-  /// Raw bps fee from `MASP.feeBps()`.
+  /// The rate applied, in bps — the asset's rate for this leg. Per-asset and
+  /// per-leg since contracts 0.5.0; there is no pool-wide rate.
   feeBps: bigint;
   mode: FeeMode;
 }

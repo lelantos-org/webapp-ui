@@ -37,17 +37,22 @@ function pacer(): () => Promise<void> {
   };
 }
 
+/// Key range covering every record under `prefix`.
+///
+/// Safe against neighbouring keys: a longer store key sharing this prefix
+/// continues with a hex digit where the range expects `:`, and a hex digit
+/// either sorts below the lower bound or above the upper one. The `:hdr` and
+/// `:nodes:` records fall outside a `:leaves:` range for the same reason.
+function prefixRange(prefix: string): IDBKeyRange {
+  return IDBKeyRange.bound(prefix, `${prefix}\uffff`);
+}
+
 /// Every record under `prefix`, as `[suffix, value]` pairs.
 ///
 /// One `getAllKeys` plus one `getAll` rather than a `get` per record. A 1M-leaf
 /// tree holds ~1000 leaf records and a comparable number of node buckets, and
 /// each `get` costs its own transaction and structured-clone hop, so a
 /// per-record read blocks a wallet build for ~1000 event-loop turns.
-///
-/// The bound is safe against neighbouring keys: a longer store key sharing this
-/// prefix continues with a hex digit where the range expects `:`, which sorts
-/// above the upper bound. The `:hdr` and `:nodes:` records fall outside a
-/// `:leaves:` range for the same reason.
 ///
 /// Both calls run in one transaction so the arrays line up index-for-index.
 /// Separate transactions would leave a window for another tab's `save()` to
@@ -62,7 +67,7 @@ async function readRange<T>(
   db: IDBPDatabase<WalletSchema>,
   prefix: string,
 ): Promise<[string, T][]> {
-  const range = IDBKeyRange.bound(prefix, `${prefix}￿`);
+  const range = prefixRange(prefix);
   const tx = db.transaction(TREE_STORE, "readonly");
   const [keys, values] = await Promise.all([
     tx.store.getAllKeys(range),
@@ -254,6 +259,28 @@ export class IdbTreePersistence implements TreePersistence {
     await tx.done;
 
     this.persistedCount = state.syncedCount;
+  }
+
+  /// Drop every record under this key, so the next `load` returns `null` and the
+  /// tree is rebuilt from the feed.
+  ///
+  /// Called by `TreeStore.reset()` when the local tree no longer reconciles with
+  /// the chain. Deleting is what makes that repair stick: leaving the records
+  /// behind would have `save()` rewrite only the tail — `firstDirtyLeaf` is
+  /// `min(persistedCount, leaves.length)`, so a shorter rebuilt tree leaves the
+  /// diverged chunks below it untouched — and the next page load would restore
+  /// the very tree that was thrown away.
+  ///
+  /// One range delete rather than a key-by-key sweep — the same reason
+  /// `readRange` reads with one `getAll` instead of a `get` per record.
+  async clear(): Promise<void> {
+    const db = await walletDb();
+    const tx = db.transaction(TREE_STORE, "readwrite");
+    await tx.store.delete(prefixRange(`${this.key}:`));
+    await tx.done;
+    // Reset with the records, not before: the next `save` must rewrite from
+    // chunk 0 rather than treat the deleted prefix as durable.
+    this.persistedCount = 0;
   }
 
   private async saveNodes(
