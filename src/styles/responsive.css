@@ -102,6 +102,9 @@
   /* Four columns of figures do not fit a phone. The `earning` badge in the
      asset cell still says the asset yields; only the amount goes. */
   .tbl--pf .tbl__earned { display: none; }
+  /* With the column gone there is no marker on screen for the legend to key,
+     and no figure for it to place inside the balance. */
+  .tbl__legend { display: none; }
   .bal__main, .bal__usd { font-size: 12px; }
 
   .claim-row { grid-template-columns: 38px 1fr auto; grid-template-areas: "g m a" "g s c" "x x c"; }

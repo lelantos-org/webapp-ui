@@ -46,64 +46,100 @@ export function ShieldedTable({
       </div>
     );
   }
-  // Whether any visible row's earned figure is a lower bound. The per-cell
-  // explanation lives in a `title`, so on touch it does not exist at all — and
-  // the "already counted in the balance" half of it applies to every row, not
-  // just the hovered one, which is what makes it worth stating once here.
-  const anyUnderstated = rows.some((r) => {
+  // Which markers the `earned` column actually put on screen. The per-cell
+  // explanation lives in a `title`, so on touch it does not exist at all, and
+  // the legend below is where it goes instead.
+  //
+  // A flag per marker rather than one "something is off" flag: the states print
+  // different glyphs, and a legend naming `≥` while every affected row shows a
+  // dash explains a symbol the reader cannot find. `earned` is tracked too
+  // because the "part of the balance" half applies to every figure in the
+  // column, marked or not.
+  const marks = { earned: false, unknown: false, partial: false };
+  for (const r of rows) {
     const meta = byId.get(r.asset);
-    if (!meta?.yieldEnabled) return false;
+    if (!meta?.yieldEnabled) continue;
     const gain = gains.get(r.asset);
-    return gain === undefined || gain.resolvedNotes === 0 || gain.unknownNotes > 0;
-  });
+    if (gain === undefined || gain.resolvedNotes === 0) {
+      marks.unknown = true;
+    } else {
+      marks.earned = true;
+      if (gain.unknownNotes > 0) marks.partial = true;
+    }
+  }
 
   return (
-    <div className="tbl-wrap">
-      <table className="tbl tbl--pf">
-        <thead>
-          <tr>
-            <th>asset</th>
-            <th>balance</th>
-            {/* Dropped below 720px along with the glyph mark: four columns of
-                figures do not fit a phone, and the row's `earning` badge still
-                says the asset yields. */}
-            {/* "incl." rather than "earned" alone. The figure is a part of the
-                balance to its left, not a second holding to add to it, and two
-                adjacent numbers with no relation stated read as summable — a
-                reading that sends users to the withdraw form asking for balance
-                plus earnings and getting "exceeds available balance" for it. */}
-            <th
-              className="tbl__earned"
-              title="part of the balance beside it, not on top of it: the yield accrued on the notes you hold now — spending a note realises its gain and resets its basis"
-            >
-              incl. earned
-            </th>
-            <th>value</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const meta = byId.get(r.asset);
-            return (
-              <ShieldedRowView
-                key={r.asset.toString()}
-                row={r}
-                label={meta ? meta.symbol : `#${r.asset.toString()}`}
-                meta={meta}
-                price={priceOf(prices, meta?.token)}
-                gain={gains.get(r.asset)}
-              />
-            );
-          })}
-        </tbody>
-      </table>
-      {anyUnderstated ? (
-        <p className="tbl__note muted txt-xs">
-          <span className="mono">≥</span> some notes have no resolvable historical basis, so those
-          figures understate. Earnings are already included in the balance beside them.
-        </p>
+    <>
+      <div className="tbl-wrap">
+        <table className="tbl tbl--pf">
+          <thead>
+            <tr>
+              <th>asset</th>
+              <th>balance</th>
+              {/* Dropped on phones along with the glyph mark: four columns of
+                  figures do not fit that width, and the row's `earning` badge
+                  still says the asset yields. */}
+              {/* "incl." rather than "earned" alone. The figure is a part of the
+                  balance to its left, not a second holding to add to it, and two
+                  adjacent numbers with no relation stated read as summable — a
+                  reading that sends users to the withdraw form asking for balance
+                  plus earnings and getting "exceeds available balance" for it. */}
+              <th
+                className="tbl__earned"
+                title="part of the balance beside it, not on top of it: the yield accrued on the notes you hold now — spending a note realises its gain and resets its basis"
+              >
+                incl. earned
+              </th>
+              <th>value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => {
+              const meta = byId.get(r.asset);
+              return (
+                <ShieldedRowView
+                  key={r.asset.toString()}
+                  row={r}
+                  label={meta ? meta.symbol : `#${r.asset.toString()}`}
+                  meta={meta}
+                  price={priceOf(prices, meta?.token)}
+                  gain={gains.get(r.asset)}
+                />
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {/* Outside `.tbl-wrap` on purpose: that box scrolls at its max height, and
+          a note placed inside it is out of sight until the reader scrolls past
+          the last row — past the very figures it explains. */}
+      {marks.earned || marks.unknown ? (
+        <div className="tbl__legend txt-xs muted">
+          {marks.earned ? (
+            <p>earned is part of the balance beside it, not an amount on top of it</p>
+          ) : null}
+          {marks.partial || marks.unknown ? (
+            <dl className="tbl__legend-keys">
+              {marks.partial ? (
+                <div className="tbl__legend-row">
+                  <dt className="tbl__legend-key mono">≥</dt>
+                  <dd>
+                    at least this much: some of these notes have no resolvable historical basis, so
+                    the figure understates
+                  </dd>
+                </div>
+              ) : null}
+              {marks.unknown ? (
+                <div className="tbl__legend-row">
+                  <dt className="tbl__legend-key mono">—</dt>
+                  <dd>unknown: no historical index reaches back to these notes</dd>
+                </div>
+              ) : null}
+            </dl>
+          ) : null}
+        </div>
       ) : null}
-    </div>
+    </>
   );
 }
 

@@ -106,3 +106,51 @@ describe("ShieldedTable earned column", () => {
     expect(cell.textContent).toContain("-10.00%");
   });
 });
+
+// The legend under the table. It is a key for glyphs the column actually
+// printed, so each line has to be gated on its own marker: naming `≥` while
+// every affected row shows a dash points at a symbol that is not there.
+describe("ShieldedTable earned legend", () => {
+  const legend = () => document.querySelector(".tbl__legend");
+
+  it("says nothing when no row earns", () => {
+    renderTable([asset(1n, "USDC")], new Map());
+    expect(legend()).toBeNull();
+  });
+
+  it("keys the dash, not `≥`, when nothing resolved", () => {
+    renderTable(
+      [asset(2n, "WETH", { yieldEnabled: true })],
+      new Map([[2n, gain({ resolvedNotes: 0, unknownNotes: 3 })]]),
+    );
+    const text = legend()?.textContent ?? "";
+    expect(text).toContain("no historical index");
+    expect(text).not.toContain("≥");
+  });
+
+  it("keys `≥` when a figure understates", () => {
+    renderTable(
+      [asset(4n, "WETH", { yieldEnabled: true })],
+      new Map([[4n, gain({ gain: 10n ** 17n, unknownNotes: 2 })]]),
+    );
+    expect(legend()?.textContent).toContain("≥");
+  });
+
+  it("states that earnings sit inside the balance whenever a figure shows", () => {
+    renderTable(
+      [asset(3n, "WETH", { yieldEnabled: true })],
+      new Map([[3n, gain({ gain: 10n ** 17n })]]),
+    );
+    expect(legend()?.textContent).toContain("part of the balance");
+  });
+
+  // The table box scrolls at its max height; a legend inside it is unreachable
+  // until the reader has scrolled past the rows it explains.
+  it("sits outside the scrolling table box", () => {
+    renderTable(
+      [asset(3n, "WETH", { yieldEnabled: true })],
+      new Map([[3n, gain({ gain: 10n ** 17n })]]),
+    );
+    expect(legend()?.closest(".tbl-wrap")).toBeNull();
+  });
+});
