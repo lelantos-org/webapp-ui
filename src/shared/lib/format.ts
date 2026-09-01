@@ -286,6 +286,17 @@ export function formatUsd(value: number): string {
   return USD_FORMATTER.format(value);
 }
 
+/// Render a fraction as a percentage: `0.0418` becomes `4.18%`.
+///
+/// Two decimals at every size. A rate rounded to `4%` reads as a round number
+/// somebody chose, and the difference between 4.18% and 4.49% is the whole point
+/// of showing one. Kept here rather than beside either caller because the
+/// portfolio table renders two different rates — a venue's and a wallet's — and
+/// two copies of this rule would let the columns disagree.
+export function formatPercent(fraction: number): string {
+  return `${(fraction * 100).toFixed(2)}%`;
+}
+
 /// USD value of `circuitUnits` of an asset priced at `priceUsd` per whole token.
 ///
 /// Mirrors `formatAmountForAsset`: balances are held in circuit units, so `scale`

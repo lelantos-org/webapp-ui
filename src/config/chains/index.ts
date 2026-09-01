@@ -23,5 +23,5 @@
 // Within the module, import the files directly.
 
 export { loadChainRegistry, readCachedChainRegistry } from "./registry";
-export type { ChainEntry, RegisteredAsset } from "./types";
+export type { ChainEntry, RegisteredAsset, VenueRate } from "./types";
 export { chainKey, findChain } from "./types";

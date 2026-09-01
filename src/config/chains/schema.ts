@@ -20,6 +20,18 @@ export const yieldStateRow = z.object({
   supply: z.string(),
   index: z.string(),
   halted: z.boolean(),
+  /// Estimated annual rate for a note holder, in basis points, net of the
+  /// pool's performance fee and idle buffer.
+  ///
+  /// Absent — never zero — when the relayer could not measure one: an RPC
+  /// without archive state, a vault younger than the window, or a reading too
+  /// wild to be a rate. A number rather than a decimal string: a rate in bps is
+  /// a small integer, unlike every other figure here.
+  apyBps: z.number().finite().optional(),
+  /// Seconds the two readings behind `apyBps` actually spanned. Present iff
+  /// `apyBps` is, and shown to the user, so the window is the measured one
+  /// rather than one the client assumed.
+  apyWindowS: z.number().finite().optional(),
 });
 
 const tokenRow = z.object({

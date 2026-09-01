@@ -39,6 +39,27 @@ export interface RegisteredAsset {
   /// The venue is no longer being supplied. The balance is still fully backed —
   /// the asset has degraded to plain custody — but it has stopped earning.
   yieldHalted: boolean;
+  /// The relayer's estimate of what this asset earns in a year, net of the
+  /// pool's cut, with the window it was measured over.
+  ///
+  /// `undefined` means not measurable, which is not the same as zero and must
+  /// render as no figure rather than `0.00%`. An estimate: what the venue did
+  /// over that window, not a promise, and not what any wallet actually earned —
+  /// that depends on when it bought in.
+  ///
+  /// One field rather than a rate and a window side by side: a rate cannot be
+  /// labelled honestly without its window, so the pair is never half-present and
+  /// no consumer has to check both.
+  apy?: VenueRate;
+}
+
+/// A measured annual rate and the span behind it.
+export interface VenueRate {
+  /// A fraction — `0.0418` for 4.18%.
+  rate: number;
+  /// Days the two readings actually spanned. Shown to the user, so it is the
+  /// measured window rather than the one the relayer aimed at.
+  windowDays: number;
 }
 
 /// Everything that varies per chain.

@@ -7,7 +7,7 @@
 import type { RegisteredAsset } from "@/config/chains";
 import { useActiveChainOrUndefined } from "@/features/chain";
 
-export type { RegisteredAsset };
+export type { RegisteredAsset, VenueRate } from "@/config/chains";
 
 /// Asset a form starts on, and the id the pickers fall back to while the
 /// registry is empty or still loading.

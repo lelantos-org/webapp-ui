@@ -8,12 +8,13 @@ import {
   DISPLAY_FRAC_DIGITS,
   formatAmountForDisplay,
   formatDecimalCompact,
+  formatPercent,
   formatUsd,
   usdValue,
 } from "@/shared/lib/format";
-import type { RegisteredAsset } from "./registered-assets";
+import type { RegisteredAsset, VenueRate } from "./registered-assets";
 import type { AssetBalanceView } from "./use-balances";
-import { formatApy, type VenueApys, WINDOW_DAYS } from "./venue-apy";
+import { formatWindow } from "./venue-apy";
 import { growthOf, type YieldGain, type YieldGains } from "./yield-gains";
 
 export function ShieldedTable({
@@ -21,7 +22,6 @@ export function ShieldedTable({
   byId,
   prices,
   gains,
-  apys,
 }: {
   rows: AssetBalanceView[];
   byId: ReadonlyMap<bigint, RegisteredAsset>;
@@ -29,10 +29,6 @@ export function ShieldedTable({
   /// Unrealised yield per asset. An asset with no entry does not earn; see
   /// `EarnedCell` for why that is not the same as an entry of zero.
   gains: YieldGains;
-  /// The venue's own annualized rate per asset, as a fraction. An asset with no
-  /// entry has no measurable rate — a different thing from a rate of zero, and
-  /// rendered as no figure rather than as `0.00%`.
-  apys: VenueApys;
 }) {
   if (rows.length === 0) {
     return (
@@ -59,11 +55,16 @@ export function ShieldedTable({
   // A flag per marker rather than one "something is off" flag: the states print
   // different glyphs, and a legend naming `≥` while every affected row shows a
   // dash explains a symbol the reader cannot find.
-  const marks = { unknown: false, partial: false, rate: false };
+  const marks = { unknown: false, partial: false, window: 0 };
   for (const r of rows) {
     const meta = byId.get(r.asset);
     if (!meta?.yieldEnabled) continue;
-    if (apys.has(r.asset)) marks.rate = true;
+    // The longest window any badge on screen was measured over. Assets can
+    // differ — one the relayer could only read part way back gets a shorter
+    // one — and the legend has to name a span covering what is visible rather
+    // than whichever row happened to be last.
+    const rate = shownRate(meta);
+    if (rate) marks.window = Math.max(marks.window, rate.windowDays);
     const gain = gains.get(r.asset);
     if (gain === undefined || gain.resolvedNotes === 0) marks.unknown = true;
     else if (gain.unknownNotes > 0) marks.partial = true;
@@ -112,7 +113,6 @@ export function ShieldedTable({
                   meta={meta}
                   price={priceOf(prices, meta?.token)}
                   gain={gains.get(r.asset)}
-                  apy={apys.get(r.asset)}
                 />
               );
             })}
@@ -122,7 +122,7 @@ export function ShieldedTable({
       {/* Outside `.tbl-wrap` on purpose: that box scrolls at its max height, and
           a note placed inside it is out of sight until the reader scrolls past
           the last row — past the very figures it explains. */}
-      {marks.partial || marks.unknown || marks.rate ? (
+      {marks.partial || marks.unknown || marks.window > 0 ? (
         <dl className="tbl__legend txt-xs muted">
           {/* The two rows below key the `earned` column, which phones do not
               show; `--earned` is what lets them go with it while the rate key,
@@ -147,12 +147,13 @@ export function ShieldedTable({
               badge describes the asset and is the same for everyone holding it;
               the `earned` column is this wallet's. Said here because no amount
               of styling distinguishes a venue's rate from a personal return. */}
-          {marks.rate ? (
+          {marks.window > 0 ? (
             <div className="tbl__legend-row">
               <dt className="tbl__legend-key mono">%</dt>
               <dd>
-                on the badge: what the venue itself returned over the last {WINDOW_DAYS} days,
-                annualized — not a promise, and not your own return, which is the earned column
+                on the badge: what the venue itself returned over the last{" "}
+                {formatWindow(marks.window)}, annualized — not a promise, and not your own return,
+                which is the earned column
               </dd>
             </div>
           ) : null}
@@ -160,6 +161,17 @@ export function ShieldedTable({
       ) : null}
     </>
   );
+}
+
+/// The rate this asset's badge shows, or `undefined` when it shows none.
+///
+/// One predicate for both the badge and the legend that keys it. They read the
+/// same asset but asked different questions before — the legend counted a rate
+/// the badge would not draw on a halted venue — and a legend explaining a symbol
+/// that is not on screen is exactly what this table has spent its other fixes
+/// removing.
+function shownRate(meta: RegisteredAsset): VenueRate | undefined {
+  return meta.yieldEnabled && !meta.yieldHalted ? meta.apy : undefined;
 }
 
 /// One row per asset.
@@ -176,7 +188,6 @@ const ShieldedRowView = memo(function ShieldedRowView({
   meta,
   price,
   gain,
-  apy,
 }: {
   row: AssetBalanceView;
   label: string;
@@ -186,11 +197,10 @@ const ShieldedRowView = memo(function ShieldedRowView({
   price: number | undefined;
   /// This asset's unrealised yield, or `undefined` when it has none to report.
   gain: YieldGain | undefined;
-  /// The venue's annualized rate, or `undefined` when none could be measured.
-  apy: number | undefined;
 }) {
   // Capped for display; the figures behind it keep full precision.
   const fmt = (v: bigint) => (meta ? formatAmountForDisplay(v, meta) : v.toString());
+  const rate = meta ? shownRate(meta) : undefined;
 
   // Both directions are rendered. A single branch on `outflow` would hide an
   // incoming amount whenever something was also leaving, so a swap — which has
@@ -227,8 +237,8 @@ const ShieldedRowView = memo(function ShieldedRowView({
               title={
                 meta.yieldHalted
                   ? "yield paused — balance still fully backed"
-                  : apy !== undefined
-                    ? `earning yield — the venue returned ${formatApy(apy)} a year over the last ${WINDOW_DAYS} days. The venue's rate, not your return: a note bought yesterday has earned a day of it.`
+                  : rate
+                    ? `earning yield — the venue returned ${formatPercent(rate.rate)} a year over the last ${formatWindow(rate.windowDays)}. The venue's rate, not your return: a note bought yesterday has earned a day of it.`
                     : "earning yield — balance grows without a transaction"
               }
             >
@@ -237,10 +247,9 @@ const ShieldedRowView = memo(function ShieldedRowView({
                   it describes the asset, not the holding, and the table is
                   already at four columns and drops one on a phone — where this
                   is arguably the figure most worth keeping. Absent, not zero,
-                  when nothing could be measured; see `annualize`. */}
-              {!meta.yieldHalted && apy !== undefined ? (
-                <span className="tok__apy mono">{formatApy(apy)}</span>
-              ) : null}
+                  when nothing could be measured; see `toApyFields` in
+                  `config/chains/parse.ts`. */}
+              {rate ? <span className="tok__apy mono">{formatPercent(rate.rate)}</span> : null}
             </span>
           ) : null}
         </span>
@@ -343,7 +352,7 @@ function EarnedCell({
         {down ? "−" : "+"}
         {formatDecimalCompact(down ? -gain.gain : gain.gain, meta.decimals, DISPLAY_FRAC_DIGITS)}
       </span>
-      <span className="earned__pct">{`${(growthOf(gain) * 100).toFixed(2)}%`}</span>
+      <span className="earned__pct">{formatPercent(growthOf(gain))}</span>
     </span>
   );
 }

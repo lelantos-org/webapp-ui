@@ -50,9 +50,14 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     // With anything cached, `isPending` is false from the first render, so the
     // app paints immediately rather than holding a spinner for a full round-trip.
     placeholderData: cached,
-    // The set of deployed chains does not change under a running tab, and every
-    // wallet-facing read depends on it, so refetching adds no value.
-    staleTime: Number.POSITIVE_INFINITY,
+    // The set of deployed chains does not change under a running tab, but the
+    // payload is no longer only identity: each yield asset carries `index` and
+    // the relayer's rate estimate, which it re-measures on its own schedule. An
+    // infinite `staleTime` pinned both at whatever they were when the tab
+    // opened, so a rate labelled "over the last 7 days" could be a week old
+    // itself. Long enough that a herd of tabs does not poll the registry, short
+    // enough that a figure on screen is one the relayer still stands behind.
+    staleTime: 10 * 60 * 1000,
     // The whole app is gated on this, so a single failed attempt should not
     // require a page reload; the retry button below covers the remaining cases.
     retry: 2,

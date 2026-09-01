@@ -52,7 +52,7 @@ const PLAIN_CUSTODY = { index: RAY, yieldEnabled: false, yieldHalted: false } as
 /// asset.
 function toYieldFields(
   raw: unknown,
-): Pick<RegisteredAsset, "index" | "yieldEnabled" | "yieldHalted"> {
+): Pick<RegisteredAsset, "index" | "yieldEnabled" | "yieldHalted" | "apy"> {
   const parsed = yieldStateRow.safeParse(raw);
   if (!parsed.success) return PLAIN_CUSTODY;
   try {
@@ -60,12 +60,35 @@ function toYieldFields(
       index: BigInt(parsed.data.index),
       yieldEnabled: true,
       yieldHalted: parsed.data.halted,
+      ...toApyFields(parsed.data.apyBps, parsed.data.apyWindowS),
     };
   } catch {
     // `z.string()` does not check that `index` is numeric, the same gap the
     // row-level catch exists for.
     return PLAIN_CUSTODY;
   }
+}
+
+/// Seconds in the shortest window the relayer will measure over.
+///
+/// A mirror of its `MIN_WINDOW_SECONDS`, and only a sanity check: the relayer
+/// refuses to annualize anything shorter, so a row carrying one is malformed
+/// rather than merely fresh. Kept equal to the number the backend actually uses,
+/// since a looser floor here would render a figure the backend claims it never
+/// emits.
+const MIN_WINDOW_S = 2 * 86_400;
+
+/// The rate half of a yield block.
+///
+/// Both or neither: a rate with no window cannot be labelled honestly, and a
+/// window with no rate says nothing, so a row carrying only one is treated as
+/// carrying none.
+function toApyFields(
+  bps: number | undefined,
+  windowS: number | undefined,
+): Pick<RegisteredAsset, "apy"> {
+  if (bps === undefined || windowS === undefined || windowS < MIN_WINDOW_S) return {};
+  return { apy: { rate: bps / 10_000, windowDays: Math.round(windowS / 86_400) } };
 }
 
 /// A row that could not be turned into a usable chain, and why.

@@ -10,7 +10,6 @@ import { describe, expect, it } from "vitest";
 import type { RegisteredAsset } from "@/config/chains";
 import { ShieldedTable } from "./ShieldedTable";
 import type { AssetBalanceView } from "./use-balances";
-import type { VenueApys } from "./venue-apy";
 import type { YieldGain, YieldGains } from "./yield-gains";
 
 function asset(id: bigint, symbol: string, over: Partial<RegisteredAsset> = {}): RegisteredAsset {
@@ -44,7 +43,7 @@ const gain = (over: Partial<YieldGain> = {}): YieldGain => ({
   ...over,
 });
 
-function renderTable(assets: RegisteredAsset[], gains: YieldGains, apys: VenueApys = new Map()) {
+function renderTable(assets: RegisteredAsset[], gains: YieldGains) {
   render(
     <MemoryRouter>
       <ShieldedTable
@@ -52,7 +51,6 @@ function renderTable(assets: RegisteredAsset[], gains: YieldGains, apys: VenueAp
         byId={new Map(assets.map((a) => [a.id, a]))}
         prices={new Map()}
         gains={gains}
-        apys={apys}
       />
     </MemoryRouter>,
   );
@@ -186,8 +184,8 @@ describe("ShieldedTable venue rate", () => {
   const badge = () => document.querySelector(".tok__yield") as HTMLElement;
 
   it("shows the rate beside `earning`", () => {
-    const a = asset(6n, "WETH", { yieldEnabled: true });
-    renderTable([a], new Map(), new Map([[6n, 0.0418]]));
+    const a = asset(6n, "WETH", { yieldEnabled: true, apy: { rate: 0.0418, windowDays: 7 } });
+    renderTable([a], new Map());
     expect(badge().textContent).toBe("earning4.18%");
   });
 
@@ -201,24 +199,31 @@ describe("ShieldedTable venue rate", () => {
   // A halted venue is not earning at whatever it last paid; the rate would be
   // the most recent thing on the row and the only untrue one.
   it("drops the rate when the venue is paused", () => {
-    const a = asset(8n, "WETH", { yieldEnabled: true, yieldHalted: true });
-    renderTable([a], new Map(), new Map([[8n, 0.0418]]));
+    const a = asset(8n, "WETH", {
+      yieldEnabled: true,
+      yieldHalted: true,
+      apy: { rate: 0.0418, windowDays: 7 },
+    });
+    renderTable([a], new Map());
     expect(badge().textContent).toBe("paused");
   });
 
   it("keys the badge percentage as the venue's, not the wallet's", () => {
-    const a = asset(9n, "WETH", { yieldEnabled: true });
-    renderTable([a], new Map(), new Map([[9n, 0.0418]]));
+    const a = asset(9n, "WETH", { yieldEnabled: true, apy: { rate: 0.0418, windowDays: 7 } });
+    renderTable([a], new Map());
     const legend = document.querySelector(".tbl__legend") as HTMLElement;
     expect(legend.textContent).toContain("what the venue itself returned");
     expect(legend.textContent).toContain("not your own return");
+    // The window is the measured one, read off the asset — not a constant the
+    // client picked, which would misstate a shorter measurement as a week.
+    expect(legend.textContent).toContain("over the last 7 days, annualized");
   });
 
   // The `earned` column goes at 480px and its keys go with it; this one does
   // not, because the badge it explains is in the asset cell.
   it("keeps the rate key off the column-scoped class", () => {
-    const a = asset(9n, "WETH", { yieldEnabled: true });
-    renderTable([a], new Map(), new Map([[9n, 0.0418]]));
+    const a = asset(9n, "WETH", { yieldEnabled: true, apy: { rate: 0.0418, windowDays: 7 } });
+    renderTable([a], new Map());
     const rows = [...document.querySelectorAll(".tbl__legend-row")];
     const rate = rows.find((r) => r.querySelector("dt")?.textContent === "%") as HTMLElement;
     expect(rate).toBeDefined();

@@ -7,7 +7,6 @@ import { PortfolioTotal } from "./PortfolioTotal";
 import { type RegisteredAsset, useRegisteredAssets } from "./registered-assets";
 import { ShieldedTable } from "./ShieldedTable";
 import { type AssetBalanceView, useBalances } from "./use-balances";
-import { useVenueApy } from "./use-venue-apy";
 import { useYieldGains } from "./use-yield-gains";
 
 export function AssetsCard() {
@@ -15,7 +14,6 @@ export function AssetsCard() {
   const assets = useRegisteredAssets();
   const prices = usePrices();
   const gains = useYieldGains();
-  const apys = useVenueApy();
 
   // A single index rather than a linear `assets.find` per row per render. It also
   // gives the rows stable prop identities, which is what makes memoising them
@@ -45,7 +43,6 @@ export function AssetsCard() {
           byId={byId}
           prices={prices}
           gains={gains}
-          apys={apys}
         />
       )}
 
