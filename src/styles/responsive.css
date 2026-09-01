@@ -105,6 +105,9 @@
   /* With the column gone there is no marker on screen for the legend to key,
      and no figure for it to place inside the balance. */
   .tbl__legend { display: none; }
+  /* And nothing left to group: one column needs no fence, and the half of it
+     that survives would read as a stray divider. */
+  .tbl--pf .tbl__grp-a { border-left: 0; }
   .bal__main, .bal__usd { font-size: 12px; }
 
   .claim-row { grid-template-columns: 38px 1fr auto; grid-template-areas: "g m a" "g s c" "x x c"; }

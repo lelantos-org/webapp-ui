@@ -52,20 +52,14 @@ export function ShieldedTable({
   //
   // A flag per marker rather than one "something is off" flag: the states print
   // different glyphs, and a legend naming `≥` while every affected row shows a
-  // dash explains a symbol the reader cannot find. `earned` is tracked too
-  // because the "part of the balance" half applies to every figure in the
-  // column, marked or not.
-  const marks = { earned: false, unknown: false, partial: false };
+  // dash explains a symbol the reader cannot find.
+  const marks = { unknown: false, partial: false };
   for (const r of rows) {
     const meta = byId.get(r.asset);
     if (!meta?.yieldEnabled) continue;
     const gain = gains.get(r.asset);
-    if (gain === undefined || gain.resolvedNotes === 0) {
-      marks.unknown = true;
-    } else {
-      marks.earned = true;
-      if (gain.unknownNotes > 0) marks.partial = true;
-    }
+    if (gain === undefined || gain.resolvedNotes === 0) marks.unknown = true;
+    else if (gain.unknownNotes > 0) marks.partial = true;
   }
 
   return (
@@ -75,20 +69,27 @@ export function ShieldedTable({
           <thead>
             <tr>
               <th>asset</th>
-              <th>balance</th>
+              <th className="tbl__grp-a">balance</th>
               {/* Dropped on phones along with the glyph mark: four columns of
                   figures do not fit that width, and the row's `earning` badge
                   still says the asset yields. */}
-              {/* "incl." rather than "earned" alone. The figure is a part of the
-                  balance to its left, not a second holding to add to it, and two
-                  adjacent numbers with no relation stated read as summable — a
-                  reading that sends users to the withdraw form asking for balance
-                  plus earnings and getting "exceeds available balance" for it. */}
+              {/* Two adjacent figures with nothing stated between them read as
+                  summable — a reading that sends users to the withdraw form
+                  asking for balance plus earnings and getting "exceeds available
+                  balance" for it. So the relation is put where it cannot be
+                  missed or scrolled away from: "of which" in the head names the
+                  figure as a part of the column beside it, the arrow points back
+                  at that column, and `.tbl__grp-*` fences the two together. Said
+                  once in the head rather than once per row, and unlike the
+                  `title` below it is on screen for touch too. */}
               <th
-                className="tbl__earned"
+                className="tbl__earned tbl__grp-b"
                 title="part of the balance beside it, not on top of it: the yield accrued on the notes you hold now — spending a note realises its gain and resets its basis"
               >
-                incl. earned
+                <span className="tbl__tie" aria-hidden>
+                  ↳
+                </span>
+                of which earned
               </th>
               <th>value</th>
             </tr>
@@ -113,31 +114,24 @@ export function ShieldedTable({
       {/* Outside `.tbl-wrap` on purpose: that box scrolls at its max height, and
           a note placed inside it is out of sight until the reader scrolls past
           the last row — past the very figures it explains. */}
-      {marks.earned || marks.unknown ? (
-        <div className="tbl__legend txt-xs muted">
-          {marks.earned ? (
-            <p>earned is part of the balance beside it, not an amount on top of it</p>
+      {marks.partial || marks.unknown ? (
+        <dl className="tbl__legend txt-xs muted">
+          {marks.partial ? (
+            <div className="tbl__legend-row">
+              <dt className="tbl__legend-key mono">≥</dt>
+              <dd>
+                at least this much: some of these notes have no resolvable historical basis, so the
+                figure understates
+              </dd>
+            </div>
           ) : null}
-          {marks.partial || marks.unknown ? (
-            <dl className="tbl__legend-keys">
-              {marks.partial ? (
-                <div className="tbl__legend-row">
-                  <dt className="tbl__legend-key mono">≥</dt>
-                  <dd>
-                    at least this much: some of these notes have no resolvable historical basis, so
-                    the figure understates
-                  </dd>
-                </div>
-              ) : null}
-              {marks.unknown ? (
-                <div className="tbl__legend-row">
-                  <dt className="tbl__legend-key mono">—</dt>
-                  <dd>unknown: no historical index reaches back to these notes</dd>
-                </div>
-              ) : null}
-            </dl>
+          {marks.unknown ? (
+            <div className="tbl__legend-row">
+              <dt className="tbl__legend-key mono">—</dt>
+              <dd>unknown: no historical index reaches back to these notes</dd>
+            </div>
           ) : null}
-        </div>
+        </dl>
       ) : null}
     </>
   );
@@ -213,7 +207,7 @@ const ShieldedRowView = memo(function ShieldedRowView({
           ) : null}
         </span>
       </td>
-      <td>
+      <td className="tbl__grp-a">
         <span className="bal">
           {/* On the figure's own line rather than stacked beneath it. A second
               line would change the row's height as each leg appeared and
@@ -235,7 +229,7 @@ const ShieldedRowView = memo(function ShieldedRowView({
           <span className="bal__main mono">{fmt(total)}</span>
         </span>
       </td>
-      <td className="tbl__earned">
+      <td className="tbl__earned tbl__grp-b">
         <EarnedCell gain={gain} meta={meta} />
       </td>
       {/* An unpriced asset gets a dash rather than a blank, so the column keeps

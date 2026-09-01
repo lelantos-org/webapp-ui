@@ -136,21 +136,43 @@ describe("ShieldedTable earned legend", () => {
     expect(legend()?.textContent).toContain("≥");
   });
 
-  it("states that earnings sit inside the balance whenever a figure shows", () => {
+  // The containment is the head's job, not the legend's: the head is on screen
+  // for every row and every reader, and a prose line repeating it under the
+  // table is one more thing to scroll to and miss.
+  it("leaves containment to the column head, which states it in words", () => {
     renderTable(
       [asset(3n, "WETH", { yieldEnabled: true })],
       new Map([[3n, gain({ gain: 10n ** 17n })]]),
     );
-    expect(legend()?.textContent).toContain("part of the balance");
+    expect(legend()).toBeNull();
+    const head = document.querySelector("th.tbl__earned") as HTMLElement;
+    expect(head.textContent).toContain("of which earned");
+    // The arrow is punctuation pointing at the balance column; a screen reader
+    // reading it out would say "downwards arrow with tip rightwards" mid-phrase.
+    expect(head.querySelector(".tbl__tie")?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  // A fence drawn round the pair, so the relation the head states is visible
+  // from any row without reading the head again.
+  it("fences the balance and earned cells together", () => {
+    renderTable(
+      [asset(3n, "WETH", { yieldEnabled: true })],
+      new Map([[3n, gain({ gain: 10n ** 17n })]]),
+    );
+    const row = screen.getByText("WETH").closest("tr") as HTMLElement;
+    expect(row.querySelector("td.tbl__grp-a .bal")).not.toBeNull();
+    expect(row.querySelector("td.tbl__grp-b.tbl__earned")).not.toBeNull();
   });
 
   // The table box scrolls at its max height; a legend inside it is unreachable
   // until the reader has scrolled past the rows it explains.
   it("sits outside the scrolling table box", () => {
     renderTable(
-      [asset(3n, "WETH", { yieldEnabled: true })],
-      new Map([[3n, gain({ gain: 10n ** 17n })]]),
+      [asset(4n, "WETH", { yieldEnabled: true })],
+      new Map([[4n, gain({ gain: 10n ** 17n, unknownNotes: 2 })]]),
     );
-    expect(legend()?.closest(".tbl-wrap")).toBeNull();
+    const el = legend();
+    expect(el).not.toBeNull();
+    expect(el?.closest(".tbl-wrap")).toBeNull();
   });
 });

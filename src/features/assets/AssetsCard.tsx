@@ -82,10 +82,15 @@ function PortfolioSkeleton() {
         <thead>
           <tr>
             <th>asset</th>
-            <th>balance</th>
+            <th className="tbl__grp-a">balance</th>
             {/* Matches `ShieldedTable`'s header exactly; a skeleton that names
                     the column differently misdescribes what it stands in for. */}
-            <th className="tbl__earned">incl. earned</th>
+            <th className="tbl__earned tbl__grp-b">
+              <span className="tbl__tie" aria-hidden>
+                ↳
+              </span>
+              of which earned
+            </th>
             <th>value</th>
           </tr>
         </thead>
@@ -98,10 +103,10 @@ function PortfolioSkeleton() {
                   <span className="skel-bar" style={{ width: "5ch" }} />
                 </span>
               </td>
-              <td>
+              <td className="tbl__grp-a">
                 <span className="skel-bar" style={{ width: "10ch" }} />
               </td>
-              <td className="tbl__earned">
+              <td className="tbl__earned tbl__grp-b">
                 <span className="skel-bar" style={{ width: "7ch" }} />
               </td>
               <td>

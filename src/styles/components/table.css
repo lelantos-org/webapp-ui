@@ -54,15 +54,6 @@
   display: grid;
   gap: 3px;
 }
-.tbl__legend p,
-.tbl__legend-keys,
-.tbl__legend-row dd {
-  margin: 0;
-}
-.tbl__legend-keys {
-  display: grid;
-  gap: 3px;
-}
 /* The glyph takes a column of its own, so it reads as a key rather than as the
    first word of the sentence, and a wrapped explanation stays clear of it. */
 .tbl__legend-row {
@@ -70,6 +61,27 @@
   grid-template-columns: 1.1rem 1fr;
   align-items: baseline;
 }
+.tbl__legend-row dd {
+  margin: 0;
+}
 .tbl__legend-key {
   color: var(--fg-dim);
+}
+
+/* BALANCE GROUP — the `balance` column and the part of it that is earned.
+   Fenced as a pair rather than left as two neighbours: two adjacent figures
+   with no relation drawn between them read as two holdings to add together.
+   The head says "of which"; the fence is what makes that visible at a glance,
+   from any row, without reading the head again. */
+.tbl--pf .tbl__grp-a {
+  border-left: 1px solid var(--line);
+}
+.tbl--pf .tbl__grp-b {
+  border-right: 1px solid var(--line);
+}
+/* The arrow points back at the column this figure is taken out of. Muted: it
+   is punctuation for the header, not a word in it. */
+.tbl__tie {
+  color: var(--fg-mute);
+  margin-right: 4px;
 }
