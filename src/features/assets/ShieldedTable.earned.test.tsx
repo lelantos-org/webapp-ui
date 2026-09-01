@@ -183,10 +183,19 @@ describe("ShieldedTable earned legend", () => {
 describe("ShieldedTable venue rate", () => {
   const badge = () => document.querySelector(".tok__yield") as HTMLElement;
 
-  it("shows the rate beside `earning`", () => {
+  /// The legend row whose key reads `key`, or `undefined` if there is none.
+  const keyed = (key: string) =>
+    [...document.querySelectorAll(".tbl__legend-row")].find(
+      (r) => r.querySelector("dt")?.textContent === key,
+    );
+
+  it("replaces the word with the labelled rate", () => {
     const a = asset(6n, "WETH", { yieldEnabled: true, apy: { rate: 0.0418, windowDays: 7 } });
     renderTable([a], new Map());
-    expect(badge().textContent).toBe("earning4.18%");
+    // Labelled, not bare: `apy` is what says the figure is the venue's rate
+    // rather than this wallet's return, and it is the only thing on the badge
+    // that says so.
+    expect(badge().textContent).toBe("4.18%apy");
   });
 
   it("says only `earning` when no rate could be measured", () => {
@@ -208,15 +217,37 @@ describe("ShieldedTable venue rate", () => {
     expect(badge().textContent).toBe("paused");
   });
 
-  it("keys the badge percentage as the venue's, not the wallet's", () => {
+  it("keys the rate on the badge's own label, not on `%`", () => {
     const a = asset(9n, "WETH", { yieldEnabled: true, apy: { rate: 0.0418, windowDays: 7 } });
     renderTable([a], new Map());
     const legend = document.querySelector(".tbl__legend") as HTMLElement;
-    expect(legend.textContent).toContain("what the venue itself returned");
-    expect(legend.textContent).toContain("not your own return");
+    // `%` would key both percentages on the card, including the one this row
+    // exists to distinguish itself from.
+    expect(keyed("%")).toBeUndefined();
+    expect(keyed("apy")).toBeDefined();
+    expect(legend.textContent).toContain("the venue's own rate");
     // The window is the measured one, read off the asset — not a constant the
     // client picked, which would misstate a shorter measurement as a week.
-    expect(legend.textContent).toContain("over the last 7 days, annualized");
+    expect(legend.textContent).toContain("annualized from the last 7 days");
+  });
+
+  // The distinction is shown as a pair of keys rather than asserted in a
+  // sentence: one above the other, a reader compares them instead of holding
+  // "A, not B" in their head.
+  it("pairs the rate key with the earned key when both are on screen", () => {
+    const a = asset(10n, "WETH", { yieldEnabled: true, apy: { rate: 0.0418, windowDays: 7 } });
+    renderTable([a], new Map([[10n, gain({ gain: 10n ** 17n })]]));
+    expect(keyed("apy")?.textContent).toContain("the venue's own rate");
+    expect(keyed("earned")?.textContent).toContain("yours");
+  });
+
+  // With every row's basis unresolved the column shows dashes, so there is no
+  // earned figure for the key to contrast the rate with.
+  it("drops the earned key when the column has no figure to contrast", () => {
+    const a = asset(11n, "WETH", { yieldEnabled: true, apy: { rate: 0.0418, windowDays: 7 } });
+    renderTable([a], new Map([[11n, gain({ resolvedNotes: 0, unknownNotes: 2 })]]));
+    expect(keyed("apy")).toBeDefined();
+    expect(keyed("earned")).toBeUndefined();
   });
 
   // The `earned` column goes at 480px and its keys go with it; this one does
@@ -224,13 +255,10 @@ describe("ShieldedTable venue rate", () => {
   it("keeps the rate key off the column-scoped class", () => {
     const a = asset(9n, "WETH", { yieldEnabled: true, apy: { rate: 0.0418, windowDays: 7 } });
     renderTable([a], new Map());
-    const rows = [...document.querySelectorAll(".tbl__legend-row")];
-    const rate = rows.find((r) => r.querySelector("dt")?.textContent === "%") as HTMLElement;
-    expect(rate).toBeDefined();
-    expect(rate.classList.contains("tbl__legend-row--earned")).toBe(false);
-    // And the keys that do belong to the column carry it, or the rule that
-    // drops them on a phone would drop nothing.
-    const dash = rows.find((r) => r.querySelector("dt")?.textContent === "—") as HTMLElement;
-    expect(dash.classList.contains("tbl__legend-row--earned")).toBe(true);
+    // The rate's badge is in the asset cell, which phones keep.
+    expect(keyed("apy")?.classList.contains("tbl__legend-row--earned")).toBe(false);
+    // The keys that do belong to the column carry it, or the rule that drops
+    // them on a phone would drop nothing.
+    expect(keyed("—")?.classList.contains("tbl__legend-row--earned")).toBe(true);
   });
 });

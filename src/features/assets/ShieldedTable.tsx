@@ -55,7 +55,7 @@ export function ShieldedTable({
   // A flag per marker rather than one "something is off" flag: the states print
   // different glyphs, and a legend naming `≥` while every affected row shows a
   // dash explains a symbol the reader cannot find.
-  const marks = { unknown: false, partial: false, window: 0 };
+  const marks = { unknown: false, partial: false, earned: false, window: 0 };
   for (const r of rows) {
     const meta = byId.get(r.asset);
     if (!meta?.yieldEnabled) continue;
@@ -66,8 +66,15 @@ export function ShieldedTable({
     const rate = shownRate(meta);
     if (rate) marks.window = Math.max(marks.window, rate.windowDays);
     const gain = gains.get(r.asset);
-    if (gain === undefined || gain.resolvedNotes === 0) marks.unknown = true;
-    else if (gain.unknownNotes > 0) marks.partial = true;
+    if (gain === undefined || gain.resolvedNotes === 0) {
+      marks.unknown = true;
+    } else {
+      // A figure in the column, as opposed to a dash. The `earned` legend key
+      // exists to contrast with the badge's rate, so it needs one of each on
+      // screen to be contrasting anything.
+      marks.earned = true;
+      if (gain.unknownNotes > 0) marks.partial = true;
+    }
   }
 
   return (
@@ -142,19 +149,29 @@ export function ShieldedTable({
               <dd>unknown: no historical index reaches back to these notes</dd>
             </div>
           ) : null}
-          {/* Two percentages are now on the card, and which is whose is the one
-              thing a reader cannot work out from the figures themselves. The
-              badge describes the asset and is the same for everyone holding it;
-              the `earned` column is this wallet's. Said here because no amount
-              of styling distinguishes a venue's rate from a personal return. */}
+          {/* Two percentages sit on the card and which is whose is the one thing
+              the figures cannot say themselves. Keyed as a pair rather than
+              asserted in a sentence: "A, not B" is a claim the reader has to
+              hold in their head, while A and B one above the other is a
+              comparison they can read. Both keys are the words on screen — the
+              badge's own label and the column's own heading — so neither points
+              at a `%` that appears twice.
+
+              The earned key drops with its column on a phone; the rate key does
+              not, and still reads on its own. */}
           {marks.window > 0 ? (
             <div className="tbl__legend-row">
-              <dt className="tbl__legend-key mono">%</dt>
+              <dt className="tbl__legend-key mono">apy</dt>
               <dd>
-                on the badge: what the venue itself returned over the last{" "}
-                {formatWindow(marks.window)}, annualized — not a promise, and not your own return,
-                which is the earned column
+                the venue's own rate, annualized from the last {formatWindow(marks.window)} — an
+                estimate of what it pays, not a promise
               </dd>
+            </div>
+          ) : null}
+          {marks.window > 0 && marks.earned ? (
+            <div className="tbl__legend-row tbl__legend-row--earned">
+              <dt className="tbl__legend-key mono">earned</dt>
+              <dd>yours: what the notes you hold now have actually accrued</dd>
             </div>
           ) : null}
         </dl>
@@ -242,14 +259,29 @@ const ShieldedRowView = memo(function ShieldedRowView({
                     : "earning yield — balance grows without a transaction"
               }
             >
-              {meta.yieldHalted ? "paused" : "earning"}
-              {/* The rate rides on the badge rather than in a column of its own:
+              {/* The rate replaces the word rather than following it: a rate
+                  already says the asset earns, and "4.18% APY" is both shorter
+                  than "EARNING 4.18%" and the only spelling that says whose
+                  return it is. `apy` is a venue's forward rate by definition —
+                  nobody calls a realised personal return an APY — so the label
+                  carries what a sentence under the table used to.
+
+                  The rate rides on the badge rather than in a column of its own:
                   it describes the asset, not the holding, and the table is
                   already at four columns and drops one on a phone — where this
                   is arguably the figure most worth keeping. Absent, not zero,
                   when nothing could be measured; see `toApyFields` in
                   `config/chains/parse.ts`. */}
-              {rate ? <span className="tok__apy mono">{formatPercent(rate.rate)}</span> : null}
+              {meta.yieldHalted ? (
+                "paused"
+              ) : rate ? (
+                <>
+                  <span className="mono">{formatPercent(rate.rate)}</span>
+                  <span className="tok__apy">apy</span>
+                </>
+              ) : (
+                "earning"
+              )}
             </span>
           ) : null}
         </span>

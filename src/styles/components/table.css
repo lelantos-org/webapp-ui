@@ -47,19 +47,22 @@
    A sibling of `.tbl-wrap` rather than a child: that box scrolls at its max
    height, so a note inside it only appears once the reader has scrolled past
    the rows it is about. */
+/* One grid for the whole list, with the rows as `display: contents`, so every
+   key shares a single auto-sized column and the explanations line up under each
+   other. Per-row grids would size their key independently, and a list mixing
+   glyph keys with word ones — `≥` beside `earned` — would step in and out. */
 .tbl__legend {
   margin: var(--sp-8) 0 0;
   padding: 0 var(--sp-2);
   line-height: 1.5;
   display: grid;
-  gap: 3px;
-}
-/* The glyph takes a column of its own, so it reads as a key rather than as the
-   first word of the sentence, and a wrapped explanation stays clear of it. */
-.tbl__legend-row {
-  display: grid;
-  grid-template-columns: 1.1rem 1fr;
+  grid-template-columns: auto 1fr;
+  column-gap: var(--sp-8);
+  row-gap: 3px;
   align-items: baseline;
+}
+.tbl__legend-row {
+  display: contents;
 }
 .tbl__legend-row dd {
   margin: 0;

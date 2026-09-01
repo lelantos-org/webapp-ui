@@ -98,16 +98,18 @@
   white-space: nowrap;
 }
 
-/* The venue's rate, inside the badge that says the asset earns. Tabular and a
-   shade dimmer than the word: the word is the claim, the rate is its size, and
-   two figures of equal weight in one 10px pill read as a single garbled token. */
+/* The unit on the badge's rate. The figure is the claim and this names it, so
+   it is dimmer and stays out of the number's way — but it is the word that says
+   whose return the figure is, so it never goes away. */
 .tok__apy {
-  margin-left: 4px;
-  opacity: 0.85;
-  font-variant-numeric: tabular-nums;
-  /* The badge is uppercased; a percentage has no case to change and the
-     letter-spacing that suits words pulls digits apart. */
+  margin-left: 3px;
+  opacity: 0.7;
+}
+/* The badge is uppercased; a percentage has no case to change, and the
+   letter-spacing that suits words pulls digits apart. */
+.tok__yield .mono {
   letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Paused is not plain: the balance is still fully backed, it has just stopped
