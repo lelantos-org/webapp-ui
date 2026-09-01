@@ -20,6 +20,7 @@ import type { FeeOption, FeeQuoteResult } from "@lelantos-org/sdk/wallet";
 import { keepPreviousData, type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useActiveChain } from "@/features/chain";
 import { useWallet } from "@/features/wallet";
+import type { ConvertAsset } from "./forms/fee-summary";
 
 export type { FeeOption, FeeQuoteResult };
 
@@ -87,15 +88,27 @@ export function useDepositFee(asset: bigint | undefined): bigint | undefined {
 ///
 /// Returns `undefined` when the registry does not know the asset, which is the
 /// same condition under which it cannot be selected to pay in.
+/// The registry fields this join reads. A `RegisteredAsset` satisfies it; stated
+/// structurally so the tests need not build a full registry row.
+type RegistryEntry = ConvertAsset & { id: bigint };
+
 export function resolveFeeOption(
   option: FeeOption | undefined,
-  registry: readonly { id: bigint; symbol: string; decimals: number; scale: bigint }[],
-): { amount: bigint; asset: { symbol: string; decimals: number; scale: bigint } } | undefined {
+  registry: readonly RegistryEntry[],
+): { amount: bigint; asset: ConvertAsset } | undefined {
   if (!option) return undefined;
   const entry = registry.find((a) => a.id === option.asset.id);
   if (!entry) return undefined;
   return {
     amount: option.amount,
-    asset: { symbol: entry.symbol, decimals: entry.decimals, scale: entry.scale },
+    // `index` travels with `scale`: the quote is in circuit units, and a
+    // relayer paid in a yield asset charges units worth `scale * index / RAY`
+    // each. Dropping it would print a fee smaller than the one taken.
+    asset: {
+      symbol: entry.symbol,
+      decimals: entry.decimals,
+      scale: entry.scale,
+      index: entry.index,
+    },
   };
 }

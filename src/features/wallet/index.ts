@@ -24,7 +24,6 @@ export {
   approvePermit2,
   defaultAllowanceCap,
   defaultAllowanceExpirationSecs,
-  ensurePermit2AuthorizedSetup,
   ensurePermit2AuthorizedSetupBatch,
   needsPermit2Approval,
   readPermit2AllowanceState,

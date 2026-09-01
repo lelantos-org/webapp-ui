@@ -11,7 +11,7 @@ import { useRegisteredAssets } from "./registered-assets";
 const log = createLogger("balances:transparent");
 
 /// Prefix shared by every per-asset entry; invalidating it covers them all.
-export const transparentBalancesKey = (chainId: bigint | undefined, account: string | undefined) =>
+const transparentBalancesKey = (chainId: bigint | undefined, account: string | undefined) =>
   ["transparent-balances", chainId?.toString() ?? null, account ?? null] as const;
 
 const sourceBalanceKey = (

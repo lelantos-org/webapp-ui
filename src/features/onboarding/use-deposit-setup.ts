@@ -2,6 +2,7 @@
 // required, whether that blocks submit, and the modal's open state.
 
 import { useCallback, useEffect, useState } from "react";
+import type { RegisteredAsset } from "@/features/assets";
 import { createLogger } from "@/shared/lib/logger";
 import { evaluateSetup, NO_SETUP_NEEDS, type SetupNeeds, useSetupStatus } from "./use-setup-status";
 
@@ -37,7 +38,7 @@ export interface DepositSetupInputs {
 }
 
 export function useDepositSetup(
-  asset: bigint | undefined,
+  asset: RegisteredAsset | undefined,
   { asEth, total }: DepositSetupInputs,
 ): DepositSetup {
   const status = useSetupStatus(asset, { asEth });

@@ -109,7 +109,13 @@ export function useDepositAmount(
     // would exceed what the user can send.
     maxAmount: asEth
       ? undefined
-      : depositMaxAmount(sourceBalance, selected?.scale ?? 1n, feeBps, relayerFee ?? 0n),
+      : depositMaxAmount(
+          sourceBalance,
+          selected?.scale ?? 1n,
+          feeBps,
+          relayerFee ?? 0n,
+          selected?.index,
+        ),
     feeFailed: fee.isError,
     retryFee: () => void fee.refetch(),
   };

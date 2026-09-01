@@ -100,7 +100,7 @@ function PhaseCard({
           busy={phase.kind === "sweeping"}
           busyAsset={phase.kind === "sweeping" ? phase.asset : undefined}
           // Switching mid-flow is the only way to arrive here blocked, and the
-          // gate card explains it, so the buttons are simply disabled.
+          // gate card explains it, so the buttons are just disabled.
           claimDisabled={mismatch !== undefined}
           onClaim={onClaim}
         />

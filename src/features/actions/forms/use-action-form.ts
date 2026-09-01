@@ -90,7 +90,12 @@ export function useActionForm<T extends ActionFormValues, I, R>({
       // No asset means the registry has not resolved the picker's value, so
       // there is nothing to send.
       if (!selected) return;
-      const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
+      const amount = parseAmountForAsset(
+        values.amount,
+        selected.decimals,
+        selected.scale,
+        selected.index,
+      );
       await send(values, { asset: selected, amount });
       clearAmount();
     }),

@@ -1,3 +1,4 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import { describe, expect, it } from "vitest";
 import { feeBreakdown } from "@/shared/lib/fees";
 import { PUBLIC_IN_MAX } from "@/shared/lib/format";
@@ -11,7 +12,7 @@ import {
   validateDepositAmount,
 } from "./amount-field";
 
-const WETH: AssetMeta = { decimals: 18, scale: 10n ** 12n, symbol: "WETH" };
+const WETH: AssetMeta = { decimals: 18, scale: 10n ** 12n, index: RAY, symbol: "WETH" };
 
 describe("parseAmountSafe", () => {
   it("parses into circuit units", () => {
@@ -164,8 +165,8 @@ describe("validateDepositAmount", () => {
 
 describe("depositMaxAmount", () => {
   /// What the deposit actually costs the wallet, in base units.
-  const cost = (amount: bigint, scale: bigint, feeBps: bigint) =>
-    feeBreakdown({ amount, scale, feeBps, mode: "deposit" }).total;
+  const cost = (amount: bigint, scale: bigint, feeBps: bigint, index: bigint) =>
+    feeBreakdown({ amount, scale, index, feeBps, mode: "deposit" }).total;
 
   it("leaves room for the fee charged on top", () => {
     // 30bps on a 1000-unit balance: depositing all 1000 would need 1003. 998
@@ -174,7 +175,7 @@ describe("depositMaxAmount", () => {
     const max = depositMaxAmount(1_000n, 1n, 30n);
 
     expect(max).toBe(998n);
-    expect(cost(998n, 1n, 30n)).toBe(1_000n);
+    expect(cost(998n, 1n, 30n, RAY)).toBe(1_000n);
   });
 
   it("does not short-change the user where the fee truncates in their favour", () => {
@@ -197,11 +198,11 @@ describe("depositMaxAmount", () => {
       for (const bps of [0n, 1n, 30n, 250n, 9_999n]) {
         const max = depositMaxAmount(balance, 1n, bps);
         if (max === undefined) continue;
-        expect(cost(max, 1n, bps)).toBeLessThanOrEqual(balance);
+        expect(cost(max, 1n, bps, RAY)).toBeLessThanOrEqual(balance);
         // And it is the *largest* such amount, not merely a safe one — unless
         // the publicIn cap is what bounded it rather than the balance.
         if (max < PUBLIC_IN_MAX) {
-          expect(cost(max + 1n, 1n, bps)).toBeGreaterThan(balance);
+          expect(cost(max + 1n, 1n, bps, RAY)).toBeGreaterThan(balance);
         }
       }
     }
@@ -213,7 +214,7 @@ describe("depositMaxAmount", () => {
     const max = depositMaxAmount(balance, 1n, 30n);
     if (max === undefined) throw new Error("expected a max");
 
-    expect(cost(max + 1n, 1n, 30n)).toBeGreaterThan(balance);
+    expect(cost(max + 1n, 1n, 30n, RAY)).toBeGreaterThan(balance);
   });
 
   it("is the whole balance when the chain charges no fee", () => {
@@ -226,7 +227,7 @@ describe("depositMaxAmount", () => {
     const max = depositMaxAmount(1_000n, 100n, 0n);
 
     expect(max).toBe(10n);
-    expect(cost(10n, 100n, 0n)).toBe(1_000n);
+    expect(cost(10n, 100n, 0n, RAY)).toBe(1_000n);
   });
 
   it("offers nothing without a balance or a fee to size it against", () => {

@@ -2,17 +2,17 @@
 // against the selected asset, then validate against the asset cap and (for
 // spends) the balance.
 
+import { RAY } from "@lelantos-org/sdk/core";
 import { BPS_DENOMINATOR, feeBreakdown } from "@/shared/lib/fees";
 import {
+  type AssetUnits,
   exceedsPublicInLimit,
   formatAmountForAsset,
   PUBLIC_IN_MAX,
   parseAmountForAsset,
 } from "@/shared/lib/format";
 
-export interface AssetMeta {
-  decimals: number;
-  scale: bigint;
+export interface AssetMeta extends AssetUnits {
   symbol?: string;
   /// Backing ERC-20 address, used to look up a USD price. Optional: the
   /// placeholder metas the forms fall back to describe no real token, and a meta
@@ -28,7 +28,7 @@ export function parseAmountSafe(
 ): bigint | undefined {
   if (!selected || !input) return undefined;
   try {
-    return parseAmountForAsset(input, selected.decimals, selected.scale);
+    return parseAmountForAsset(input, selected.decimals, selected.scale, selected.index);
   } catch {
     return undefined;
   }
@@ -135,16 +135,21 @@ export function depositMaxAmount(
   /// it comes off the top of the balance before the proportional fee is solved
   /// for, rather than joining the ratio below.
   relayerReserve = 0n,
+  /// Yield index, RAY-scaled. A unit of a yield asset costs more than `scale`,
+  /// so ignoring this would offer a maximum the payer cannot afford.
+  index = RAY,
 ): bigint | undefined {
   if (balanceBase === undefined || feeBps === undefined) return undefined;
-  if (balanceBase <= 0n || scale <= 0n) return undefined;
+  if (balanceBase <= 0n || scale <= 0n || index <= 0n) return undefined;
 
   const fits = (amount: bigint) =>
-    feeBreakdown({ amount, scale, feeBps, mode: "deposit" }).total + relayerReserve <= balanceBase;
+    feeBreakdown({ amount, scale, feeBps, mode: "deposit", index }).total + relayerReserve <=
+    balanceBase;
 
   const spendable = balanceBase - relayerReserve;
   if (spendable <= 0n) return undefined;
-  let amount = (spendable * BPS_DENOMINATOR) / (BPS_DENOMINATOR + feeBps) / scale;
+  // A seed the loops below refine, so it only has to be close.
+  let amount = (spendable * BPS_DENOMINATOR * RAY) / (BPS_DENOMINATOR + feeBps) / (scale * index);
   while (amount > 0n && !fits(amount)) amount -= 1n;
   while (fits(amount + 1n)) amount += 1n;
 
@@ -154,9 +159,12 @@ export function depositMaxAmount(
 
 /// Render an asset balance for the "max" button click handler.
 export function formatBalance(balance: bigint, selected: AssetMeta): string {
-  return formatAmountForAsset(balance, selected.decimals, selected.scale);
+  return formatAmountForAsset(balance, selected.decimals, selected.scale, selected.index);
 }
 
 /// Default meta for `balanceHint` before the registry has loaded. Renders a raw
 /// integer, since no decimals are known.
-export const NO_META: AssetMeta = { decimals: 0, scale: 1n };
+// `index: RAY` rather than an absent one: the placeholder describes no asset,
+// and RAY is the identity every conversion would have applied anyway — stated
+// here once instead of defaulted at each call.
+export const NO_META: AssetMeta = { decimals: 0, scale: 1n, index: RAY };

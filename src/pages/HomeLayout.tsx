@@ -5,6 +5,8 @@ import { AssetsCard } from "@/features/assets";
 import { useActiveChainOrUndefined } from "@/features/chain";
 import { SetupAllNotice } from "@/features/onboarding";
 import { AccountCard, preloadProverWorker, useWallet, Welcome } from "@/features/wallet";
+import { Notice } from "@/shared/ui/Notice";
+import { useChainChangeNotice } from "./use-chain-change-notice";
 
 const PREFETCH: Record<string, () => Promise<unknown>> = {
   "/": () => import("@/features/actions/forms/DepositForm"),
@@ -15,11 +17,11 @@ const PREFETCH: Record<string, () => Promise<unknown>> = {
 };
 
 const TABS = [
-  { to: "/", label: "deposit", end: true, hidden: false },
-  { to: "/transfer", label: "transfer", end: false, hidden: false },
-  { to: "/withdraw", label: "withdraw", end: false, hidden: false },
-  { to: "/swap", label: "swap", end: false, hidden: false },
-  { to: "/send-link", label: "claim link", end: false, hidden: false },
+  { to: "/", label: "deposit", end: true },
+  { to: "/transfer", label: "transfer", end: false },
+  { to: "/withdraw", label: "withdraw", end: false },
+  { to: "/swap", label: "swap", end: false },
+  { to: "/send-link", label: "claim link", end: false },
 ] as const;
 
 const TRANSITION_MS = 360;
@@ -43,8 +45,16 @@ function FormFallback() {
 
 export function HomeLayout() {
   const { wallet, status, ethAddress } = useWallet();
-  const chainId = useActiveChainOrUndefined()?.chainId;
+  const chain = useActiveChainOrUndefined();
+  const chainId = chain?.chainId;
   const ready = status === "ready" && !!wallet;
+
+  // Names the network just left, for a few seconds after a switch. The form
+  // below is recreated on that switch — see the `<Fragment key>` comment — so
+  // without this the user's typed input disappears with nothing said about it.
+  const leftChain = useChainChangeNotice(
+    chain ? { key: chainKey(chain.chainId), name: chain.chainName } : undefined,
+  );
 
   // Keep `<Welcome />` mounted briefly after `ready` flips, so the CSS opacity
   // transition can complete. The connected layout renders underneath in the same
@@ -77,6 +87,15 @@ export function HomeLayout() {
     <div className="home-wrap">
       {ready && wallet ? (
         <div className="home stack home--enter">
+          {/* Hidden rather than shown: the design has no page title, and
+              `AccountCard` is the visual anchor. But without an h1 the
+              connected route's headings start at h2 with nothing above them —
+              `Welcome`'s h1 unmounts on connect — so a screen reader gets a
+              document with no name for the page it is on.
+              Withheld until the cross-fade ends, because `Welcome` is still
+              mounted with an h1 of its own until then and the document would
+              briefly claim two. */}
+          {welcomeMounted ? null : <h1 className="sr-only">Lelantos shielded wallet</h1>}
           <AccountCard shielded={wallet.address} eth={ethAddress} />
           {/* Above the portfolio: this gates every ERC-20 deposit, so it is
               the first thing worth acting on. Rendered here rather than inside
@@ -86,7 +105,7 @@ export function HomeLayout() {
           <AssetsCard />
           <div className="action-shell">
             <nav className="action-shell__tabs seg">
-              {TABS.filter((t) => !t.hidden).map((t) => (
+              {TABS.map((t) => (
                 <NavLink
                   key={t.to}
                   to={t.to}
@@ -100,6 +119,12 @@ export function HomeLayout() {
               ))}
             </nav>
             <div className="action-shell__body">
+              {leftChain ? (
+                <Notice title="Network changed">
+                  the form was reset — amounts and assets belong to the network they were entered
+                  on. you were on {leftChain}.
+                </Notice>
+              ) : null}
               <Suspense fallback={<FormFallback />}>
                 {/* Keyed on the chain so a network switch recreates the form's
                     react-hook-form state instead of carrying it across.

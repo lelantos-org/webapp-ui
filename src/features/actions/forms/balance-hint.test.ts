@@ -1,10 +1,11 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import type { SpendableMax } from "@lelantos-org/sdk/wallet";
 import { describe, expect, it } from "vitest";
 import { balanceHint, withheldHint } from "./balance-hint";
 
 // 0 decimals and unit scale, so the figures in the assertions are the figures
 // passed in — this is about which number is chosen, not about formatting.
-const META = { symbol: "WETH", decimals: 0, scale: 1n };
+const META = { symbol: "WETH", decimals: 0, scale: 1n, index: RAY };
 
 describe("balanceHint", () => {
   it("states the balance alone when nothing is in flight", () => {

@@ -72,13 +72,13 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
           return <ChunkReload error={error} />;
         }
         return (
-          <div className="card m-5">
+          <div className="card m-20">
             <div className="card__hdr">
-              <h3 className="card__t">this page failed to load</h3>
+              <h2 className="card__t">This page failed to load</h2>
             </div>
             <div className="stack stack--md">
               <div className="err">{describeError(error)}</div>
-              <div className="row gap-2">
+              <div className="row">
                 <button type="button" className="btn" onClick={reset}>
                   try again
                 </button>

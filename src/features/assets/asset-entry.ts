@@ -20,6 +20,13 @@ export interface AssetFeeInputs {
   feeBps: bigint;
   /// ERC-20 backing this asset id.
   token: EvmAddress;
+  /// Yield index, RAY-scaled; `RAY` for an asset held as plain custody.
+  ///
+  /// Carried with the rate because a fee is charged on a converted amount, and
+  /// a yield asset's unit is worth `scale * index / RAY` rather than `scale`.
+  /// Omitting it here understates what a deposit costs — and this figure sizes
+  /// the Permit2 window, so an understatement is a deposit the pool cannot pull.
+  index: bigint;
 }
 
 /// Read everything a fee estimate for `(asset, mode)` needs, in one round trip.
@@ -50,5 +57,6 @@ export async function fetchAssetFeeInputs(
     scale: info.scale,
     feeBps: mode === "deposit" ? info.depositBps : info.withdrawBps,
     token: info.token,
+    index: info.index,
   };
 }

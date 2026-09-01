@@ -33,7 +33,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         {/* Router above `ChainProvider`, so `RouteErrorBoundary` — which resets
             on the location — has one available. `ChainProvider` itself reads no
             route state; the chain comes from the wallet. */}
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ChainProvider>
             <WalletBoot>
               <WalletProvider>{children}</WalletProvider>

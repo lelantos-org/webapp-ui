@@ -174,3 +174,39 @@
 }
 .slip__opt--on .slip__sub { color: var(--accent); }
 .slip__hint { line-height: 1.4; }
+
+/* Reverses the pair. Lives on the "to" field's label row, beside the label,
+   rather than floating in the gap between the two pickers: that gap sits
+   between two *field groups*, and the lower group opens with a label, so
+   anything centred in it reads as nearer the box above than the box below.
+   On the label row there is nothing to centre against and nothing to overlap. */
+.swap-flip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--fs-10);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+  cursor: pointer;
+  transition: color 120ms var(--ease-soft);
+}
+.swap-flip:hover:not(:disabled) { color: var(--accent); }
+.swap-flip:focus-visible {
+  outline: var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+.swap-flip:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Block, so the icon is not an inline box on a text baseline with descender
+   space reserved under it, which would push it off the label's centre line. */
+.swap-flip svg { display: block; }
+@media (pointer: coarse) {
+  /* Grown into the field's own spacing rather than by making the label row
+     taller, which would reintroduce a gap to argue about. */
+  .swap-flip { min-height: 44px; padding: 0 var(--sp-4); margin: calc(var(--sp-8) * -1) 0; }
+}

@@ -9,10 +9,9 @@ export function ClaimHero({ subtitle }: { subtitle?: string }) {
   return (
     <div className="hero claim-hero">
       <div>
-        <div className="hero__eyebrow"></div>
-        <h1 className="hero__t">claim shielded funds</h1>
+        <h1 className="hero__t">Claim shielded funds</h1>
         <p className="hero__sub muted">
-          {subtitle ?? "funds will be swept to your connected shielded address."}
+          {subtitle ?? "these funds will be claimed to the wallet you connect."}
         </p>
       </div>
       <div className="claim-hero__glyph" aria-hidden>
@@ -30,8 +29,8 @@ export function ReadingFragmentCard() {
       <div className="claim-state__row">
         <span className="spinner" aria-hidden />
         <div>
-          <div className="claim-state__t">decoding bearer secret</div>
-          <div className="muted txt-sm">parsing 32-byte fragment from URL hash…</div>
+          <div className="claim-state__t">Reading your link</div>
+          <div className="muted txt-sm">just a moment.</div>
         </div>
       </div>
     </div>
@@ -44,10 +43,8 @@ export function ScanningCard() {
       <div className="claim-state__row">
         <span className="spinner" aria-hidden />
         <div className="claim-state__grow">
-          <div className="claim-state__t">scanning chain for note</div>
-          <div className="muted txt-sm">
-            walking commitment tree · trial-decrypting up to 500 notes…
-          </div>
+          <div className="claim-state__t">Finding your funds</div>
+          <div className="muted txt-sm">this usually takes a few seconds.</div>
         </div>
         <span className="dot dot--idle" aria-hidden />
       </div>
@@ -75,10 +72,12 @@ export function BadLinkCard({ error, reason }: { error: string; reason: BadLinkR
         {missing ? "↺" : "×"}
       </div>
       <div className="stack stack--sm">
-        <div className="gate__t">{missing ? "no claim secret in this URL" : "bad link"}</div>
+        <div className="gate__t">
+          {missing ? "No claim code in this link" : "This link isn't valid"}
+        </div>
         {missing ? (
           <div className="muted txt-sm">
-            the secret is stripped from the address bar the moment this page opens, so it never
+            the claim code is stripped from the address bar the moment this page opens, so it never
             reaches your history — which is also why a reload cannot bring it back. open the
             original link again.
           </div>
@@ -86,7 +85,7 @@ export function BadLinkCard({ error, reason }: { error: string; reason: BadLinkR
           <>
             <div className="muted txt-sm">{error}</div>
             <div className="muted txt-xs">
-              ask the sender to regenerate. each claim link is single-use and bearer-only.
+              ask the sender for a new link. each one works once, for whoever opens it.
             </div>
           </>
         )}
@@ -110,7 +109,7 @@ export function ErrorCard({ message, onRetry }: { message: string; onRetry?: () 
         !
       </div>
       <div className="stack stack--sm">
-        <div className="gate__t">claim failed</div>
+        <div className="gate__t">Claim failed</div>
         <div className="err">{message}</div>
         <div className="row">
           {onRetry ? (
@@ -138,14 +137,15 @@ export interface DoneCardProps {
 export function DoneCard({ txHash, asset, amount, assets, destinationAddress }: DoneCardProps) {
   const a = findAsset(assets, asset);
   const symbol = a?.symbol ?? `asset#${asset.toString()}`;
-  const formatted = a ? formatAmountForAsset(amount, a.decimals, a.scale) : amount.toString();
+  const formatted = a
+    ? formatAmountForAsset(amount, a.decimals, a.scale, a.index)
+    : amount.toString();
   const explorer = useTxExplorerUrl()(txHash);
   return (
     <div className="card claim-done">
       <div className="claim-done__check" aria-hidden>
         ✓
       </div>
-      <div className="claim-done__eyebrow"></div>
       <div className="claim-done__amt">
         <span className="claim-done__num mono">{formatted}</span>
         <span className="claim-done__sym">{symbol}</span>

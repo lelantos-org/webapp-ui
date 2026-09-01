@@ -1,3 +1,4 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -11,6 +12,7 @@ const option = (id: bigint, symbol: string, amount: bigint, balance: bigint): Fe
   symbol,
   decimals: 6,
   scale: 100n,
+  index: RAY,
   amount,
   balance,
   affordable: balance >= amount,

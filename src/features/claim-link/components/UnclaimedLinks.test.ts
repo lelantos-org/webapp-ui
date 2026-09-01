@@ -1,7 +1,7 @@
 // The recovery list renders amounts pulled off disk, where the asset registry
 // that gives them meaning is not guaranteed to still contain the asset.
 
-import { evmAddress } from "@lelantos-org/sdk";
+import { evmAddress, RAY } from "@lelantos-org/sdk";
 import { describe, expect, it } from "vitest";
 import type { RegisteredAsset } from "@/config/chains";
 import type { StoredClaimLink } from "../link-vault";
@@ -14,6 +14,10 @@ const USDC: RegisteredAsset = {
   symbol: "USDC",
   decimals: 6,
   scale: 1n,
+  // Plain custody: one unit is worth `scale` forever.
+  index: RAY,
+  yieldEnabled: false,
+  yieldHalted: false,
 };
 
 const link = (over: Partial<StoredClaimLink> = {}): StoredClaimLink => ({

@@ -8,24 +8,29 @@
   border: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.93);
   box-shadow: var(--shadow-glow);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 14px;
+  border-radius: var(--radius);
+  padding: var(--sp-16);
+  margin-bottom: var(--sp-14);
   position: relative;
 }
 .card__hdr {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin-bottom: 12px;
-  gap: 12px;
+  margin-bottom: var(--sp-12);
+  gap: var(--sp-12);
 }
+/* Card titles are prose and are written in sentence case at the call site.
+   There was a `::first-letter { text-transform: uppercase }` here doing that
+   job in CSS; it made the painted string and the string in the accessibility
+   tree disagree, and it silently did nothing for any title beginning with an
+   element rather than a text node. Controls stay lowercase — see .btn, .seg__b,
+   .fld__lbl, .tbl th. */
 .card__t {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--fs-14);
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
   color: var(--fg);
 }
-.card__t::first-letter { text-transform: uppercase; }

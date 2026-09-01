@@ -9,6 +9,8 @@ interface QuoteCardProps {
   quote: SwapQuote;
   outDecimals: number;
   outScale: bigint;
+  /// Yield index of the output asset, RAY-scaled. `RAY` for plain custody.
+  outIndex: bigint;
   outSymbol: string;
   /// Protocol fee, needed to size the B-note. `undefined` until the read lands,
   /// in which case the card reports that rather than showing a figure the wallet
@@ -29,6 +31,7 @@ export function QuoteCard({
   quote,
   outDecimals,
   outScale,
+  outIndex,
   outSymbol,
   feeBps,
   outDepositFee,
@@ -50,8 +53,8 @@ export function QuoteCard({
     feeBps === undefined || outDepositFee === undefined
       ? undefined
       : swapCredit({ minOut: quote.minOut, scaleOut: outScale, feeBps, depositFee: outDepositFee });
-  const fmt = (v: bigint) => formatAmountForAsset(v / outScale, outDecimals, outScale);
-  const fmtCircuit = (v: bigint) => formatAmountForAsset(v, outDecimals, outScale);
+  const fmt = (v: bigint) => formatAmountForAsset(v / outScale, outDecimals, outScale, outIndex);
+  const fmtCircuit = (v: bigint) => formatAmountForAsset(v, outDecimals, outScale, outIndex);
   const slipPct = (slippageBps / 100).toFixed(slippageBps < 100 ? 2 : 1);
   return (
     <div className={`quote ${stale ? "quote--stale" : ""}`}>

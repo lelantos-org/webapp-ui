@@ -231,8 +231,8 @@ export default defineConfig({
         name: "Lelantos Wallet",
         short_name: "Lelantos",
         description: "Shielded MASP wallet",
-        theme_color: "#ffffff",
-        background_color: "#f5f5f4",
+        theme_color: "#f2f3f7",
+        background_color: "#f2f3f7",
         display: "standalone",
         start_url: "/",
         icons: [
@@ -278,22 +278,37 @@ export default defineConfig({
     precompress(),
   ],
   optimizeDeps: {
+    // The SDK is served unbundled in dev. Pre-bundling it pulled the three
+    // wasm-pack glue modules (`#wasm/jubjub`, `#wasm/poseidon`, `#wasm/prover`)
+    // into `node_modules/.vite/deps/`, and esbuild copies their closing
+    // `new URL('<crate>_bg.wasm', import.meta.url)` through verbatim. From the
+    // deps directory that resolves to a path with no `.wasm` beside it, the dev
+    // server answers the SPA fallback `index.html`, and wasm-bindgen logs
+    // "your server does not serve Wasm with `application/wasm` MIME type"
+    // before the instantiate fails outright. `Poseidon.build()` catches that
+    // and silently drops to poseidon-lite, ~10x slower over the ~350K arity-5
+    // hashes of a tree build — in the main thread and in every scanner worker.
+    //
+    // Left unbundled, Vite's own asset transform rewrites each `new URL` to the
+    // served `.wasm` (`Content-Type: application/wasm`). Only jubjub had a
+    // workaround, the explicit `?url` override in `config/wasm.ts`.
+    //
+    // `#wasm/*` cannot be excluded instead: Vite marks an excluded specifier
+    // external and leaves it bare in the chunk, and a package-internal
+    // `imports` specifier is unresolvable from `.vite/deps/` — the module 500s.
+    exclude: ["@lelantos-org/sdk"],
     include: [
-      "@lelantos-org/sdk",
       "assert",
+      // The SDK is excluded above, so its CJS dependencies are no longer
+      // inlined into its pre-bundle and have to be optimized in their own
+      // right — without this, `import { bech32m } from "bech32"` is served the
+      // raw CJS file and throws "does not provide an export named 'bech32m'".
+      "bech32",
       // poseidon-lite ships CommonJS (`exports.poseidonN = ...`) with no ESM
-      // build. Pre-bundling it here is what gives those files real named
-      // exports in dev.
-      //
-      // It is reachable two ways, and only one of them was covered before.
-      // Statically, `crypto/poseidon.js` is pulled into the SDK's own
-      // pre-bundle and inlined — fine. But the scanner worker
-      // (`sync/worker/entry.js`) reaches it through a *dynamic*
-      // `import("../../crypto/poseidon.js")`, which Vite serves as its own
-      // module outside that bundle. The bare specifier there is rewritten to
-      // `/node_modules/poseidon-lite/poseidonN.js?v=<hash>` and served raw, so
-      // `import { poseidonN }` finds no such export and the worker dies on
-      // first use.
+      // build, and the SDK imports it by name. Pre-bundling it here is what
+      // gives those files real named exports in dev; served raw,
+      // `import { poseidonN }` finds no such export and the importer — the
+      // main thread and the scanner worker alike — dies on first use.
       //
       // Arities 1-8, matching what `crypto/poseidon.js` imports. Listing them
       // individually because each is its own export subpath; the package root

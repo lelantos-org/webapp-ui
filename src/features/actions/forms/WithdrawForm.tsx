@@ -6,7 +6,7 @@ import {
   useAssetBalanceLabel,
   useEthAssetPicker,
 } from "@/features/assets";
-import { SyncErrorNotice, useSpendableMax } from "@/features/wallet";
+import { SyncErrorNotice, useSpendableMax, useWallet } from "@/features/wallet";
 import { useWithdraw } from "../mutations";
 import { useFeePreview } from "../use-fee-preview";
 import { ActionForm } from "./ActionForm";
@@ -18,6 +18,7 @@ import { FeeSummary } from "./FeeSummary";
 import { feeIncoming, joinHint, shownFee } from "./fee-hint";
 import { feeModeFor } from "./fee-summary";
 import { RecipientField } from "./RecipientField";
+import { isSelfWithdraw } from "./recipient-warning";
 import { isEvmAddress, type WithdrawInput, withdrawSchema } from "./schemas";
 import { useActionForm } from "./use-action-form";
 import { useFeePanel } from "./use-fee-panel";
@@ -31,6 +32,7 @@ import { useLadder } from "./use-ladder";
 const KIND = "withdraw" as const;
 
 export function WithdrawForm() {
+  const { ethAddress } = useWallet();
   const action = useWithdraw();
   const { mutation: m, progress } = action;
   const { register, watch, setValue, errors, selected, setAmount, clearFinished, onSubmit } =
@@ -125,6 +127,16 @@ export function WithdrawForm() {
         onPaste={(to) => setValue("to", to, { shouldDirty: true, shouldValidate: true })}
         formError={errors.to?.message}
       />
+      {/* Non-blocking by design: the submit stays enabled. Withdrawing to your
+          own account is a tradeoff a user may take deliberately, so this states
+          the consequence rather than gating on it. */}
+      {isSelfWithdraw(watch("to"), ethAddress) ? (
+        <div className="warn-banner card" role="status">
+          <strong>⚠ this is the account you deposit from.</strong> Withdrawing here puts the same
+          address on both sides of the pool, so anyone can match your deposit to this withdrawal.
+          Use a different address to keep them unlinked.
+        </div>
+      ) : null}
       <AmountField
         inputProps={register("amount")}
         selected={selected}

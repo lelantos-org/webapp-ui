@@ -14,8 +14,7 @@ import { HEAD_POLL_MS, usePolling } from "@/shared/lib/activity";
 /// never be read as unchanged.
 export type SyncHead = string | null;
 
-export const syncHeadKey = (chainId?: bigint) =>
-  ["sync-head", chainId?.toString() ?? null] as const;
+const syncHeadKey = (chainId?: bigint) => ["sync-head", chainId?.toString() ?? null] as const;
 
 /// Timeout for one watermark read.
 ///

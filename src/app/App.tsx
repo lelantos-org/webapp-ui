@@ -27,9 +27,9 @@ const ClaimPage = lazy(() =>
 
 function NotFound() {
   return (
-    <div className="card m-5">
+    <div className="card m-20">
       <div className="card__hdr">
-        <h3 className="card__t">page not found</h3>
+        <h2 className="card__t">Page not found</h2>
       </div>
       <div className="stack stack--md">
         <p className="muted">Nothing lives at this address.</p>

@@ -9,7 +9,6 @@
 // where an asset balance belongs; placing it beside the submitters would move
 // the cycle to `assets <-> actions`.
 
-import type { UseQueryResult } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useActiveChain } from "@/features/chain";
 import {
@@ -27,7 +26,7 @@ import {
   type WalletState,
 } from "@/features/wallet";
 import { jitter } from "@/shared/lib/activity";
-import { formatDecimalCompact } from "@/shared/lib/format";
+import { formatDecimalCompact, toBaseUnits } from "@/shared/lib/format";
 import type { AssetBalanceLabel } from "./asset-option";
 
 /// How soon to nudge a resync after a watermark-bound entry appears.
@@ -114,12 +113,35 @@ export interface BalancesState extends Omit<WalletState, "balances"> {
   balances: AssetBalanceView[];
 }
 
+/// What a balance consumer needs, and nothing else.
+///
+/// Not `UseQueryResult<BalancesState>`. Returning the whole result requires
+/// spreading `useWalletState()`'s, and a spread reads every property on
+/// react-query's tracking proxy, subscribing the observer to all of them. Every
+/// consumer then re-renders twice per background poll on the `isFetching` flip
+/// alone, with the balances unchanged — and since `useBalances` is reached from
+/// `useAssetBalance` and `useAssetBalanceLabel` as well as the portfolio card,
+/// that is every mounted form on the 30s cadence.
+///
+/// Naming the three fields callers actually read keeps the subscription to
+/// those three, none of which move on a no-op refetch. Anything wanting the
+/// query's fetch state — `PortfolioActions` wants `isFetching` — reads
+/// `useWalletState()` directly, where tracking it is the point.
+export interface BalancesResult {
+  /// `undefined` until the first sync succeeds; see `useAssetBalance`.
+  data: BalancesState | undefined;
+  /// The last sync failure, surfaced by `SyncErrorNotice`.
+  error: Error | null;
+  /// First load only, not a background refetch.
+  isLoading: boolean;
+}
+
 /// Confirmed balances with the in-flight overlay applied.
 ///
 /// Also owns the two side effects the overlay implies: clearing watermark-bound
 /// entries once a sync has credited them, and resyncing faster while any
 /// remain.
-export function useBalances(): UseQueryResult<BalancesState> {
+export function useBalances(): BalancesResult {
   const query = useWalletState();
   const { wallet } = useWallet();
   const { chainId } = useActiveChain();
@@ -151,12 +173,10 @@ export function useBalances(): UseQueryResult<BalancesState> {
     return settlingPoll.join(invalidate);
   }, [hasWatermarkPending, invalidate]);
 
-  const data = query.data;
+  // Read as three named fields rather than spread; see `BalancesResult`.
+  const { data, error, isLoading } = query;
   const merged = useMemo(() => (data ? mergePending(data, pending) : undefined), [data, pending]);
-  return useMemo(
-    () => ({ ...query, data: merged }) as UseQueryResult<BalancesState>,
-    [query, merged],
-  );
+  return useMemo(() => ({ data: merged, error, isLoading }), [merged, error, isLoading]);
 }
 
 /// The display row for one asset.
@@ -213,6 +233,11 @@ function mergePending(state: WalletState, pending: Map<bigint, PendingTotals>): 
 ///
 /// Compact rather than exact: an 18-decimal balance rendered in full is wider
 /// than the select it sits in.
+///
+/// Converted with `toBaseUnits`, so a yield asset's row states what its notes
+/// are worth now rather than when they were credited. The two differ by exactly
+/// the yield earned, so an option labelled "earning yield" beside a figure that
+/// never moves reads as broken.
 export function useAssetBalanceLabel(): AssetBalanceLabel {
   const { data } = useBalances();
   // Indexed once rather than scanned per option, as in `AssetsCard`: a picker
@@ -222,6 +247,9 @@ export function useAssetBalanceLabel(): AssetBalanceLabel {
     if (!data) return () => undefined;
     const byAsset = new Map(data.balances.map((b) => [b.asset, b.balance]));
     return (asset) =>
-      formatDecimalCompact((byAsset.get(asset.id) ?? 0n) * asset.scale, asset.decimals);
+      formatDecimalCompact(
+        toBaseUnits(byAsset.get(asset.id) ?? 0n, asset.scale, asset.index),
+        asset.decimals,
+      );
   }, [data]);
 }

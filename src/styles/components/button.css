@@ -2,10 +2,10 @@
   background: var(--accent);
   color: #fff;
   border: 1px solid var(--accent);
-  border-radius: 8px;
-  padding: 10px 16px;
+  border-radius: var(--radius);
+  padding: var(--sp-10) var(--sp-16);
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 500;
   letter-spacing: 0;
   cursor: pointer;
@@ -18,6 +18,12 @@
   box-shadow: 0 2px 6px rgba(var(--accent-rgb),0.25);
 }
 .btn:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+/* After `:active` deliberately: an outline is independent of the press
+   transform, so the ring travels with the button rather than fighting it. */
+.btn:focus-visible {
+  outline: var(--ring);
+  outline-offset: 2px;
+}
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .btn--ghost {
   background: transparent;
@@ -33,7 +39,7 @@
   box-shadow: none;
 }
 .btn--xl {
-  padding: 14px 32px;
+  padding: var(--sp-14) 32px;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: 0;
@@ -54,10 +60,28 @@
   border-bottom: 1px dotted var(--fg-mute);
   background: none;
   font: inherit;
-  font-size: 12px;
+  font-size: var(--fs-12);
   letter-spacing: 0.04em;
   color: var(--fg-mute);
   cursor: pointer;
   transition: color 120ms var(--ease-soft);
 }
 .txt-btn:hover { color: var(--accent); border-color: var(--accent); }
+.txt-btn:focus-visible {
+  outline: var(--ring);
+  outline-offset: 3px;
+}
+
+/* Destructive. There was no danger variant before, which is part of why a
+   wipe-and-rescan read as an ordinary link. */
+.btn--danger {
+  background: var(--err);
+  border-color: var(--err);
+  color: #fff;
+}
+.btn--danger:hover:not(:disabled) {
+  background: var(--err);
+  border-color: var(--err);
+  box-shadow: 0 2px 6px rgba(var(--err-rgb), 0.3);
+}
+.btn--danger:focus-visible { outline: 2px solid var(--err); outline-offset: 2px; }

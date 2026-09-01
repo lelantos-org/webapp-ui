@@ -1,9 +1,23 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import type { RegisteredAsset } from "@/features/assets";
 import { useDepositSetup } from "./use-deposit-setup";
 import type { SetupStatus } from "./use-setup-status";
 
-const WETH_ASSET = 1n;
+/// The record the form holds; only `token` is read, via `useSetupStatus`, which
+/// this file stubs out — the rest is shape.
+const WETH_ASSET: RegisteredAsset = {
+  id: 1n,
+  token: "0x0000000000000000000000000000000000000001" as RegisteredAsset["token"],
+  isWeth: true,
+  symbol: "WETH",
+  decimals: 18,
+  scale: 1n,
+  index: RAY,
+  yieldEnabled: false,
+  yieldHalted: false,
+};
 const FAR_FUTURE = Math.floor(Date.now() / 1000) + 30 * 24 * 3600;
 
 /// Permit2 state for a token with nothing approved — the ordinary state of a

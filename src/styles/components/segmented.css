@@ -1,7 +1,7 @@
 .seg {
   display: inline-flex;
   border: 1px solid var(--line-strong);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   background: var(--bg);
 }
@@ -9,9 +9,9 @@
   background: transparent;
   color: var(--fg);
   border: none;
-  padding: 8px 14px;
+  padding: var(--sp-8) var(--sp-14);
   font-family: var(--sans);
-  font-size: 13px;
+  font-size: var(--fs-13);
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -21,10 +21,19 @@
 }
 .seg__b:last-child { border-right: none; }
 .seg__b:hover:not(:disabled) { color: var(--fg); background: var(--bg-2); }
+/* Inset, because `.seg` clips: a positive offset would put the ring outside the
+   strip's `overflow: hidden` and lose it entirely. */
+.seg__b:focus-visible {
+  outline: var(--ring);
+  outline-offset: -2px;
+}
 .seg__b--on {
   color: var(--bg);
   background: var(--accent);
   font-weight: 700;
   text-shadow: none;
 }
+/* The selected tab is filled with the accent, so an accent ring on it would be
+   invisible. Swap to the background colour, which reads against that fill. */
+.seg__b--on:focus-visible { outline-color: var(--bg); }
 .seg__b:disabled { opacity: 0.4; cursor: not-allowed; }

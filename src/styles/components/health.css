@@ -4,6 +4,24 @@
   align-items: center;
   cursor: default;
 }
+/* Hit area around the 8px dot. The dot itself stays 8px; this button carries
+   the padding, and the negative margin gives it back to the layout so adding a
+   touch target does not move the header. */
+.health__hit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-8);
+  margin: calc(var(--sp-8) * -1);
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.health__hit:focus-visible {
+  outline: var(--ring);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
+}
 .health__dot {
   width: 8px;
   height: 8px;
@@ -24,8 +42,8 @@
   flex-direction: column;
   gap: 4px;
   padding: 8px 10px;
-  background: var(--bg-2, #111);
-  border: 1px solid var(--border, var(--line));
+  background: var(--bg-2);
+  border: 1px solid var(--line);
   border-radius: 6px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.3);
   white-space: nowrap;
@@ -42,7 +60,7 @@
   align-items: center;
 }
 .health__label {
-  color: var(--fg, #eee);
+  color: var(--fg);
 }
 .health__state {
   color: var(--fg-mute);

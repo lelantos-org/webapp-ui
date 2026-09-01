@@ -22,7 +22,7 @@ import {
 } from "@/config/chains";
 import { useWalletStore } from "@/features/eip1193";
 
-export const chainRegistryKey = ["chain-registry"] as const;
+const chainRegistryKey = ["chain-registry"] as const;
 
 interface ChainContextValue {
   registry: ChainEntry[];
@@ -114,7 +114,7 @@ function ChainNotice({
     <div className="main">
       <div className={tone === "err" ? "err" : "muted txt-sm"}>{children}</div>
       {onRetry ? (
-        <button type="button" className="btn mt-3" onClick={onRetry}>
+        <button type="button" className="btn mt-8" onClick={onRetry}>
           try again
         </button>
       ) : null}

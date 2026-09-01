@@ -10,29 +10,32 @@
 // privacy, which is invisible unless something says so.
 //
 // Amounts are formatted with the webapp's `formatAmountForAsset` rather than the
-// SDK's `denominationChoices`, deliberately. A chip writes a decimal string into
-// the amount field, `parseAmountForAsset` turns it back into the circuit units
-// the withdrawal publishes, and the SDK's formatter applies the pool's yield
-// index where the webapp's does not. Labelling with one formatter and parsing
-// with the other would round-trip a denomination into a number that is not on
-// the ladder — the exact failure this module exists to prevent. One formatter on
-// both ends is what makes a chip's promise true.
+// SDK's `denominationChoices`. A chip writes a decimal string into the amount
+// field and `parseAmountForAsset` turns it back into the circuit units the
+// withdrawal publishes, so the two must be exact inverses: labelling with one
+// formatter and parsing with another round-trips a denomination into a number
+// that is not on the ladder, the failure this module exists to prevent.
+//
+// On a yield asset that inverse is why `parseAmountForAsset` rounds up: the
+// formatter floors circuit units into base units, so anything else reads a chip
+// back one unit short of the rung it names. See the note there.
 
 import { isDenomination, type Ladder, nearest } from "@lelantos-org/sdk/core";
-import { exceedsPublicInLimit, formatAmountForAsset, formatAssetAmount } from "@/shared/lib/format";
+import {
+  exceedsPublicInLimit,
+  formatAmountForAsset,
+  formatAmountForDisplay,
+  formatAssetAmount,
+} from "@/shared/lib/format";
 import type { AssetMeta } from "./amount-field";
 
 /// Where the offered denominations came from, which decides what may be claimed
 /// for them.
 ///
-/// One case since SDK 0.32.0. The ladder used to come either from a six-entry
-/// table of mainnet addresses or from a ladder this app generated for the assets
-/// that table omitted, and only the former could be called shared. The SDK now
-/// derives every ladder from the asset's own `scale` and `decimals`, so any
-/// wallet holding the asset arrives at the same rungs and there is no longer a
-/// table to be absent from — the "round amounts" phrasing had nothing left to
-/// describe. Kept as a named type rather than inlined: what may be claimed for a
-/// rung depends on where it came from, and a future source would land here.
+/// One case: the SDK derives every ladder from the asset's own `scale` and
+/// `decimals`, so any wallet holding the asset arrives at the same rungs. Kept
+/// as a named type rather than inlined, since what may be claimed for a rung
+/// depends on its source and a further source would land here.
 export type LadderSource = "shared";
 
 /// How one chip reads against the amount field.
@@ -49,20 +52,26 @@ export interface DenominationOption {
   value: bigint;
   /// What the amount field is written with. `parseAmountForAsset` maps it back
   /// to `value` exactly; see the note at the top of this file.
+  ///
+  /// Full precision: this is an amount, not a caption. Capping it would write a
+  /// figure off the very rung the chip stands for, the one thing these chips
+  /// exist to keep it on.
   text: string;
+  /// What the chip reads on screen — `text` capped to
+  /// {@link DISPLAY_FRAC_DIGITS}. A yield asset's rungs are round in circuit
+  /// units and anything but round in token units, so the untruncated figure runs
+  /// to 18 digits inside a button.
+  label: string;
   state: DenominationState;
 }
 
 /// Every string whose truth depends on where the ladder came from, in one
 /// place.
 ///
-/// A generated rung must never be described as shared: its anonymity set is
-/// whatever this app's own users give it, not the pool-wide crowd the built-in
-/// table describes, and overstating that is the failure `denominations.ts` calls
-/// undetectable from inside the wallet. Branching on `source` at each phrase put
-/// that guarantee in six places and one of them — the fieldset's accessible
-/// name — had already drifted into the component. One table keyed by source is
-/// the whole contract, readable at a glance.
+/// A rung must never be described as shared unless it is: overstating the
+/// anonymity set is undetectable from inside the wallet. Keyed by source in one
+/// table rather than branched on at each phrase, so no user-visible claim about
+/// the ladder can drift out of this file.
 interface LadderCopy {
   /// The field's visible label.
   heading: string;
@@ -156,7 +165,8 @@ export function ladderModel({ ladder, meta, amount, max }: LadderInputs): Ladder
   return {
     options: offerable.map((value) => ({
       value,
-      text: formatAmountForAsset(value, meta.decimals, meta.scale),
+      text: formatAmountForAsset(value, meta.decimals, meta.scale, meta.index),
+      label: formatAmountForDisplay(value, meta),
       state: stateOf(value, entered, suggestion),
     })),
     source,
@@ -176,9 +186,9 @@ export function ladderModel({ ladder, meta, amount, max }: LadderInputs): Ladder
 
 /// The denominations worth putting on screen, ascending.
 ///
-/// Bounded by `spendableMax`, the same figure the "max" button writes and the
-/// coin selector honours: a chip above it writes an amount the app's own
-/// selector then refuses, under a label promising privacy. While that ceiling is
+/// Bounded by `spendableMax`, the figure the "max" button writes and the coin
+/// selector honours: a chip above it would write an amount the app's own
+/// selector refuses, under a label promising privacy. While that ceiling is
 /// unknown the whole ladder is offered rather than none of it, matching how the
 /// rest of the form treats an unresolved max.
 ///
@@ -211,10 +221,9 @@ interface NoticeInputs {
 /// What to say under the chips.
 ///
 /// Always something once the asset has a ladder, including before anything is
-/// entered. Two reasons: the control is otherwise unexplained — a row of
-/// amounts with no stated benefit is a row of amounts — and a line that appears
-/// on the first keystroke grows the form, moving the submit button under the
-/// pointer. Same constraint `FeeSummary` is built around.
+/// entered: the control is otherwise unexplained, and a line appearing on the
+/// first keystroke grows the form and moves the submit button under the pointer.
+/// The same constraint `FeeSummary` is built around.
 function ladderNotice({
   ladder,
   copy,
@@ -224,9 +233,8 @@ function ladderNotice({
   suggestion,
   offered,
 }: NoticeInputs): LadderNotice | undefined {
-  // Nothing to be on or off: not even the fallback could build a ladder, which
-  // means the asset has no exact circuit-unit basis to build one from. See
-  // `unitsPerToken`.
+  // Nothing to be on or off: the asset has no exact circuit-unit basis to build
+  // a ladder from.
   if (ladder.length === 0) return undefined;
 
   if (entered === undefined) {

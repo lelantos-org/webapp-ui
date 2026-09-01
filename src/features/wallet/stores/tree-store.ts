@@ -12,8 +12,8 @@ const ARITY = 4;
 /// Stored records to deserialize between yields back to the event loop.
 ///
 /// A full tree requires ~1M leaf parses plus ~350K node parses. Yielding does
-/// not reduce that cost, but keeps it from forming a single multi-second task
-/// that blocks paint and input for the duration of a wallet build.
+/// not reduce that cost but keeps it from forming one multi-second task that
+/// blocks paint and input for the whole wallet build.
 const PARSE_YIELD_EVERY = 64;
 
 /// Hand the event loop a turn. Prefers the scheduler API where available and
@@ -57,7 +57,7 @@ function prefixRange(prefix: string): IDBKeyRange {
 /// Both calls run in one transaction so the arrays line up index-for-index.
 /// Separate transactions would leave a window for another tab's `save()` to
 /// insert a record between them, pairing every entry past the insertion point
-/// with the wrong value — a plausible-looking tree with a wrong root and a
+/// with the wrong value: a plausible-looking tree with a wrong root and a
 /// rejected spend, reported as no error at all.
 ///
 /// The order is IndexedDB's lexicographic key order, not numeric (`:10` sorts
@@ -152,15 +152,15 @@ type TreeWriteStore = IDBPObjectStore<WalletSchema, ["tree"], "tree", "readwrite
 /// different number.
 const enc = (v: bigint): string => `0x${v.toString(16)}`;
 
-/// IndexedDB-backed Merkle tree persistence for the `treePersistence` option
-/// of `connect`.
+/// IndexedDB-backed Merkle tree persistence for the `treePersistence` option of
+/// `connect`.
 ///
 /// Append-only and chunked rather than one record per save. The tree reaches 1M
 /// leaves plus ~350K memoised internal nodes, so rewriting all of it on every
 /// sync — which happens on every spend — costs a full serialize of ~100 MB of
-/// strings regardless of how many leaves changed.
+/// strings however few leaves changed.
 ///
-/// Both feeds grow only at the tail, which makes the delta computable without a
+/// Both feeds grow only at the tail, making the delta computable without a
 /// diff: a leaf record below `syncedCount` can never change again, and an
 /// internal node is final once its subtree is full. A save therefore rewrites
 /// only the records at or after the previous `syncedCount`, turning an O(n)
@@ -269,10 +269,10 @@ export class IdbTreePersistence implements TreePersistence {
   /// behind would have `save()` rewrite only the tail — `firstDirtyLeaf` is
   /// `min(persistedCount, leaves.length)`, so a shorter rebuilt tree leaves the
   /// diverged chunks below it untouched — and the next page load would restore
-  /// the very tree that was thrown away.
+  /// the tree that was thrown away.
   ///
-  /// One range delete rather than a key-by-key sweep — the same reason
-  /// `readRange` reads with one `getAll` instead of a `get` per record.
+  /// One range delete rather than a key-by-key sweep, for the reason `readRange`
+  /// reads with one `getAll` instead of a `get` per record.
   async clear(): Promise<void> {
     const db = await walletDb();
     const tx = db.transaction(TREE_STORE, "readwrite");

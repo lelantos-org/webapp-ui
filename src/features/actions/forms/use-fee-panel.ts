@@ -28,6 +28,12 @@ export interface FeeAssetOption {
   symbol: string;
   decimals: number;
   scale: bigint;
+  /// Yield index, RAY-scaled. Needed alongside `scale` for the same reason
+  /// `resolveFeeOption` carries it: `amount` and `balance` are circuit units, and
+  /// a yield asset's unit is worth more than `scale`. Required, and sourced from
+  /// the registry entry — which always has one — so no conversion here has to
+  /// decide what an absent index means.
+  index: bigint;
   /// What the relay costs when paid in this asset.
   amount: bigint;
   /// This wallet's unspent balance in it.
@@ -146,6 +152,7 @@ export function useFeePanel({
             symbol: entry.symbol,
             decimals: entry.decimals,
             scale: entry.scale,
+            index: entry.index,
             amount: o.amount,
             balance: o.balance,
             affordable: o.affordable,

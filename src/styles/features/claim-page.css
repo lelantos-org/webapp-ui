@@ -142,13 +142,6 @@
   box-shadow: 0 0 32px rgba(var(--accent-rgb), 0.35);
   animation: pulse 2.4s ease-in-out infinite;
 }
-.claim-done__eyebrow {
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--fg-dim);
-}
 .claim-done__amt {
   display: flex;
   align-items: baseline;

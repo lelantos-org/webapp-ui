@@ -176,8 +176,8 @@ export function useDeposit(): ActionMutation<DepositCall> {
 
       // The deposit leg: this sizes the Permit2 window, and the pool pulls the
       // principal plus that leg's fee.
-      const { scale, feeBps, token } = await fetchAssetFeeInputs(w, i.asset, "deposit");
-      const { total } = feeBreakdown({ amount: i.amount, scale, feeBps, mode: "deposit" });
+      const { scale, feeBps, token, index } = await fetchAssetFeeInputs(w, i.asset, "deposit");
+      const { total } = feeBreakdown({ amount: i.amount, scale, feeBps, mode: "deposit", index });
 
       // AllowanceTransfer mode needs no per-deposit Permit2 signature. The
       // SetupFlow modal in DepositForm gates the form on a missing or expired

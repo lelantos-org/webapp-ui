@@ -33,7 +33,7 @@ export function Welcome({
 
         {status === "unsupported-chain" ? (
           <div className="welcome__panel">
-            <h3 className="warn">unsupported network</h3>
+            <h2 className="warn">unsupported network</h2>
             <p className="muted">
               your wallet is on a network this deployment does not serve. switch it to continue —
               your shielded address is the same on every chain.
@@ -45,7 +45,7 @@ export function Welcome({
         {status === "connecting" ? (
           <div className="welcome__panel">
             <span className="spinner spinner--lg" aria-hidden />
-            <h3>connecting…</h3>
+            <h2>connecting…</h2>
             <p className="muted">approve the connection request in your wallet.</p>
           </div>
         ) : null}
@@ -53,7 +53,7 @@ export function Welcome({
         {status === "deriving" ? (
           <div className="welcome__panel">
             <span className="spinner spinner--lg" aria-hidden />
-            <h3>check your wallet</h3>
+            <h2>check your wallet</h2>
             <p>sign the EIP-712 message to derive your shielded key.</p>
             <div className="welcome__rule" />
             <p className="muted txt-xs">
@@ -65,14 +65,14 @@ export function Welcome({
         {status === "resuming" ? (
           <div className="welcome__panel">
             <span className="spinner spinner--lg" aria-hidden />
-            <h3>resuming session…</h3>
+            <h2>resuming session…</h2>
             <p className="muted">unlocking your shielded wallet.</p>
           </div>
         ) : null}
 
         {status === "error" ? (
           <div className="welcome__panel">
-            <h3 className="err">connection failed</h3>
+            <h2 className="err">connection failed</h2>
             <p className="muted">{error ?? "unknown error"}</p>
             <button type="button" className="btn" onClick={connect}>
               retry

@@ -1,3 +1,4 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
@@ -29,6 +30,7 @@ const asset = (id: bigint, symbol: string) => ({
   symbol,
   decimals: 6,
   scale: 1n,
+  index: RAY,
   amount: 2_042n,
   balance: 10n ** 9n,
   affordable: true,
@@ -187,6 +189,7 @@ describe("FeeSummary", () => {
           symbol: "USDC",
           decimals: 6,
           scale: 1n,
+          index: RAY,
           amount: 2_042n,
           balance: 10n ** 9n,
           affordable: true,

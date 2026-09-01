@@ -162,6 +162,42 @@ describe("ensurePermit2AuthorizedSetupBatch", () => {
     expect(seen.filter((p) => p.step === "permitting" && p.status === "wallet")).toHaveLength(1);
   });
 
+  // The pool registers one asset id per yield variant over the same ERC-20, so
+  // "authorize everything registered" arrives here with each token twice.
+  it("collapses entries that name the same token", async () => {
+    const m = mockWallet({
+      [TOK_A]: { erc20Allowance: 0n, nonce: 7 },
+      [TOK_B]: { erc20Allowance: 0n, nonce: 0 },
+    });
+    await ensurePermit2AuthorizedSetupBatch(m.wallet, [
+      entry(TOK_A),
+      entry(TOK_B),
+      entry(TOK_A),
+      entry(TOK_B),
+    ]);
+
+    // One approval per token, not one per entry.
+    expect(m.chain.ctx.approved).toEqual([TOK_A, TOK_B]);
+    // And one detail per token: a repeat carries the nonce the earlier detail
+    // has already consumed, which reverts the whole permit on chain.
+    expect(m.chain.ctx.signed[0]!.details.map((d) => [d.token, d.nonce])).toEqual([
+      [TOK_A, 7],
+      [TOK_B, 0],
+    ]);
+  });
+
+  it("keeps the widest terms when it collapses a duplicate", async () => {
+    const m = mockWallet({ [TOK_A]: { erc20Allowance: CAP, nonce: 1 } });
+    await ensurePermit2AuthorizedSetupBatch(m.wallet, [
+      { token: TOK_A, cap: 1_000n, expirationUnixSecs: EXPIRY },
+      { token: TOK_A, cap: CAP, expirationUnixSecs: EXPIRY + 3600 },
+    ]);
+
+    expect(m.chain.ctx.signed[0]!.details).toEqual([
+      { token: TOK_A, amount: CAP, expiration: EXPIRY + 3600, nonce: 1 },
+    ]);
+  });
+
   it("does nothing on an empty selection", async () => {
     const m = mockWallet({});
     await ensurePermit2AuthorizedSetupBatch(m.wallet, []);

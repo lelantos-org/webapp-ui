@@ -18,13 +18,18 @@ import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { TokenIcon } from "@/features/icons";
 import { cx } from "@/shared/lib/cx";
-import { formatDecimalCompact } from "@/shared/lib/format";
+import { formatDecimalCompact, toBaseUnits } from "@/shared/lib/format";
 import { useAnchoredPopover } from "@/shared/ui/use-anchored-popover";
 import type { FeeAssetChoice, FeeAssetOption } from "./use-fee-panel";
 
 /// Base units, from the circuit units the relayer quotes in.
+///
+/// Through `toBaseUnits` rather than a bare `* scale`: a yield asset's unit is
+/// worth `scale * index / RAY`, so both the quoted fee and the balance beside it
+/// would read low — and an option could show as unaffordable against a balance
+/// that in fact covers it.
 function human(amount: bigint, asset: FeeAssetOption): string {
-  return formatDecimalCompact(amount * asset.scale, asset.decimals);
+  return formatDecimalCompact(toBaseUnits(amount, asset.scale, asset.index), asset.decimals);
 }
 
 export interface FeeAssetPickerProps {
@@ -154,7 +159,7 @@ export function FeeAssetPicker({ choice }: FeeAssetPickerProps) {
           }
         }}
       >
-        <span className="feepick__sym">{selected?.symbol ?? "—"}</span>
+        <span>{selected?.symbol ?? "—"}</span>
         <Chevron />
       </button>
 

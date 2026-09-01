@@ -215,7 +215,9 @@
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  min-width: 11em;
+  /* Reserves room for the widest state — "delete my copy" plus "cancel" — so
+     starting a confirm on one row does not shift the rows under it. */
+  min-width: 13em;
 }
 
 .link-vault__act {
@@ -230,6 +232,11 @@
   transition: color 120ms var(--ease-soft);
 }
 .link-vault__act:hover { color: var(--accent-2); text-decoration: underline; }
+.link-vault__act:focus-visible { outline: var(--ring); outline-offset: 2px; }
+/* These two sit side by side and one of them deletes a spending key. */
+@media (pointer: coarse) {
+  .link-vault__act { min-height: 44px; }
+}
 .link-vault__act--warn { color: var(--warn); }
 .link-vault__act--warn:hover { color: var(--warn); }
 .link-vault__act--mute { color: var(--fg-mute); }

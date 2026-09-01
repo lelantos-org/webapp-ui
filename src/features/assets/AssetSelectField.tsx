@@ -1,6 +1,6 @@
 import { forwardRef, type SelectHTMLAttributes } from "react";
 import { Field } from "@/shared/ui/Field";
-import { type AssetBalanceLabel, assetOptionLabel } from "./asset-option";
+import { type AssetBalanceLabel, assetOptionLabel, assetYieldTag } from "./asset-option";
 import { DEFAULT_ASSET_ID, useRegisteredAssets } from "./registered-assets";
 
 export type AssetSelectFieldProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, "className"> & {
@@ -32,7 +32,7 @@ export const AssetSelectField = forwardRef<HTMLSelectElement, AssetSelectFieldPr
             ) : (
               assets.map((a) => (
                 <option key={a.id.toString()} value={a.id.toString()}>
-                  {assetOptionLabel(a.symbol, balanceOf?.(a))}
+                  {assetOptionLabel(a.symbol, balanceOf?.(a), assetYieldTag(a))}
                 </option>
               ))
             )}

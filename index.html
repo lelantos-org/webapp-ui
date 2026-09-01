@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#050507" />
+    <!-- Matches --bg in src/styles/tokens.css. Keep these in step: the browser
+         paints its chrome with this before any CSS loads, so a stale value
+         shows as a band of the wrong colour above the app on every cold start. -->
+    <meta name="theme-color" content="#f2f3f7" />
     <meta name="referrer" content="no-referrer" />
     <!--
       CSP via meta is partial: `frame-ancestors`, `sandbox`, `report-uri` are ignored here

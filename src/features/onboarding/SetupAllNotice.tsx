@@ -18,10 +18,10 @@ export function SetupAllNotice() {
   const [open, setOpen] = useState(false);
 
   const supported = !!wallet && supportsAllowanceBatch(wallet.chain);
-  // Probing is per (chain, payer, asset) with a 30s staleTime and shares a cache
+  // Probing is per (chain, payer, token) with a 30s staleTime and shares a cache
   // with the deposit form's single-asset probe, so this adds no extra reads.
-  const ids = useMemo(() => (supported ? assets.map((a) => a.id) : []), [supported, assets]);
-  const { statuses } = useSetupStatusMany(ids);
+  const probed = useMemo(() => (supported ? assets : []), [supported, assets]);
+  const { statuses } = useSetupStatusMany(probed);
   const needs = useMemo(() => evaluateSetupMany(statuses), [statuses]);
 
   const outstanding = assets.filter((a) => needs.get(a.id)?.needsSetup === true);

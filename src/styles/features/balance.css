@@ -81,15 +81,43 @@
   color: var(--fg);
 }
 
-/* BALANCE CELL — the token figure, with any in-flight legs beneath it.
+/* Why this row's balance moves without a transaction behind it. Quiet by
+   design: it labels a property of the asset, not an event, so it must not
+   compete with the figure it explains. Accent rather than a green — the palette
+   carries no success colour, and inventing one for a single badge would put a
+   sixth hue on screen. */
+.tok__yield {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.1);
+  white-space: nowrap;
+}
+
+/* Paused is not plain: the balance is still fully backed, it has just stopped
+   growing. Muted rather than `--warn` — nothing is at risk, so an alarm colour
+   would overstate it. */
+.tok__yield--halted {
+  color: var(--fg-mute);
+  background: var(--bg-3);
+}
+
+/* BALANCE CELL — the token figure, with any in-flight legs beside it.
    The dollar value moved out to a column of its own; three lines of differently
-   sized type stacked in one right-aligned cell was the crowding. */
+   sized type stacked in one cell was the crowding. */
 .bal {
   display: inline-flex;
   /* Centred, not baseline-aligned: the legs lead with a spinner, which has no
      baseline of its own to align the figure to. */
   align-items: center;
-  justify-content: flex-end;
+  /* Matches the cell, which is left-aligned like every other column. The box
+     hugs its content either way, so this only decides where slack goes if the
+     cell is ever given a width. */
+  justify-content: flex-start;
   gap: 8px;
   /* No height reserved, and none needed: the in-flight legs sit on the
      figure's line, so a row is the same height whether something is settling
@@ -146,7 +174,34 @@
 }
 .bal__usd--none { color: var(--fg-mute); }
 
+/* EARNED CELL — unrealised yield on the notes currently held.
+
+   Blank for plain custody rather than dashed: the column's emptiness is what
+   says at a glance which assets earn, and a dash would claim the figure is
+   merely unknown. See `EarnedCell`. */
+.earned {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  /* Accent rather than a green, as `.bal__delta--in` already does: the palette
+     has no green, and inventing one for this cell alone would make it the only
+     thing on the card wearing a colour nothing else uses. */
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+/* A venue loss is real and is shown; it should not read as an error, only as a
+   direction. */
+.earned--down { color: var(--warn); }
+.earned--none { color: var(--fg-mute); }
+/* The percentage annotates the amount, so it is sized like the annotation it
+   is — the token figure is the claim, the rate is context for it. */
+.earned__pct {
+  font-size: 11px;
+  color: var(--fg-mute);
+}
+
 /* Column widths for the portfolio table. Without them the browser sizes on
    content and the asset column takes half the card on a short symbol list. */
-.tbl--pf th:first-child { width: 44%; }
-.tbl--pf th:last-child { width: 26%; }
+.tbl--pf th:first-child { width: 36%; }
+.tbl--pf th:last-child { width: 22%; }

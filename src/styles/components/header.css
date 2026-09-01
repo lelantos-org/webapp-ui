@@ -39,6 +39,7 @@
   transition: color 120ms var(--ease-soft), background 120ms var(--ease-soft);
 }
 .lnk:hover { color: var(--accent); background: var(--bg-3); }
+.lnk:focus-visible { outline: var(--ring); outline-offset: 2px; }
 .lnk--inline {
   padding: 0;
   border: none;
@@ -47,6 +48,7 @@
   background: none;
 }
 .lnk--inline:hover { color: var(--accent-2); background: none; text-decoration: underline; }
+.lnk--inline:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
 /* HEADER STATUS
    One `.pill` holding the health dot and the network name. They answer the
@@ -96,6 +98,7 @@
   transition: color 120ms var(--ease-soft), background 120ms var(--ease-soft);
 }
 .account__disconnect:hover { color: var(--err); background: var(--bg-3); }
+.account__disconnect:focus-visible { outline: var(--ring); outline-offset: 1px; }
 
 /* The bar earns its calm by dropping words, not by shrinking them: below this
    the network label and the address go, leaving the dot, the chain name and
@@ -105,5 +108,12 @@
 }
 @media (max-width: 460px) {
   .account__addr { display: none; }
-  .account { padding: 4px; }
+  .account { padding: var(--sp-6); }
+}
+
+/* Finger-sized targets keyed on the pointer, not the viewport: the constraint
+   is the fingertip, and a phone-width desktop window should keep the dense
+   bar this header is designed around. */
+@media (pointer: coarse) {
+  .account__disconnect { min-width: 44px; min-height: 44px; }
 }

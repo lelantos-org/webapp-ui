@@ -70,6 +70,12 @@ export function stepperStateFor(phase: Phase, blocked = false): StepperState {
   }
 }
 
+/// Written for someone who has never used this app and is holding a link to
+/// real money. That rules out naming the mechanism — "bearer secret", "URL
+/// fragment", "commitment tree" — however precise it is: a stranger cannot act
+/// on any of it, and being told a term they do not know while they wait for
+/// funds reads as something having gone wrong.
+///
 /// `blocked` drops the phase's own line rather than replacing it: the network
 /// gate card already names both chains and offers the switch, and repeating that
 /// here would read as two separate problems.
@@ -77,22 +83,22 @@ export function heroSubtitleFor(phase: Phase, blocked = false): string | undefin
   if (blocked && phase.kind !== "done" && phase.kind !== "error") return undefined;
   switch (phase.kind) {
     case "reading-fragment":
-      return "reading the bearer secret from the URL fragment.";
+      return "reading your claim link.";
     case "bad-link":
       // A reload is the common route to this state, and nothing has failed.
       return phase.reason === "missing"
         ? "the secret is only ever in the address bar, and only for a moment."
         : "this link can't be parsed.";
     case "need-wallet":
-      return "connect a wallet to derive the destination shielded address.";
+      return "connect a wallet — that's where these funds will go.";
     case "loading":
-      return "scanning the chain for the deposited note.";
+      return "looking for your funds.";
     case "ready":
-      return "review claimable balances and sweep to your shielded address.";
+      return "check what's here, then claim it to your wallet.";
     case "sweeping":
-      return "submitting claim transaction.";
+      return "claiming — this can take a moment.";
     case "done":
-      return "funds swept to your shielded address.";
+      return "done — the funds are yours.";
     case "error":
       return undefined;
   }

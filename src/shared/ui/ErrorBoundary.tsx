@@ -60,9 +60,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
 function DefaultFallback({ error, reset }: { error: unknown; reset(): void }) {
   return (
-    <div className="card m-5">
+    <div className="card m-20">
       <div className="card__hdr">
-        <h3 className="card__t">something broke</h3>
+        <h2 className="card__t">Something broke</h2>
       </div>
       <div className="stack stack--md">
         <div className="err">{describeError(error)}</div>

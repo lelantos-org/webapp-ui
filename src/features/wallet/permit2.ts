@@ -48,17 +48,17 @@ export const UNLIMITED_ALLOWANCE = (1n << 160n) - 1n;
 ///
 /// A cap sized from the current deposit re-triggers setup mid-session, since
 /// `evaluateSetup` compares the window against the current total and any larger
-/// deposit immediately outruns it.
+/// deposit outruns it.
 ///
 /// Permit2 treats `type(uint160).max` as unlimited and non-decrementing —
 /// `AllowanceTransfer._transfer` guards the subtraction with
 /// `if (maxAmount != type(uint160).max)` — so the window never drains and
 /// `expiration` is the only bound.
 ///
-/// `MASP.depositAuthorized` is the sole spender of this allowance and reverts
-/// `PayerNotSender` unless `msg.sender == d.payer`, so nothing moves without a
-/// transaction the payer signed. Revisit if the pool gains a path that pulls the
-/// allowance on another party's behalf.
+/// `MASP.depositAuthorized` is the sole spender and reverts `PayerNotSender`
+/// unless `msg.sender == d.payer`, so nothing moves without a transaction the
+/// payer signed. Revisit if the pool gains a path that pulls the allowance on
+/// another party's behalf.
 export function defaultAllowanceCap(): bigint {
   return UNLIMITED_ALLOWANCE;
 }
@@ -148,6 +148,39 @@ export interface SetupEntry {
 /// entry's `expiration` (which gates the future pulls).
 const SIG_DEADLINE_SECS = 30 * 60;
 
+/// Collapse entries naming the same ERC-20 into one, taking the widest terms.
+///
+/// Permit2 keys an allowance by `(owner, token, spender)`, so two entries for one
+/// token are two attempts at a single grant. Left in place they break the run
+/// twice over: pass 1 reads its allowances in one snapshot and sends a redundant
+/// approval tx per duplicate, and pass 2 gives both details the same nonce,
+/// which `AllowanceTransfer._updateApproval` rejects on the second, reverting the
+/// whole batch so setup can never complete.
+///
+/// Reachable in practice: the pool registers a separate asset id per yield
+/// variant and those ids share the underlying token, so a caller passing every
+/// registered asset arrives here with duplicates.
+function dedupeByToken(entries: readonly SetupEntry[]): SetupEntry[] {
+  const byToken = new Map<string, SetupEntry>();
+  for (const e of entries) {
+    const key = e.token.toLowerCase();
+    const prev = byToken.get(key);
+    // Widest terms rather than first-wins: the merged entry has to satisfy every
+    // caller that asked for this token.
+    byToken.set(
+      key,
+      prev
+        ? {
+            token: prev.token,
+            cap: prev.cap > e.cap ? prev.cap : e.cap,
+            expirationUnixSecs: Math.max(prev.expirationUnixSecs, e.expirationUnixSecs),
+          }
+        : e,
+    );
+  }
+  return [...byToken.values()];
+}
+
 /// One-time-per-window setup letting future deposits pull via
 /// `submitDepositAuthorized` with no per-tx Permit2 signature.
 ///
@@ -160,9 +193,10 @@ const SIG_DEADLINE_SECS = 30 * 60;
 /// then `confirming` with the broadcast tx hash for the on-chain steps.
 export async function ensurePermit2AuthorizedSetupBatch(
   wallet: WalletApi,
-  entries: readonly SetupEntry[],
+  requested: readonly SetupEntry[],
   onProgress?: (p: SetupProgress) => void,
 ): Promise<void> {
+  const entries = dedupeByToken(requested);
   if (entries.length === 0) return;
 
   const chain = wallet.chain;
@@ -179,7 +213,7 @@ export async function ensurePermit2AuthorizedSetupBatch(
   // Bound rather than destructured: these are prototype methods on
   // `ViemChainAdapter` that read `this.ctx`, so detaching them strips the
   // receiver and every call throws on `undefined`. Binding also carries the
-  // narrowing from the guard above into the closures below.
+  // guard's narrowing into the closures below.
   const tokenAllowance = chain.tokenAllowance.bind(chain);
   const tokenApprove = chain.tokenApprove.bind(chain);
 
@@ -227,18 +261,4 @@ export async function ensurePermit2AuthorizedSetupBatch(
   await chain.permit2PermitAllowanceBatch({ owner, permit, signature }, (hash) => {
     onProgress?.({ step: "permitting", status: "confirming", txHash: hash });
   });
-}
-
-/// Single-token setup, delegating to a one-entry
-/// {@link ensurePermit2AuthorizedSetupBatch} so there is one implementation.
-export async function ensurePermit2AuthorizedSetup(
-  wallet: WalletApi,
-  token: EvmAddress,
-  cap: bigint,
-  expirationUnixSecs: number,
-  onProgress?: (step: SetupStep, status: SetupStepPhase, txHash?: string) => void,
-): Promise<void> {
-  return ensurePermit2AuthorizedSetupBatch(wallet, [{ token, cap, expirationUnixSecs }], (p) =>
-    onProgress?.(p.step, p.status, p.txHash),
-  );
 }

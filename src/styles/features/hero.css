@@ -21,14 +21,6 @@
   background: linear-gradient(90deg, transparent, var(--accent), transparent);
   opacity: 0.6;
 }
-.hero__eyebrow {
-  font-size: 12px;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--accent);
-  font-weight: 500;
-  margin-bottom: 10px;
-}
 .hero__t {
   margin: 0 0 8px;
   font-size: 32px;

@@ -40,9 +40,9 @@ export function ClaimLinkResult({ url, amountLabel, onReset }: ClaimLinkResultPr
 
   return (
     <section className="claim-result" aria-labelledby={titleId}>
-      <h3 id={titleId} className="claim-result__t">
+      <h2 id={titleId} className="claim-result__t">
         link ready
-      </h3>
+      </h2>
       {amountLabel ? <p className="claim-result__amount mono">{amountLabel}</p> : null}
 
       {/* Placed ahead of the buttons: this is a bearer secret and sending it

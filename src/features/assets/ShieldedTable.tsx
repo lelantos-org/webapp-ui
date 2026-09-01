@@ -4,18 +4,29 @@ import { memo } from "react";
 import { Link } from "react-router-dom";
 import { TokenIcon } from "@/features/icons";
 import { type PriceMap, priceOf } from "@/features/prices";
-import { formatAmountForAsset, formatUsd, usdValue } from "@/shared/lib/format";
+import {
+  DISPLAY_FRAC_DIGITS,
+  formatAmountForDisplay,
+  formatDecimalCompact,
+  formatUsd,
+  usdValue,
+} from "@/shared/lib/format";
 import type { RegisteredAsset } from "./registered-assets";
 import type { AssetBalanceView } from "./use-balances";
+import { growthOf, type YieldGain, type YieldGains } from "./yield-gains";
 
 export function ShieldedTable({
   rows,
   byId,
   prices,
+  gains,
 }: {
   rows: AssetBalanceView[];
   byId: ReadonlyMap<bigint, RegisteredAsset>;
   prices: PriceMap;
+  /// Unrealised yield per asset. An asset with no entry does not earn; see
+  /// `EarnedCell` for why that is not the same as an entry of zero.
+  gains: YieldGains;
 }) {
   if (rows.length === 0) {
     return (
@@ -35,14 +46,39 @@ export function ShieldedTable({
       </div>
     );
   }
+  // Whether any visible row's earned figure is a lower bound. The per-cell
+  // explanation lives in a `title`, so on touch it does not exist at all — and
+  // the "already counted in the balance" half of it applies to every row, not
+  // just the hovered one, which is what makes it worth stating once here.
+  const anyUnderstated = rows.some((r) => {
+    const meta = byId.get(r.asset);
+    if (!meta?.yieldEnabled) return false;
+    const gain = gains.get(r.asset);
+    return gain === undefined || gain.resolvedNotes === 0 || gain.unknownNotes > 0;
+  });
+
   return (
     <div className="tbl-wrap">
       <table className="tbl tbl--pf">
         <thead>
           <tr>
             <th>asset</th>
-            <th className="ta-r">balance</th>
-            <th className="ta-r">value</th>
+            <th>balance</th>
+            {/* Dropped below 720px along with the glyph mark: four columns of
+                figures do not fit a phone, and the row's `earning` badge still
+                says the asset yields. */}
+            {/* "incl." rather than "earned" alone. The figure is a part of the
+                balance to its left, not a second holding to add to it, and two
+                adjacent numbers with no relation stated read as summable — a
+                reading that sends users to the withdraw form asking for balance
+                plus earnings and getting "exceeds available balance" for it. */}
+            <th
+              className="tbl__earned"
+              title="part of the balance beside it, not on top of it: the yield accrued on the notes you hold now — spending a note realises its gain and resets its basis"
+            >
+              incl. earned
+            </th>
+            <th>value</th>
           </tr>
         </thead>
         <tbody>
@@ -55,11 +91,18 @@ export function ShieldedTable({
                 label={meta ? meta.symbol : `#${r.asset.toString()}`}
                 meta={meta}
                 price={priceOf(prices, meta?.token)}
+                gain={gains.get(r.asset)}
               />
             );
           })}
         </tbody>
       </table>
+      {anyUnderstated ? (
+        <p className="tbl__note muted txt-xs">
+          <span className="mono">≥</span> some notes have no resolvable historical basis, so those
+          figures understate. Earnings are already included in the balance beside them.
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -77,6 +120,7 @@ const ShieldedRowView = memo(function ShieldedRowView({
   label,
   meta,
   price,
+  gain,
 }: {
   row: AssetBalanceView;
   label: string;
@@ -84,9 +128,11 @@ const ShieldedRowView = memo(function ShieldedRowView({
   /// USD per whole token, or `undefined` when no price is known. Not zero: an
   /// unpriced asset shows no dollar line rather than `$0.00`.
   price: number | undefined;
+  /// This asset's unrealised yield, or `undefined` when it has none to report.
+  gain: YieldGain | undefined;
 }) {
-  const fmt = (v: bigint) =>
-    meta ? formatAmountForAsset(v, meta.decimals, meta.scale) : v.toString();
+  // Capped for display; the figures behind it keep full precision.
+  const fmt = (v: bigint) => (meta ? formatAmountForDisplay(v, meta) : v.toString());
 
   // Both directions are rendered. A single branch on `outflow` would hide an
   // incoming amount whenever something was also leaving, so a swap — which has
@@ -101,7 +147,9 @@ const ShieldedRowView = memo(function ShieldedRowView({
 
   const total = row.balance + row.pending;
   const usd =
-    meta && price !== undefined ? usdValue(total, meta.decimals, meta.scale, price) : undefined;
+    meta && price !== undefined
+      ? usdValue(total, meta.decimals, meta.scale, price, meta.index)
+      : undefined;
 
   return (
     <tr>
@@ -111,9 +159,25 @@ const ShieldedRowView = memo(function ShieldedRowView({
               a symbol still get different marks. */}
           <TokenIcon symbol={label} address={meta?.token} />
           <span className="tok__sym mono">{label}</span>
+          {/* A yield balance grows with no transaction behind it, so the row
+              says why. `halted` still earns nothing and is still fully backed,
+              which is a different thing from not being a yield asset at all —
+              showing both as plain would misdescribe it. */}
+          {meta?.yieldEnabled ? (
+            <span
+              className={`tok__yield${meta.yieldHalted ? " tok__yield--halted" : ""}`}
+              title={
+                meta.yieldHalted
+                  ? "yield paused — balance still fully backed"
+                  : "earning yield — balance grows without a transaction"
+              }
+            >
+              {meta.yieldHalted ? "paused" : "earning"}
+            </span>
+          ) : null}
         </span>
       </td>
-      <td className="ta-r">
+      <td>
         <span className="bal">
           {/* On the figure's own line rather than stacked beneath it. A second
               line would change the row's height as each leg appeared and
@@ -135,9 +199,12 @@ const ShieldedRowView = memo(function ShieldedRowView({
           <span className="bal__main mono">{fmt(total)}</span>
         </span>
       </td>
+      <td className="tbl__earned">
+        <EarnedCell gain={gain} meta={meta} />
+      </td>
       {/* An unpriced asset gets a dash rather than a blank, so the column keeps
           its shape and the absence of a price is stated. */}
-      <td className="ta-r">
+      <td>
         {usd !== undefined ? (
           <span className="bal__usd mono">{formatUsd(usd)}</span>
         ) : (
@@ -149,6 +216,69 @@ const ShieldedRowView = memo(function ShieldedRowView({
     </tr>
   );
 });
+
+/**
+ * The `earned` cell: what this wallet's current notes have accrued.
+ *
+ * Four states, and conflating any two of them would misreport something:
+ *
+ * - **plain custody** — blank. The asset does not earn, so there is nothing to
+ *   say about it, and a dash here would claim the return is merely unknown.
+ * - **earning, basis unresolved** — a dash. The wallet knows the asset yields
+ *   but could not price what it held at the time it acquired it, because the
+ *   node has no archive state that far back. Genuinely unknown.
+ * - **earning, partial** — the figure, marked. Some notes resolved and some did
+ *   not, so the amount is real but understates. Saying so is the difference
+ *   between a low number and a wrong one.
+ * - **earning, resolved** — the figure.
+ *
+ * Signed and shown in the token's own units rather than as a percentage alone:
+ * the percentage is the return on the notes held, which is not the return on
+ * everything the user has ever deposited into this asset, and a bare "+3.4%"
+ * invites reading it as the latter. The amount is the honest half; the
+ * percentage rides along as context.
+ */
+function EarnedCell({
+  gain,
+  meta,
+}: {
+  gain: YieldGain | undefined;
+  meta: RegisteredAsset | undefined;
+}) {
+  if (!meta?.yieldEnabled) return null;
+  if (gain === undefined || gain.resolvedNotes === 0) {
+    return (
+      <span className="earned earned--none" title="no historical index for these notes">
+        {/* `title` is not exposed on a plain span and never appears on touch,
+            so the same words go in a visually hidden node — the pattern this
+            table already uses for the settling legs below. */}
+        <span className="sr-only">earnings unknown: no historical index for these notes</span>
+        <span aria-hidden>—</span>
+      </span>
+    );
+  }
+
+  // Both facts are read three and two times below; naming them once keeps the
+  // sign, the tone and the marker from drifting apart.
+  const down = gain.gain < 0n;
+  const partial = gain.unknownNotes > 0;
+  const explain = partial
+    ? `at least this much, already counted in the balance: ${gain.unknownNotes} note(s) have no resolvable basis`
+    : "already counted in the balance beside it";
+  return (
+    <span className={`earned${down ? " earned--down" : ""}`} title={explain}>
+      {/* See above: `title` alone leaves the cell's only explanation of what
+          this figure means unreachable without a mouse. */}
+      <span className="sr-only">{explain}</span>
+      <span className="mono">
+        {partial ? "≥" : ""}
+        {down ? "−" : "+"}
+        {formatDecimalCompact(down ? -gain.gain : gain.gain, meta.decimals, DISPLAY_FRAC_DIGITS)}
+      </span>
+      <span className="earned__pct">{`${(growthOf(gain) * 100).toFixed(2)}%`}</span>
+    </span>
+  );
+}
 
 /// One in-flight leg of a row's balance.
 interface SettleLeg {

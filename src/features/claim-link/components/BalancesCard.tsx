@@ -29,10 +29,10 @@ export function BalancesCard({
     return (
       <div className="card">
         <div className="card__hdr">
-          <h3 className="card__t">no notes found</h3>
+          <h2 className="card__t">No notes found</h2>
         </div>
         <div className="empty">
-          <div className="empty__t">nothing to claim at this link</div>
+          <div className="empty__sub">nothing to claim at this link</div>
           <div className="muted txt-sm">
             note may already have been swept, or sender's tx hasn't landed yet.
           </div>
@@ -44,7 +44,7 @@ export function BalancesCard({
   return (
     <div className="card claim-found">
       <div className="card__hdr">
-        <h3 className="card__t">claimable</h3>
+        <h2 className="card__t">Claimable</h2>
         <span className="muted txt-xs">
           {balances.length} asset{balances.length === 1 ? "" : "s"}
         </span>
@@ -62,7 +62,7 @@ export function BalancesCard({
           const a = findAsset(assets, b.asset);
           const symbol = a?.symbol ?? `#${b.asset.toString()}`;
           const formatted = a
-            ? formatAmountForAsset(b.amount, a.decimals, a.scale)
+            ? formatAmountForAsset(b.amount, a.decimals, a.scale, a.index)
             : formatAmount(b.amount);
           const isBusy = busy && busyAsset === b.asset;
           return (

@@ -69,7 +69,7 @@ function getSnapshot(): ReadonlyMap<string, PendingEntry> {
   return snapshot;
 }
 
-export function pendingKey(chainId: bigint, txHash: string, asset: bigint): string {
+function pendingKey(chainId: bigint, txHash: string, asset: bigint): string {
   return `${chainKey(chainId)}:${txHash}:${asset}`;
 }
 

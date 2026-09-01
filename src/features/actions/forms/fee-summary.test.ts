@@ -1,11 +1,12 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import { describe, expect, it } from "vitest";
 import type { FeeBreakdown } from "@/shared/lib/fees";
 import { feeSummary } from "./fee-summary";
 
 // 6-decimal token at scale 100 — so circuit units and base units differ, and a
 // row that forgot to scale one of them shows up.
-const USDC = { symbol: "USDC", decimals: 6, scale: 100n };
-const USDT = { symbol: "USDT", decimals: 6, scale: 100n };
+const USDC = { symbol: "USDC", decimals: 6, scale: 100n, index: RAY };
+const USDT = { symbol: "USDT", decimals: 6, scale: 100n, index: RAY };
 
 /// 100 USDC in circuit units.
 const AMOUNT = 1_000_000n;
@@ -144,6 +145,60 @@ describe("feeSummary", () => {
       // One row is not a sum, and labelling it "Total fees" would just repeat
       // the line above it.
       expect(transfer(relayerIn(USDC, 2_042n))?.total).toBeUndefined();
+    });
+  });
+
+  describe("a yield asset's index", () => {
+    // A pool index 8% above par: a note credited at par is now worth 1.08x its
+    // deposit, and that gain is withdrawable like any other value.
+    const RAY = 10n ** 27n;
+    const INDEX = (RAY * 108n) / 100n;
+    const YUSDC = { ...USDC, index: INDEX };
+    const YIELDED_BASE = (AMOUNT * USDC.scale * INDEX) / RAY;
+
+    it("is counted in the amount being moved", () => {
+      const m = feeSummary({
+        kind: "withdraw",
+        amount: AMOUNT,
+        spendAsset: YUSDC,
+        protocol: undefined,
+        relayer: undefined,
+      });
+      expect(row(m, "amount")?.amount).toBe(YIELDED_BASE);
+      expect(YIELDED_BASE).toBeGreaterThan(AMOUNT_BASE);
+    });
+
+    it("is counted in what a withdraw pays out", () => {
+      // The headline is `amount - protocolFee`, and `feeBreakdown` sizes that
+      // fee against the *indexed* amount. Scaling the amount without the index
+      // would subtract today's fee from the deposit-time value, understating
+      // the payout by the whole of the yield.
+      const fee = 324_000n;
+      const m = feeSummary({
+        kind: "withdraw",
+        amount: AMOUNT,
+        spendAsset: YUSDC,
+        protocol: {
+          inAmt: YIELDED_BASE,
+          fee,
+          total: YIELDED_BASE - fee,
+          feeBps: 30n,
+          mode: "withdraw",
+        },
+        relayer: undefined,
+      });
+      expect(m?.headline?.amount).toBe(YIELDED_BASE - fee);
+    });
+
+    it("is counted in a relayer quote, which also arrives in circuit units", () => {
+      const m = feeSummary({
+        kind: "withdraw",
+        amount: AMOUNT,
+        spendAsset: YUSDC,
+        protocol: undefined,
+        relayer: relayerIn(YUSDC, 2_000n),
+      });
+      expect(row(m, "relayer")?.amount).toBe((2_000n * USDC.scale * INDEX) / RAY);
     });
   });
 

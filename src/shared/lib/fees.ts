@@ -1,7 +1,13 @@
 // Protocol fee math, over the SDK's `applyFee`. Truncating integer division
 // mirrors `MASP._takeFee` on-chain.
 
-import { applyFee, BPS_DENOMINATOR } from "@lelantos-org/sdk/core";
+import {
+  applyFee,
+  BPS_DENOMINATOR,
+  circuitAmount,
+  RAY,
+  toTokenUnits,
+} from "@lelantos-org/sdk/core";
 
 /// The basis-point denominator `applyFee` — and `MASP._takeFee` — divide by.
 ///
@@ -36,10 +42,35 @@ export interface FeeInputs {
   scale: bigint;
   feeBps: bigint;
   mode: FeeMode;
+  /// Yield index, RAY-scaled. Defaults to `RAY`, which is the identity and
+  /// leaves a plain asset's arithmetic exactly as it was.
+  index?: bigint;
 }
 
-export function feeBreakdown({ amount, scale, feeBps, mode }: FeeInputs): FeeBreakdown {
-  const inAmt = amount * scale;
+/// What a leg costs or yields, in token base units.
+///
+/// **An estimate, not the charge.** For a yield asset the pool converts with its
+/// exact `gross / supply`, and the index this uses is floored where the relayer
+/// reports it; the authoritative figure is computed inside the SDK, which signs
+/// a ceiling over it. This drives what the UI shows and what the "max" button
+/// offers, so a deposit rounds **up** — over-stating the cost keeps the max from
+/// proposing an amount the payer cannot actually afford — and a withdraw rounds
+/// **down**, so neither direction flatters the user into a failing transaction.
+export function feeBreakdown({
+  amount,
+  scale,
+  feeBps,
+  mode,
+  index = RAY,
+}: FeeInputs): FeeBreakdown {
+  // The SDK's conversion, at the rounding the leg requires: **up** into the
+  // pool, **down** out of it, so dust always accrues to the remaining holders
+  // rather than to whoever is transacting. That asymmetry is the SDK's to own —
+  // re-deriving it here is how the two end up disagreeing.
+  const inAmt = toTokenUnits(circuitAmount(amount), scale, {
+    index,
+    round: mode === "deposit" ? "up" : "down",
+  });
   const fee = applyFee(inAmt, feeBps);
   return {
     inAmt,

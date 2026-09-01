@@ -1,7 +1,7 @@
 // Sender side of the claim-link flow; stages owned by `useClaimLinkStage`.
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import type { TxPhase } from "@/features/actions";
 import {
@@ -23,6 +23,7 @@ import { useActiveChain } from "@/features/chain";
 import { describeError } from "@/shared/lib/errors";
 import { formatAssetAmount, parseAmountForAsset } from "@/shared/lib/format";
 import { TextField } from "@/shared/ui/Field";
+import { useInert } from "@/shared/ui/use-inert";
 import { ClaimLinkResult } from "./components/ClaimLinkResult";
 import { GenerateModal } from "./components/GenerateModal";
 import { UnclaimedLinks } from "./components/UnclaimedLinks";
@@ -62,6 +63,8 @@ export function GenerateLinkForm() {
   // through the currently selected asset could state a different token and
   // quantity on the confirmation screen.
   const [pending, setPending] = useState<{ amount: bigint; asset: RegisteredAsset } | null>(null);
+  const formRef = useRef<HTMLDivElement>(null);
+  useInert(formRef, stageApi.modalOpen);
 
   const selected = findAsset(assets, watch("asset"));
   const watchedAmount = watch("amount");
@@ -74,12 +77,24 @@ export function GenerateLinkForm() {
     undefined,
   ).valid;
   const visibleSteps = progress.steps.filter((s) => VISIBLE_RUNNING_PHASES.has(s.id));
+  // Nothing else on this form explains either disable, unlike the deposit and
+  // withdraw forms where a notice already carries the reason.
+  const blockedReason = !selected
+    ? "no assets on this network"
+    : !amountValid
+      ? "enter an amount"
+      : undefined;
   const amountLabel = pending ? formatAssetAmount(pending.amount, pending.asset) : "";
 
   const onSubmit = handleSubmit((values) => {
     if (!selected) return;
     try {
-      const amount = parseAmountForAsset(values.amount, selected.decimals, selected.scale);
+      const amount = parseAmountForAsset(
+        values.amount,
+        selected.decimals,
+        selected.scale,
+        selected.index,
+      );
       setPending({ amount, asset: selected });
       stageApi.toConfirm();
     } catch (e) {
@@ -124,27 +139,37 @@ export function GenerateLinkForm() {
 
   return (
     <>
-      <ActionForm
-        submitLabel="generate link"
-        busy={mutation.isPending}
-        error={mutation.error}
-        onSubmit={onSubmit}
-        submitDisabled={!selected || !amountValid}
-        progress={stageApi.stage === "running" ? undefined : progress}
-      >
-        <AssetSelectField
-          balanceOf={balanceOf}
-          error={errors.asset?.message}
-          {...register("asset")}
-        />
-        <TextField
-          label="amount"
-          placeholder={selected ? `1.0 ${selected.symbol}` : "1.0"}
-          inputMode="decimal"
-          error={errors.amount?.message}
-          {...register("amount")}
-        />
-      </ActionForm>
+      {/* Held inert while the confirm modal is up. `Modal` traps Tab inside its
+          own panel, but it portals, so this form is a sibling rather than a
+          descendant: without this the pointer still reaches these fields and a
+          screen reader still walks them, behind a dialog describing the values
+          they hold. The `pending` snapshot above remains the correctness
+          guarantee; this is the second layer, and it degrades to nothing on an
+          engine without `inert`. */}
+      <div ref={formRef}>
+        <ActionForm
+          submitLabel="generate link"
+          busy={mutation.isPending}
+          error={mutation.error}
+          onSubmit={onSubmit}
+          submitDisabled={!selected || !amountValid}
+          blockedReason={blockedReason}
+          progress={stageApi.stage === "running" ? undefined : progress}
+        >
+          <AssetSelectField
+            balanceOf={balanceOf}
+            error={errors.asset?.message}
+            {...register("asset")}
+          />
+          <TextField
+            label="amount"
+            placeholder={selected ? `1.0 ${selected.symbol}` : "1.0"}
+            inputMode="decimal"
+            error={errors.amount?.message}
+            {...register("amount")}
+          />
+        </ActionForm>
+      </div>
 
       <UnclaimedLinks chainId={chain.chainId} assets={assets} />
 

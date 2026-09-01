@@ -6,9 +6,7 @@
 // directly — routing local imports back through this file would create a
 // cycle through the barrel.
 
-export { SetupAllModal } from "./SetupAllModal";
 export { SetupAllNotice } from "./SetupAllNotice";
 export { SetupFlow } from "./SetupFlow";
 export { SetupNotice } from "./SetupNotice";
 export { useDepositSetup } from "./use-deposit-setup";
-export { evaluateSetupMany, useSetupStatusMany } from "./use-setup-status";

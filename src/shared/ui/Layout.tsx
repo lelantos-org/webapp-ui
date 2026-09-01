@@ -25,6 +25,12 @@ export function Layout({ children }: { children: ReactNode }) {
           gradient backdrop. */}
       {minimal ? null : <Backdrop />}
       <div className="app">
+        {/* The banner, brand, status pill and connect button all precede the
+            content on every route, so a keyboard or screen-reader user crosses
+            them before reaching anything they came for. */}
+        <a className="skip" href="#main">
+          Skip to content
+        </a>
         {/* Above the header, and on `/claim` too: that route is where someone
             who has never seen the app arrives holding a link to real funds. */}
         <BetaBanner />
@@ -33,20 +39,30 @@ export function Layout({ children }: { children: ReactNode }) {
             <span className="brand">LELANTOS</span>
             <span className="brand__sub muted">{minimal ? "claim" : "wallet"}</span>
           </div>
-          {minimal ? null : (
-            <div className="hdr__right">
-              {/* Health and network are one question — "connected, and to
-                  what" — so they share a pill rather than sitting as two
-                  separate widgets competing for the same glance. */}
-              <span className="pill hdr__status">
-                <HealthIndicator />
-                <ChainBadge />
-              </span>
-              <ConnectButton />
-            </div>
-          )}
+          {/* `/claim` keeps the network label and drops the rest. A wrong
+              network is the likeliest thing to go wrong on that route, and
+              until the link is decoded *and* a wallet is connected
+              `NetworkGateCard` cannot yet say so — leaving the arrival with no
+              way to see where they are. The badge is a read-only label with no
+              work behind it; health and connect stay out, because the claim
+              flow runs its own gate and its own status. */}
+          <div className="hdr__right">
+            {/* Health and network are one question — "connected, and to
+                what" — so they share a pill rather than sitting as two
+                separate widgets competing for the same glance. */}
+            <span className="pill hdr__status">
+              {minimal ? null : <HealthIndicator />}
+              <ChainBadge />
+            </span>
+            {minimal ? null : <ConnectButton />}
+          </div>
         </header>
-        <main className="main">{children}</main>
+        {/* `tabIndex={-1}` so the skip link can move focus here, not just
+            scroll: without it the target is unfocusable and the next Tab
+            resumes from the header the link was meant to skip. */}
+        <main className="main" id="main" tabIndex={-1}>
+          {children}
+        </main>
         <footer className="ftr">
           <span className="ftr__brand">Lelantos</span>
           <span className="ftr__sep" aria-hidden="true" />

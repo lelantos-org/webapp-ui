@@ -1,10 +1,9 @@
-// Bridge between the AssetPicker's display value (`"eth"` sentinel +
+// Bridge between the AssetPicker's display value (`ethOption` sentinels +
 // asset-id strings) and the form schema fields (`asset` + `asEth`).
 
 import { useCallback } from "react";
 import type { UseFormSetValue } from "react-hook-form";
-import { ETH_OPTION } from "./AssetPicker";
-import { useRegisteredAssets } from "./registered-assets";
+import { ethOption, parseEthOption } from "./eth-option";
 
 export interface AssetEthForm {
   asset: string;
@@ -23,24 +22,22 @@ export function useEthAssetPicker<T extends AssetEthForm>(
   watchedAsset: string,
   watchedAsEth: boolean,
 ): UseEthAssetPickerResult {
-  const assets = useRegisteredAssets();
-  const weth = assets.find((a) => a.isWeth);
   const onPickerChange = useCallback(
     (next: string) => {
       // biome-ignore lint/suspicious/noExplicitAny: setValue's path generic cannot express a field name shared across both form schemas
       const set = setValue as any;
-      if (next === ETH_OPTION && weth) {
-        set("asset", weth.id.toString(), { shouldDirty: true });
-        set("asEth", true, { shouldDirty: true });
-      } else {
-        set("asset", next, { shouldDirty: true });
-        set("asEth", false, { shouldDirty: true });
-      }
+      // The id travels inside the sentinel, so the registry is not consulted
+      // here. Picking the WETH id by symbol would have to choose between a
+      // plain and a yield-bound registration of the same token, which is the
+      // choice the user just made.
+      const eth = parseEthOption(next);
+      set("asset", eth ?? next, { shouldDirty: true });
+      set("asEth", eth !== undefined, { shouldDirty: true });
     },
-    [setValue, weth],
+    [setValue],
   );
   return {
-    pickerValue: watchedAsEth ? ETH_OPTION : watchedAsset,
+    pickerValue: watchedAsEth ? ethOption(watchedAsset) : watchedAsset,
     onPickerChange,
   };
 }

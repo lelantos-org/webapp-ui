@@ -25,7 +25,7 @@ const PREFIX = "lelantos:fmd-sub:v3:";
 ///
 /// The server does not reject a pool below the floor: it clamps its advertised
 /// ceiling to `GAMMA_MIN` and accepts γ=1 at any note count. This client is
-/// stricter, because at γ=1 the match set is half the pool, so registering one
+/// stricter, since at γ=1 the match set is half the pool and registering one
 /// reveals more to the discovery service than taking the firehose. See
 /// `maxDetectionGamma`.
 const DECOY_FLOOR = 64;
@@ -34,11 +34,11 @@ const DECOY_FLOOR = 64;
 /// server, and when.
 ///
 /// The token is a pure function of the wallet key and never changes, but the
-/// subscription it addresses can expire or be revoked server-side. This is
+/// subscription it addresses can expire or be revoked server-side. It is
 /// therefore a hint with an expiry: past the TTL the token is re-confirmed
 /// through the idempotent create call. Trusting it indefinitely would turn an
-/// expired subscription into a silent zero balance, since an inactive
-/// subscription answers `listNotes` with an empty page rather than an error.
+/// expired subscription into a silent zero balance, an inactive subscription
+/// answering `listNotes` with an empty page rather than an error.
 ///
 /// Grouped into one object so the token and its expiry are written, read and
 /// cleared together.
@@ -71,7 +71,7 @@ const tokenCache = {
 /// Jittered once at write time into the entry's `expiresAt`. An exact 24h TTL
 /// would land the re-confirm at the same wall-clock offset every day, a
 /// per-wallet schedule the discovery service could recognise without reading the
-/// token. Jittering at comparison time instead would re-roll the deadline on
+/// token. Jittering at comparison time would instead re-roll the deadline on
 /// every read, letting one entry answer "valid" and then "expired" microseconds
 /// apart.
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;

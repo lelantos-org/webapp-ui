@@ -1,5 +1,8 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import { describe, expect, it } from "vitest";
-import { type ChainEntry, chainKey, findChain, toChainEntry } from "@/config/chains";
+import { toChainEntry } from "./parse";
+import type { ChainEntry } from "./types";
+import { chainKey, findChain } from "./types";
 
 const entry = (chainId: bigint, chainName: string): ChainEntry =>
   ({ chainId, chainName }) as ChainEntry;
@@ -127,5 +130,67 @@ describe("toChainEntry with unparseable fields", () => {
 
   it("still accepts a well-formed row", () => {
     expect(toChainEntry(good as never).ok).toBe(true);
+  });
+
+  // A relayer predating the yield mixin sends no `yieldState`, and so does every
+  // asset held as plain custody. `RAY` is the identity for every conversion, so
+  // both keep exactly today's arithmetic.
+  it("reads an asset with no yieldState as plain custody at RAY", () => {
+    const result = toChainEntry({
+      ...good,
+      tokens: [{ assetId: 1, token: good.maspAddress, scale: "1" }],
+    } as never);
+    expect(result.ok).toBe(true);
+    const asset = result.ok ? result.entry.tokens[0] : undefined;
+    expect(asset?.index).toBe(RAY);
+    expect(asset?.yieldEnabled).toBe(false);
+    expect(asset?.yieldHalted).toBe(false);
+  });
+
+  it("carries the index and the halted flag when the pool reports them", () => {
+    const result = toChainEntry({
+      ...good,
+      tokens: [
+        {
+          assetId: 1,
+          token: good.maspAddress,
+          scale: "1",
+          yieldState: {
+            venue: good.relayerAddress,
+            gross: "1100000",
+            supply: "1000000",
+            index: "1100000000000000000000000000",
+            halted: true,
+          },
+        },
+      ],
+    } as never);
+    expect(result.ok).toBe(true);
+    const asset = result.ok ? result.entry.tokens[0] : undefined;
+    expect(asset?.index).toBe(1_100_000_000_000_000_000_000_000_000n);
+    expect(asset?.yieldEnabled).toBe(true);
+    expect(asset?.yieldHalted).toBe(true);
+  });
+
+  // The row's existing contract: an asset the relayer cannot fully describe is
+  // still usable and only the label degrades. A yield block that fails its
+  // schema must not take the asset — or the chain — down with it.
+  it("drops a malformed yieldState rather than the asset", () => {
+    const result = toChainEntry({
+      ...good,
+      tokens: [
+        {
+          assetId: 1,
+          token: good.maspAddress,
+          scale: "1",
+          yieldState: { venue: 42, gross: null },
+        },
+      ],
+    } as never);
+    expect(result.ok).toBe(true);
+    const asset = result.ok ? result.entry.tokens[0] : undefined;
+    expect(asset).toBeDefined();
+    expect(asset?.index).toBe(RAY);
+    expect(asset?.yieldEnabled).toBe(false);
   });
 });

@@ -17,6 +17,12 @@
   --warn: #d97706;
   --warn-rgb: 217, 119, 6;
   --warn-dim: #fde68a;
+  /* Opaque amber pair for the beta banner. Deliberately flat colours rather
+     than an rgba() derived from --warn-rgb: the banner sits over the animated
+     gradient backdrop, and a warning whose contrast moves as the backdrop
+     animates is a warning that is sometimes unreadable. */
+  --warn-bg: #fef6e7;
+  --warn-strong: #7a4204;
   --err: #dc2626;
   --err-rgb: 220, 38, 38;
   --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -28,4 +34,53 @@
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
   --radius: 8px;
   --radius-sm: 6px;
+  --radius-pill: 999px;
+
+  /* Keyboard focus ring. An outline rather than a box-shadow, matching the
+     rules that already existed on the denomination, slippage, wallet and
+     fee-asset controls: outline is not clipped by an ancestor's
+     `overflow: hidden` (the segmented nav has one) and does not compete with
+     `.btn:active`'s transform. Pair it with an explicit `outline-offset` —
+     negative where a parent clips, so the ring draws inside the control. */
+  --ring: 2px solid var(--accent);
+
+  /* Spacing, measured from what the stylesheet already does rather than picked
+     off a grid. This file is not on an 8pt system and should not be moved onto
+     one: its finest step is 2px and its spine is 6/8/10/12/14, which is what
+     makes the dense surfaces (the portfolio row, the fee panel, the header
+     pill) hold together at 14px base.
+
+     The even ramp below covers ~85% of every padding, margin and gap here. The
+     odd values it omits — 3, 5, 7, 9, 11 — are deliberate optical nudges, and
+     several carry a comment saying so (see header.css, where 8px is documented
+     as a correction for leading cut out of the pill). Leave those literal;
+     rounding them onto the ramp is what this scale is meant to prevent, not
+     what it is for. */
+  --sp-2: 2px;
+  --sp-4: 4px;
+  --sp-6: 6px;
+  --sp-8: 8px;
+  --sp-10: 10px;
+  --sp-12: 12px;
+  --sp-14: 14px;
+  --sp-16: 16px;
+  --sp-18: 18px;
+  --sp-20: 20px;
+  --sp-22: 22px;
+  --sp-24: 24px;
+
+  /* Type, body spine only. These five sizes are 80% of every font-size in the
+     stylesheet and they encode a real shared decision: 14 body, 13 controls,
+     12 secondary, 11 dense, 10 micro.
+
+     The display sizes (20 through 56) are deliberately absent. Each is used
+     once or twice, in a hero or a per-breakpoint ramp, and tokenising them
+     would assert a shared step where there is only a one-off optical choice —
+     including the 12.5px in the claim hero, which is exactly the kind of value
+     a scale would destroy. */
+  --fs-10: 10px;
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
 }

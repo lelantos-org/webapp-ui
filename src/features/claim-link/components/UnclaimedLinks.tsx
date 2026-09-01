@@ -55,10 +55,11 @@ export function UnclaimedLinks({ chainId, assets }: UnclaimedLinksProps) {
 
   return (
     <section className="link-vault">
-      <h4 className="link-vault__t">links you generated</h4>
+      <h2 className="link-vault__t">links you generated</h2>
       <p className="link-vault__note">
-        Kept in this browser so a network switch or a closed tab cannot lose them. Remove one once
-        the recipient has it — anyone holding the link can claim the funds.
+        Kept in this browser so a network switch or a closed tab cannot lose them. Removing a record
+        deletes your copy of the link — it does not revoke anything, and anyone still holding the
+        link can claim the funds.
       </p>
       <ul className="link-vault__list">
         {links.map((link) => (
@@ -147,7 +148,7 @@ function DefaultActions({ amount, onCopy, onStartForget }: DefaultActionsProps) 
         className="link-vault__act link-vault__act--mute"
         onClick={onStartForget}
       >
-        done with this
+        remove
       </button>
     </>
   );
@@ -161,11 +162,15 @@ interface ConfirmForgetActionsProps {
 /// Second step of the two-step delete. Holds the same two slots as
 /// `DefaultActions`, and `.link-vault__actions` reserves the width, so confirming
 /// on one row does not shift the rows below.
+///
+/// "delete my copy", not "forget it?": what this destroys is the local record,
+/// and the link itself keeps working for whoever holds it. The old wording read
+/// as revocation, which is the one thing it cannot do.
 function ConfirmForgetActions({ onConfirm, onCancel }: ConfirmForgetActionsProps) {
   return (
     <>
       <button type="button" className="link-vault__act link-vault__act--warn" onClick={onConfirm}>
-        forget it?
+        delete my copy
       </button>
       <button type="button" className="link-vault__act link-vault__act--mute" onClick={onCancel}>
         cancel

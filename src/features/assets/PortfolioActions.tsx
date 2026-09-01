@@ -1,35 +1,20 @@
 import { useEffect, useState } from "react";
-import { useCompactNotes, useHardRefresh, useWalletState } from "@/features/wallet";
+import { useWalletState } from "@/features/wallet";
 import { relativeTime } from "@/shared/lib/format";
-import { toastError, toastInfo } from "@/shared/lib/toast";
+import { WalletDataModal } from "./WalletDataModal";
 
-/// Header for the Portfolio card: sync status, plus the refresh, hard-refresh and
-/// compact actions.
+/// Header for the Portfolio card: sync status and the refresh action.
+///
+/// `hard refresh` and `compact` sit behind `manage`, in a modal with room to
+/// say what each costs; as equal-weight links here they would put a
+/// several-minute wipe-and-rescan at the same visual weight as a refetch.
+/// `refresh` stays inline, being read constantly and cheap.
 export function PortfolioActions() {
   const shielded = useWalletState();
-  const hard = useHardRefresh();
-  const compact = useCompactNotes();
-  const [confirmHard, setConfirmHard] = useState(false);
-  const [compacting, setCompacting] = useState(false);
+  const [managing, setManaging] = useState(false);
 
   const syncing = shielded.isFetching;
   const syncedAt = shielded.data?.syncedAt;
-
-  const onCompact = async () => {
-    setCompacting(true);
-    try {
-      const removed = await compact.run();
-      toastInfo(
-        removed > 0
-          ? `pruned ${removed} spent note${removed === 1 ? "" : "s"}`
-          : "nothing to prune",
-      );
-    } catch (e) {
-      toastError("compact failed", e);
-    } finally {
-      setCompacting(false);
-    }
-  };
 
   return (
     <span className="muted txt-xs">
@@ -37,32 +22,8 @@ export function PortfolioActions() {
       <Sep />
       <InlineAction disabled={syncing} onClick={() => shielded.refetch()} label="refresh" />
       <Sep />
-      {confirmHard ? (
-        <>
-          <InlineAction
-            disabled={syncing}
-            onClick={async () => {
-              setConfirmHard(false);
-              await hard.run();
-            }}
-            label="wipe + resync?"
-            tone="warn"
-          />{" "}
-          <InlineAction onClick={() => setConfirmHard(false)} label="cancel" />
-        </>
-      ) : (
-        <InlineAction
-          disabled={syncing}
-          onClick={() => setConfirmHard(true)}
-          label="hard refresh"
-        />
-      )}
-      <Sep />
-      <InlineAction
-        disabled={syncing || compacting}
-        onClick={onCompact}
-        label={compacting ? "compacting…" : "compact"}
-      />
+      <InlineAction onClick={() => setManaging(true)} label="manage" />
+      {managing ? <WalletDataModal syncing={syncing} onClose={() => setManaging(false)} /> : null}
     </span>
   );
 }

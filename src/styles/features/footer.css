@@ -25,6 +25,7 @@
   transition: color 0.15s ease;
 }
 .ftr__link:hover { color: var(--accent); }
+.ftr__link:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
 /* Below this the row cannot hold the privacy note and the links on one line.
    Left to wrap on its own it broke mid-note and stranded the vertical rules at

@@ -1,12 +1,11 @@
 // The withdrawal ladder for one asset.
 //
-// Read through `wallet.asset` rather than from the SDK's built-in table
-// directly. The ladder an amount is judged against is whatever
-// `WalletConfig.denominations` resolved to, and reading the table here would go
-// on offering "10, 20, 50…" to a wallet that opted out or supplied its own —
-// steering users onto a ladder the spend path no longer knows about.
-// `AssetInfo.ladder` *is* that resolution, which is what makes it worth a round
-// trip a pure lookup would not need.
+// Read through `wallet.asset` rather than from the SDK's built-in table. The
+// ladder an amount is judged against is whatever `WalletConfig.denominations`
+// resolved to, and reading the table here would keep offering "10, 20, 50…" to
+// a wallet that opted out or supplied its own, steering users onto a ladder the
+// spend path does not know about. `AssetInfo.ladder` is that resolution, which
+// is what makes the round trip worth more than a pure lookup.
 //
 // Fixed for the life of the asset: the denominations are circuit-unit integers
 // keyed on the ERC-20 address, and unlike the human labels drawn for them they
@@ -27,9 +26,9 @@ const NO_LADDER: Ladder = [];
 /// Withdrawal denominations for `asset`, ascending, in circuit units.
 ///
 /// Empty while the read is in flight, and empty for good on an asset with no
-/// ladder. The two are deliberately not distinguished: both mean there is
-/// nothing to offer, and a form that rendered a "loading denominations"
-/// placeholder would flash it on every asset with none.
+/// ladder. The two are not distinguished: both mean there is nothing to offer,
+/// and a form rendering a "loading denominations" placeholder would flash it on
+/// every asset with none.
 export function useAssetLadder(asset: bigint | undefined): Ladder {
   const { wallet } = useWallet();
   // Asset ids are unique only within a chain, so the same id names a different

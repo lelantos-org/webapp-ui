@@ -1,4 +1,4 @@
-import { evmAddress } from "@lelantos-org/sdk";
+import { evmAddress, RAY } from "@lelantos-org/sdk";
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { RegisteredAsset } from "@/features/assets";
@@ -13,6 +13,10 @@ const USDC: RegisteredAsset = {
   // `scale: 1n` keeps circuit units and base units the same, so the max
   // arithmetic below is readable without a conversion in the way.
   scale: 1n,
+  // Plain custody: one unit is worth `scale` forever.
+  index: RAY,
+  yieldEnabled: false,
+  yieldHalted: false,
 };
 
 const FEE_BPS = 30n;

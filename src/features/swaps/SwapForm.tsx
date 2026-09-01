@@ -1,6 +1,5 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { quoteAgeSecs } from "@lelantos-org/sdk/quoter";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   ActionForm,
@@ -26,16 +25,17 @@ import {
 } from "@/features/assets";
 import { useActiveChain } from "@/features/chain";
 import { SyncErrorNotice } from "@/features/wallet";
-import { formatAmountForAsset, parseAmountForAsset } from "@/shared/lib/format";
+import { formatAmountForDisplay, parseAmountForAsset } from "@/shared/lib/format";
+import { defaultSwapOut } from "./default-pair";
+import { FlipIcon } from "./FlipIcon";
 import { QuoteCard } from "./QuoteCard";
+import { quoteRequest } from "./quote-request";
 import { SlippageField } from "./SlippageField";
 import { type SwapInput, swapSchema } from "./schemas";
-import { QUOTE_STALE_SECS, useSwapQuote } from "./use-swap-quote";
+import { swapSubmitBlock } from "./submit-block";
+import { useQuoteAge } from "./use-quote-age";
+import { useSwapQuote } from "./use-swap-quote";
 
-/// Any asset other than `DEFAULT_ASSET_ID`, so the pair starts valid. A swap
-/// needs two distinct assets; a matching pair leaves the quote request
-/// `undefined`.
-const DEFAULT_SWAP_ASSET_OUT_ID = "2";
 const DEFAULT_SLIPPAGE_BPS = 50;
 
 export function SwapForm() {
@@ -48,7 +48,10 @@ export function SwapForm() {
     resolver: zodResolver(swapSchema),
     defaultValues: {
       assetIn: DEFAULT_ASSET_ID,
-      assetOut: DEFAULT_SWAP_ASSET_OUT_ID,
+      // Derived rather than hardcoded, and safe to compute here: the registry
+      // resolves before anything below `ChainProvider` renders (see
+      // `registered-assets.ts`), so there is nothing to reconcile afterwards.
+      assetOut: defaultSwapOut(assets),
       amount: "",
       slippageBps: DEFAULT_SLIPPAGE_BPS,
     },
@@ -57,6 +60,7 @@ export function SwapForm() {
     register,
     handleSubmit,
     setValue,
+    trigger,
     watch,
     formState: { errors },
   } = form;
@@ -76,30 +80,22 @@ export function SwapForm() {
   const v = validateAmount(parsed, inAsset, inBalance);
 
   // The quote binds a route into the proof, so it is fetched for one exact
-  // (pair, amount, slippage). Passing `undefined` until every part is present
-  // keeps the query off, and because the request is the cache key, changing any
-  // part invalidates the previous quote by construction.
-  //
-  // MetaQuoter quotes against token base units. MASP skims its fee off the gross
-  // publicOut before the wrapper sees the input, so the adapter-side input is
-  // slightly lower; the user's `slippageBps` floor absorbs the difference.
-  const request =
-    inAsset && outAsset && wAssetIn !== wAssetOut && v.valid && parsed !== undefined
-      ? {
-          chainId: activeChain.chainId,
-          tokenIn: inAsset.token,
-          tokenOut: outAsset.token,
-          amountIn: parsed * inAsset.scale,
-          slippageBps: wSlippage,
-        }
-      : undefined;
+  // (pair, amount, slippage); see `quote-request.ts` for why `undefined` is the
+  // load-bearing case.
+  const request = quoteRequest({
+    chainId: activeChain.chainId,
+    inAsset,
+    outAsset,
+    amount: parsed,
+    amountValid: v.valid,
+    slippageBps: wSlippage,
+  });
   const quoteQ = useSwapQuote(request);
   // Suppressed while the debounce catches up, since `data` then describes an
   // earlier amount and submitting against it would prove the wrong route.
   const quote = quoteQ.stale ? undefined : quoteQ.data;
 
-  const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
-  const quoteAge = quote ? quoteAgeSecs(quote, now) : undefined;
+  const { ageSecs: quoteAge, stale: quoteStale } = useQuoteAge(quote);
   // The **out** asset's **deposit** rate, because that is what it prices: leg 2
   // mints the B-note as a deposit of `outAsset`, and `sizeBNote` solves for the
   // value whose Permit2 pull clears `minOut`. The in-asset's rate, or the
@@ -122,28 +118,46 @@ export function SwapForm() {
     feeAsset,
     onFeeAsset: setFeeAsset,
   });
-  const quoteStale = quoteAge !== undefined && quoteAge > QUOTE_STALE_SECS;
-
-  // `now` drives the quote's age counter only, so it ticks only while a quote
-  // exists and is under `QUOTE_STALE_SECS`; ungated, it would re-render the whole
-  // form subtree once a second for the life of the route. Resynced on entry, so a
-  // quote arriving after a pause is not measured against a stale clock.
-  useEffect(() => {
-    if (!quote || quoteStale) return;
-    setNow(Math.floor(Date.now() / 1000));
-    const id = setInterval(() => setNow(Math.floor(Date.now() / 1000)), 1000);
-    return () => clearInterval(id);
-  }, [quote, quoteStale]);
-
   const refreshQuote = () => void quoteQ.refetch();
   const quoting = quoteQ.isFetching || (request !== undefined && quoteQ.stale);
 
-  const submitDisabled = !v.valid || !quote || quoteStale || quoting;
+  const block = swapSubmitBlock({
+    amountValid: v.valid,
+    hasQuote: !!quote,
+    quoteStale,
+    quoting,
+  });
+
+  // Swapping the pair drops the amount. It is denominated in the *in* asset, so
+  // carrying it across reinterprets "1.0" against a different token and a
+  // different balance — the same digits, a trade orders of magnitude apart.
+  // Clearing also retires the quote by construction, the mechanism the
+  // post-submit path relies on: the request goes `undefined` and the query
+  // idles.
+  //
+  // Both sides are written unvalidated and revalidated together afterwards.
+  // Validating each `setValue` as it lands walks through a state where the two
+  // sides are momentarily equal, and `swapSchema` reports that on *both* paths
+  // by design (see the comment there). The second write then clears only the
+  // field it names, leaving the first field's "tokenIn and tokenOut must differ"
+  // latched on a pair that is now perfectly valid.
+  const flip = () => {
+    clearFinished();
+    setValue("assetIn", wAssetOut);
+    setValue("assetOut", wAssetIn);
+    void trigger(["assetIn", "assetOut"]);
+    clearAmount();
+  };
 
   const onSubmit = handleSubmit(
     useSubmitOnce(async (values) => {
       if (!inAsset || !outAsset || !quote) return;
-      const amount = parseAmountForAsset(values.amount, inAsset.decimals, inAsset.scale);
+      const amount = parseAmountForAsset(
+        values.amount,
+        inAsset.decimals,
+        inAsset.scale,
+        inAsset.index,
+      );
       await m.mutateAsync({ assetIn: inAsset.id, assetOut: outAsset.id, amount, quote, feeAsset });
       // The quote is bound to this exact amount, so clearing the amount retires
       // it: the request becomes `undefined` and the query goes idle, while the
@@ -158,7 +172,8 @@ export function SwapForm() {
       busy={m.isPending}
       error={m.error}
       onSubmit={onSubmit}
-      submitDisabled={submitDisabled}
+      submitDisabled={block.disabled}
+      blockedReason={block.reason}
       progress={progress}
       txHash={m.data?.txHash}
     >
@@ -183,6 +198,25 @@ export function SwapForm() {
           setValue("assetOut", next, { shouldValidate: true });
         }}
         error={errors.assetOut?.message}
+        // On this field's label row rather than floating in the gap above it.
+        // Centring it in that gap looked wrong however it was measured: the gap
+        // separates the two *field groups*, and the "to" group opens with a
+        // label, so anything centred between them sits a label's height nearer
+        // the "from" box than the "to" box. Here it needs no overlap, no
+        // negative margin and no stacking order, and it sits with the value it
+        // rewrites.
+        action={
+          <button
+            type="button"
+            className="swap-flip"
+            onClick={flip}
+            disabled={m.isPending}
+            title="reverse the pair"
+          >
+            <FlipIcon />
+            reverse
+          </button>
+        }
       />
       <input type="hidden" {...register("assetOut")} />
       <AmountField
@@ -193,7 +227,7 @@ export function SwapForm() {
         formError={errors.amount?.message}
         hint={
           inBalance !== undefined && inAsset
-            ? `balance ${formatAmountForAsset(inBalance, inAsset.decimals, inAsset.scale)} ${inAsset.symbol}`
+            ? `balance ${formatAmountForDisplay(inBalance, inAsset)} ${inAsset.symbol}`
             : undefined
         }
         onSetMax={setAmount}
@@ -227,6 +261,7 @@ export function SwapForm() {
             quote={quote}
             outDecimals={outAsset.decimals}
             outScale={outAsset.scale}
+            outIndex={outAsset.index}
             outSymbol={outAsset.symbol}
             feeBps={feeBps}
             outDepositFee={outDepositFee}

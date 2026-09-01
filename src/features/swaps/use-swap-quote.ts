@@ -61,6 +61,12 @@ export function useSwapQuote(request: QuoteRequest | undefined): QuoteResult {
     // Under the refresh interval, so returning to the tab does not buy a quote
     // the running refresh was about to fetch.
     staleTime: REFRESH_MS,
+    // Stated, because the result is spread into `QuoteResult` below and a spread
+    // reads every property on react-query's tracking proxy, subscribing this
+    // observer to all of them. `SwapForm` reads exactly these three; `refetch`
+    // is stable and needs no subscription. `isFetching` is genuinely wanted here
+    // — it drives the "quoting…" state and the refresh button's spinner.
+    notifyOnChangeProps: ["data", "error", "isFetching"],
   });
 
   return useMemo(() => ({ ...query, stale }) as QuoteResult, [query, stale]);

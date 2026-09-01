@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 import { useTxExplorerUrl } from "@/features/chain";
 import { friendlyMessage } from "@/shared/lib/errors";
 import { Stepper } from "@/shared/ui/Stepper";
@@ -16,6 +16,13 @@ export interface ActionFormProps {
   /// Form-level disable, such as an insufficient balance or missing context.
   /// `busy` already disables submit during an in-flight op.
   submitDisabled?: boolean;
+  /// Why `submitDisabled` is set, in the user's terms.
+  ///
+  /// A disabled button states a fact and withholds the reason, which is fine
+  /// when something else on screen already carries it — `SetupNotice` and
+  /// `SyncErrorNotice` do exactly that for the ops they block. Pass this where
+  /// nothing else explains the disable, rather than everywhere.
+  blockedReason?: string;
   /// Optional inline stepper, rendered between the fields and the submit button
   /// when the active op publishes a non-empty step list.
   progress?: { steps: Step[]; phase: TxPhase | undefined; done: boolean };
@@ -35,9 +42,12 @@ export function ActionForm({
   onSubmit,
   children,
   submitDisabled = false,
+  blockedReason,
   progress,
   txHash,
 }: ActionFormProps) {
+  const whyId = useId();
+  const showWhy = !!blockedReason && submitDisabled && !busy;
   const explorerUrl = useTxExplorerUrl();
   const explorer = txHash ? explorerUrl(txHash) : undefined;
   const showTx = !!txHash && !busy;
@@ -53,7 +63,7 @@ export function ActionForm({
     <form className="action-form" onSubmit={onSubmit}>
       {title ? (
         <div className="card__hdr">
-          <h3 className="card__t">{title}</h3>
+          <h2 className="card__t">{title}</h2>
         </div>
       ) : null}
       <div className="stack stack--md">
@@ -62,9 +72,21 @@ export function ActionForm({
           <Stepper steps={progress.steps} current={stepCurrent} failed={failed} done={done} />
         ) : null}
         {showTx && txHash ? <TxHash hash={txHash} url={explorer} /> : null}
-        <button className="btn" type="submit" disabled={busy || submitDisabled}>
+        <button
+          className="btn"
+          type="submit"
+          disabled={busy || submitDisabled}
+          aria-describedby={showWhy ? whyId : undefined}
+        >
           {busy ? "submitting…" : submitLabel}
         </button>
+        {/* Not while `busy`: mid-submit the button already says what it is
+            doing, and a stale reason underneath it would contradict that. */}
+        {showWhy ? (
+          <p className="action-form__why muted txt-xs" id={whyId}>
+            {blockedReason}
+          </p>
+        ) : null}
         {/* Summary only. The cause is already logged by `toastError` in the
             mutation's `onError`, so reporting it again here would duplicate. */}
         {error ? <div className="err">{friendlyMessage(error)}</div> : null}

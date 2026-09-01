@@ -36,7 +36,7 @@
   .pf-sum { padding: 12px 13px; }
   .pf-sum__val { font-size: 26px; }
 
-  .welcome { min-height: 50vh; padding: 18px 8px; }
+  .welcome { min-height: 50vh; min-height: 50dvh; padding: 18px 8px; }
   .welcome__t { font-size: 28px; }
   .welcome__panel { padding: 18px 14px; }
   .btn--xl { padding: 11px 22px; font-size: 12px; }
@@ -57,7 +57,15 @@
   .welcome__sub { font-size: 12px; }
   .welcome__hint { font-size: 10px; }
 
-  .seg__b { font-size: 10px; padding: 6px 8px; letter-spacing: 0.05em; }
+  /* 11px, not the 10px this was: that sat below the floor the rest of the app
+     keeps, and the strip wraps to two columns here, so the height a 44px
+     target needs is free. */
+  .seg__b {
+    font-size: var(--fs-11);
+    padding: var(--sp-12) var(--sp-8);
+    min-height: 44px;
+    letter-spacing: 0.05em;
+  }
 
   /* Inline rows stack: field full width on top, button below. */
   .row { flex-wrap: wrap; }
@@ -72,7 +80,13 @@
   }
   .ftr__note { font-size: 11px; }
 
-  .btn--ghost { padding: 6px 10px; font-size: 11px; }
+  /* Grown rather than shrunk. `.row > .btn` already goes full-width at this
+     breakpoint, so the height a thumb needs costs no horizontal room. */
+  .btn--ghost {
+    padding: var(--sp-12) var(--sp-14);
+    font-size: var(--fs-12);
+    min-height: 44px;
+  }
 
   /* Decorative background overlay is heavy on tiny screens — drop it. */
   body::before { display: none; }
@@ -85,6 +99,9 @@
   .tok .tok__mark { display: none; }
   .tok { gap: 0; }
   .tbl--pf th:first-child, .tbl--pf th:last-child { width: auto; }
+  /* Four columns of figures do not fit a phone. The `earning` badge in the
+     asset cell still says the asset yields; only the amount goes. */
+  .tbl--pf .tbl__earned { display: none; }
   .bal__main, .bal__usd { font-size: 12px; }
 
   .claim-row { grid-template-columns: 38px 1fr auto; grid-template-areas: "g m a" "g s c" "x x c"; }

@@ -1,3 +1,4 @@
+import { RAY } from "@lelantos-org/sdk";
 import { describe, expect, it } from "vitest";
 import type { RegisteredAsset } from "@/config/chains";
 import type { PriceMap } from "@/features/prices";
@@ -12,6 +13,10 @@ function asset(id: bigint, token: string, decimals = 18, scale = 1n): Registered
     symbol: `T${id}`,
     decimals,
     scale,
+    // Plain custody: one unit is worth `scale` forever.
+    index: RAY,
+    yieldEnabled: false,
+    yieldHalted: false,
   };
 }
 

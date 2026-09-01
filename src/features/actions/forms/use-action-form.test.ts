@@ -1,3 +1,4 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -12,6 +13,8 @@ const ASSET = {
   decimals: 18,
   // Circuit units are 1e10 base units, so "1.5" parses to 150_000_000.
   scale: 10_000_000_000n,
+  // Plain custody: RAY is the identity for every conversion.
+  index: RAY,
 };
 
 const assets = vi.hoisted(() => ({ value: [] as unknown[] }));

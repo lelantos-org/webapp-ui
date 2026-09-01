@@ -60,7 +60,7 @@ export function DenominationField({ model, onPick }: DenominationFieldProps) {
               aria-pressed={o.state === "chosen"}
               onClick={() => onPick(o)}
             >
-              {o.text}
+              {o.label}
             </button>
           ))}
         </fieldset>

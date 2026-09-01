@@ -11,13 +11,13 @@
 // means the transfer may or may not have landed.
 //
 // The trade-off is a spending key on disk, outliving the tab. It is the
-// sender's own key to their own funds, it only matters until the recipient
+// sender's own key to their own funds, it matters only until the recipient
 // claims, and `forgetClaimLink` drops it once the link has been handed over.
 //
 // Layout, top to bottom: stored shape and validator, pure helpers over a record
-// list, the mutable cache, the subscription, the single write path, and the
-// exported API. Everything above `cache` is pure; everything that mutates is in
-// one block.
+// list, the mutable cache, the subscription, the single write path, the exported
+// API. Everything above `cache` is pure; everything that mutates is in one
+// block.
 
 import { createLogger } from "@/shared/lib/logger";
 import { localStore, readJson, writeJson } from "@/shared/lib/storage";
@@ -62,9 +62,9 @@ const DECIMAL = /^\d+$/;
 /// A `bigint` field in its stored form.
 ///
 /// The digit check guards the row renderer, which calls `BigInt(amount)` during
-/// render; `BigInt` throws `SyntaxError` on a non-numeric literal, which would
-/// take down the whole send-link tab and with it the only remaining copy of
-/// every other link's key.
+/// render. `BigInt` throws `SyntaxError` on a non-numeric literal, taking down
+/// the send-link tab and with it the only remaining copy of every other link's
+/// key.
 function isDecimalString(value: unknown): value is string {
   return typeof value === "string" && DECIMAL.test(value);
 }
@@ -116,15 +116,13 @@ function normalize(records: readonly StoredClaimLink[], now: number): StoredClai
     .slice(0, MAX_RECORDS);
 }
 
-/// Parse the stored payload, newest first.
-///
-/// A pure read; pruning happens on write, so this is safe to call during
-/// render.
+/// Parse the stored payload, newest first. A pure read; pruning happens on
+/// write, so this is safe to call during render.
 ///
 /// `isRecordArray` is all-or-nothing: one bad entry discards the batch, which
-/// then reads as absent and is replaced by the next write. Element-wise
-/// salvage would gain nothing, since a record is only recoverable from the URL
-/// the user already holds.
+/// then reads as absent and is replaced by the next write. Element-wise salvage
+/// would gain nothing, a record being recoverable only from the URL the user
+/// already holds.
 function parse(): StoredClaimLink[] {
   const stored = readJson(localStore, KEY, isRecordArray);
   if (!stored) {
@@ -149,8 +147,8 @@ interface Cache {
   /// The raw stored string `records` was parsed from. `useSyncExternalStore`
   /// compares snapshots by identity, so a freshly-parsed array on every call
   /// would re-render indefinitely. Keying on the raw string rather than on this
-  /// module's own writes keeps the cache correct regardless of the writer —
-  /// another tab, a devtools edit, a test clearing storage — with no separate
+  /// module's own writes keeps the cache correct whatever the writer — another
+  /// tab, a devtools edit, a test clearing storage — with no separate
   /// invalidation path.
   raw: string | undefined;
   /// Stable identity between changes; handed straight to React.

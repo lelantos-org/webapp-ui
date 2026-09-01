@@ -28,11 +28,10 @@ export const IDLE_POLL_FACTOR = 4;
 /**
  * Fraction by which `jitter` may shorten or lengthen an interval.
  *
- * Kept small: the goal is to blur a cadence, not to defer work.
- * `selection.ts` applies a spend cooldown keyed on `firstSeenBlock`, and a
- * staler nullifier view raises the odds of building a spend against a note
- * already spent elsewhere. ±20% costs at most six seconds on the 30s polls,
- * leaving that margin intact.
+ * Kept small: the goal is to blur a cadence, not to defer work. `selection.ts`
+ * applies a spend cooldown keyed on `firstSeenBlock`, and a staler nullifier
+ * view raises the odds of building a spend against a note already spent
+ * elsewhere. ±20% costs at most six seconds on the 30s polls.
  */
 const JITTER_FRAC = 0.2;
 
@@ -40,30 +39,30 @@ const JITTER_FRAC = 0.2;
  * `baseMs` perturbed by up to ±`frac`.
  *
  * Polls are otherwise exactly periodic (30s sync, 30s balances, 15s health),
- * which gives a passive observer such as the edge or an ISP a device
- * fingerprint and a way to segment one long-lived connection into sessions.
- * The app never sees a client IP, but the components in front of it do, and
- * cadence is what lets them join requests carrying no identifier.
+ * giving a passive observer such as the edge or an ISP a device fingerprint and
+ * a way to segment one long-lived connection into sessions. The app never sees a
+ * client IP, but the components in front of it do, and cadence is what lets them
+ * join requests carrying no identifier.
  *
  * Call this per tick, not once per mount. React Query accepts a function for
  * `refetchInterval` and re-invokes it after each fetch; a value fixed at mount
- * becomes a constant offset, which is itself a stable per-session fingerprint.
+ * becomes a constant offset, itself a stable per-session fingerprint.
  */
 export function jitter(baseMs: number, frac = JITTER_FRAC): number {
   return Math.round(baseMs * (1 + (Math.random() * 2 - 1) * frac));
 }
 
 /**
- * The interval a poll should use right now: `baseMs`, widened while idle, then
+ * The interval a poll should use now: `baseMs`, widened while idle, then
  * jittered.
  *
  * Both adjustments are applied in one call so neither can be used without the
  * other. Omitting the idle factor keeps an unattended tab polling at full rate,
- * which for `transparent-balances` means announcing the user's EOA to a
- * third-party RPC every 30s indefinitely.
+ * which for `transparent-balances` announces the user's EOA to a third-party RPC
+ * every 30s indefinitely.
  *
- * Pass it as a thunk — `refetchInterval: () => pollInterval(POLL_MS, idle)` —
- * so React Query re-draws the jitter after each fetch.
+ * Pass it as a thunk — `refetchInterval: () => pollInterval(POLL_MS, idle)` — so
+ * React Query re-draws the jitter after each fetch.
  */
 export function pollInterval(baseMs: number, idle: boolean): number {
   return jitter(idle ? baseMs * IDLE_POLL_FACTOR : baseMs);
@@ -109,9 +108,9 @@ export const BALANCE_POLL_MS = 30_000;
  *
  * Six times the rate of `BALANCE_POLL_MS` at a fraction of the cost: the
  * endpoint is two indexed `MAX()`s and a few bytes, where a balance refresh is a
- * full `syncNotes` plus a recompute over every unspent note. New value is
- * detected within about five seconds while the expensive work runs only when
- * something moved.
+ * full `syncNotes` plus a recompute over every unspent note. New value shows
+ * within about five seconds while the expensive work runs only when something
+ * moved.
  *
  * Goes through `pollInterval` like every other poll here, so the jitter and
  * idle-widening apply unchanged.
@@ -204,6 +203,6 @@ const getIdleOnServer = (): boolean => false;
  * returning to the tab restores the shorter interval immediately rather than at
  * the end of the current interval.
  */
-export function useIsIdle(): boolean {
+function useIsIdle(): boolean {
   return useSyncExternalStore(subscribeIdle, getIdle, getIdleOnServer);
 }

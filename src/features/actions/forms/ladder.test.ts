@@ -1,4 +1,4 @@
-import { universalLadder } from "@lelantos-org/sdk/core";
+import { RAY, universalLadder } from "@lelantos-org/sdk/core";
 import { describe, expect, it } from "vitest";
 import { PUBLIC_IN_MAX, parseAmountForAsset } from "@/shared/lib/format";
 import type { AssetMeta } from "./amount-field";
@@ -12,6 +12,7 @@ const USDC: AssetMeta = {
   symbol: "USDC",
   decimals: 6,
   scale: 1n,
+  index: RAY,
   token: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
 };
 
@@ -37,7 +38,20 @@ describe("ladderModel options", () => {
     // formatter that did not invert would put the user off the ladder while
     // telling them they were on it.
     for (const { value, text } of model().options) {
-      expect(parseAmountForAsset(text, USDC.decimals, USDC.scale)).toBe(value);
+      expect(parseAmountForAsset(text, USDC.decimals, USDC.scale, RAY)).toBe(value);
+    }
+  });
+
+  // The same property once a venue has earned. `ladder.ts` writes the text and
+  // `parseAmountForAsset` reads it back, so if only one side learns about the
+  // index the chip silently stops meaning what it says — and a withdrawal off
+  // the ladder is the one thing the ladder exists to prevent.
+  it("still round-trips when the asset's index has moved", () => {
+    // 1.1 × RAY: the venue has earned 10%.
+    const index = (RAY * 11n) / 10n;
+    const earning: AssetMeta = { ...USDC, index };
+    for (const { value, text } of model({ meta: earning }).options) {
+      expect(parseAmountForAsset(text, earning.decimals, earning.scale, index)).toBe(value);
     }
   });
 
@@ -153,7 +167,10 @@ describe("ladderModel notice", () => {
   it("omits the symbol for an asset that has none", () => {
     // Token kept: this asserts the symbol is omitted, not that the source
     // changed — dropping it would silently reword the whole notice.
-    const n = model({ amount: TWENTY, meta: { decimals: 6, scale: 1n, token: USDC.token } }).notice;
+    const n = model({
+      amount: TWENTY,
+      meta: { decimals: 6, scale: 1n, index: RAY, token: USDC.token },
+    }).notice;
     expect(n?.text).toContain("20 is a shared denomination");
   });
 });
@@ -168,7 +185,13 @@ describe("ladderModel source", () => {
   // therefore had no shared ladder; since 0.32.0 the ladder is derived from the
   // asset itself, so this asset is no longer a special case — which is the
   // point of the first test below.
-  const MDAI: AssetMeta = { symbol: "mDAI", decimals: 18, scale: 10n ** 10n, token: "0xdev1" };
+  const MDAI: AssetMeta = {
+    symbol: "mDAI",
+    decimals: 18,
+    scale: 10n ** 10n,
+    index: RAY,
+    token: "0xdev1",
+  };
   const ONE = 10n ** 8n;
   const DERIVED = universalLadder(MDAI);
 
@@ -209,7 +232,54 @@ describe("ladderModel source", () => {
 
   it("derives rungs that round-trip through the amount field", () => {
     for (const { value, text } of fb().options) {
-      expect(parseAmountForAsset(text, MDAI.decimals, MDAI.scale)).toBe(value);
+      expect(parseAmountForAsset(text, MDAI.decimals, MDAI.scale, RAY)).toBe(value);
     }
+  });
+});
+
+describe("chip label vs written text", () => {
+  // A yield index that makes every rung a non-round number of token units —
+  // the case where a capped label and the written amount visibly diverge.
+  const YIELDING: AssetMeta = {
+    symbol: "yWETH",
+    decimals: 18,
+    scale: 10n ** 10n,
+    index: (RAY * 1_179_551_100_000_000_000n) / 1_000_000_000_000_000_000n,
+    token: "0xdev2",
+  };
+
+  const options = ladderModel({
+    ladder: universalLadder(YIELDING),
+    meta: YIELDING,
+    amount: undefined,
+    max: undefined,
+  }).options;
+
+  it("caps the label at five fractional digits", () => {
+    expect(options.length).toBeGreaterThan(0);
+    for (const o of options) {
+      const frac = o.label.split(".")[1] ?? "";
+      // Dust below the cap is allowed to run longer rather than read as "0";
+      // every chip with a whole part must obey the cap.
+      if (!o.label.startsWith("0.")) {
+        expect(frac.length).toBeLessThanOrEqual(5);
+      }
+    }
+  });
+
+  it("writes the exact rung, not the capped label", () => {
+    // The invariant the chips exist for: what the field receives must parse
+    // back to the denomination itself, or the amount lands off the ladder and
+    // the privacy the chip promised is gone. `label` is a caption; `text` is
+    // the amount.
+    for (const o of options) {
+      expect(parseAmountForAsset(o.text, YIELDING.decimals, YIELDING.scale, YIELDING.index)).toBe(
+        o.value,
+      );
+    }
+  });
+
+  it("actually differs — otherwise this file proves nothing", () => {
+    expect(options.some((o) => o.label !== o.text)).toBe(true);
   });
 });

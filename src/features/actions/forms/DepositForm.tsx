@@ -6,7 +6,7 @@ import {
   useEthAssetPicker,
 } from "@/features/assets";
 import { SetupFlow, SetupNotice, useDepositSetup } from "@/features/onboarding";
-import { formatDecimalCompact } from "@/shared/lib/format";
+import { DISPLAY_FRAC_DIGITS, formatDecimalCompact } from "@/shared/lib/format";
 import { Notice } from "@/shared/ui/Notice";
 import { useDeposit } from "../mutations";
 import { ActionForm } from "./ActionForm";
@@ -35,7 +35,7 @@ export function DepositForm() {
 
   // The whole amount-and-fee view, not the figure being sent.
   const amount = useDepositAmount(selected, { asEth: watchedAsEth, input: watch("amount") });
-  const setup = useDepositSetup(selected?.id, { asEth: watchedAsEth, total: amount.total });
+  const setup = useDepositSetup(selected, { asEth: watchedAsEth, total: amount.total });
   // No `onFeeAsset`: a deposit's relayer note is minted in the deposited asset
   // (`resolveDepositFee`), so there is no choice to offer.
   const fees = useFeePanel({
@@ -48,8 +48,9 @@ export function DepositForm() {
     protocolPending: amount.feePending,
   });
   const submitDisabled = !amount.validation.valid || setup.blocked;
-  const setupErc20 = setup.needs.needsErc20Approve;
-  const needsErc20Approve = useCallback(() => setupErc20, [setupErc20]);
+  // What the run will do, not what gates the deposit — see `SetupNeeds`.
+  const setupErc20 = setup.needs.willApproveErc20;
+  const willApproveErc20 = useCallback(() => setupErc20, [setupErc20]);
   const setupAssets = useMemo(() => (selected ? [selected] : []), [selected]);
 
   return (
@@ -100,7 +101,7 @@ export function DepositForm() {
           {setup.needs.needsSetup || setup.unknown ? (
             <SetupNotice
               asset={selected}
-              needsErc20Approve={setup.needs.needsErc20Approve}
+              willApproveErc20={setup.needs.willApproveErc20}
               unknown={setup.unknown}
               onRun={setup.show}
             />
@@ -108,7 +109,7 @@ export function DepositForm() {
           {setup.open ? (
             <SetupFlow
               assets={setupAssets}
-              needsErc20Approve={needsErc20Approve}
+              willApproveErc20={willApproveErc20}
               onSuccess={setup.complete}
               onCancel={setup.dismiss}
             />
@@ -136,6 +137,6 @@ function depositHint(
   const balance =
     sourceBalance === undefined
       ? undefined
-      : `balance ${formatDecimalCompact(sourceBalance, asEth ? 18 : selected.decimals)} ${sym}`;
+      : `balance ${formatDecimalCompact(sourceBalance, asEth ? 18 : selected.decimals, DISPLAY_FRAC_DIGITS)} ${sym}`;
   return joinHint(mode, balance);
 }

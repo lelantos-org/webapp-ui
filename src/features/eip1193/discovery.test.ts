@@ -6,7 +6,8 @@
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { announce, detail } from "@/test/eip6963";
-import { parseChainId, walletStore } from "./store";
+import { parseChainId } from "./provider";
+import { walletStore } from "./store";
 
 describe("startDiscovery", () => {
   let notifies: number;

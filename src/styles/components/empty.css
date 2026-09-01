@@ -1,21 +1,19 @@
 .empty {
   display: grid;
   justify-items: center;
-  gap: 12px;
+  gap: var(--sp-12);
   text-align: center;
   color: var(--fg-mute);
-  padding: 36px 22px;
+  padding: 36px var(--sp-22);
 }
 .empty__icon {
   font-size: 36px;
   color: var(--accent-dim);
   line-height: 1;
 }
-.empty__title { color: var(--fg); font-size: 14px; }
-.empty__sub { font-size: 12px; max-width: 320px; }
-/* empty title — sibling for `.empty` */
-.empty__t {
-  font-size: 13px;
-  letter-spacing: 0.04em;
-  color: var(--fg-dim);
-}
+/* One treatment, deliberately. There was a second, `.empty__t`, at 13px and
+   --fg-dim; an empty state's headline is usually the only thing on the card, so
+   the higher-contrast pair is the right one and the dimmer variant only made
+   two empty states look like they came from different apps. */
+.empty__title { color: var(--fg); font-size: var(--fs-14); }
+.empty__sub { font-size: var(--fs-12); max-width: 320px; }

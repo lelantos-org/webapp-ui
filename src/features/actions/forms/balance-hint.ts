@@ -1,7 +1,7 @@
 // Shared "balance + settling" hint formatter for action forms.
 
 import type { SpendableMax } from "@lelantos-org/sdk/wallet";
-import { formatAmountForAsset, formatAssetAmount } from "@/shared/lib/format";
+import { formatAmountForDisplay, formatAssetAmount } from "@/shared/lib/format";
 import type { AssetMeta } from "./amount-field";
 
 // Re-exported so `balance-hint` importers need one import; the type belongs with
@@ -17,7 +17,7 @@ export function balanceHint(
   meta: AssetMeta,
 ): string | undefined {
   if (balance === undefined) return undefined;
-  const fmt = (v: bigint) => formatAmountForAsset(v, meta.decimals, meta.scale);
+  const fmt = (v: bigint) => formatAmountForDisplay(v, meta);
   // Only the leading figure carries the symbol; the settling delta reads as a
   // adjustment to it, not a second quantity.
   const withSymbol = formatAssetAmount(balance, meta);

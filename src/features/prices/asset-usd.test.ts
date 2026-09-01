@@ -1,3 +1,4 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import { describe, expect, it } from "vitest";
 import { assetUsd, priceOf } from "./asset-usd";
 import type { PriceMap } from "./use-prices";
@@ -21,22 +22,22 @@ describe("priceOf", () => {
 
 describe("assetUsd", () => {
   it("prices an amount in circuit units", () => {
-    const asset = { decimals: 18, scale: 1n, token: "0xAAAA" };
+    const asset = { decimals: 18, scale: 1n, index: RAY, token: "0xAAAA" };
     expect(assetUsd(2n * 10n ** 18n, asset, priceMap({ "0xaaaa": 3000 }))).toBeCloseTo(6000, 6);
   });
 
   it("applies scale, so a scaled asset is not understated", () => {
-    const asset = { decimals: 18, scale: 10n ** 12n, token: "0xAAAA" };
+    const asset = { decimals: 18, scale: 10n ** 12n, index: RAY, token: "0xAAAA" };
     expect(assetUsd(2_000_000n, asset, priceMap({ "0xaaaa": 3000 }))).toBeCloseTo(6000, 6);
   });
 
   it("is undefined rather than zero when the asset has no price", () => {
-    const asset = { decimals: 18, scale: 1n, token: "0xBBBB" };
+    const asset = { decimals: 18, scale: 1n, index: RAY, token: "0xBBBB" };
     expect(assetUsd(10n ** 18n, asset, priceMap({ "0xaaaa": 1 }))).toBeUndefined();
   });
 
   it("is undefined for an asset with no address", () => {
-    const asset = { decimals: 18, scale: 1n };
+    const asset = { decimals: 18, scale: 1n, index: RAY };
     expect(assetUsd(10n ** 18n, asset, priceMap({ "0xaaaa": 1 }))).toBeUndefined();
   });
 });

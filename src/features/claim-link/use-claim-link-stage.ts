@@ -13,7 +13,7 @@ export type ClaimLinkStage = "form" | "confirm" | "running" | "success" | "closi
 /// with the `claim-success` CSS so the tick has time to draw. Not an
 /// `animationDelay`, since this is reading time for the result, which applies
 /// under reduced motion as well.
-export const SUCCESS_DWELL_MS = 1100;
+const SUCCESS_DWELL_MS = 1100;
 
 /// Stages during which the modal portal stays mounted.
 const MODAL_STAGES = new Set<ClaimLinkStage>(["confirm", "running", "success", "closing"]);

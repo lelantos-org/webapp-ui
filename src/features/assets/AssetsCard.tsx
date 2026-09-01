@@ -7,11 +7,13 @@ import { PortfolioTotal } from "./PortfolioTotal";
 import { type RegisteredAsset, useRegisteredAssets } from "./registered-assets";
 import { ShieldedTable } from "./ShieldedTable";
 import { type AssetBalanceView, useBalances } from "./use-balances";
+import { useYieldGains } from "./use-yield-gains";
 
 export function AssetsCard() {
   const shielded = useBalances();
   const assets = useRegisteredAssets();
   const prices = usePrices();
+  const gains = useYieldGains();
 
   // A single index rather than a linear `assets.find` per row per render. It also
   // gives the rows stable prop identities, which is what makes memoising them
@@ -27,7 +29,7 @@ export function AssetsCard() {
   return (
     <div className="card">
       <div className="card__hdr">
-        <h3 className="card__t">Portfolio </h3>
+        <h2 className="card__t">Portfolio</h2>
         <PortfolioActions />
       </div>
 
@@ -36,7 +38,12 @@ export function AssetsCard() {
       {shielded.isLoading && !shielded.data ? (
         <PortfolioSkeleton />
       ) : (
-        <ShieldedTable rows={shielded.data?.balances ?? EMPTY_ROWS} byId={byId} prices={prices} />
+        <ShieldedTable
+          rows={shielded.data?.balances ?? EMPTY_ROWS}
+          byId={byId}
+          prices={prices}
+          gains={gains}
+        />
       )}
 
       {/* Not only under the first-load skeleton. A "hard refresh" wipes the
@@ -46,7 +53,7 @@ export function AssetsCard() {
           time. */}
       <SyncProgressLine />
 
-      {err ? <div className="err mt-3">{describeError(err)}</div> : null}
+      {err ? <div className="err mt-8">{describeError(err)}</div> : null}
     </div>
   );
 }
@@ -61,7 +68,7 @@ function SyncProgressLine() {
   const { active, scanned, hits } = useSyncProgress();
   if (!active || scanned === 0) return null;
   return (
-    <div className="muted mt-2" aria-live="polite">
+    <div className="muted mt-6" aria-live="polite">
       scanned {scanned.toLocaleString()} notes
       {hits > 0 ? `, found ${hits.toLocaleString()}` : ""}…
     </div>
@@ -75,8 +82,11 @@ function PortfolioSkeleton() {
         <thead>
           <tr>
             <th>asset</th>
-            <th className="ta-r">balance</th>
-            <th className="ta-r">value</th>
+            <th>balance</th>
+            {/* Matches `ShieldedTable`'s header exactly; a skeleton that names
+                    the column differently misdescribes what it stands in for. */}
+            <th className="tbl__earned">incl. earned</th>
+            <th>value</th>
           </tr>
         </thead>
         <tbody>
@@ -88,10 +98,13 @@ function PortfolioSkeleton() {
                   <span className="skel-bar" style={{ width: "5ch" }} />
                 </span>
               </td>
-              <td className="ta-r">
+              <td>
                 <span className="skel-bar" style={{ width: "10ch" }} />
               </td>
-              <td className="ta-r">
+              <td className="tbl__earned">
+                <span className="skel-bar" style={{ width: "7ch" }} />
+              </td>
+              <td>
                 <span className="skel-bar" style={{ width: "6ch" }} />
               </td>
             </tr>

@@ -13,7 +13,7 @@ export function ConnectGate({ status, onConnect }: ConnectGateProps) {
   return (
     <div className="card">
       <div className="card__hdr">
-        <h3 className="card__t">connect to claim</h3>
+        <h2 className="card__t">Connect to claim</h2>
       </div>
       {status === "disconnected" ? (
         <div className="stack stack--sm">

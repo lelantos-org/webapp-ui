@@ -52,6 +52,11 @@
   background: rgba(var(--accent-rgb), 0.06);
 }
 .acct__icon:active { transform: scale(0.95); }
+.acct__icon:focus-visible { outline: var(--ring); outline-offset: 2px; }
+/* See the note in header.css: sized for a fingertip, not a viewport width. */
+@media (pointer: coarse) {
+  .acct__icon { min-width: 44px; min-height: 44px; }
+}
 
 .acct__addr {
   font-size: 14px;

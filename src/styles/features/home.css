@@ -7,6 +7,7 @@
   /* Lock the row height to whichever child is taller so the layout doesn't
      shrink when Welcome unmounts after the cross-fade. */
   min-height: 60vh;
+  min-height: 60dvh;
 }
 .home-wrap > * { grid-area: stack; min-width: 0; align-self: start; }
 

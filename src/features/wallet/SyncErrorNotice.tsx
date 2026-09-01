@@ -13,7 +13,7 @@ export function SyncErrorNotice() {
   const { error } = useWalletState();
   if (!error) return null;
   return (
-    <div className="err mb-3">
+    <div className="err mb-8">
       Balances could not be synced, so amounts below may be incomplete. {describeError(error)}
     </div>
   );

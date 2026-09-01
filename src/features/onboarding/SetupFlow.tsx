@@ -12,12 +12,16 @@ import {
   useWallet,
 } from "@/features/wallet";
 import { shortAddr } from "@/shared/lib/format";
+import { createLogger } from "@/shared/lib/logger";
 import { MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { type ReportedError, reportError } from "@/shared/lib/report-error";
 import { Modal } from "@/shared/ui/Modal";
 import { Stepper, type StepperItem } from "@/shared/ui/Stepper";
 import { useExitTransition } from "@/shared/ui/use-exit-transition";
+import { byDistinctToken, sameToken } from "./by-token";
 import { useInvalidateSetupStatus } from "./use-setup-status";
+
+const log = createLogger("setup");
 
 type Screen = "intro" | "running" | "done" | "failed";
 
@@ -60,7 +64,13 @@ function initialProgress(toApprove: readonly RegisteredAsset[]): SetupProgress {
 
 /// Stepper row id for one token's approval. Shared by the row and the highlight,
 /// so a rename cannot desynchronise them.
-const approvalStepId = (assetId: bigint | undefined) => `approving:${assetId}`;
+///
+/// Keyed by token, not asset id: the pool registers a separate id per yield
+/// variant over the same ERC-20, and the approval is per token. Keyed by id, six
+/// ids over three tokens drew six rows, and `SetupProgress.token` then resolved
+/// to whichever id came first — so the highlight jumped back to row 1 on the
+/// fourth prompt.
+const approvalStepId = (token: string) => `approving:${token.toLowerCase()}`;
 
 const EXPIRY_DAYS = 365;
 const DONE_AUTOCLOSE_MS = 1500;
@@ -70,21 +80,32 @@ export interface SetupFlowProps {
   /// the signature and the permit tx into one each, which is why this takes an
   /// array.
   assets: RegisteredAsset[];
-  /// Whether `asset` still needs the ERC-20 → Permit2 approval. Per-asset,
-  /// because that step does not batch.
-  needsErc20Approve(assetId: bigint): boolean;
+  /// Whether the run will send an ERC-20 → Permit2 approval for `asset`. Per-
+  /// asset, because that step does not batch. Must be `SetupNeeds.
+  /// willApproveErc20`, not `needsErc20Approve`: the batch decides on the cap it
+  /// grants, so the gating predicate predicts a shorter run than the one the
+  /// wallet prompts for.
+  willApproveErc20(assetId: bigint): boolean;
   onSuccess(): void;
   onCancel(): void;
 }
 
-export function SetupFlow({ assets, needsErc20Approve, onSuccess, onCancel }: SetupFlowProps) {
+export function SetupFlow({ assets, willApproveErc20, onSuccess, onCancel }: SetupFlowProps) {
   const { wallet } = useWallet();
   const invalidate = useInvalidateSetupStatus();
   const [screen, setScreen] = useState<Screen>("intro");
   // Memoised so `run` below keeps a stable identity across renders.
+  // Distinct tokens first, then the filter: two ids over one token are one
+  // approval, and `ensurePermit2AuthorizedSetupBatch` collapses them the same
+  // way. `some` rather than the representative's own answer — an unsettled probe
+  // on one id is reported as needing approval, and dropping that would leave the
+  // run with a prompt the stepper has no row for.
   const toApprove = useMemo(
-    () => assets.filter((a) => needsErc20Approve(a.id)),
-    [assets, needsErc20Approve],
+    () =>
+      byDistinctToken(assets).filter((a) =>
+        assets.some((b) => sameToken(b.token, a.token) && willApproveErc20(b.id)),
+      ),
+    [assets, willApproveErc20],
   );
   const [progress, setProgress] = useState<SetupProgress>(() => initialProgress(toApprove));
   const [error, setError] = useState<ReportedError | null>(null);
@@ -96,23 +117,21 @@ export function SetupFlow({ assets, needsErc20Approve, onSuccess, onCancel }: Se
   const cap = defaultAllowanceCap();
   const expiration = defaultAllowanceExpirationSecs();
   const expiryStr = new Date(expiration * 1000).toISOString().slice(0, 10);
-  const assetByToken = (token: string) =>
-    assets.find((a) => a.token.toLowerCase() === token.toLowerCase());
+  const assetByToken = (token: string) => assets.find((a) => sameToken(a.token, token));
   const symbolOf = (token: string) => assetByToken(token)?.symbol ?? "token";
-  const symbolList = assets.map((a) => a.symbol).join(", ");
+  const distinct = byDistinctToken(assets);
+  const symbolList = distinct.map((a) => a.symbol).join(", ");
   const costLine = `${setupCostLine(toApprove.length)}.`;
 
   // One approval row per token that needs one. They are separate wallet prompts,
   // so a single combined row would show a finished step while further prompts
   // were still coming.
   const visibleSteps: StepperItem[] = [
-    ...toApprove.map((a) => ({ id: approvalStepId(a.id), label: `authorize ${a.symbol}` })),
+    ...toApprove.map((a) => ({ id: approvalStepId(a.token), label: `authorize ${a.symbol}` })),
     ...SHARED_STEPS,
   ];
   const currentStepId =
-    progress.step === "approving"
-      ? approvalStepId(assetByToken(progress.token)?.id)
-      : progress.step;
+    progress.step === "approving" ? approvalStepId(progress.token) : progress.step;
   // The running and failed screens both need the label for the current step,
   // which `visibleSteps` already holds.
   const currentLabel = visibleSteps.find((s) => s.id === currentStepId)?.label ?? progress.step;
@@ -141,14 +160,23 @@ export function SetupFlow({ assets, needsErc20Approve, onSuccess, onCancel }: Se
         },
       );
       if (cancelledRef.current) return;
-      // Each asset keeps its own cache entry, so each needs its own invalidation.
-      await Promise.all(assets.map((a) => invalidate(a.id)));
-      setScreen("done");
     } catch (e) {
       if (cancelledRef.current) return;
       setError(reportError("permit2 setup failed", e));
       setScreen("failed");
+      return;
     }
+    setScreen("done");
+    // Outside the try, and after the screen: the allowances are on-chain by this
+    // point, so a failed cache invalidation is a stale read, not a failed setup.
+    // Inside, it would render "setup failed" over a setup that succeeded and
+    // send the retry through a second signature and permit tx.
+    // One invalidation per distinct token, not per asset: the probes are cached
+    // by token, so ids sharing one would fire N identical invalidations of a
+    // single entry.
+    await Promise.all(byDistinctToken(assets).map((a) => invalidate(a.id))).catch((e) => {
+      log.warn("setup succeeded but the allowance probe could not be invalidated", e);
+    });
   }, [wallet, assets, cap, expiration, invalidate, toApprove]);
 
   useEffect(() => {
@@ -181,9 +209,9 @@ export function SetupFlow({ assets, needsErc20Approve, onSuccess, onCancel }: Se
           </p>
           <p className="modal-copy">
             It grants the pool an <strong>unlimited</strong> allowance on{" "}
-            {assets.length === 1 ? "that token" : "those tokens"}, valid for {EXPIRY_DAYS} days. The
-            pool can only draw on it during a deposit you send yourself, and you can revoke it at
-            any time.
+            {distinct.length === 1 ? "that token" : "those tokens"}, valid for {EXPIRY_DAYS} days.
+            The pool can only draw on it during a deposit you send yourself, and you can revoke it
+            at any time.
           </p>
           <p className="modal-meta">{costLine}</p>
           <details

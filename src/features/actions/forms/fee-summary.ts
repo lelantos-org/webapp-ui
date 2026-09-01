@@ -3,40 +3,46 @@
 // Four properties shape the model.
 //
 // **Two fees, charged by different parties, out of different pockets.** The
-// protocol fee is skimmed by the contract off the transparent leg — `publicIn`
-// on a deposit, `publicOut` on a withdraw — so it moves the figure the user
-// reads as "paid" or "received".
+// contract skims the protocol fee off the transparent leg — `publicIn` on a
+// deposit, `publicOut` on a withdraw — so it moves the figure the user reads as
+// "paid" or "received". Where the relayer's fee lands depends on the kind:
 //
-// Where the relayer's fee lands depends on the kind:
+//   * On a spend it is an output note inside the proof, funded from the sender's
+//     own change, so it comes off the sender's shielded balance and never
+//     affects what the counterparty receives.
+//   * On a deposit there is no proof to carry the slot, so the depositor mints a
+//     second leaf addressed to the relayer and funds it transparently: Permit2
+//     pulls `amount + protocolFee + relayerFee` in one transfer
+//     (`resolveDepositFee`). It leaves the wallet, so it belongs in the
+//     headline.
 //
-//   * On a spend, it is an output note inside the proof, funded from the
-//     sender's own change. It never affects the amount the counterparty
-//     receives; it comes off the sender's shielded balance.
-//   * On a deposit, there is no proof to carry the slot, so the depositor mints
-//     a second leaf addressed to the relayer and funds it transparently:
-//     Permit2 pulls `amount + protocolFee + relayerFee` in one transfer
-//     (`resolveDepositFee`). It is part of what leaves the wallet and so
-//     belongs in the headline.
+// **Two unit systems.** `feeBreakdown` works in token base units, a relayer
+// quote in circuit units. Base units are the common denominator, since
+// circuit → base is a multiply while the reverse is a truncating divide. Every
+// row is normalised on the way in by `toBaseUnits` and formatted by its own
+// asset's `decimals`.
 //
-// **Two unit systems.** `feeBreakdown` works in token base units; a relayer
-// quote is in circuit units. Base units are the common denominator, since
-// circuit → base is an exact multiply by `scale` while the reverse is a
-// truncating divide. Every row is normalised on the way in and formatted by its
-// own asset's `decimals`.
+// That conversion must carry the asset's yield index: a unit of a yield asset is
+// worth `scale * index / RAY`, so scaling by `scale` alone states the amount as
+// it was when the notes were credited. On a withdraw the headline is
+// `amount − protocolFee` and `feeBreakdown` prices the fee against the indexed
+// amount, so omitting the index here subtracts a fee sized for today's value
+// from a figure sized for the deposit's.
 //
 // **Two assets, possibly.** A spend may pay the relayer in an asset it is not
-// moving, so fee rows are not always summable. `total` is present only when
-// every fee shares one asset. A deposit is never in this case: its relayer note
-// is minted in the deposited asset or the SDK refuses to build.
+// moving, so fee rows are not always summable; `total` is present only when
+// every fee shares one asset. A deposit is never in this case, its relayer note
+// being minted in the deposited asset or the SDK refusing to build.
 //
 // **Two arrival times.** The two fees are fetched by queries with different keys
-// and latencies — the protocol fee is debounced against the amount field, the
+// and latencies: the protocol fee is debounced against the amount field, the
 // relayer quote is not. A row whose charge is known to apply is therefore
 // emitted with `amount: undefined` rather than omitted, and the renderer draws a
 // placeholder, so the panel's shape is fixed once the kind and paying asset are
 // known and only the figures fill in afterwards.
 
 import type { FeeBreakdown, FeeMode } from "@/shared/lib/fees";
+import { type AssetUnits, toBaseUnits } from "@/shared/lib/format";
 
 export type FeeKind = "deposit" | "transfer" | "withdraw" | "swap";
 
@@ -45,6 +51,10 @@ export interface RowAsset {
   symbol: string;
   decimals: number;
 }
+
+/// An asset an amount is converted against: a `RowAsset` plus the factors taking
+/// circuit units to base units.
+export interface ConvertAsset extends RowAsset, Omit<AssetUnits, "decimals"> {}
 
 /// One line of the summary. `amount` is always token base units of `asset` and
 /// always non-negative; direction is carried by `sign` and applied by the
@@ -83,7 +93,7 @@ export interface FeeSummaryInput {
   /// The typed amount in circuit units, and the asset it is in. `undefined`
   /// while the field is empty or mid-edit.
   amount: bigint | undefined;
-  spendAsset: { symbol: string; decimals: number; scale: bigint } | undefined;
+  spendAsset: ConvertAsset | undefined;
   /// Protocol fee, already settled. Absent when the chain charges none, or
   /// while the debounced preview is catching up.
   protocol: FeeBreakdown | undefined;
@@ -94,21 +104,19 @@ export interface FeeSummaryInput {
   /// `FeeOption`, whose `AssetInfo.decimals` is optional and leaves human-unit
   /// conversion undefined; a row formatted against a guessed `decimals` is off
   /// by orders of magnitude. See `resolveFeeOption`.
-  relayer:
-    | { amount: bigint; asset: { symbol: string; decimals: number; scale: bigint } }
-    | undefined;
+  relayer: { amount: bigint; asset: ConvertAsset } | undefined;
   /// The asset's rate for this kind's leg, in basis points.
   ///
-  /// Read per asset and per leg rather than per amount (`useAssetFeeBps`), so it is cached by
-  /// the time a form renders. It labels the protocol row before `protocol` has
-  /// priced anything, and `0n` suppresses the row entirely.
+  /// Read per asset and per leg rather than per amount (`useAssetFeeBps`), so it
+  /// is cached by the time a form renders. It labels the protocol row before
+  /// `protocol` has priced anything; `0n` suppresses the row entirely.
   feeBps?: bigint | undefined;
   /// The caller has a protocol-fee read in flight and will fill `protocol` in.
   ///
   /// Passed explicitly rather than inferred from a missing breakdown: a swap is
-  /// charged a protocol fee but passes none, since its `QuoteCard` already
-  /// states the credited amount. Inferring from `feeBps` would hold a line open
-  /// on that panel indefinitely.
+  /// charged a protocol fee but passes none, its `QuoteCard` already stating the
+  /// credited amount. Inferring from `feeBps` would hold a line open on that
+  /// panel indefinitely.
   protocolPending?: boolean;
   /// The asset the relayer will be paid in. Comes from the fee picker, so it is
   /// settled before the quote pricing it arrives, letting the relayer row hold
@@ -119,9 +127,8 @@ export interface FeeSummaryInput {
 /// Whose pocket the protocol fee comes out of, per kind.
 ///
 /// A deposit is charged it on top of the escrowed amount; a withdraw and a swap
-/// have it skimmed off the transparent leg. A transfer has no transparent leg,
-/// so `MASP._takeFee` never runs and there is no protocol fee — hence no
-/// `"transfer"` in `FeeMode`.
+/// have it skimmed off the transparent leg. A transfer has no transparent leg
+/// and so no protocol fee, hence no `"transfer"` in `FeeMode`.
 function protocolSign(kind: FeeKind): "plus" | "minus" | undefined {
   switch (kind) {
     case "deposit":
@@ -137,15 +144,14 @@ function protocolSign(kind: FeeKind): "plus" | "minus" | undefined {
 /// Which of the asset's two rates a kind is charged at.
 ///
 /// Switched on `kind` directly rather than read off `protocolSign`. The two
-/// agree today — "plus" is the deposit leg charged on top, "minus" the withdraw
-/// leg skimmed out — but `protocolSign` picks a `+`/`−` glyph, and letting a
-/// presentation choice decide which rate is fetched from chain means a kind
-/// rendered unsigned would silently change the query. The rates are per asset
-/// and per leg since contracts 0.5.0 and differ routinely, so reading the wrong
-/// one labels the row with a percentage the figure beside it will not match.
-/// `transfer` gets no protocol row at all, so its mode is never read; it is
-/// mapped rather than left to a default so adding a kind is a compile error
-/// here.
+/// agree today, but `protocolSign` picks a `+`/`−` glyph, and letting a
+/// presentation choice decide which rate is read from chain means a kind
+/// rendered unsigned would silently change the query. Rates are per asset and
+/// per leg and differ routinely, so reading the wrong one labels the row with a
+/// percentage the figure beside it will not match.
+///
+/// `transfer` gets no protocol row, so its mode is never read; it is mapped
+/// rather than left to a default so adding a kind is a compile error here.
 export function feeModeFor(kind: FeeKind): FeeMode {
   switch (kind) {
     case "deposit":
@@ -174,10 +180,10 @@ function headlineLabel(kind: FeeKind): string | undefined {
 
 /// The protocol row, or `undefined` where this spend is charged nothing.
 ///
-/// Distinguishes two absences. A settled breakdown of zero means the pool takes
-/// nothing on this amount and gets no row, since "0.00" reads as a failed
-/// pricing. No breakdown at all with a pending read and a non-zero rate opens
-/// the row immediately and waits for the figure.
+/// Two absences are distinguished. A settled breakdown of zero means the pool
+/// takes nothing and gets no row, since "0.00" reads as a failed pricing. No
+/// breakdown with a pending read and a non-zero rate opens the row immediately
+/// and waits for the figure.
 function protocolRowFor(
   kind: FeeKind,
   spendAsset: RowAsset,
@@ -223,7 +229,9 @@ function relayerRowFor(
   return {
     key: "relayer",
     label: "Relayer fee",
-    amount: relayer ? relayer.amount * relayer.asset.scale : undefined,
+    amount: relayer
+      ? toBaseUnits(relayer.amount, relayer.asset.scale, relayer.asset.index)
+      : undefined,
     asset,
     // Never `minus`: on a deposit it is pulled on top of the amount, and on a
     // spend it is funded from the sender's change. Neither reduces what the
@@ -263,7 +271,7 @@ export function feeSummary({
 }: FeeSummaryInput): FeeSummaryModel | undefined {
   if (!spendAsset || amount === undefined || amount <= 0n) return undefined;
 
-  const base = amount * spendAsset.scale;
+  const base = toBaseUnits(amount, spendAsset.scale, spendAsset.index);
   const rows: FeeRow[] = [
     { key: "amount", label: "Amount", amount: base, asset: spendAsset, sign: "none" },
   ];

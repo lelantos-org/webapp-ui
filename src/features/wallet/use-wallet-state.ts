@@ -29,7 +29,7 @@ const SYNC_LIMIT = 500;
 /// Chain-scoped as well as address-scoped. The address is the same on every
 /// chain, so without the chainId a switch would serve the previous chain's
 /// balances from cache until the query next refetched.
-export const walletStateKey = (chainId?: bigint, address?: string) =>
+const walletStateKey = (chainId?: bigint, address?: string) =>
   ["wallet-state", chainId?.toString() ?? null, address ?? null] as const;
 
 function computeBalances(wallet: WalletApi): AssetBalance[] {

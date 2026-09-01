@@ -39,3 +39,10 @@
 .action-form { margin: 0; }
 .action-shell__body .action-form { margin: 0; padding: 0; border: none; background: none; }
 
+
+/* Why the submit button above is disabled. Directly under it and quiet: it is
+   an explanation of a control, not a warning in its own right. */
+.action-form__why {
+  margin: calc(var(--sp-4) * -1) 0 0;
+  text-align: center;
+}

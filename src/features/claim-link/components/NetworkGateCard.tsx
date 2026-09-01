@@ -15,7 +15,7 @@ export function NetworkGateCard({ mismatch }: { mismatch: ChainMismatch }) {
         ⇄
       </div>
       <div className="stack stack--sm">
-        <div className="gate__t">wrong network</div>
+        <div className="gate__t">Wrong network</div>
         <div className="claim-hop">
           <span className="pill pill--sm claim-hop__from">{mismatch.walletLabel}</span>
           <span className="claim-hop__arrow" aria-hidden>

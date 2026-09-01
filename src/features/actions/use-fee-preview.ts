@@ -60,8 +60,8 @@ export function useFeePreview(
       if (!wallet || asset === undefined || settled === undefined) {
         throw new Error("not ready");
       }
-      const { scale, feeBps } = await fetchAssetFeeInputs(wallet, asset, mode);
-      return feeBreakdown({ amount: settled, scale, feeBps, mode });
+      const { scale, feeBps, index } = await fetchAssetFeeInputs(wallet, asset, mode);
+      return feeBreakdown({ amount: settled, scale, feeBps, mode, index });
     },
     staleTime: 30_000,
     // Each distinct amount is its own key, so intermediate entries would
@@ -71,6 +71,13 @@ export function useFeePreview(
     // edit. The figure held over describes the previous amount, which is what
     // `stale` above reports and what callers gating a submit must honour.
     placeholderData: keepPreviousData,
+    // Stated, because the result is spread into `FeePreviewResult` below and a
+    // spread reads every property on react-query's tracking proxy — which
+    // subscribes this observer to all of them, re-rendering the form on each
+    // `isFetching` flip with the fee unchanged. These three are what is read:
+    // `isPlaceholderData` here, `data` and `isError` by `fee-hint.ts` and
+    // `use-deposit-amount.ts`. `refetch` is stable and needs no subscription.
+    notifyOnChangeProps: ["data", "isError", "isPlaceholderData"],
   });
 
   // `isPlaceholderData` covers the second case: the debounce has settled but the

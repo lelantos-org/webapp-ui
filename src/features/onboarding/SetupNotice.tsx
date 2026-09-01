@@ -3,9 +3,11 @@ import { Notice } from "@/shared/ui/Notice";
 
 export interface SetupNoticeProps {
   asset: RegisteredAsset;
-  /// The ERC-20 → Permit2 approval is still outstanding, so setup runs an
-  /// extra on-chain step before the signature.
-  needsErc20Approve: boolean;
+  /// The run will send an ERC-20 → Permit2 approval, so setup takes an extra
+  /// on-chain step before the signature. `SetupNeeds.willApproveErc20`, which
+  /// predicts the run; `needsErc20Approve` gates the deposit and can be false
+  /// while the run still approves.
+  willApproveErc20: boolean;
   /// The allowances could not be read. Setup is still offered, since running it
   /// is the way forward and withholding it would strand the deposit.
   unknown?: boolean;
@@ -19,7 +21,7 @@ export interface SetupNoticeProps {
 /// The underlying failure is logged rather than rendered: a viem revert runs to
 /// several hundred characters of ABI and call data, obscuring the actionable
 /// part.
-export function SetupNotice({ asset, needsErc20Approve, unknown, onRun }: SetupNoticeProps) {
+export function SetupNotice({ asset, willApproveErc20, unknown, onRun }: SetupNoticeProps) {
   if (unknown) {
     return (
       <Notice title="Can't check token approval" actionLabel="run setup" onAction={onRun}>
@@ -29,7 +31,7 @@ export function SetupNotice({ asset, needsErc20Approve, unknown, onRun }: SetupN
   }
   return (
     <Notice title="One-time approval needed" actionLabel="run setup" onAction={onRun}>
-      {needsErc20Approve
+      {willApproveErc20
         ? `Approve ${asset.symbol} and sign a spending window. Later deposits won't need a signature.`
         : `Sign a new spending window for ${asset.symbol} to cover this deposit.`}
     </Notice>

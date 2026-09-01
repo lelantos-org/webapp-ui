@@ -19,6 +19,9 @@ describe("evaluateSetup", () => {
   it("needs nothing when both allowances cover the total", () => {
     expect(evaluateSetup(state(1_000n, 1_000n), 1_000n, NOW)).toEqual({
       needsErc20Approve: false,
+      // The allowance covers this deposit but sits below the cap a run grants,
+      // so a run launched for another reason still approves it.
+      willApproveErc20: true,
       needsAllowancePermit: false,
       needsSetup: false,
     });

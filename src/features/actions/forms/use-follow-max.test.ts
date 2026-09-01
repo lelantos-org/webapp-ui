@@ -1,10 +1,11 @@
+import { RAY } from "@lelantos-org/sdk/core";
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { AssetMeta } from "./amount-field";
 import { useFollowMax } from "./use-follow-max";
 
 // 0 decimals and unit scale so the formatted figure is the number passed in.
-const META: AssetMeta = { symbol: "WETH", decimals: 0, scale: 1n };
+const META: AssetMeta = { symbol: "WETH", decimals: 0, scale: 1n, index: RAY };
 
 /// Drive the hook the way a form does: render, click max, then re-render with
 /// the field holding whatever was written.
