@@ -44,10 +44,21 @@ export function useSpendableMax(
 ): SpendableMax | undefined {
   const { wallet } = useWallet();
   const { chainId } = useActiveChain();
-  // Read for `syncedAt` rather than for the balances: it marks when the note file
-  // last changed, and it makes this inherit the sync's invalidation, so a
-  // completed transfer refreshes the max without a second poll.
-  const syncedAt = useWalletState().data?.syncedAt;
+  // Keyed on what this asset holds, not on `syncedAt`.
+  //
+  // `syncedAt` is `Date.now()` written on every successful sync whether or not
+  // anything moved, so keying on it minted a fresh cache entry on every poll —
+  // and a fresh entry has no data, so the max went `undefined` and back on a
+  // timer. Everything downstream flapped with it: `offerableDenominations`
+  // reads an unknown ceiling as "no ceiling" and offered the entire ladder, so
+  // a wallet too small for any rung watched a full row of chips appear and
+  // vanish once per sync.
+  //
+  // The holdings are what a max actually depends on: the same notes and the same
+  // fee arguments cannot produce a different answer. `use-yield-gains.ts` keys
+  // itself the same way, for the same reason.
+  const held = useWalletState().data?.balances.find((b) => b.asset === asset);
+  const holdings = held ? `${held.notes}:${held.balance}` : "none";
 
   const { data } = useQuery<SpendableMax>({
     queryKey: [
@@ -55,7 +66,7 @@ export function useSpendableMax(
       chainId.toString(),
       wallet?.address ?? null,
       asset?.toString() ?? null,
-      syncedAt ?? null,
+      holdings,
       crossAssetFee,
       sameAssetFee.toString(),
     ],
@@ -70,8 +81,14 @@ export function useSpendableMax(
         fee: sameAssetFee,
       });
     },
-    // The note file only moves when a sync does, and `syncedAt` is in the key.
+    // The note file cannot move without the holdings moving, and those are in
+    // the key.
     staleTime: Number.POSITIVE_INFINITY,
+    // Belt and braces for the keys that legitimately do change under a running
+    // form — switching the fee asset moves `crossAssetFee` and `sameAssetFee`.
+    // Without this the max blanks for the length of that read, and the ladder
+    // below it offers rungs this balance cannot cover in the meantime.
+    placeholderData: (prev) => prev,
   });
 
   return data;
