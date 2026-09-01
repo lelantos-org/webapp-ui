@@ -81,7 +81,7 @@ const refused = new Set<string>();
 /// discards both. Keyed by URL so a chain switch gets its own.
 const clients = new Map<string, PublicClient>();
 
-function clientFor(rpcUrl: string): PublicClient {
+export function clientFor(rpcUrl: string): PublicClient {
   const existing = clients.get(rpcUrl);
   if (existing) return existing;
   // `batch` coalesces the historical reads into a single JSON-RPC array.
@@ -120,6 +120,52 @@ function partitionBlocks(
     else resolved.set(key, cached);
   }
   return { resolved, missing };
+}
+
+/**
+ * The pool's index for one asset at one block, off the same caches
+ * {@link resolveGains} fills.
+ *
+ * For a caller that wants one specific historical reading rather than a whole
+ * note set's worth — `use-venue-apy.ts` measuring a rate. Sharing the caches is
+ * the point: a node with no archive state is asked once per block for the life
+ * of the session, whoever is asking, and a block that did answer is never asked
+ * again on this device.
+ *
+ * `undefined` on any failure. There is no error path: every caller of this has
+ * something to render without the number.
+ */
+export async function indexAtBlock({
+  chainId,
+  rpcUrl,
+  maspAddress,
+  asset,
+  block,
+}: {
+  chainId: bigint;
+  rpcUrl: string;
+  maspAddress: EvmAddress;
+  asset: bigint;
+  block: number;
+}): Promise<bigint | undefined> {
+  const key = cacheKey(chainId, asset, block);
+  if (refused.has(key)) return undefined;
+  const cached = readCached(chainId, asset, block);
+  if (cached !== undefined) return cached;
+  try {
+    const state = await clientFor(rpcUrl).readContract({
+      address: maspAddress,
+      abi: MASP_ABI,
+      functionName: "yieldState",
+      args: [asset],
+      blockNumber: BigInt(block),
+    });
+    localStore.set(key, state.index.toString());
+    return state.index;
+  } catch {
+    refused.add(key);
+    return undefined;
+  }
 }
 
 export interface ResolveArgs {

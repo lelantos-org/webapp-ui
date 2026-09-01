@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import type { RegisteredAsset } from "@/config/chains";
 import { ShieldedTable } from "./ShieldedTable";
 import type { AssetBalanceView } from "./use-balances";
+import type { VenueApys } from "./venue-apy";
 import type { YieldGain, YieldGains } from "./yield-gains";
 
 function asset(id: bigint, symbol: string, over: Partial<RegisteredAsset> = {}): RegisteredAsset {
@@ -43,7 +44,7 @@ const gain = (over: Partial<YieldGain> = {}): YieldGain => ({
   ...over,
 });
 
-function renderTable(assets: RegisteredAsset[], gains: YieldGains) {
+function renderTable(assets: RegisteredAsset[], gains: YieldGains, apys: VenueApys = new Map()) {
   render(
     <MemoryRouter>
       <ShieldedTable
@@ -51,6 +52,7 @@ function renderTable(assets: RegisteredAsset[], gains: YieldGains) {
         byId={new Map(assets.map((a) => [a.id, a]))}
         prices={new Map()}
         gains={gains}
+        apys={apys}
       />
     </MemoryRouter>,
   );
@@ -174,5 +176,56 @@ describe("ShieldedTable earned legend", () => {
     const el = legend();
     expect(el).not.toBeNull();
     expect(el?.closest(".tbl-wrap")).toBeNull();
+  });
+});
+
+// The venue rate on the `earning` badge. What it is *not* matters as much as
+// what it is: a rate the venue paid, not a return this wallet made, and absent
+// rather than zero when nothing could be measured.
+describe("ShieldedTable venue rate", () => {
+  const badge = () => document.querySelector(".tok__yield") as HTMLElement;
+
+  it("shows the rate beside `earning`", () => {
+    const a = asset(6n, "WETH", { yieldEnabled: true });
+    renderTable([a], new Map(), new Map([[6n, 0.0418]]));
+    expect(badge().textContent).toBe("earning4.18%");
+  });
+
+  it("says only `earning` when no rate could be measured", () => {
+    const a = asset(7n, "WETH", { yieldEnabled: true });
+    renderTable([a], new Map());
+    expect(badge().textContent).toBe("earning");
+    expect(badge().querySelector(".tok__apy")).toBeNull();
+  });
+
+  // A halted venue is not earning at whatever it last paid; the rate would be
+  // the most recent thing on the row and the only untrue one.
+  it("drops the rate when the venue is paused", () => {
+    const a = asset(8n, "WETH", { yieldEnabled: true, yieldHalted: true });
+    renderTable([a], new Map(), new Map([[8n, 0.0418]]));
+    expect(badge().textContent).toBe("paused");
+  });
+
+  it("keys the badge percentage as the venue's, not the wallet's", () => {
+    const a = asset(9n, "WETH", { yieldEnabled: true });
+    renderTable([a], new Map(), new Map([[9n, 0.0418]]));
+    const legend = document.querySelector(".tbl__legend") as HTMLElement;
+    expect(legend.textContent).toContain("what the venue itself returned");
+    expect(legend.textContent).toContain("not your own return");
+  });
+
+  // The `earned` column goes at 480px and its keys go with it; this one does
+  // not, because the badge it explains is in the asset cell.
+  it("keeps the rate key off the column-scoped class", () => {
+    const a = asset(9n, "WETH", { yieldEnabled: true });
+    renderTable([a], new Map(), new Map([[9n, 0.0418]]));
+    const rows = [...document.querySelectorAll(".tbl__legend-row")];
+    const rate = rows.find((r) => r.querySelector("dt")?.textContent === "%") as HTMLElement;
+    expect(rate).toBeDefined();
+    expect(rate.classList.contains("tbl__legend-row--earned")).toBe(false);
+    // And the keys that do belong to the column carry it, or the rule that
+    // drops them on a phone would drop nothing.
+    const dash = rows.find((r) => r.querySelector("dt")?.textContent === "—") as HTMLElement;
+    expect(dash.classList.contains("tbl__legend-row--earned")).toBe(true);
   });
 });

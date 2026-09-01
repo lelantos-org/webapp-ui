@@ -102,9 +102,12 @@
   /* Four columns of figures do not fit a phone. The `earning` badge in the
      asset cell still says the asset yields; only the amount goes. */
   .tbl--pf .tbl__earned { display: none; }
-  /* With the column gone there is no marker on screen for the legend to key,
-     and no figure for it to place inside the balance. */
-  .tbl__legend { display: none; }
+  /* With the column gone there is no marker on screen for those keys to
+     explain. The rate key stays: its badge is in the asset cell, which this
+     width keeps. A legend left with nothing but the dropped keys goes whole,
+     rather than standing as an empty line's worth of margin. */
+  .tbl__legend-row--earned { display: none; }
+  .tbl__legend:not(:has(.tbl__legend-row:not(.tbl__legend-row--earned))) { display: none; }
   /* And nothing left to group: one column needs no fence, and the half of it
      that survives would read as a stray divider. */
   .tbl--pf .tbl__grp-a { border-left: 0; }

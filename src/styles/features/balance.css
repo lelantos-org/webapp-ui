@@ -98,6 +98,18 @@
   white-space: nowrap;
 }
 
+/* The venue's rate, inside the badge that says the asset earns. Tabular and a
+   shade dimmer than the word: the word is the claim, the rate is its size, and
+   two figures of equal weight in one 10px pill read as a single garbled token. */
+.tok__apy {
+  margin-left: 4px;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+  /* The badge is uppercased; a percentage has no case to change and the
+     letter-spacing that suits words pulls digits apart. */
+  letter-spacing: 0;
+}
+
 /* Paused is not plain: the balance is still fully backed, it has just stopped
    growing. Muted rather than `--warn` — nothing is at risk, so an alarm colour
    would overstate it. */
