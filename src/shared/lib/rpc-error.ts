@@ -67,7 +67,7 @@ function codeMatches(actual: unknown, wanted: number | string): boolean {
 export function rpcErrorMessage(err: unknown): string | undefined {
   const chain = rpcErrorChain(err);
   for (let i = chain.length - 1; i >= 0; i--) {
-    const message = chain[i].message;
+    const message = chain[i]?.message;
     if (typeof message === "string" && message.length > 0) return message;
   }
   return undefined;

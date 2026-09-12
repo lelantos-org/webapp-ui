@@ -1,0 +1,54 @@
+@layer components {
+  /* The asset trigger beside the figure. */
+  .tokpill {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 44px;
+    padding: 9px var(--sp-16) 9px var(--sp-10);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-2);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: var(--fs-16);
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color var(--dur-120) var(--ease-soft);
+  }
+  .tokpill:hover,
+  .tokpill--open { border-color: var(--accent); }
+  .tokpill:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .tokpill .tok__mark { width: 28px; height: 28px; }
+  .tokpill__chev {
+    color: var(--fg-mute);
+    transition: transform var(--dur-140) var(--ease-soft);
+  }
+  .tokpill--open .tokpill__chev { transform: rotate(180deg); }
+
+  /* `AssetSelectPill`: the same pill with a transparent native select stretched
+     over it. The select takes the pointer and the focus, so the pill draws both. */
+  .tokpill--select { position: relative; }
+  .tokpill--select:focus-within { outline: var(--ring); outline-offset: 2px; }
+  .tokpill--invalid { border-color: var(--err); }
+  .tokpill--disabled { cursor: not-allowed; opacity: 0.6; }
+  .tokpill--disabled:hover { border-color: var(--line-strong); }
+  .tokpill__native {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: inherit;
+    /* 16px so iOS does not zoom the page when the select takes focus. */
+    font-size: var(--fs-16);
+    appearance: none;
+  }
+
+  @media (max-width: 480px) {
+    .tokpill { gap: 7px; padding: 8px 12px 8px 8px; font-size: var(--fs-15); }
+    .tokpill .tok__mark { width: 24px; height: 24px; }
+  }
+}

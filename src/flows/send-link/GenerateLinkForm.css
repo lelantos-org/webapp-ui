@@ -1,0 +1,77 @@
+@layer features {
+  /* The private-channel acknowledgement. A real checkbox, visually hidden, with
+     the drawn box beside it carrying the state and the focus ring. */
+  .linkack {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-12);
+    min-height: 44px;
+    padding: var(--sp-14) var(--sp-16);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    cursor: pointer;
+  }
+  .linkack__input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+  }
+  .linkack__box {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    background: var(--bg-1);
+    color: transparent;
+    transition: background var(--dur-120) var(--ease-soft), border-color var(--dur-120) var(--ease-soft);
+  }
+  .linkack__input:checked + .linkack__box {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-fill);
+  }
+  .linkack__input:focus-visible + .linkack__box {
+    outline: var(--ring);
+    outline-offset: 2px;
+  }
+  .linkack:hover .linkack__box { border-color: var(--accent); }
+  .linkack__txt {
+    font-size: var(--fs-15);
+    line-height: 1.45;
+    color: var(--fg-dim);
+  }
+}
+
+@layer features {
+  /* Send by link: two columns, "1 · Compose" and "2 · Share". */
+  .sendlink {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-20);
+    align-items: start;
+  }
+  .sendlink__col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-12);
+    min-width: 0;
+  }
+  .sendlink__step {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--fg-mute);
+  }
+
+  @media (max-width: 900px) {
+    .sendlink { grid-template-columns: minmax(0, 1fr); }
+  }
+}

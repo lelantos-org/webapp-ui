@@ -1,4 +1,7 @@
 import "@/app/polyfills";
+// First, before any module that could bring a stylesheet of its own: its opening
+// `@layer` statement is what fixes the cascade order. See `styles.css`.
+import "@/styles.css";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "@/app/App";
@@ -6,7 +9,6 @@ import { renderBootFailure } from "@/app/boot-failure";
 import { AppProviders } from "@/app/providers";
 import { ensureWasm, prefetchWasm } from "@/config/wasm";
 import { installConsoleFilter } from "@/shared/lib/logger";
-import "@/styles.css";
 
 function mountPoint(): HTMLElement {
   const root = document.getElementById("root");

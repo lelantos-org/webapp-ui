@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root{
+      --bg:#14110E;--bg-1:#1C1815;--bg-2:#241F1A;--bg-3:#2E2822;
+      --fg:#F5F1E8;--fg-dim:#BEB5A6;--fg-mute:#9E9486;
+      --line:#2A241E;--line-strong:#3A332B;
+      --accent:#E0794A;--accent-2:#EA8C60;--warn:#E0A93F;--err:#E67A6E;
+      --display:"Newsreader",Georgia,serif;
+      --sans:"Public Sans",-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+      --mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+    a{color:var(--accent);}a:hover{color:var(--accent-2);}
+    .num{font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;font-feature-settings:"zero" 1;}
+    .lbl{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);}
+    .card{border:1px solid var(--line-strong);background:var(--bg-1);}
+    td,th{text-align:left;vertical-align:top;padding:10px 16px 10px 0;border-bottom:1px solid var(--line);}
+    th{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);border-bottom:1px solid var(--line-strong);}
+  </style>
+</helmet>
+
+<div style="min-height:1320px;display:flex;flex-direction:column;background:radial-gradient(900px 420px at 50% -10%, rgba(224,121,74,0.10), transparent 62%), #14110E;">
+  <div style="display:flex;align-items:center;gap:16px;padding:14px 32px;border-bottom:1px solid var(--line);background:rgba(28,24,21,0.78);">
+    <svg width="20" height="20" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:15px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+      <span style="display:flex;align-items:center;gap:8px;padding:8px 14px;border:1px solid var(--line-strong);font-size:14px;">Base</span>
+      <span class="num" style="padding:8px 14px;border:1px solid var(--line-strong);font-size:14px;color:var(--fg-dim);">0x7a4f…c2e1</span>
+    </div>
+  </div>
+  <div style="flex:1;width:100%;max-width:560px;margin:0 auto;padding:34px 24px 46px;display:flex;flex-direction:column;gap:18px;">
+
+    <!-- step 2 of 2: the deliberate pause before something irreversible -->
+    <div style="display:flex;align-items:center;gap:13px;">
+      <span style="width:40px;height:40px;border:1px solid var(--line-strong);background:var(--bg-1);display:inline-grid;place-items:center;color:var(--fg-dim);flex:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </span>
+      <div style="display:flex;flex-direction:column;gap:1px;">
+        <span style="font-family:var(--display);font-size:26px;font-weight:600;">Review</span>
+        <span style="font-size:14px;color:var(--fg-mute);">Shielded pool → a public address · this part is visible</span>
+      </div>
+      <span class="num" style="margin-left:auto;font-size:13px;color:var(--fg-mute);flex:none;">STEP 2 OF 2</span>
+    </div>
+
+    <div style="border:1px solid var(--line-strong);background:var(--bg-1);">
+      <div style="padding:26px 24px 22px;border-bottom:1px solid var(--line);">
+        <div class="lbl" style="margin-bottom:11px;">You are sending</div>
+        <div class="num" style="font-family:var(--display);font-size:46px;font-weight:600;line-height:1;letter-spacing:-.02em;">500.00 <span style="font-size:24px;color:var(--fg-dim);">USDC</span></div>
+        <div style="display:flex;align-items:baseline;gap:10px;margin-top:9px;">
+          <span style="font-family:var(--display);font-size:18px;font-style:italic;color:var(--fg-dim);">Five hundred and 00/100 USDC</span>
+          <span style="flex:1;height:1px;background:var(--line-strong);align-self:center;"></span>
+        </div>
+      </div>
+
+      <div style="padding:20px 24px;border-bottom:1px solid var(--line);">
+        <div class="lbl" style="margin-bottom:9px;">To this public address</div>
+        <div class="num" style="font-size:17px;line-height:1.7;letter-spacing:.02em;overflow-wrap:anywhere;">0x9E 2b41 Ac7f D305 18cB 6a2E e913 F47d B0c8 135A a4</div>
+        <div style="font-size:14px;color:var(--fg-mute);margin-top:7px;">This address is public. Anything sent here is visible on-chain from now on.</div>
+      </div>
+
+      <div style="padding:20px 24px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:9px;">
+        
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;">
+          <span style="font-size:15px;color:var(--fg-mute);">Amount</span>
+          <span class="num" style="font-size:15px;color:var(--fg-dim);">500.00 USDC</span>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;">
+          <span style="font-size:15px;color:var(--fg-mute);">Protocol fee · 0.25%</span>
+          <span class="num" style="font-size:15px;color:var(--fg-dim);">1.25 USDC</span>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;">
+          <span style="font-size:15px;color:var(--fg-mute);">Relayer fee · paid in USDC</span>
+          <span class="num" style="font-size:15px;color:var(--fg-dim);">0.31 USDC</span>
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;">
+          <span style="font-size:15px;color:var(--fg-mute);">They receive</span>
+          <span class="num" style="font-size:15px;color:var(--fg);">498.44 USDC</span>
+        </div>
+      </div>
+
+      <div style="padding:20px 24px;border-bottom:1px solid var(--line);">
+        <div class="lbl" style="margin-bottom:11px;">What the chain will show</div>
+        <div style="display:flex;flex-direction:column;gap:10px;padding:15px 16px;background:var(--bg-2);border:1px solid var(--line);">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <span style="font-size:14px;color:var(--fg-mute);">Where it came from</span>
+            <span style="background:var(--fg);height:14px;width:126px;"></span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <span style="font-size:14px;color:var(--fg-mute);">Destination</span>
+            <span class="num" style="font-size:14px;color:var(--fg-dim);">0x9E2b…5Aa4</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <span style="font-size:14px;color:var(--fg-mute);">Amount</span>
+            <span class="num" style="font-size:14px;color:var(--fg-dim);">500.00 USDC</span>
+          </div>
+        </div>
+        <div style="font-size:14px;color:var(--fg-mute);margin-top:9px;">500 is a shared denomination — many withdrawals publish it.</div>
+      </div>
+
+      <div style="padding:20px 24px;display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:15px 17px;border:1px solid rgba(224,169,63,0.38);background:rgba(224,169,63,0.08);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E0A93F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:2px;"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <span style="font-size:14px;color:#EDD09A;line-height:1.6;">This cannot be reversed. The destination is not one you have deposited from, so the two sides stay unlinked — keep it that way by not reusing it.</span>
+        </div>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:10px;">
+          <span style="display:inline-flex;align-items:center;justify-content:center;padding:16px 26px;border:1px solid var(--line-strong);font-size:16px;font-weight:600;min-height:44px;">Back</span>
+          <span style="display:inline-flex;align-items:center;justify-content:center;padding:16px;background:var(--accent);color:#14110E;font-size:17px;font-weight:600;min-height:44px;">Confirm and unshield</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,29 +1,24 @@
 import { type EvmAddress, evmAddress } from "@lelantos-org/sdk";
+import type { TokenAmount } from "@lelantos-org/sdk/core";
 import type { WalletApi } from "@lelantos-org/sdk/wallet";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  queryOptions,
+  skipToken,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback } from "react";
+import type { RegisteredAsset } from "@/config/chains";
 import { useActiveChain } from "@/features/chain";
 import { useWallet } from "@/features/wallet";
-import { BALANCE_POLL_MS, BALANCE_STALE_MS, usePolling } from "@/shared/lib/activity";
+import { asBaseUnits } from "@/shared/domain/units";
 import { createLogger } from "@/shared/lib/logger";
+import { BALANCE_POLL_MS, BALANCE_STALE_MS, usePolling } from "@/shared/query/cadence";
+import { queryKeys } from "@/shared/query/keys";
 import { useRegisteredAssets } from "./registered-assets";
 
 const log = createLogger("balances:transparent");
-
-/// Prefix shared by every per-asset entry; invalidating it covers them all.
-const transparentBalancesKey = (chainId: bigint | undefined, account: string | undefined) =>
-  ["transparent-balances", chainId?.toString() ?? null, account ?? null] as const;
-
-const sourceBalanceKey = (
-  chainId: bigint | undefined,
-  account: string | undefined,
-  assetId: bigint | undefined,
-  asEth: boolean,
-) =>
-  [
-    ...transparentBalancesKey(chainId, account),
-    asEth ? "native" : (assetId?.toString() ?? null),
-  ] as const;
 
 /// Chain reads, both reporting an unavailable balance as `undefined`.
 ///
@@ -69,35 +64,78 @@ function readToken(chain: Chain, token: TokenRef, account: EvmAddress): Promise<
 /// adapter cannot answer, so callers distinguish "not yet known" from zero and do
 /// not reject an amount against a balance they do not have.
 ///
+/// The query behind one source balance, spelled once for the single-asset hook
+/// and the picker's list, so both fill the same cache entry the same way. Skipped
+/// until there is an account to read and — off the native path — a token to read
+/// it in.
+function sourceBalanceQuery(
+  { wallet, ethAddress }: Pick<ReturnType<typeof useWallet>, "wallet" | "ethAddress">,
+  chainId: bigint,
+  assets: readonly RegisteredAsset[],
+  { assetId, asEth }: { assetId: bigint | undefined; asEth: boolean },
+) {
+  const token = asEth ? undefined : assets.find((a) => a.id === assetId)?.token;
+  const queryFn: (() => Promise<bigint | null>) | typeof skipToken =
+    !wallet || !ethAddress || (!asEth && token === undefined)
+      ? skipToken
+      : asEth
+        ? () => readNative(wallet.chain, evmAddress(ethAddress))
+        : () => readToken(wallet.chain, token!, evmAddress(ethAddress));
+  return queryOptions({
+    queryKey: queryKeys.sourceBalance(wallet ? chainId : undefined, ethAddress, assetId, asEth),
+    queryFn,
+    staleTime: BALANCE_STALE_MS,
+  });
+}
+
 /// Reads only the balance it returns, keyed per asset: selecting a different
 /// asset costs one cold read and is cached thereafter.
 export function useDepositSourceBalance(
   assetId: bigint | undefined,
   asEth: boolean,
-): bigint | undefined {
-  const { wallet, ethAddress } = useWallet();
+): TokenAmount | undefined {
   const { chainId } = useActiveChain();
-  const assets = useRegisteredAssets();
-  const token = asEth ? undefined : assets.find((a) => a.id === assetId)?.token;
-
-  const { data } = useQuery<bigint | null>({
-    queryKey: sourceBalanceKey(wallet ? chainId : undefined, ethAddress, assetId, asEth),
-    enabled: !!wallet && !!ethAddress && (asEth || token !== undefined),
-    queryFn: async () => {
-      if (!wallet || !ethAddress) throw new Error("not ready");
-      const account = evmAddress(ethAddress);
-      if (asEth) return readNative(wallet.chain, account);
-      if (token === undefined) throw new Error("not ready");
-      return readToken(wallet.chain, token, account);
-    },
+  const { data } = useQuery({
+    ...sourceBalanceQuery(useWallet(), chainId, useRegisteredAssets(), { assetId, asEth }),
     // Through `usePolling` like every other poll: this one sends the user's EOA
     // to a third-party RPC on each tick, so an unattended tab must not keep
     // announcing that address at full cadence.
     ...usePolling(BALANCE_POLL_MS),
-    staleTime: BALANCE_STALE_MS,
   });
 
-  return data ?? undefined;
+  // Chain reads of an ERC-20 or native balance: base units by definition.
+  return data === undefined || data === null ? undefined : asBaseUnits(data);
+}
+
+/// One entry the Shield picker lists: a registered asset, or native coin paid
+/// through one of its WETH ids.
+export interface SourceBalanceRef {
+  assetId: bigint;
+  asEth: boolean;
+}
+
+/// `useDepositSourceBalance` for a whole list at once, in the order given.
+///
+/// For the Shield picker's "You hold" column, and only while it is open: this is
+/// an RPC read per registered token, each announcing the user's EOA to a
+/// third-party RPC, which is exactly the cost `asset-option.ts` declined to pay
+/// on every render of a `<select>`. The picker mounts only while the user is
+/// actually choosing.
+///
+/// Shares keys and query functions with the single-asset hook, so the picker
+/// and the form reuse each other's cache — the selected asset is never read
+/// twice — and every native-coin entry resolves to the one native read.
+export function useDepositSourceBalances(
+  refs: readonly SourceBalanceRef[],
+): (bigint | undefined)[] {
+  const wallet = useWallet();
+  const { chainId } = useActiveChain();
+  const assets = useRegisteredAssets();
+
+  return useQueries({
+    queries: refs.map((ref) => sourceBalanceQuery(wallet, chainId, assets, ref)),
+    combine: (results) => results.map((r) => r.data ?? undefined),
+  });
 }
 
 /// Drop every cached source balance for the active wallet.
@@ -112,7 +150,7 @@ export function useInvalidateTransparentBalances(): () => Promise<void> {
   return useCallback(
     () =>
       qc.invalidateQueries({
-        queryKey: transparentBalancesKey(wallet ? chainId : undefined, ethAddress),
+        queryKey: queryKeys.transparentBalances(wallet ? chainId : undefined, ethAddress),
       }),
     [qc, wallet, chainId, ethAddress],
   );

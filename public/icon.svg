@@ -1,22 +1,13 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Lelantos">
   <title>Lelantos</title>
-  <rect width="512" height="512" rx="112" fill="#0f0f0e" />
-  <!-- Shield: the wallet is a shielded pool. -->
-  <path
-    d="M256 104 L392 156 V272 C392 348 332 396 256 424 C180 396 120 348 120 272 V156 Z"
-    fill="none"
-    stroke="#f5f5f4"
-    stroke-width="26"
-    stroke-linejoin="round"
-  />
-  <!-- Quaternary node: the Merkle tree the wallet mirrors locally. -->
-  <circle cx="256" cy="212" r="30" fill="#f5f5f4" />
-  <circle cx="196" cy="312" r="20" fill="#f5f5f4" />
-  <circle cx="316" cy="312" r="20" fill="#f5f5f4" />
-  <path
-    d="M256 242 L196 292 M256 242 L316 292"
-    stroke="#f5f5f4"
-    stroke-width="16"
-    stroke-linecap="round"
-  />
+  <!-- A Merkle root and two leaves. The edges rise from the leaves and stop short
+       of the root: the tree is public, which leaf is yours is not.
+       No background tile: this is the browser-tab favicon, drawn straight onto
+       the tab in either theme. The installable app icons (public/icons/*.png)
+       keep their tile, which home screens and maskable crops need. -->
+  <circle cx="256" cy="104" r="64" fill="#E0794A"/>
+  <circle cx="104" cy="408" r="64" fill="#E0794A"/>
+  <circle cx="408" cy="408" r="64" fill="#E0794A"/>
+  <path d="M144 336 L198 227 M368 336 L314 227"
+        stroke="#E0794A" stroke-width="42" stroke-linecap="round" fill="none"/>
 </svg>

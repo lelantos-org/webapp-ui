@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Lelantos">
+  <title>Lelantos</title>
+  <!-- A Merkle root and two leaves. The edges rise from the leaves and stop short
+       of the root: the tree is public, which leaf is yours is not. -->
+  <rect width="512" height="512" rx="112" fill="#14110E"/>
+  <circle cx="256" cy="104" r="64" fill="#E0794A"/>
+  <circle cx="104" cy="408" r="64" fill="#E0794A"/>
+  <circle cx="408" cy="408" r="64" fill="#E0794A"/>
+  <path d="M144 336 L198 227 M368 336 L314 227"
+        stroke="#E0794A" stroke-width="42" stroke-linecap="round" fill="none"/>
+</svg>

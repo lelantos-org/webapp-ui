@@ -1,0 +1,103 @@
+@layer features {
+  .linkres {
+    gap: var(--sp-18);
+    border: 1px solid rgba(var(--accent-rgb), 0.4);
+    background: linear-gradient(180deg, rgba(var(--accent-rgb), 0.07), var(--bg-1));
+  }
+  .linkres__head {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-10);
+    padding: 6px 0 2px;
+    text-align: center;
+  }
+  .linkres__ring {
+    width: 52px;
+    height: 52px;
+  }
+  .linkres__amt {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1.15;
+    font-variant-numeric: tabular-nums;
+    color: var(--fg);
+    outline: none;
+  }
+  .linkres__sub {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .linkres__url {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-12);
+    padding: var(--sp-6) var(--sp-8) var(--sp-6) var(--sp-16);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    min-width: 0;
+  }
+  .linkres__code {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-size: var(--fs-14);
+    color: var(--fg-dim);
+  }
+  .linkres__code--open {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .linkres__reveal {
+    flex: none;
+    padding: 0 var(--sp-8);
+    font-size: var(--fs-14);
+    font-weight: 500;
+  }
+  .linkres__reveal:focus-visible { outline: var(--ring); outline-offset: -2px; }
+  .linkres__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-10);
+  }
+  .linkres__actions--one { grid-template-columns: 1fr; }
+  .linkres__actions .btn--cta { padding: 15px; font-size: var(--fs-16); }
+  .linkres__again {
+    align-self: center;
+    padding: 0 var(--sp-8);
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+    text-decoration: underline dotted;
+    text-underline-offset: 4px;
+  }
+  .linkres__again:hover { color: var(--fg); }
+  .linkres__again:focus-visible { outline: var(--ring); outline-offset: 2px; }
+
+  /* Before there is a link: the column keeps its shape, and says what will land. */
+  .linkres--empty {
+    border: 1px dashed var(--line-strong);
+    background: transparent;
+  }
+  .linkres__placeholder {
+    margin: 0;
+    font-size: var(--fs-14);
+    line-height: 1.6;
+    color: var(--fg-mute);
+    text-align: center;
+  }
+
+  @media (max-width: 900px) {
+    /* One column: nothing to hold a place for until the link exists. */
+    .linkres--empty { display: none; }
+  }
+
+  @media (max-width: 560px) {
+    .linkres { padding: var(--sp-18) var(--sp-16); gap: var(--sp-14); }
+  }
+}

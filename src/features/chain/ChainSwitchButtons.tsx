@@ -1,6 +1,6 @@
 import type { ChainEntry } from "@/config/chains";
-import { useSwitchChain } from "@/features/eip1193";
-import { ChainIcon } from "@/features/icons";
+import { useSwitchChain } from "@/features/wallet-kinds";
+import { ChainIcon } from "@/shared/ui/icons/ChainIcon";
 import { useActiveChainOrUndefined, useChainRegistry } from "./ChainProvider";
 
 export interface ChainSwitchButtonsProps {

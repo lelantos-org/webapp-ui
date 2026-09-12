@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root {
+      --bg: #14110E; --bg-1: #1C1815; --bg-2: #241F1A; --bg-3: #2E2822;
+      --fg: #F5F1E8; --fg-dim: #BEB5A6; --fg-mute: #9E9486;
+      --line: #2A241E; --line-strong: #3A332B;
+      --accent: #E0794A; --accent-2: #EA8C60; --accent-dim: #7A4526;
+      --warn: #E0A93F; --err: #E67A6E;
+      --display: "Newsreader", Georgia, "Times New Roman", serif;
+      --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: "zero" 1; }
+    .shell { min-height: 900px; display: flex; flex-direction: column; background: radial-gradient(900px 420px at 50% -10%, rgba(224,121,74,0.14), transparent 62%), #14110E; }
+    .hdr { display: flex; align-items: center; gap: 16px; padding: 14px 32px; border-bottom: 1px solid var(--line); background: rgba(28,24,21,0.78); }
+    .pill { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 2px; font-size: 14px; }
+    .card { border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-1); padding: 26px 24px 24px; display: flex; flex-direction: column; gap: 18px; }
+    .rule { height: 1px; background: var(--line); }
+    .cta { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 17px; border-radius: 4px; background: var(--accent); color: #14110E; font-size: 17px; font-weight: 600; box-shadow: 0 6px 22px rgba(224,121,74,0.3); min-height: 44px; }
+    .tokpill { display: flex; align-items: center; gap: 9px; padding: 9px 16px 9px 10px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--bg-2); flex: none; }
+    .mark { border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; flex: none; }
+    .amt { font-family: var(--display); font-size: 46px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; flex: 1; min-width: 0; }
+    .back { width: 40px; height: 40px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--bg-1); display: inline-grid; place-items: center; color: var(--fg-dim); flex: none; }
+    .h1 { font-family: var(--display); font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+    .muted { color: var(--fg-mute); }
+    .sub { font-size: 14px; color: var(--fg-mute); }
+  </style>
+</helmet>
+
+<div class="shell">
+  <div class="hdr">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:13px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+      <div class="pill">
+        <span class="mark" style="width: 16px; height: 16px; background: #2151f5; font-size: 9px; color: #fff;">B</span>
+        <span>Base</span>
+      </div>
+      <div class="pill" style="gap: 10px; padding: 7px 8px 7px 14px; background: var(--bg-2);">
+        <span class="num" style="color: var(--fg-dim);">0x7a4f…c2e1</span>
+        <span class="mark" style="width: 26px; height: 26px; background: var(--bg-3); color: var(--fg-mute);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+        </span>
+      </div>
+    </div>
+  </div>
+  <div style="flex: 1; width: 100%; max-width: 1120px; margin: 0 auto; padding: 36px 32px 48px; display: flex; flex-direction: column; gap: 22px;">
+
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <span class="back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></span>
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <span class="h1">Send by link</span>
+        <span class="sub">For someone who has no shielded address yet. They open the link, connect a wallet, and the funds are theirs.</span>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start;">
+
+      <!-- step 1: compose -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-mute);">1 · Compose</span>
+        <div class="card">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <span class="sub">Amount to send</span>
+            <div style="display: flex; align-items: center; gap: 16px;">
+              <span class="num amt" style="font-size: 40px;">75</span>
+              <div class="tokpill">
+                <span class="mark" style="width: 28px; height: 28px; background: rgba(122,160,180,0.16); border: 1px solid rgba(122,160,180,0.42); color: #8FB6C9; font-size: 9px;">USDC</span>
+                <span style="font-size: 16px; font-weight: 600;">USDC</span>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+              <span class="num sub">≈ $75.00</span>
+              <span class="muted" style="font-size: 14px;">Shielded <span class="num" style="color: var(--fg-dim);">8,420.00 USDC</span></span>
+            </div>
+          </div>
+
+          <div class="rule"></div>
+
+          <div style="display: flex; align-items: flex-start; gap: 13px; padding: 16px 18px; border: 1px solid rgba(224,169,63,0.38); border-radius: 4px; background: rgba(224,169,63,0.08);">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#E0A93F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px;"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <span style="font-size: 15px; font-weight: 600; color: #EDD09A;">The link is the money</span>
+              <span style="font-size: 14px; color: #D8BE93;">Anyone who opens it can claim the funds. Send it through a private channel — never a public chat, or anything that logs URLs. It cannot be cancelled once broadcast.</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-2);">
+            <span style="width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); display: inline-grid; place-items: center; flex: none;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+            </span>
+            <span style="font-size: 15px; color: var(--fg-dim);">I'll share this link only through a private channel</span>
+          </div>
+
+          <div class="cta"><span>Create link</span></div>
+        </div>
+      </div>
+
+      <!-- step 2: result -->
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <span style="font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-mute);">2 · Share</span>
+        <div class="card" style="border-color: rgba(224,121,74,0.4); background: linear-gradient(180deg, rgba(224,121,74,0.07), var(--bg-1));">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 0 2px;">
+            <span style="width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--accent); display: inline-grid; place-items: center; color: var(--accent);">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg>
+            </span>
+            <span class="num" style="font-family: var(--display); font-size: 30px; font-weight: 600;">75 USDC</span>
+            <span class="sub">sent — your link is ready</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-2);">
+            <span class="num" style="flex: 1; min-width: 0; font-size: 14px; color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">lelantos.xyz/claim#••••••••••••••••</span>
+            <span style="flex: none; font-size: 14px; color: var(--accent); font-weight: 500;">Reveal</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+            <div class="cta" style="padding: 15px; font-size: 16px;"><span>Copy link</span></div>
+            <div style="display: flex; align-items: center; justify-content: center; padding: 15px; border: 1px solid var(--line-strong); border-radius: 4px; font-size: 16px; font-weight: 600; min-height: 44px;">Share…</div>
+          </div>
+
+          <p style="margin: 0; text-align: center; font-size: 14px; color: var(--fg-mute);">Works once. We keep a copy in this browser until it's claimed.</p>
+        </div>
+
+        <!-- vault -->
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 4px; background: var(--bg-1);">
+          <span style="font-size: 15px; font-weight: 600;">Links you haven't seen claimed</span>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line);">
+            <span class="num" style="flex: 1; font-size: 15px;">120.00 USDC</span>
+            <span style="font-size: 14px; color: var(--accent);">Copy</span>
+            <span style="font-size: 14px; color: var(--fg-mute);">Remove</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0;">
+            <span class="num" style="flex: 1; font-size: 15px;">0.05 ETH</span>
+            <span style="padding: 2px 9px; border-radius: 2px; background: rgba(224,169,63,0.14); color: #E0A93F; font-size: 12px; font-weight: 600;">unconfirmed</span>
+            <span style="font-size: 14px; color: var(--accent);">Copy</span>
+            <span style="font-size: 14px; color: var(--fg-mute);">Remove</span>
+          </div>
+          <span class="sub">Removing a record deletes your copy only. It does not revoke anything — whoever holds the link can still claim it.</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

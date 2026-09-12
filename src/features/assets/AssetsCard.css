@@ -1,0 +1,126 @@
+@layer features {
+  /* ASSETS SECTION — title row, then the list card. */
+  .pf-assets {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-12);
+    min-width: 0;
+  }
+  .pf-assets__hdr {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-16);
+  }
+  .pf-assets__t {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .pf-assets__manage {
+    margin: -12px 0;
+    padding: 0;
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .pf-assets__manage:hover { color: var(--accent); }
+  .pf-assets__manage:focus-visible { outline: var(--ring); outline-offset: 2px; }
+
+  /* SKELETON ROWS — the first sync, still counting. */
+  .pf-skel-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-12);
+    padding: 15px var(--sp-20);
+    border-bottom: 1px solid var(--line);
+  }
+  .pf-skel-row .skel-bar { background: var(--bg-3); }
+  .pf-skel-row__mark {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius);
+  }
+  .pf-skel-row__left {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: var(--sp-6);
+  }
+  .pf-skel-row__bar { display: block; }
+
+  /* EMPTY — what can be shielded here, then the one action. */
+  .pf-empty__head {
+    padding: 30px var(--sp-22);
+    text-align: center;
+    border-bottom: 1px solid var(--line);
+  }
+  .pf-empty__t {
+    margin: 0 0 var(--sp-6);
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .pf-empty__sub {
+    margin: 0;
+    font-size: var(--fs-15);
+    color: var(--fg-dim);
+  }
+  .pf-empty__rows { margin: 0; padding: 0; list-style: none; }
+  .pf-empty__row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-12);
+    padding: var(--sp-14) var(--sp-18);
+    border-bottom: 1px solid var(--line);
+  }
+  .pf-empty__mark {
+    width: 30px;
+    height: 30px;
+    font-size: var(--fs-10);
+  }
+  .pf-empty__sym { font-size: var(--fs-15); font-weight: 600; color: var(--fg); }
+  .pf-empty__rate { margin-left: auto; text-align: right; }
+  .pf-empty__rate-fig {
+    font-size: var(--fs-14);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .pf-empty__rate-fig--paused { color: var(--warn); }
+  .pf-empty__rate-win { font-size: var(--fs-12); color: var(--fg-mute); }
+  .pf-empty__rate--none { font-size: var(--fs-13); color: var(--fg-mute); }
+  .pf-empty__foot { padding: var(--sp-16) var(--sp-18); }
+  .pf-empty__cta {
+    font-size: var(--fs-16);
+    padding: 15px;
+    box-shadow: none;
+  }
+
+  /* Flat at rest, lifted on hover, as `.spend-review__confirm`. */
+  .pf-empty__cta:hover:not(:disabled) { box-shadow: 0 6px 22px rgba(var(--accent-rgb), 0.38); }
+  .pf-empty__note {
+    margin: 11px 0 0;
+    font-size: var(--fs-13);
+    line-height: 1.6;
+    text-align: center;
+    color: var(--fg-mute);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pf-skel-row .skel-bar { animation: none; opacity: 0.6; }
+  }
+
+  @media (max-width: 480px) {
+    .pf-assets { gap: var(--sp-10); }
+    .pf-assets__t { font-size: var(--fs-17); }
+    .pf-assets__manage { font-size: var(--fs-13); }
+    .pf-skel-row { padding: 15px var(--sp-16); }
+    .pf-empty__head { padding: var(--sp-22) var(--sp-16); }
+    .pf-empty__t { font-size: 20px; }
+    .pf-empty__sub { font-size: var(--fs-14); }
+    .pf-empty__row { padding: var(--sp-12) var(--sp-16); }
+  }
+}

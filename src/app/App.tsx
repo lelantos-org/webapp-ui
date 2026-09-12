@@ -1,43 +1,57 @@
-import { lazy, Suspense } from "react";
-import { Link, Route, Routes } from "react-router-dom";
-import { Layout } from "@/shared/ui/Layout";
+import { type ComponentType, lazy, Suspense } from "react";
+import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { Layout } from "@/app/shell/Layout";
+import {
+  loadClaim,
+  loadLinks,
+  loadSend,
+  loadSendLink,
+  loadShield,
+  loadSwap,
+  loadUnshield,
+} from "@/flows/loaders";
+import { ErrorCard } from "@/shared/ui/ErrorCard";
 import { RouteErrorBoundary } from "@/shared/ui/RouteErrorBoundary";
 
-const HomeLayout = lazy(() =>
-  import("@/pages/HomeLayout").then((m) => ({ default: m.HomeLayout })),
-);
-const DepositForm = lazy(() =>
-  import("@/features/actions/forms/DepositForm").then((m) => ({ default: m.DepositForm })),
-);
-const TransferForm = lazy(() =>
-  import("@/features/actions/forms/TransferForm").then((m) => ({ default: m.TransferForm })),
-);
-const WithdrawForm = lazy(() =>
-  import("@/features/actions/forms/WithdrawForm").then((m) => ({ default: m.WithdrawForm })),
-);
-const GenerateLinkForm = lazy(() =>
-  import("@/features/claim-link/GenerateLinkForm").then((m) => ({ default: m.GenerateLinkForm })),
-);
-const SwapForm = lazy(() =>
-  import("@/features/swaps/SwapForm").then((m) => ({ default: m.SwapForm })),
-);
-const ClaimPage = lazy(() =>
-  import("@/features/claim-link/claim-page").then((m) => ({ default: m.ClaimPage })),
-);
+/// `lazy()` over a module's named export: the routes' modules export their
+/// screen by name, not as a default.
+function lazyNamed<K extends string, P extends object>(
+  load: () => Promise<Record<K, ComponentType<P>>>,
+  name: K,
+) {
+  return lazy(() => load().then((m) => ({ default: m[name] })));
+}
+
+const Home = lazyNamed(() => import("@/app/Home"), "Home");
+const ActionScreen = lazyNamed(() => import("@/app/shell/ActionScreen"), "ActionScreen");
+const ClaimPage = lazyNamed(loadClaim, "ClaimPage");
+
+/// The action screens, each its own route in the same shell: the connection
+/// gate, the chain-keyed remount, the chunk fallback. See `ActionScreen`.
+const ACTIONS = [
+  { path: "/shield", width: "narrow", Screen: lazyNamed(loadShield, "DepositForm") },
+  { path: "/send", width: "narrow", Screen: lazyNamed(loadSend, "TransferForm") },
+  { path: "/send/link", width: "wide", Screen: lazyNamed(loadSendLink, "GenerateLinkForm") },
+  { path: "/unshield", width: "narrow", Screen: lazyNamed(loadUnshield, "WithdrawForm") },
+  { path: "/swap", width: "narrow", Screen: lazyNamed(loadSwap, "SwapForm") },
+  { path: "/links", width: "vault", Screen: lazyNamed(loadLinks, "LinksPage") },
+] as const;
+
+/// Retired protocol-named paths, and the routes that serve them.
+const MOVED = [
+  ["/transfer", "/send"],
+  ["/withdraw", "/unshield"],
+  ["/send-link", "/send/link"],
+] as const;
 
 function NotFound() {
   return (
-    <div className="card m-20">
-      <div className="card__hdr">
-        <h2 className="card__t">Page not found</h2>
-      </div>
-      <div className="stack stack--md">
-        <p className="muted">Nothing lives at this address.</p>
-        <Link to="/" className="btn">
-          go to the wallet
-        </Link>
-      </div>
-    </div>
+    <ErrorCard title="Page not found">
+      <p className="muted">Nothing lives at this address.</p>
+      <Link to="/" className="btn">
+        Go to the wallet
+      </Link>
+    </ErrorCard>
   );
 }
 
@@ -50,20 +64,39 @@ function PageFallback() {
   );
 }
 
+/// A retired path, sent on to the route that serves it.
+///
+/// `replace`, so the old path does not sit in history as a step that bounces
+/// forward again on Back. Query and fragment ride along: nothing reads them on
+/// these routes today, but a redirect that drops part of a URL is one that
+/// breaks the first time something does.
+function Moved({ to }: { to: string }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={{ pathname: to, search, hash }} replace />;
+}
+
 export function App() {
   return (
     <Layout>
       <RouteErrorBoundary>
         <Suspense fallback={<PageFallback />}>
           <Routes>
-            <Route path="/" element={<HomeLayout />}>
-              <Route index element={<DepositForm />} />
-              <Route path="transfer" element={<TransferForm />} />
-              <Route path="withdraw" element={<WithdrawForm />} />
-              <Route path="swap" element={<SwapForm />} />
-              <Route path="send-link" element={<GenerateLinkForm />} />
-            </Route>
+            <Route path="/" element={<Home />} />
+            {ACTIONS.map(({ path, width, Screen }) => (
+              <Route
+                key={path}
+                path={path}
+                element={
+                  <ActionScreen width={width}>
+                    <Screen />
+                  </ActionScreen>
+                }
+              />
+            ))}
             <Route path="/claim" element={<ClaimPage />} />
+            {MOVED.map(([from, to]) => (
+              <Route key={from} path={from} element={<Moved to={to} />} />
+            ))}
             {/* Without this an unknown path rendered `<Layout>` around nothing,
                 which reads as the app having failed rather than as a bad URL. */}
             <Route path="*" element={<NotFound />} />

@@ -7,9 +7,10 @@ import type { EvmAddress } from "@lelantos-org/sdk";
 
 /// Display-friendly view of one asset registered on the MASP.
 ///
-/// Served whole by the relayer's `/chains`, so no client needs per-token
-/// `symbol()` and `decimals()` RPC reads. Their silent failure would leave the
-/// asset labelled `#<id>` with `isWeth` false, hiding the native-ETH option.
+/// Served whole by registry-webserver's `/v1/assets`, so no client needs
+/// per-token `symbol()` and `decimals()` RPC reads. Their silent failure would
+/// leave the asset labelled `#<id>` with `isWeth` false, hiding the native-ETH
+/// option.
 export interface RegisteredAsset {
   id: bigint;
   token: EvmAddress;
@@ -39,8 +40,12 @@ export interface RegisteredAsset {
   /// The venue is no longer being supplied. The balance is still fully backed —
   /// the asset has degraded to plain custody — but it has stopped earning.
   yieldHalted: boolean;
-  /// The relayer's estimate of what this asset earns in a year, net of the
+  /// The deployment's estimate of what this asset earns in a year, net of the
   /// pool's cut, with the window it was measured over.
+  ///
+  /// Measured and published by registry-webserver, not by a relayer: a venue's
+  /// rate is the same for every relayer serving the chain, so a relayer stating
+  /// one would be asserting a fact a wallet cannot check it against.
   ///
   /// `undefined` means not measurable, which is not the same as zero and must
   /// render as no figure rather than `0.00%`. An estimate: what the venue did
@@ -51,6 +56,12 @@ export interface RegisteredAsset {
   /// labelled honestly without its window, so the pair is never half-present and
   /// no consumer has to check both.
   apy?: VenueRate;
+  /// The `name()` of the ERC-4626 vault this asset earns in, e.g. "Steakhouse
+  /// USDC". What tells an earning asset from the plain one sharing its symbol.
+  ///
+  /// `undefined` for plain custody, until the indexer has read it, and for a
+  /// vault without `name()` — render the symbol alone rather than a placeholder.
+  vaultName?: string;
 }
 
 /// A measured annual rate and the span behind it.
@@ -58,35 +69,50 @@ export interface VenueRate {
   /// A fraction — `0.0418` for 4.18%.
   rate: number;
   /// Days the two readings actually spanned. Shown to the user, so it is the
-  /// measured window rather than the one the relayer aimed at.
+  /// measured window rather than the one the measurement aimed at.
   windowDays: number;
 }
 
 /// Everything that varies per chain.
 ///
-/// Service URLs are excluded: one relayer, fmd-webserver and metaquoter serve
-/// every chain, selecting by chainId in the path or query, so those stay global
-/// on `env`. Only chain identity and the contracts deployed on it belong here.
+/// Service URLs are excluded: one registry-webserver, relayer, fmd-webserver and
+/// metaquoter serve every chain, selecting by chainId in the path or query, so
+/// those stay global on `env`. Only chain identity and the contracts deployed on
+/// it belong here.
 export interface ChainEntry {
   chainId: bigint;
   /// Human label; also what `wallet_addEthereumChain` registers the chain as.
   chainName: string;
+  /// The endpoint offered to the user's wallet by `wallet_addEthereumChain`.
+  ///
+  /// Must stay general-purpose: the wallet installs it as the chain's RPC,
+  /// permanently and per user, and will issue writes, subscriptions and
+  /// background block polling against it. Never point this at the read proxy —
+  /// use `readRpcUrl`.
   rpcUrl: string;
+  /// The endpoint the SDK reads with. Falls back to `rpcUrl` when the
+  /// deployment runs no read proxy.
+  readRpcUrl: string;
   maspAddress: EvmAddress;
   /// SNARK-bound: must equal the relayer pipeline signer or the pool reverts.
   relayerAddress: EvmAddress;
-  permit2Address?: EvmAddress;
+  permit2Address?: EvmAddress | undefined;
   /// Absent means native-ETH deposit and `withdrawEth` have no entry point on
   /// this chain; the "ETH (native)" option is then withheld rather than offered
   /// and rejected at submit.
-  nativeAdapterAddress?: EvmAddress;
-  swapWrapperAddress?: EvmAddress;
+  nativeAdapterAddress?: EvmAddress | undefined;
+  swapWrapperAddress?: EvmAddress | undefined;
   treeDepth: number;
   /// Block-explorer base, for tx links.
-  explorerUrl?: string;
+  explorerUrl?: string | undefined;
   /// Assets registered on this chain. Empty while the indexer catches up, which
   /// means "not known yet" rather than "none supported".
-  tokens: RegisteredAsset[];
+  ///
+  /// `readonly` because this is a read model: it is built once by `parse.ts` and
+  /// handed to components, and an in-place `sort` or `push` by a consumer would
+  /// mutate the array every other consumer holds — the registry is shared, not
+  /// copied per reader.
+  readonly tokens: readonly RegisteredAsset[];
 }
 
 /// Canonical spelling of a chainId for storage keys and cache namespaces.
@@ -97,6 +123,12 @@ export function chainKey(chainId: bigint): string {
   return chainId.toString(16);
 }
 
-export function findChain(registry: ChainEntry[], chainId: bigint): ChainEntry | undefined {
+/// Accepts a `readonly` array so a caller holding an immutable registry — which
+/// is every caller — does not have to widen it back to a mutable one to look a
+/// chain up.
+export function findChain(
+  registry: readonly ChainEntry[],
+  chainId: bigint,
+): ChainEntry | undefined {
   return registry.find((c) => c.chainId === chainId);
 }

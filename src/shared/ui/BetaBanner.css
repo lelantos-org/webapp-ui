@@ -1,0 +1,50 @@
+@layer components {
+  /* Standing "this is beta, funds are at risk" strip above the header.
+
+     It sits outside `.hdr` rather than inside it so the header keeps its own
+     sticky behaviour: the banner scrolls away with the page and the status bar
+     still pins to the top, which is the ordering that matches how often each is
+     needed — the warning once per visit, the connection state continuously. */
+  .beta-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-10);
+    padding: 9px var(--sp-24);
+    border-bottom: 1px solid var(--warn-dim);
+    /* Opaque, unlike the header's translucent glass: the backdrop behind it is a
+       moving gradient, and a warning that changes contrast as it animates is a
+       warning that is sometimes unreadable. Both tokens are flat colours for that
+       reason — see --warn-bg in tokens.css. */
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+    font-size: var(--fs-13);
+    line-height: 1.45;
+    text-align: center;
+  }
+  .beta-banner__tag {
+    flex: none;
+    padding: 2px var(--sp-8);
+    border: 1px solid var(--warn);
+    border-radius: var(--radius-sm);
+    color: var(--warn);
+    font-family: var(--mono);
+    font-size: var(--fs-11);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1.4;
+  }
+  .beta-banner__txt strong {
+    font-weight: 600;
+    color: var(--warn-emph);
+  }
+
+  /* The short sentence, for the width a phone has. */
+  .beta-banner__txt--short { display: none; }
+
+  @media (max-width: 720px) {
+    .beta-banner { padding: 7px var(--sp-14); gap: var(--sp-8); }
+    .beta-banner__txt--full { display: none; }
+    .beta-banner__txt--short { display: inline; }
+  }
+}

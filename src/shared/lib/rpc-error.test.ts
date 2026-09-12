@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasRpcCode, rpcErrorChain, rpcErrorMessage } from "@/shared/lib/rpc-error";
+import { hasRpcCode, rpcErrorChain, rpcErrorMessage } from "./rpc-error";
 
 /// The shape MetaMask and Rabby actually send, via the `rpc-errors` package.
 const wrapped = {

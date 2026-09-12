@@ -1,13 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { stubReducedMotion } from "@/test/dom";
 import { animationDelay, MODAL_EXIT_MS, prefersReducedMotion } from "./motion";
 
-function stubReducedMotion(reduce: boolean) {
-  vi.stubGlobal("matchMedia", (media: string) => ({ media, matches: reduce }));
-}
-
 describe("prefersReducedMotion", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   it("reads the media query", () => {
     stubReducedMotion(true);
     expect(prefersReducedMotion()).toBe(true);
@@ -26,7 +21,6 @@ describe("animationDelay", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
   });
 
   it("waits the full duration by default", async () => {

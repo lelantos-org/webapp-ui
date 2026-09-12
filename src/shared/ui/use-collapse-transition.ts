@@ -19,9 +19,7 @@ export interface CollapseTransition {
   expanded: boolean;
 }
 
-/**
- * @param durationMs must match the CSS transition it is pairing with.
- */
+/// `durationMs` must match the CSS transition it is pairing with.
 export function useCollapseTransition(open: boolean, durationMs: number): CollapseTransition {
   const [mounted, setMounted] = useState(open);
   const [expanded, setExpanded] = useState(open);

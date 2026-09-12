@@ -5,7 +5,11 @@
 // 4x6 is the SDK's default shape, the only one `@lelantos-org/circuits` still
 // publishes keys for, and what the deployed verifier accepts. These artifacts
 // must match the `shape` passed to `connect` in `build-wallet.ts`: a mismatch
-// builds witnesses of the wrong arity and every proof is rejected.
+// builds witnesses of the wrong arity and every proof is rejected. The package
+// version must also match the release the contracts' verifying keys and the
+// relayer's `4x6_verification_key.json` come from: each release re-runs the
+// setup, so a proof from another release's zkey is rejected (HTTP 400 on
+// `/v1/spend`) even though the shape agrees.
 import circuitUrl from "@lelantos-org/circuits/4x6/4x6.wasm?url";
 import zkeyUrl from "@lelantos-org/circuits/4x6/4x6_final.zkey?url";
 import { type ProverArtifacts, WorkerProver } from "@lelantos-org/sdk/prover";
@@ -59,7 +63,18 @@ export function getProverWorker(): WorkerProver {
   const worker = asSdkWorker(
     new Worker(new URL("@lelantos-org/sdk/prover-worker", import.meta.url), { type: "module" }),
   );
-  cached = new WorkerProver({ worker, paths: proverArtifacts, threads });
+  // The SDK persists artifacts keyed by URL, trusting the URL to change with
+  // the release. A production build hashes the file name, so it does; the dev
+  // server serves `/node_modules/@lelantos-org/circuits/build/4x6_final.zkey`
+  // for every version, so a circuits bump would keep proving with the cached
+  // old key and every spend would fail the relayer's pre-verification. A
+  // localhost fetch is cheap, so dev skips the cache instead.
+  cached = new WorkerProver({
+    worker,
+    paths: proverArtifacts,
+    threads,
+    cacheArtifacts: !import.meta.env.DEV,
+  });
   return cached;
 }
 

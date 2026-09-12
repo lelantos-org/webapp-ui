@@ -1,0 +1,40 @@
+@layer primitives {
+  /* No `backdrop-filter`: the ambient canvas is masked fully transparent under
+     the centre column (see `.backdrop`), so a blur would cost a gaussian pass
+     per canvas frame for a static gradient. Background alpha is raised in its
+     place. */
+  .card {
+    border: 1px solid var(--line);
+    background: var(--bg-1);
+    border-radius: var(--radius);
+    padding: var(--sp-16);
+    margin: var(--sp-20) var(--sp-20) var(--sp-14);
+    position: relative;
+  }
+  .card__hdr {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: var(--sp-12);
+    gap: var(--sp-12);
+  }
+
+  /* Written in sentence case at the call site, never transformed here: a
+     `::first-letter` uppercase would make the painted string and the string in
+     the accessibility tree disagree. */
+  .card__t {
+    font-family: var(--display);
+    margin: 0;
+    font-size: var(--fs-14);
+    font-weight: 600;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--fg);
+  }
+  .stack { display: grid; gap: var(--sp-10); }
+
+  @media (max-width: 720px) {
+    .card { padding: 14px; margin-bottom: 12px; }
+    .card__hdr { gap: 8px; flex-wrap: wrap; }
+  }
+}

@@ -1,34 +1,27 @@
 import { useEffect, useRef } from "react";
-import { onActivity } from "@/shared/lib/activity";
+import { onActivity } from "@/shared/lib/idle";
 import { prefersReducedMotion } from "@/shared/lib/motion";
-import { accentRgb } from "@/shared/lib/theme";
 import { BackdropField, buildPalette } from "@/shared/ui/backdrop-field";
 
-/**
- * Ambient canvas backdrop, rendering the commitment set the wallet writes into.
- * Decorative and non-interactive.
- *
- * Schedules frames; `BackdropField` defines their contents.
- *
- * The loop stops when the tab is hidden, when the user prefers reduced motion,
- * and after `IDLE_MS` without input. Any input resumes it.
- */
+/// Ambient canvas backdrop, rendering the commitment set the wallet writes into.
+/// Decorative and non-interactive.
+///
+/// Schedules frames; `BackdropField` defines their contents.
+///
+/// The loop stops when the tab is hidden, when the user prefers reduced motion,
+/// and after `IDLE_MS` without input. Any input resumes it.
 
-/**
- * Backing-store scale, fixed at 1 rather than tracking `devicePixelRatio`. The
- * field is 14%-alpha hairlines under a radial mask, so the upscale is not
- * visible, while a HiDPI backing store quadruples the per-frame clear and
- * raster cost.
- */
+/// Backing-store scale, fixed at 1 rather than tracking `devicePixelRatio`. The
+/// field is 14%-alpha hairlines under a radial mask, so the upscale is not
+/// visible, while a HiDPI backing store quadruples the per-frame clear and
+/// raster cost.
 const RENDER_SCALE = 1;
 
-/**
- * Frame budget. 30fps is sufficient for drift at this speed and halves the
- * frame count on a 60Hz display, quartering it on 120Hz.
- */
+/// Frame budget. 30fps is sufficient for drift at this speed and halves the
+/// frame count on a 60Hz display, quartering it on 120Hz.
 const FRAME_MS = 1000 / 30;
 
-/** Quiet period after which the loop parks, including on a visible tab. */
+/// Quiet period after which the loop parks, including on a visible tab.
 const IDLE_MS = 8000;
 
 export function Backdrop() {
@@ -138,4 +131,30 @@ export function Backdrop() {
   }, []);
 
   return <canvas ref={ref} className="backdrop" aria-hidden="true" tabIndex={-1} />;
+}
+
+// Palette tokens read back out of the stylesheet.
+//
+// A `<canvas>` cannot reference a CSS custom property, so anything painting
+// outside CSS resolves `--accent` itself rather than holding a second copy that
+// drifts when the palette changes.
+
+/// Matches `--accent` in `styles/tokens.css`. Used only when the property cannot be read,
+/// as in jsdom or a call made before the stylesheet applies.
+const ACCENT_FALLBACK: [number, number, number] = [224, 121, 74];
+
+function accentRgb(): [number, number, number] {
+  if (typeof getComputedStyle !== "function") return ACCENT_FALLBACK;
+  const raw = getComputedStyle(document.documentElement).getPropertyValue("--accent-rgb");
+  const [r, g, b, ...rest] = raw.split(",").map((p) => Number.parseInt(p.trim(), 10));
+  if (
+    r !== undefined &&
+    g !== undefined &&
+    b !== undefined &&
+    rest.length === 0 &&
+    [r, g, b].every((n) => Number.isFinite(n))
+  ) {
+    return [r, g, b];
+  }
+  return ACCENT_FALLBACK;
 }

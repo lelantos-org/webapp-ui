@@ -1,0 +1,57 @@
+@layer components {
+  .screen-hdr {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-14);
+  }
+  .screen-hdr__back {
+    position: relative;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    background: var(--bg-1);
+    transition: border-color var(--dur-120) var(--ease-soft), color var(--dur-120) var(--ease-soft);
+  }
+
+  /* Drawn at 40, hit at 44: the touch floor sizes the target, not the box. */
+  .screen-hdr__back::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+  }
+  .screen-hdr__text {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .screen-hdr__t {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    color: var(--fg);
+  }
+  .screen-hdr__sub {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .screen-hdr__right {
+    margin-left: auto;
+    flex: none;
+    font-family: var(--mono);
+    font-size: var(--fs-13);
+    color: var(--fg-mute);
+  }
+
+  @media (max-width: 480px) {
+    .screen-hdr { gap: var(--sp-12); }
+    .screen-hdr__back { width: 38px; height: 38px; }
+    /* 38 + 2×3 keeps the hit area at 44. */
+    .screen-hdr__back::after { inset: -3px; }
+    .screen-hdr__t { font-size: 22px; }
+    .screen-hdr__sub { font-size: var(--fs-13); }
+  }
+}

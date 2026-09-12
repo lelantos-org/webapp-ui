@@ -1,0 +1,122 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root {
+      --bg: #14110E; --bg-1: #1C1815; --bg-2: #241F1A; --bg-3: #2E2822;
+      --fg: #F5F1E8; --fg-dim: #BEB5A6; --fg-mute: #9E9486;
+      --line: #2A241E; --line-strong: #3A332B;
+      --accent: #E0794A; --accent-2: #EA8C60; --accent-dim: #7A4526;
+      --warn: #E0A93F; --err: #E67A6E;
+      --display: "Newsreader", Georgia, "Times New Roman", serif;
+      --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: "zero" 1; }
+    .shell { min-height: 900px; display: flex; flex-direction: column; background: radial-gradient(900px 420px at 50% -10%, rgba(224,121,74,0.14), transparent 62%), #14110E; }
+    .hdr { display: flex; align-items: center; gap: 16px; padding: 14px 32px; border-bottom: 1px solid var(--line); background: rgba(28,24,21,0.78); }
+    .pill { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 2px; font-size: 14px; }
+    .card { border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-1); padding: 26px 24px 24px; display: flex; flex-direction: column; gap: 18px; }
+    .rule { height: 1px; background: var(--line); }
+    .cta { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 17px; border-radius: 4px; background: var(--accent); color: #14110E; font-size: 17px; font-weight: 600; box-shadow: 0 6px 22px rgba(224,121,74,0.3); min-height: 44px; }
+    .tokpill { display: flex; align-items: center; gap: 9px; padding: 9px 16px 9px 10px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--bg-2); flex: none; }
+    .mark { border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; flex: none; }
+    .amt { font-family: var(--display); font-size: 46px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; flex: 1; min-width: 0; }
+    .back { width: 40px; height: 40px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--bg-1); display: inline-grid; place-items: center; color: var(--fg-dim); flex: none; }
+    .h1 { font-family: var(--display); font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+    .muted { color: var(--fg-mute); }
+    .sub { font-size: 14px; color: var(--fg-mute); }
+  </style>
+</helmet>
+
+<div class="shell">
+  <div class="hdr">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:13px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span>
+    </div>
+  </div>
+  <div style="flex: 1; display: grid; grid-template-columns: 1fr 400px; gap: 40px; align-items: center; width: 100%; max-width: 1080px; margin: 0 auto; padding: 40px 32px 56px;">
+
+    <!-- left: the pitch -->
+    <div style="display: flex; flex-direction: column; gap: 22px;">
+      <span style="display: inline-flex; align-items: center; gap: 8px; align-self: flex-start; padding: 6px 14px; border: 1px solid rgba(224,121,74,0.4); border-radius: 2px; background: rgba(224,121,74,0.08); font-size: 14px; color: var(--accent);">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--accent);"></span>
+        Zero-knowledge, in your browser
+      </span>
+
+      <h1 style="margin: 0; font-family: var(--display); font-size: 54px; font-weight: 600; line-height: 1.06; letter-spacing: -0.03em;">
+        Your balance is<br>nobody else's<br><span style="color: var(--accent);">business.</span>
+      </h1>
+
+      <p style="margin: 0; font-size: 18px; line-height: 1.55; color: var(--fg-dim); max-width: 460px;">
+        Move assets into a shielded pool, then send, swap and unshield without anyone reading your holdings off the chain. Proofs are generated on your device — nothing leaves it.
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <span class="cta" style="align-self: flex-start; padding: 17px 34px; font-size: 17px;">Connect wallet</span>
+        <span class="sub">No funds move. One signature — or a passkey — derives your shielded keys.</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-top: 6px;">
+        <span class="sub" style="flex: none;">Available on</span>
+        <span class="pill" style="padding: 6px 13px; font-size: 13px;"><span class="mark" style="width: 15px; height: 15px; background: #2151f5; font-size: 8px; color: #fff;">B</span>Base</span>
+        <span class="pill" style="padding: 6px 13px; font-size: 13px;"><span class="mark" style="width: 15px; height: 15px; background: #627eea; font-size: 8px; color: #fff;">E</span>Ethereum</span>
+        <span class="pill" style="padding: 6px 13px; font-size: 13px;"><span class="mark" style="width: 15px; height: 15px; background: #ff0420; font-size: 8px; color: #fff;">O</span>Optimism</span>
+        <span class="pill" style="padding: 6px 13px; font-size: 13px;"><span class="mark" style="width: 15px; height: 15px; background: #28a0f0; font-size: 8px; color: #fff;">A</span>Arbitrum</span>
+      </div>
+
+      <div style="display: flex; gap: 26px; padding-top: 10px; flex-wrap: wrap;">
+        <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">No accounts</span><span class="sub">Nothing to sign up for</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">No tracking</span><span class="sub">No cookies, no analytics</span></div>
+        <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 600;">No gas account</span><span class="sub">A relayer pays for spends</span></div>
+      </div>
+    </div>
+
+    <!-- right: wallet picker -->
+    <div style="display: flex; flex-direction: column; gap: 14px; padding: 24px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-1); box-shadow: 0 24px 60px rgba(0,0,0,0.5);">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <span style="font-family: var(--display); font-size: 20px; font-weight: 600;">Choose a wallet</span>
+        <span class="sub">Used only to derive your shielded key.</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 13px; padding: 14px 16px; border: 1px solid var(--accent); border-radius: 4px; background: rgba(224,121,74,0.08); min-height: 44px;">
+          <span class="mark" style="width: 30px; height: 30px; border-radius: 9px; background: #f6851b; color: #fff; font-size: 13px;">M</span>
+          <span style="font-size: 16px; font-weight: 500; flex: 1;">MetaMask</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+        <div style="display: flex; align-items: center; gap: 13px; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 4px; min-height: 44px;">
+          <span class="mark" style="width: 30px; height: 30px; border-radius: 9px; background: #7a67f5; color: #fff; font-size: 13px;">R</span>
+          <span style="font-size: 16px; font-weight: 500; flex: 1;">Rabby</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+        <div style="display: flex; align-items: center; gap: 13px; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: 4px; min-height: 44px;">
+          <span class="mark" style="width: 30px; height: 30px; border-radius: 9px; background: var(--bg-3); color: var(--fg-dim);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 1 1 8 0v3"/></svg>
+          </span>
+          <div style="display: flex; flex-direction: column; gap: 0; flex: 1;">
+            <span style="font-size: 16px; font-weight: 500;">Create a passkey</span>
+            <span style="font-size: 13px; color: var(--fg-mute);">No browser wallet needed</span>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
+      </div>
+
+      <span class="sub" style="text-align: center;">Don't see yours? Unlock the extension, then reopen this.</span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

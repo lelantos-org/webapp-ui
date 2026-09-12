@@ -1,57 +1,173 @@
-// Fails when a file reaches for its own feature through the `@/` alias.
+// Module-boundary checks Biome cannot express.
 //
-// The point is that an import should say, at a glance, whether it crosses a
-// boundary. `@/features/x` means leaving the current module; `./x` means
-// staying inside it. When both spellings are allowed for the same target every
-// import line looks alike, and the only way to tell a local helper from a
-// dependency on another feature is to know the tree by heart.
+// `biome.json` owns the rules on ordinary `import` statements: `shared` and
+// `config` reach into no feature, a feature into no flow, and another module is
+// imported through its barrel (`@/features/x`), never a deep path. What Biome
+// cannot see, and this script checks:
 //
-// Cross-feature imports are untouched — those *should* be absolute.
+//   1. Paths in `vi.mock` / `vi.doMock` / `typeof import()` / `import()`. A mock
+//      of a path that no longer exists applies to nothing and raises no error, so
+//      a file move silently turns a mocked test into one running the real module.
+//      Each must resolve, and one reaching another feature must name its barrel —
+//      which a move inside that feature cannot break.
+//   2. A reference that leaves its module uses the `@/` alias. Biome matches
+//      import specifiers as written, so a relative `../../features/x/internal`
+//      would pass it; this keeps every crossing visible to its rules.
+//   3. Flows are leaves reached only through `src/flows/loaders.ts`, and only
+//      dynamically, so each stays its own route chunk.
+//   4. Features import each other without cycles. A cycle through barrels leaves
+//      one side reading `undefined` during module initialisation.
+//
+// Barrels (`features/*/index.ts`) are each feature's public surface. Anything not
+// re-exported there is internal to the feature and can move freely. Within a
+// feature, import modules directly: routing a local import back through the
+// barrel is a cycle.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
-const ROOT = "src/features";
+const SRC = "src";
+const LOADERS = join(SRC, "flows", "loaders.ts");
 
-/** Every `@/features/<name>` this file mentions, in an import or a vi.mock. */
-function referencedFeatures(source) {
-  const hits = [];
-  const patterns = [
-    /from\s+"@\/features\/([a-z0-9-]+)((?:\/[A-Za-z0-9._-]+)*)"/g,
-    /import\("@\/features\/([a-z0-9-]+)((?:\/[A-Za-z0-9._-]+)*)"/g,
-    /vi\.mock\("@\/features\/([a-z0-9-]+)((?:\/[A-Za-z0-9._-]+)*)"/g,
-  ];
-  for (const re of patterns) {
-    for (const m of source.matchAll(re)) hits.push({ feature: m[1], rest: m[2] ?? "" });
-  }
-  return hits;
-}
-
+/**
+ * @param {string} dir
+ * @returns {Generator<string>}
+ */
 function* sourceFiles(dir) {
   for (const entry of readdirSync(dir)) {
     const path = join(dir, entry);
     if (statSync(path).isDirectory()) yield* sourceFiles(path);
-    else if (/\.tsx?$/.test(entry)) yield path;
+    else if (/\.tsx?$/.test(entry) && !entry.endsWith(".d.ts")) yield path;
   }
 }
 
+/**
+ * The module a path belongs to: `features/x`, `flows/x`, `shared/x`, or the
+ * top-level directory (`app`, `config`, `test`, and `flows` for the loaders).
+ * @param {string} path
+ */
+function moduleOf(path) {
+  const parts = relative(SRC, path).split(sep);
+  if (["features", "flows", "shared"].includes(parts[0] ?? "") && parts.length > 2) {
+    return `${parts[0]}/${parts[1]}`;
+  }
+  return parts[0] ?? "";
+}
+
+/** @param {string} base */
+function resolveFile(base) {
+  for (const c of [`${base}.ts`, `${base}.tsx`, join(base, "index.ts"), join(base, "index.tsx")]) {
+    if (existsSync(c) && statSync(c).isFile()) return c;
+  }
+  return undefined;
+}
+
+/** @typedef {"static" | "dynamic" | "mock" | "typeof"} Kind */
+
+/**
+ * Every local specifier in a file, with how it is used.
+ * @param {string} source
+ * @returns {{ spec: string, kind: Kind, line: number }[]}
+ */
+function references(source) {
+  /** @type {{ spec: string, kind: Kind, line: number }[]} */
+  const hits = [];
+  const at = (/** @type {number} */ index) => source.slice(0, index).split("\n").length;
+  const patterns = /** @type {const} */ ([
+    ["static", /(?:^|\n)\s*(?:import|export)\b[^;"]*?\bfrom\s*"([^"]+)"/g],
+    ["static", /(?:^|\n)\s*import\s*"([^"]+)"/g],
+    ["typeof", /typeof\s+import\(\s*"([^"]+)"\s*\)/g],
+    ["dynamic", /(?<!typeof\s+)\bimport\(\s*"([^"]+)"\s*\)/g],
+    ["mock", /\bvi\.(?:mock|doMock|unmock)\(\s*"([^"]+)"/g],
+  ]);
+  for (const [kind, re] of patterns) {
+    for (const m of source.matchAll(re)) {
+      const spec = m[1] ?? "";
+      if (spec.startsWith("@/") || spec.startsWith(".")) {
+        hits.push({ spec, kind, line: at(m.index + m[0].lastIndexOf(`"${spec}"`)) });
+      }
+    }
+  }
+  return hits;
+}
+
+/** @type {string[]} */
 const offences = [];
-for (const file of sourceFiles(ROOT)) {
-  const feature = relative(ROOT, file).split(sep)[0];
-  for (const { feature: target, rest } of referencedFeatures(readFileSync(file, "utf8"))) {
-    // A bare `@/features/x` from inside x is the feature's own barrel, which is
-    // a separate problem (a cycle through index); this rule is about deep paths.
-    if (target === feature && rest) offences.push({ file, target, rest });
+const report = (/** @type {string} */ where, /** @type {string} */ msg) =>
+  offences.push(`  ${where}\n    ${msg}`);
+
+/** Feature → features it references (production files only), with one example site. */
+/** @type {Map<string, Map<string, string>>} */
+const featureEdges = new Map();
+
+for (const file of sourceFiles(SRC)) {
+  const from = moduleOf(file);
+  const isTest = /\.(test|spec)\.tsx?$/.test(file) || from === "test";
+  for (const { spec, kind, line } of references(readFileSync(file, "utf8"))) {
+    const where = `${file}:${line}`;
+    const base = spec.startsWith("@/") ? join(SRC, spec.slice(2)) : resolve(dirname(file), spec);
+    const resolved = resolveFile(base);
+    if (!resolved) {
+      // tsc reports unresolved imports; a mock or `typeof import` goes stale silently.
+      if (kind === "mock" || kind === "typeof") report(where, `${spec} does not resolve`);
+      continue;
+    }
+    const target = relative(process.cwd(), resolved);
+    const to = moduleOf(target);
+    if (to === from) continue;
+
+    // 2. crossings use the alias
+    if (spec.startsWith(".") && file !== LOADERS) {
+      report(where, `${spec} leaves ${from} for ${to} — use the "@/" alias`);
+    }
+
+    // 1. what Biome cannot see must also go through the barrel
+    if (kind !== "static" && to.startsWith("features/") && target !== join(SRC, to, "index.ts")) {
+      report(where, `${spec} reaches into ${to} — use its barrel "@/${to}"`);
+    }
+
+    // 3. flows only through the loaders, dynamically
+    if (to.startsWith("flows/")) {
+      if (file !== LOADERS)
+        report(where, `${spec}: only src/flows/loaders.ts may reference a flow`);
+      else if (kind !== "dynamic") report(where, `${spec}: loaders must import a flow dynamically`);
+    }
+
+    // 4. collected here, checked below
+    if (!isTest && from.startsWith("features/") && to.startsWith("features/")) {
+      const edges = featureEdges.get(from) ?? new Map();
+      if (!edges.has(to)) edges.set(to, where);
+      featureEdges.set(from, edges);
+    }
   }
 }
+
+// 4. no cycles between features: a depth-first search reporting each back edge.
+/** @type {Map<string, "open" | "done">} */
+const state = new Map();
+/** @type {string[]} */
+const stack = [];
+/** @param {string} feature */
+function visit(feature) {
+  state.set(feature, "open");
+  stack.push(feature);
+  for (const [next, where] of featureEdges.get(feature) ?? []) {
+    if (state.get(next) === "open") {
+      const cycle = [...stack.slice(stack.indexOf(next)), next].join(" → ");
+      report(where, `feature import cycle: ${cycle}`);
+    } else if (!state.has(next)) {
+      visit(next);
+    }
+  }
+  stack.pop();
+  state.set(feature, "done");
+}
+for (const feature of featureEdges.keys()) if (!state.has(feature)) visit(feature);
 
 if (offences.length > 0) {
-  console.error(`${offences.length} same-feature import(s) using the "@/" alias:\n`);
-  for (const { file, target, rest } of offences) {
-    console.error(`  ${file}\n    @/features/${target}${rest}  ->  use a relative path`);
-  }
-  console.error('\nWithin a feature, import relatively ("./thing", "../thing").');
+  console.error(`${offences.length} module-boundary offence(s):\n`);
+  console.error(offences.join("\n"));
   process.exit(1);
 }
 
-console.log("imports: no same-feature alias imports");
+console.log("imports: module boundaries hold");

@@ -1,56 +1,47 @@
-/* The stylesheet, as an ordered list of parts.
+/* The stylesheet's entry, and the one place the cascade order is decided.
  *
- * Import order *is* the cascade: nothing here uses ids, `!important` or
- * deep selector chains, so a later file wins ties against an earlier one.
- * Hence the shape — tokens, then base, then things that are reused, then
- * things that use them, then the overrides that must beat everything.
+ * Every file wraps its rules in one of the layers named below, and a later layer
+ * beats an earlier one whatever the selectors' specificity. The order is fixed
+ * by this first statement, which is why `main.tsx` imports this file before
+ * anything else: a stylesheet that names a layer before this line has run would
+ * rank that layer first.
  *
- * Vite inlines these at build time, so the browser still fetches one file.
+ *   reset       box-sizing and `[hidden]`
+ *   tokens      custom properties (the light palette is repeated at build time)
+ *   base        fonts, page ground, the ambient backdrop, shared keyframes
+ *   utilities   single-purpose helpers; they lose to every component on purpose
+ *   primitives  building blocks many components share (button, pill, marks…)
+ *   components  the shared surfaces of the app shell and the op forms
+ *   features    one surface each; free to retune anything above
+ *
+ * This file imports only what every screen needs: the foundations and the
+ * primitives. A component's own stylesheet sits beside it (`Notice.tsx` and
+ * `Notice.css`) and is imported by it, so it arrives with the chunk that renders
+ * it — a lazy route's CSS loads with that route. That is safe only because of
+ * the layers: a stylesheet that loads late cannot outrank an earlier layer, and
+ * no two files in one layer set the same property on the same element.
+ *
+ * `app/toast.css` stays unlayered: sonner injects its own unlayered stylesheet
+ * at runtime, and only an unlayered rule can argue with it on specificity.
+ *
+ * Breakpoints live beside the rules they retune, at the end of each file.
  */
+@layer reset, tokens, base, utilities, primitives, components, features;
 
-/* Foundations: custom properties, element defaults, ambient backdrop. */
+@import "./styles/reset.css";
 @import "./styles/tokens.css";
 @import "./styles/base.css";
+@import "./styles/motion.css";
 @import "./styles/utilities.css";
 
-/* Reusable pieces. Anything used by more than one feature lives here. */
-@import "./styles/components/pill.css";
-@import "./styles/components/beta-banner.css";
-@import "./styles/components/header.css";
-@import "./styles/components/card.css";
-@import "./styles/components/gate.css";
-@import "./styles/components/field.css";
-@import "./styles/components/button.css";
-@import "./styles/components/notice.css";
-@import "./styles/components/segmented.css";
-@import "./styles/components/table.css";
-@import "./styles/components/health.css";
-@import "./styles/components/empty.css";
-@import "./styles/components/stepper.css";
-@import "./styles/components/fee-summary.css";
-@import "./styles/components/denominations.css";
-@import "./styles/components/tag.css";
-@import "./styles/components/spinner.css";
-@import "./styles/components/skeleton.css";
-@import "./styles/components/token-mark.css";
-@import "./styles/components/hex.css";
-@import "./styles/components/modal.css";
-@import "./styles/components/toast.css";
-
-/* One file per feature surface; each may lean on the components above. */
-@import "./styles/features/hero.css";
-@import "./styles/features/account.css";
-@import "./styles/features/wallet-picker.css";
-@import "./styles/features/welcome.css";
-@import "./styles/features/home.css";
-@import "./styles/features/footer.css";
-@import "./styles/features/claim-link.css";
-@import "./styles/features/claim-page.css";
-@import "./styles/features/swap.css";
-@import "./styles/features/action-shell.css";
-@import "./styles/features/txhash.css";
-@import "./styles/features/balance.css";
-
-/* Last, and deliberately: these override whatever came before. */
-@import "./styles/responsive.css";
-@import "./styles/motion.css";
+@import "./styles/primitives/pill.css";
+@import "./styles/primitives/button.css";
+@import "./styles/primitives/spinner.css";
+@import "./styles/primitives/skeleton.css";
+@import "./styles/primitives/token-mark.css";
+@import "./styles/primitives/surface.css";
+@import "./styles/primitives/type.css";
+@import "./styles/primitives/controls.css";
+@import "./styles/primitives/collapse.css";
+@import "./styles/primitives/sticky-cta.css";
+@import "./styles/primitives/err.css";

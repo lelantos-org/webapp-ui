@@ -23,18 +23,6 @@ permissions:
 env:
   REGISTRY_URL: ghcr.io
   REPOSITORY: ${{ github.repository }}
-  # Only the shared services are baked in. Every per-chain value now comes
-  # from the relayer's /chains at runtime, so the image is deployment-agnostic
-  # and these placeholders no longer have to pretend to describe a chain.
-  VITE_RELAYER_URL: "/relayer"
-  VITE_FMD_URL: "/fmd"
-  # Same-origin path, matching the dev proxy in vite.config.ts and the
-  # `handle_path /metaquoter/*` route Caddy serves in production.
-  #
-  # Blank here leaves the swap tab inert: env.ts treats an empty string as
-  # absent, and useSwapQuote then throws "VITE_METAQUOTER_URL not configured"
-  # when the user requests a quote — at click time, not at boot.
-  VITE_METAQUOTER_URL: "/metaquoter"
 
 jobs:
   docker:
@@ -43,12 +31,7 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
-      # The footer names the build on screen. The image build cannot read it
-      # itself — `.git` is dockerignored — so it is resolved here and passed in
-      # as a build arg. Without this the Dockerfile's `ARG VITE_COMMIT` stays
-      # empty, the in-image `git rev-parse` fails, and the footer reports "dev".
-      # Short form: the footer has room for a ref, not a full sha.
+        
       - name: Resolve build commit
         id: commit
         run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
@@ -84,10 +67,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # The service URLs are the Dockerfile's defaults.
           build-args: |
-            VITE_RELAYER_URL=${{ env.VITE_RELAYER_URL }}
-            VITE_FMD_URL=${{ env.VITE_FMD_URL }}
-            VITE_METAQUOTER_URL=${{ env.VITE_METAQUOTER_URL }}
             VITE_COMMIT=${{ steps.commit.outputs.short }}
           secrets: |
             npm_token=${{ secrets.GITHUB_TOKEN }}

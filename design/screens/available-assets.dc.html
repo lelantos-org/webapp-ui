@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root{
+      --bg:#14110E;--bg-1:#1C1815;--bg-2:#241F1A;--bg-3:#2E2822;
+      --fg:#F5F1E8;--fg-dim:#BEB5A6;--fg-mute:#9E9486;
+      --line:#2A241E;--line-strong:#3A332B;
+      --accent:#E0794A;--accent-2:#EA8C60;--warn:#E0A93F;--err:#E67A6E;
+      --display:"Newsreader",Georgia,serif;
+      --sans:"Public Sans",-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+      --mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+    a{color:var(--accent);}a:hover{color:var(--accent-2);}
+    .num{font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;font-feature-settings:"zero" 1;}
+    .lbl{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);}
+    .card{border:1px solid var(--line-strong);background:var(--bg-1);}
+    td,th{text-align:left;vertical-align:top;padding:10px 16px 10px 0;border-bottom:1px solid var(--line);}
+    th{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);border-bottom:1px solid var(--line-strong);}
+  </style>
+</helmet>
+
+<div style="min-height:1680px;padding:0 0 46px;">
+  <div style="background:var(--fg);color:var(--bg);padding:20px 40px;display:flex;align-items:baseline;justify-content:space-between;gap:20px;">
+    <span style="font-family:var(--display);font-size:28px;font-weight:600;">Everything you could shield</span>
+    <span class="num" style="font-size:13px;opacity:.72;">YES — BUT NOT IN THE BALANCE TABLE</span>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:30px 40px 0;display:flex;flex-direction:column;gap:24px;">
+
+    <p style="margin:0;font-size:17px;color:var(--fg-dim);line-height:1.7;max-width:102ch;">
+      Worth doing — you cannot shield an asset you do not know is supported, and “the pool pays 4.18%” means little without something to compare it against. The registry already carries every asset with its rate, resolved before render, so it costs nothing to fetch. But it does not belong in the portfolio: that table answers <em>what do I have</em>, and folding a menu into it turns a balance sheet into a shop. Three places instead.
+    </p>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px;align-items:start;">
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:11px;">
+          <span class="num" style="font-size:14px;font-weight:700;color:var(--accent);">01</span>
+          <span style="font-family:var(--display);font-size:19px;font-weight:600;flex:1;">In the Shield picker</span>
+          <span style="padding:3px 10px;background:var(--accent);color:#14110E;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Best</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;"><div style="display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--accent);background:rgba(224,121,74,0.06);"><span style="width:32px;height:32px;border-radius:4px;background:rgba(224,169,63,0.13);border:1px solid rgba(224,169,63,0.34);color:#E0A93F;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">ETH</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">ETH</span><span class="num" style="font-size:13px;color:var(--fg-mute);">You hold 2.4180</span></div><span style="font-size:14px;color:var(--fg-mute);">—</span></div><div style="display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--line);background:var(--bg-1);"><span style="width:32px;height:32px;border-radius:4px;background:rgba(122,160,180,0.16);border:1px solid rgba(122,160,180,0.42);color:#8FB6C9;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">USDC</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">USDC</span><span class="num" style="font-size:13px;color:var(--fg-mute);">You hold 8,420.00</span></div><span style="display:flex;flex-direction:column;gap:1px;align-items:flex-end;"><span class="num" style="font-size:15px;font-weight:600;color:var(--accent);">4.18% / yr</span><span style="font-size:12px;color:var(--fg-mute);">measured over 30d</span></span></div><div style="display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--line);background:var(--bg-1);"><span style="width:32px;height:32px;border-radius:4px;background:rgba(200,160,90,0.14);border:1px solid rgba(200,160,90,0.34);color:#D2A85C;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">DAI</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">DAI</span></div><span style="display:flex;flex-direction:column;gap:1px;align-items:flex-end;"><span class="num" style="font-size:15px;font-weight:600;color:var(--accent);">3.91% / yr</span><span style="font-size:12px;color:var(--fg-mute);">measured over 30d</span></span></div><div style="display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--line);background:var(--bg-1);"><span style="width:32px;height:32px;border-radius:4px;background:rgba(120,175,150,0.14);border:1px solid rgba(120,175,150,0.34);color:#7FB49B;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">USDT</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">USDT</span></div><span style="font-size:14px;color:var(--fg-mute);">—</span></div><div style="display:grid;grid-template-columns:auto 1fr auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--line);background:var(--bg-1);"><span style="width:32px;height:32px;border-radius:4px;background:rgba(198,138,74,0.15);border:1px solid rgba(198,138,74,0.36);color:#C68A4A;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">WBTC</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">WBTC</span><span class="num" style="font-size:13px;color:var(--fg-mute);">You hold 0.0094</span></div><span style="display:flex;flex-direction:column;gap:1px;align-items:flex-end;"><span class="num" style="font-size:15px;font-weight:600;color:var(--warn);">paused</span><span style="font-size:12px;color:var(--fg-mute);">still fully backed</span></span></div></div>
+        <span style="font-size:14px;color:var(--fg-dim);line-height:1.6;">The decision moment. Every registered asset, with what you already hold and what each venue pays, at exactly the point you are choosing between them.</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:11px;">
+          <span class="num" style="font-size:14px;font-weight:700;color:var(--accent);">02</span>
+          <span style="font-family:var(--display);font-size:19px;font-weight:600;flex:1;">Under the portfolio</span>
+        </div>
+        <div style="border:1px solid var(--line);background:var(--bg-1);overflow:hidden;"><div style="display:flex;align-items:baseline;justify-content:space-between;gap:14px;padding:15px 16px;border-bottom:1px solid var(--line);background:var(--bg-2);"><span style="font-size:15px;font-weight:600;">You could also shield</span><span style="font-size:13px;color:var(--fg-mute);">2 more on Base</span></div><div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);"><span style="width:28px;height:28px;border-radius:4px;background:rgba(200,160,90,0.14);border:1px solid rgba(200,160,90,0.34);color:#D2A85C;display:inline-grid;place-items:center;font-size:9px;font-weight:700;flex:none;">DAI</span><span style="font-size:15px;font-weight:600;flex:none;">DAI</span><span style="margin-left:auto;text-align:right;"><span><span class="num" style="font-size:14px;font-weight:600;color:var(--accent);">3.91% / yr</span><span style="font-size:12px;color:var(--fg-mute);"> · 30d</span></span></span></div><div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);"><span style="width:28px;height:28px;border-radius:4px;background:rgba(120,175,150,0.14);border:1px solid rgba(120,175,150,0.34);color:#7FB49B;display:inline-grid;place-items:center;font-size:9px;font-weight:700;flex:none;">USDT</span><span style="font-size:15px;font-weight:600;flex:none;">USDT</span><span style="margin-left:auto;text-align:right;"><span style="font-size:13px;color:var(--fg-mute);">does not earn</span></span></div><div style="padding:12px 16px;"><span style="font-size:13px;color:var(--fg-mute);line-height:1.6;">Rates are what each venue returned recently, net of the pool’s cut. An estimate of what it pays, not a promise.</span></div></div>
+        <span style="font-size:14px;color:var(--fg-dim);line-height:1.6;">A separate, quieter card below your holdings — never merged into them. Lists only what you do <em>not</em> already hold, so it shrinks to nothing as you use the app.</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;gap:11px;">
+          <span class="num" style="font-size:14px;font-weight:700;color:var(--accent);">03</span>
+          <span style="font-family:var(--display);font-size:19px;font-weight:600;flex:1;">The empty state</span>
+        </div>
+        <div style="border:1px solid var(--line);background:var(--bg-1);overflow:hidden;"><div style="padding:28px 22px;text-align:center;border-bottom:1px solid var(--line);"><div style="font-family:var(--display);font-size:21px;font-weight:600;margin-bottom:6px;">Nothing shielded yet</div><span style="font-size:15px;color:var(--fg-dim);">These five assets are supported on Base right now.</span></div><div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);"><span style="width:28px;height:28px;border-radius:4px;background:rgba(122,160,180,0.16);border:1px solid rgba(122,160,180,0.42);color:#8FB6C9;display:inline-grid;place-items:center;font-size:9px;font-weight:700;flex:none;">USDC</span><span style="font-size:15px;font-weight:600;flex:none;">USDC</span><span style="margin-left:auto;text-align:right;"><span><span class="num" style="font-size:14px;font-weight:600;color:var(--accent);">4.18% / yr</span><span style="font-size:12px;color:var(--fg-mute);"> · 30d</span></span></span></div><div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);"><span style="width:28px;height:28px;border-radius:4px;background:rgba(200,160,90,0.14);border:1px solid rgba(200,160,90,0.34);color:#D2A85C;display:inline-grid;place-items:center;font-size:9px;font-weight:700;flex:none;">DAI</span><span style="font-size:15px;font-weight:600;flex:none;">DAI</span><span style="margin-left:auto;text-align:right;"><span><span class="num" style="font-size:14px;font-weight:600;color:var(--accent);">3.91% / yr</span><span style="font-size:12px;color:var(--fg-mute);"> · 30d</span></span></span></div><div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);"><span style="width:28px;height:28px;border-radius:4px;background:rgba(224,169,63,0.13);border:1px solid rgba(224,169,63,0.34);color:#E0A93F;display:inline-grid;place-items:center;font-size:9px;font-weight:700;flex:none;">ETH</span><span style="font-size:15px;font-weight:600;flex:none;">ETH</span><span style="margin-left:auto;text-align:right;"><span style="font-size:13px;color:var(--fg-mute);">does not earn</span></span></div><div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);"><span style="width:28px;height:28px;border-radius:4px;background:rgba(120,175,150,0.14);border:1px solid rgba(120,175,150,0.34);color:#7FB49B;display:inline-grid;place-items:center;font-size:9px;font-weight:700;flex:none;">USDT</span><span style="font-size:15px;font-weight:600;flex:none;">USDT</span><span style="margin-left:auto;text-align:right;"><span style="font-size:13px;color:var(--fg-mute);">does not earn</span></span></div><div style="display:flex;align-items:center;gap:11px;padding:12px 16px;border-bottom:1px solid var(--line);"><span style="width:28px;height:28px;border-radius:4px;background:rgba(198,138,74,0.15);border:1px solid rgba(198,138,74,0.36);color:#C68A4A;display:inline-grid;place-items:center;font-size:9px;font-weight:700;flex:none;">WBTC</span><span style="font-size:15px;font-weight:600;flex:none;">WBTC</span><span style="margin-left:auto;text-align:right;"><span><span class="num" style="font-size:14px;font-weight:600;color:var(--warn);">paused</span><span style="font-size:12px;color:var(--fg-mute);"> · still backed</span></span></span></div><div style="padding:16px;"><span style="display:block;text-align:center;padding:15px;background:var(--accent);color:#14110E;font-size:16px;font-weight:600;">Shield an asset</span></div></div>
+        <span style="font-size:14px;color:var(--fg-dim);line-height:1.6;">Where it matters most. A first-time user currently gets an empty table and a button; this tells them what is actually on offer before asking them to commit.</span>
+      </div>
+    </div>
+
+    <div style="border:1px solid var(--line-strong);background:var(--bg-1);">
+      <div style="padding:16px 22px;border-bottom:1px solid var(--line);"><span class="lbl">Four rules these surfaces must keep</span></div>
+      <div style="padding:6px 22px 18px;">
+      <div style="display:grid;grid-template-columns:250px 210px 1fr;gap:18px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">A rate is never shown without its window</span>
+        <span class="num" style="font-size:14px;color:var(--fg-dim);">4.18% / yr · measured over 30d</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">The registry ships the rate and the span as one field precisely so a consumer cannot show half of it. Thirty days of data is a different claim from a year of it.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:250px 210px 1fr;gap:18px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">Not measurable is not zero</span>
+        <span class="num" style="font-size:14px;color:var(--fg-dim);">—</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">An asset whose rate cannot be measured shows a dash. Rendering 0.00% would state that it earns nothing, which is a different and unsupported claim.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:250px 210px 1fr;gap:18px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">Paused still means backed</span>
+        <span class="num" style="font-size:14px;color:var(--fg-dim);">paused · still fully backed</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">A halted venue has degraded to plain custody. The balance is intact; it has only stopped growing. Never shown as an error.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:250px 210px 1fr;gap:18px;align-items:start;padding:14px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">Net of the pool’s cut</span>
+        <span class="num" style="font-size:14px;color:var(--fg-dim);">already net</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">The published figure has the protocol’s share removed, so no second deduction is implied anywhere in the UI.</span>
+      </div></div>
+    </div>
+
+    <div style="border:1px solid var(--warn);background:rgba(224,169,63,0.06);padding:20px 24px;">
+      <span class="lbl" style="color:var(--warn);display:block;margin-bottom:8px;">The line not to cross</span>
+      <span style="font-size:16px;color:var(--fg-dim);line-height:1.7;">
+        Ranking these by rate, sorting highest-first, or badging one as “best” would turn a registry into a recommendation — and the wallet has no basis for one. The order is the registry’s own, held assets first. A rate is shown because it is a fact about a venue, not because the app has an opinion about where your money should go.
+      </span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

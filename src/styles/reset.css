@@ -1,0 +1,11 @@
+@layer reset {
+  * { box-sizing: border-box; }
+
+  /* `hidden` has to win over a component's own `display`. The UA rule is a plain
+     `display: none` that any `.x { display: flex }` beats, and the action forms
+     hide their fields and cards with the attribute — hidden, not unmounted, so
+     react-hook-form keeps its state. `!important` in the first layer is the
+     strongest declaration there is: an important in an earlier layer beats one
+     in a later layer. */
+  [hidden] { display: none !important; }
+}

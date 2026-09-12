@@ -1,0 +1,52 @@
+/* Small controls that several surfaces draw the same way. */
+@layer primitives {
+  /* A bordered square holding one glyph: the screen's Back, the address card's
+     copy and QR buttons. Size and ground are the caller's. */
+  .icon-btn {
+    display: inline-grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    color: var(--fg-dim);
+    cursor: pointer;
+  }
+  .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .icon-btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
+
+  /* A text-sized action in the accent that still takes a 44px press: "Copy",
+     "Show", "Show more". Padding and size are the caller's. */
+  .link-btn {
+    min-height: 44px;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--accent);
+    cursor: pointer;
+  }
+  .link-btn:hover { color: var(--accent-2); }
+
+  /* A one-word verdict or source beside a label ("Uniswap", "Blends in"). */
+  .badge {
+    padding: 3px var(--sp-10);
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+  }
+  .badge--accent {
+    color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.14);
+  }
+  .badge--warn {
+    color: var(--warn);
+    background: rgba(var(--warn-rgb), 0.14);
+  }
+
+  /* A glyph in a ring: the settled and failed marks, the link result's check. */
+  .glyph-ring {
+    display: inline-grid;
+    place-items: center;
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-round);
+    color: var(--accent);
+  }
+}

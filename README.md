@@ -34,21 +34,28 @@ The dev server listens on port `5174`.
 
 Environment variables are validated at startup in [`src/config/env.ts`](src/config/env.ts). Invalid or missing required values fail fast with a descriptive error.
 
+Only the services are configured here. Everything per-chain — chain id and name,
+RPC, contract addresses, tree depth, explorer, the asset catalog — is discovered
+at runtime, so one build serves every deployment and a redeployed contract needs
+no rebuild.
+
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `VITE_CHAIN_ID` | No | `31337` | Target chain ID |
-| `VITE_CHAIN_NAME` | No | `local` | Human-readable chain name |
-| `VITE_RPC_URL` | Yes | — | Ethereum JSON-RPC endpoint |
-| `VITE_MASP_ADDRESS` | No | — | MASP contract address |
-| `VITE_RELAYER_URL` | Yes | — | Relayer API base URL |
+| `VITE_REGISTRY_URL` | Yes | — | registry-webserver base URL: what each chain is, and what is registered on it |
+| `VITE_RELAYER_URL` | Yes | — | Relayer API base URL: what one relayer will do on each chain |
 | `VITE_FMD_URL` | Yes | — | Fuzzy message detection service URL |
-| `VITE_RELAYER_ADDRESS` | Yes | — | Relayer account address |
-| `VITE_PERMIT2_ADDRESS` | No | — | Permit2 contract address |
-| `VITE_TREE_DEPTH` | No | `20` | Commitment tree depth |
-| `VITE_EXPLORER_URL` | No | — | Block explorer base URL |
-| `VITE_EXPLORER_API_URL` | No | `/explorer` | Explorer API base URL |
-| `VITE_METAQUOTER_URL` | No | — | Metaquoter (swap quoting) service URL |
-| `VITE_SWAP_WRAPPER_ADDRESS` | No | — | Swap wrapper contract address |
+| `VITE_METAQUOTER_URL` | No | — | Metaquoter (swap quoting) service URL; absent leaves the swap tab inert |
+
+### Why two bootstraps
+
+`VITE_REGISTRY_URL` and `VITE_RELAYER_URL` are both required and neither is
+derivable from the other. registry-webserver publishes the deployment's own
+account of a chain; the relayer publishes what that one relayer will do on it.
+The two overlap only on `maspAddress` and `treeDepth`, and the app compares them
+before using a chain — dropping any where they disagree. That check is what makes
+a self-hosted or third-party relayer safe to point this wallet at, so a
+deployment configured with only one of the two has no usable network rather than
+a degraded one.
 
 ## Scripts
 
@@ -57,14 +64,14 @@ Environment variables are validated at startup in [`src/config/env.ts`](src/conf
 | `npm run dev` | Start the dev server |
 | `npm run build` | Type-check and build for production |
 | `npm run preview` | Serve the production build locally |
-| `npm run typecheck` | Run the TypeScript compiler without emitting |
-| `npm run lint` | Lint with Biome |
-| `npm run format` | Format with Biome |
-| `npm run check` | Lint + format with autofix |
+| `npm run typecheck` | Type-check the app and the tooling (`tsc -b`, no emit) |
+| `npm run check` | Biome lint, format and import sorting, with autofix |
+| `npm run check:ci` | The same Biome checks, without writing |
+| `npm run check:imports` | The import rules Biome cannot see (`scripts/check-imports.mjs`) |
+| `npm run knip` | Unused files, exports and dependencies |
 | `npm run test` | Run the test suite once |
-| `npm run test:watch` | Run tests in watch mode |
-| `npm run test:coverage` | Run tests with coverage |
-| `npm run verify` | Typecheck, lint, and test (CI entry point) |
+| `npm run test:coverage` | Run the test suite under its coverage floor |
+| `npm run verify` | Typecheck, `check:ci`, `check:imports`, `knip` and `test:coverage` (the CI gate) |
 
 ## Development
 
@@ -74,10 +81,14 @@ The dev server proxies the following paths to local backend services, so relativ
 
 | Path | Target |
 | --- | --- |
-| `/relayer` | `http://localhost:3003` |
+| `/registry` | `http://localhost:3005` (override with `REGISTRY_PROXY_TARGET`) |
+| `/relayer` | `http://localhost:3003` (override with `RELAYER_PROXY_TARGET`) |
 | `/fmd` | `http://localhost:3001` |
 | `/metaquoter` | `http://localhost:8081` |
 | `/explorer` | `http://localhost:3002` |
+| `/rpc` | `http://localhost:3006` (rpc-proxy) |
+
+The table lives in [`vite/proxy.ts`](vite/proxy.ts); the service worker's navigation fallback skips the same prefixes.
 
 ### Cross-origin isolation
 
@@ -96,7 +107,7 @@ Any production deployment must serve the app with these same headers.
 npm run test
 ```
 
-Tests run with Vitest in a jsdom environment, using Testing Library for component tests. `npm run verify` runs the full quality gate: typecheck, Biome checks, and tests.
+Tests run with Vitest under Node; a suite that needs a DOM opts into jsdom with `// @vitest-environment jsdom` on its first line, and uses Testing Library for components. `npm run verify` runs the full quality gate: typecheck, Biome checks, the import rules, knip, and the tests under their coverage floor.
 
 ## Docker
 
@@ -105,14 +116,7 @@ The production image builds the app and serves it with nginx:
 ```bash
 docker build \
   --secret id=npm_token,env=NODE_AUTH_TOKEN \
-  --build-arg VITE_CHAIN_ID=... \
-  --build-arg VITE_RPC_URL=... \
-  --build-arg VITE_MASP_ADDRESS=... \
-  --build-arg VITE_RELAYER_URL=... \
-  --build-arg VITE_FMD_URL=... \
-  --build-arg VITE_RELAYER_ADDRESS=... \
-  --build-arg VITE_TREE_DEPTH=... \
   -t lelantos-wallet .
 ```
 
-Environment variables are baked in at build time. The npm token secret is required to install `@lelantos-org` packages. The bundled [`nginx.conf`](nginx.conf) serves the SPA on port 80.
+Environment variables are baked in at build time. The service URLs default to the same-origin paths in `.env.example` (`/registry`, `/relayer`, `/fmd`, `/metaquoter`); override any with `--build-arg VITE_REGISTRY_URL=...` and so on. The npm token secret is required to install `@lelantos-org` packages. The bundled [`nginx.conf`](nginx.conf) serves the SPA on port 80.

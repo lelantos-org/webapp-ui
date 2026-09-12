@@ -1,22 +1,13 @@
 import { RAY } from "@lelantos-org/sdk";
 import { describe, expect, it } from "vitest";
 import type { RegisteredAsset } from "@/config/chains";
+import { makeAsset } from "@/test/fixtures/assets";
 import { computeGains, growthOf, type IndexAt, type YieldGain } from "./yield-gains";
 
 /// A yield asset at `index`. `scale` is 1 so the arithmetic under test is the
 /// index conversion alone; the scale leg is exercised once, at the end.
 function yieldAsset(id: bigint, index: bigint, scale = 1n): RegisteredAsset {
-  return {
-    id,
-    token: "0xAAAA" as RegisteredAsset["token"],
-    isWeth: false,
-    symbol: `T${id}`,
-    decimals: 18,
-    scale,
-    index,
-    yieldEnabled: true,
-    yieldHalted: false,
-  };
+  return makeAsset(id, `T${id}`, { token: "0xAAAA", scale, index, yieldEnabled: true });
 }
 
 function plainAsset(id: bigint): RegisteredAsset {

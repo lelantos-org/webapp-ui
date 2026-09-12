@@ -1,0 +1,153 @@
+@layer components {
+  /* THE RELAYER'S FEE ASSET PICKER
+   *
+   * A popover listbox rather than a `<select>`, because the choice turns on
+   * figures — what the relay costs in each token, and what the wallet holds of
+   * it — that a native option list has nowhere to put. See `FeeAssetPicker.tsx`.
+   *
+   * The trigger stays a text-sized capsule on the relayer row: it is part of the
+   * label it sits in, not another form field stacked into the panel.
+   */
+  .feepick {
+    position: relative;
+    display: inline-flex;
+  }
+  .feepick__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--sans);
+    font-size: var(--fs-12);
+    font-weight: 600;
+    line-height: 1;
+    color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.08);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    padding: 3px 7px;
+    cursor: pointer;
+    transition: border-color var(--dur-120) var(--ease-soft), background var(--dur-120) var(--ease-soft);
+  }
+  .feepick__btn:hover,
+  .feepick__btn--open {
+    border-color: var(--accent-dim);
+    background: rgba(var(--accent-rgb), 0.14);
+  }
+  .feepick__btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .feepick__chev {
+    transition: transform var(--dur-140) var(--ease-soft);
+  }
+  .feepick__btn--open .feepick__chev {
+    transform: rotate(180deg);
+  }
+
+  /* Portalled to `<body>` and placed in viewport coordinates by the component,
+     because the fee panel's height animation wraps it in `overflow: hidden` and
+     would otherwise clip it to the panel, which this list is taller than by
+     design. `fixed`, so the coordinates it is given are the ones it was measured
+     against, with no offset parent in between.
+     `top`/`left` come from the component; everything else is here. */
+  .feepick__pop {
+    position: fixed;
+    /* Above the sticky header (10) and everything on the page, below the
+       modal layer (50) — a dialog opening over the form must cover this,
+       not sit under it. */
+    z-index: var(--z-popover);
+    width: max-content;
+    min-width: 240px;
+    /* Never wider than the viewport it is being clamped into, whatever the
+       symbols and figures inside come to. */
+    max-width: min(320px, calc(100vw - 16px));
+    padding: 6px;
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-glow);
+    animation: drop-in var(--dur-140) var(--ease);
+  }
+
+  /* Rises from the side it opened on, so the motion points back at the trigger. */
+  .feepick__pop--up {
+    animation-name: rise-in;
+  }
+  @keyframes rise-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
+  .feepick__hint {
+    margin: 2px 8px 6px;
+    font-size: var(--fs-11);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--fg-mute);
+  }
+  .feepick__list {
+    /* Capped so a relayer that takes a dozen assets scrolls rather than running
+       the length of the screen. The placement pass measures whatever this comes
+       to and picks the side with room for it. */
+    max-height: min(244px, calc(100vh - 96px));
+    overflow-y: auto;
+  }
+
+  /* The list holds the keyboard while open, and `aria-activedescendant` — not
+     focus — marks the row. Its own focus ring would sit around all of them. */
+  .feepick__list:focus {
+    outline: none;
+  }
+  .feepick__opt {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 100ms var(--ease-soft);
+  }
+  .feepick__opt--active {
+    background: var(--bg-3);
+  }
+  .feepick__opt--on .feepick__optsym {
+    color: var(--accent);
+  }
+
+  /* Kept legible rather than greyed to the edge of readable: the figures are the
+     reason to show an option the wallet cannot cover at all. */
+  .feepick__opt--off {
+    cursor: not-allowed;
+  }
+  .feepick__opt--off .feepick__optsym,
+  .feepick__opt--off .feepick__cost {
+    color: var(--fg-mute);
+  }
+  .feepick__opt--off .feepick__bal {
+    color: var(--warn);
+  }
+  .feepick__name {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+  .feepick__optsym {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .feepick__bal {
+    font-size: var(--fs-11);
+    color: var(--fg-mute);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .feepick__cost {
+    font-size: 12.5px;
+    color: var(--fg-dim);
+    white-space: nowrap;
+  }
+}

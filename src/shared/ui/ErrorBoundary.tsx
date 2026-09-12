@@ -1,6 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { describeError } from "@/shared/lib/errors";
+import { userMessage } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
+import { ErrorCard } from "./ErrorCard";
 
 const log = createLogger("error-boundary");
 
@@ -25,7 +26,7 @@ interface State {
 /// Async errors — `useEffect` callbacks, mutations — are not caught here; they
 /// surface as toasts in the mutation layer.
 export class ErrorBoundary extends Component<Props, State> {
-  state: State = { resetKey: this.props.resetKey };
+  override state: State = { resetKey: this.props.resetKey };
 
   static getDerivedStateFromError(error: unknown): Partial<State> {
     return { error };
@@ -39,7 +40,7 @@ export class ErrorBoundary extends Component<Props, State> {
     return { error: undefined, resetKey: props.resetKey };
   }
 
-  componentDidCatch(error: unknown, info: ErrorInfo): void {
+  override componentDidCatch(error: unknown, info: ErrorInfo): void {
     log.error("caught", error, info.componentStack);
   }
 
@@ -47,7 +48,7 @@ export class ErrorBoundary extends Component<Props, State> {
     this.setState({ error: undefined });
   };
 
-  render(): ReactNode {
+  override render(): ReactNode {
     if (this.state.error !== undefined) {
       if (this.props.fallback) {
         return this.props.fallback({ error: this.state.error, reset: this.reset });
@@ -60,16 +61,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
 function DefaultFallback({ error, reset }: { error: unknown; reset(): void }) {
   return (
-    <div className="card m-20">
-      <div className="card__hdr">
-        <h2 className="card__t">Something broke</h2>
-      </div>
-      <div className="stack stack--md">
-        <div className="err">{describeError(error)}</div>
-        <button type="button" className="btn" onClick={reset}>
-          try again
-        </button>
-      </div>
-    </div>
+    <ErrorCard title="Something broke">
+      <div className="err">{userMessage(error)}</div>
+      <button type="button" className="btn" onClick={reset}>
+        try again
+      </button>
+    </ErrorCard>
   );
 }

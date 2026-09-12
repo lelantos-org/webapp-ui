@@ -4,6 +4,7 @@ import { MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { toastError, toastInfo } from "@/shared/lib/toast";
 import { Modal } from "@/shared/ui/Modal";
 import { useExitTransition } from "@/shared/ui/use-exit-transition";
+import "./WalletDataModal.css";
 
 /// The two local-storage maintenance actions, behind a surface with room to
 /// explain them.
@@ -29,11 +30,11 @@ export function WalletDataModal({ onClose, syncing }: { onClose(): void; syncing
       const removed = await compact.run();
       toastInfo(
         removed > 0
-          ? `pruned ${removed} spent note${removed === 1 ? "" : "s"}`
-          : "nothing to prune",
+          ? `Cleared ${removed} spent note${removed === 1 ? "" : "s"}`
+          : "No spent notes to clear",
       );
     } catch (e) {
-      toastError("compact failed", e);
+      toastError("Couldn't clear spent notes", e);
     } finally {
       setCompacting(false);
     }
@@ -44,7 +45,7 @@ export function WalletDataModal({ onClose, syncing }: { onClose(): void; syncing
       await hard.run();
       dismiss();
     } catch (e) {
-      toastError("hard refresh failed", e);
+      toastError("Wipe and resync failed", e);
     }
   };
 
@@ -62,9 +63,14 @@ export function WalletDataModal({ onClose, syncing }: { onClose(): void; syncing
       </p>
 
       <section className="wdm__act">
-        <strong className="wdm__t">Compact</strong>
+        {/* Named for what it does, not "Compact": that word reads as the remedy
+            for "Max is less than your balance", which only spending performs.
+            This touches storage and nothing on-chain. */}
+        <strong className="wdm__t">Clear spent notes</strong>
         <p className="modal-copy">
-          Drops notes that have already been spent from local storage. Balances are unchanged.
+          Removes notes you have already spent from this browser's storage, so a sync has less to
+          read. It does not merge notes, change your balance or change what Max allows — sending
+          merges the notes it touches.
         </p>
         <button
           type="button"
@@ -72,12 +78,12 @@ export function WalletDataModal({ onClose, syncing }: { onClose(): void; syncing
           disabled={syncing || busy}
           onClick={onCompact}
         >
-          {compacting ? "compacting…" : "compact"}
+          {compacting ? "Clearing…" : "Clear spent notes"}
         </button>
       </section>
 
       <section className="wdm__act wdm__act--danger">
-        <strong className="wdm__t warn">Hard refresh</strong>
+        <strong className="wdm__t">Wipe and resync</strong>
         <p className="modal-copy">
           Deletes every note this browser has decrypted and rescans the chain from the beginning. On
           a busy chain this takes several minutes, and the wallet shows no balance until it
@@ -98,13 +104,13 @@ export function WalletDataModal({ onClose, syncing }: { onClose(): void; syncing
           disabled={syncing || busy || !acknowledged}
           onClick={onHardRefresh}
         >
-          {hard.busy ? "wiping…" : "wipe and resync"}
+          {hard.busy ? "Wiping…" : "Wipe and resync"}
         </button>
       </section>
 
       <div className="modal-actions">
         <button type="button" className="btn btn--ghost" onClick={dismiss} disabled={busy}>
-          close
+          Close
         </button>
       </div>
     </Modal>

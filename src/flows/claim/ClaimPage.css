@@ -1,0 +1,22 @@
+@layer features {
+  /* Claim: the recipient's page. The sender's side is `flows/send-link` and the
+     vault. */
+  .claim-page {
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+    /* On top of `.main`'s own 28px. */
+    padding-top: var(--sp-16);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-24);
+  }
+  .claim-page__foot {
+    line-height: 1.55;
+  }
+
+  @media (max-width: 480px) {
+    .claim-page { padding-top: var(--sp-6); gap: var(--sp-16); }
+    .claim-page__foot { font-size: var(--fs-13); }
+  }
+}

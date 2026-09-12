@@ -1,0 +1,138 @@
+/* Recipient: the address field Send and Unshield put in the card beside
+   `AmountHero`. */
+
+@layer components {
+  .rcpt {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+  }
+  .rcpt__lbl {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .rcpt__box {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-12);
+    padding: var(--sp-14) var(--sp-16);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    transition: border-color var(--dur-120) var(--ease-soft), box-shadow var(--dur-120) var(--ease-soft);
+  }
+  .rcpt__box:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
+  }
+  .rcpt--invalid .rcpt__box { border-color: var(--err); }
+  .rcpt--invalid .rcpt__box:focus-within { box-shadow: 0 0 0 3px rgba(var(--err-rgb), 0.16); }
+  .rcpt__field {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* A 164-character address wraps rather than scrolling out of sight. The height
+     follows the content: `field-sizing` where the browser has it, the measured
+     `--rcpt-h` where it does not. */
+  .rcpt__inp {
+    display: block;
+    width: 100%;
+    height: var(--rcpt-h, auto);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: var(--fs-15);
+    line-height: 1.5;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+    resize: none;
+    outline: none;
+    field-sizing: content;
+  }
+  .rcpt__inp::placeholder { color: var(--fg-mute); opacity: 1; }
+
+  /* Phones only; see the breakpoint below. */
+  .rcpt__grouped { display: none; }
+  .rcpt__ok {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-round);
+    background: rgba(var(--accent-rgb), 0.18);
+    color: var(--accent);
+  }
+
+  /* Text-sized, target-sized: the box's own padding is borrowed back so the
+     44px hit area does not grow the field. */
+  .rcpt__paste {
+    flex: none;
+    min-height: 44px;
+    margin: -12px -8px -12px 0;
+    padding: 0 var(--sp-10);
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font-family: var(--sans);
+    font-size: var(--fs-13);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .rcpt__paste:hover { color: var(--accent-2); }
+  .rcpt__paste:focus-visible { outline: var(--ring); outline-offset: -2px; }
+  .rcpt__err {
+    font-size: var(--fs-14);
+    color: var(--err);
+  }
+  .rcpt__helper,
+  .rcpt__extra {
+    margin: 0;
+    font-size: var(--fs-14);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+  .rcpt__link {
+    color: var(--accent);
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .rcpt__link:hover { color: var(--accent-2); }
+  .rcpt__link:focus-visible { outline: var(--ring); outline-offset: 2px; }
+
+  @media (max-width: 480px) {
+    .rcpt { gap: var(--sp-8); }
+    .rcpt__lbl { font-size: var(--fs-13); }
+    .rcpt__box { padding: 13px var(--sp-14); }
+    .rcpt__inp { font-size: var(--fs-14); line-height: 1.7; }
+    /* Neither on a phone: the grouped address is its own confirmation, and the
+       helper's advice does not fit the column. */
+    .rcpt__helper,
+    .rcpt__ok { display: none; }
+    /* A valid address reads in fours until the field is touched again. The
+       textarea stays on top, transparent, so the tap that wants to edit lands
+       in it — and once focused it is the one shown. */
+    .rcpt--valid .rcpt__grouped {
+      display: block;
+      font-size: var(--fs-14);
+      line-height: 1.7;
+      color: var(--fg);
+      overflow-wrap: anywhere;
+    }
+    .rcpt--valid:not(:focus-within) .rcpt__inp {
+      position: absolute;
+      inset: 0;
+      height: 100%;
+      opacity: 0;
+    }
+    .rcpt--valid:focus-within .rcpt__grouped { display: none; }
+  }
+}

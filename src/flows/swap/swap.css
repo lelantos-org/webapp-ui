@@ -1,0 +1,167 @@
+@layer features {
+  /* Swap: two legs with the flip button over the seam, then the Details row. The
+     light theme is the same markup on the light tokens, so nothing here names a
+     colour that does not come from them. */
+  .swap-pair {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-10);
+    min-width: 0;
+  }
+  .swap-leg {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    padding: var(--sp-20);
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    min-width: 0;
+    transition: border-color var(--dur-160) var(--ease-soft);
+  }
+  .swap-leg--receive { border-color: rgba(var(--accent-rgb), 0.28); }
+  .swap-leg--stale { border-color: rgba(var(--warn-rgb), 0.45); }
+
+  /* The pill sits on the leg's ground, so it steps back to the card's. */
+  .swap-leg .tokpill { background: var(--bg-1); }
+  .swap-leg__hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-12);
+    min-height: 26px;
+  }
+  .swap-leg__lbl {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .swap-leg__badges {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-8);
+  }
+  .swap-venue {
+    font-size: var(--fs-12);
+    white-space: nowrap;
+  }
+
+  /* The age is the refresh control. Drawn as a small badge, hit as a 44px target. */
+  .swap-age {
+    position: relative;
+    padding: 3px var(--sp-10);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--fg-mute);
+    font-family: var(--mono);
+    font-size: var(--fs-12);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--dur-120) var(--ease-soft), border-color var(--dur-120) var(--ease-soft);
+  }
+  .swap-age::after {
+    content: "";
+    position: absolute;
+    inset: -10px -4px;
+  }
+  .swap-age:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+  .swap-age:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .swap-age:disabled { cursor: progress; }
+  .swap-leg--stale .swap-age { color: var(--warn); border-color: var(--warn); }
+  .swap-leg__row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-16);
+    min-width: 0;
+  }
+  .swap-leg__amt {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 40px;
+    color: var(--accent);
+  }
+  .swap-leg__amt--none { color: var(--fg-mute); }
+  .swap-leg__sub {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0 var(--sp-8);
+    margin: 0;
+    min-height: 1.5em;
+    font-family: var(--mono);
+    font-size: var(--fs-14);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+  .swap-leg__sub--warn { color: var(--warn); }
+  .swap-leg__sub--err { color: var(--err-strong); }
+  /* Keeps the accent on hover, where `.link-btn` would deepen it. */
+  .swap-leg__retry {
+    margin: -12px 0;
+    padding: 0 var(--sp-4);
+    font-family: var(--sans);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .swap-leg__retry:focus-visible { outline: var(--ring); outline-offset: -2px; }
+  .swap-pair__err { color: var(--err); }
+
+  /* Over the seam: the row takes no height of its own (−21 + 40 − 21), so the
+     legs keep the card's 10px gap, less the 2px the button overlaps each. */
+  .swap-flip-row {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    justify-content: center;
+    margin: -21px 0;
+    pointer-events: none;
+  }
+  .swap-flip {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 3px solid var(--bg-1);
+    border-radius: var(--radius);
+    background: var(--bg-3);
+    color: var(--fg-dim);
+    cursor: pointer;
+    pointer-events: auto;
+    transition: color var(--dur-120) var(--ease-soft), transform var(--dur-200) var(--ease-soft);
+  }
+  .swap-flip::after {
+    content: "";
+    position: absolute;
+    inset: -5px;
+  }
+  .swap-flip:hover:not(:disabled) { color: var(--accent); }
+  .swap-flip:active:not(:disabled) { transform: rotate(180deg); }
+  .swap-flip:focus-visible { outline: var(--ring); outline-offset: 1px; }
+  .swap-flip:disabled { opacity: 0.5; cursor: not-allowed; }
+  .swap-flip svg { display: block; }
+
+  @media (max-width: 480px) {
+    .swap-pair { gap: var(--sp-8); }
+    .swap-leg { gap: var(--sp-10); padding: 15px var(--sp-14); }
+    .swap-leg__lbl { font-size: var(--fs-13); }
+    /* The venue badge goes; the age stays, since it is the refresh. */
+    .swap-venue { display: none; }
+    .swap-age { font-size: var(--fs-11); padding: 2px var(--sp-8); }
+    .swap-leg__row { gap: 11px; }
+    .swap-leg__amt { font-size: 36px; }
+    .swap-leg__sub { font-size: var(--fs-13); }
+    .swap-flip-row { margin: -16px 0; }
+    .swap-flip { width: 34px; height: 34px; }
+    .swap-flip::after { inset: -5px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .swap-flip:active:not(:disabled) { transform: none; }
+  }
+}

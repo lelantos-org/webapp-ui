@@ -1,0 +1,108 @@
+@layer components {
+  /* Observer: the one honest use of a redaction bar — what someone else is
+     denied, never the user's own figures from them. */
+
+  .observer--full {
+    border: 1px solid var(--line-strong);
+    background: var(--bg-1);
+  }
+  .observer__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-12);
+    padding: var(--sp-12) var(--sp-20);
+    background: var(--fg);
+    color: var(--bg);
+  }
+  .observer__t {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: var(--fs-12);
+    font-weight: 700;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: inherit;
+  }
+  .observer__public {
+    font-size: var(--fs-12);
+    opacity: 0.72;
+  }
+  .observer__body {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding: var(--sp-20);
+  }
+  .observer__p {
+    margin: 0;
+    font-size: var(--fs-14);
+    line-height: 1.55;
+    color: var(--fg-dim);
+  }
+  .observer__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-12);
+    margin: 0;
+    padding: var(--sp-16);
+  }
+  .observer__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-12);
+    min-width: 0;
+  }
+
+  /* The line between what is hidden and what is not. */
+  .observer__row--sep {
+    padding-top: var(--sp-12);
+    border-top: 1px solid var(--line-strong);
+  }
+  .observer__lbl {
+    font-size: var(--fs-13);
+    color: var(--fg-mute);
+  }
+  .observer__val {
+    margin: 0;
+    min-width: 0;
+    text-align: right;
+    font-size: var(--fs-13);
+    color: var(--fg-dim);
+    overflow-wrap: anywhere;
+  }
+  .observer__redact {
+    display: block;
+    height: 15px;
+    background: var(--fg);
+  }
+  .observer__redact--a { width: 132px; }
+  .observer__redact--b { width: 96px; }
+  .observer__redact--c { width: 114px; }
+
+  /* Inside the review: a section of the card, not a panel of its own. */
+  .observer__cap {
+    margin-bottom: 11px;
+  }
+  .observer--compact .observer__rows {
+    gap: var(--sp-10);
+    padding: 15px var(--sp-16);
+  }
+  .observer--compact .observer__lbl,
+  .observer--compact .observer__val { font-size: var(--fs-14); }
+  .observer--compact .observer__redact { height: 14px; }
+  .observer--compact .observer__redact--a { width: 126px; }
+  .observer__note {
+    margin: 9px 0 0;
+    font-size: var(--fs-14);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+
+  @media (max-width: 480px) {
+    /* Phones get the compact block in the review only. */
+    .observer--full { display: none; }
+    .observer__redact--a { width: 96px; }
+  }
+}

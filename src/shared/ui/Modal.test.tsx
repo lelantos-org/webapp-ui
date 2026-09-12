@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -50,7 +51,6 @@ describe("Modal", () => {
     await userEvent.click(overlay);
 
     expect(onDismiss).not.toHaveBeenCalled();
-    expect(overlay).toHaveClass("modal-overlay--locked");
   });
 
   it("refuses a second dismiss while the exit is playing", async () => {

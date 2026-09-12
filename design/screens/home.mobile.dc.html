@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root {
+      --bg: #14110E; --bg-1: #1C1815; --bg-2: #241F1A; --bg-3: #2E2822;
+      --fg: #F5F1E8; --fg-dim: #BEB5A6; --fg-mute: #9E9486;
+      --line: #2A241E; --line-strong: #3A332B;
+      --accent: #E0794A; --accent-2: #EA8C60; --accent-dim: #7A4526;
+      --warn: #E0A93F; --err: #E67A6E;
+      --display: "Newsreader", Georgia, "Times New Roman", serif;
+      --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: "zero" 1; }
+    .shell { min-height: 844px; display: flex; flex-direction: column; background: radial-gradient(420px 300px at 50% -6%, rgba(224,121,74,0.16), transparent 66%), #14110E; }
+    .mark { border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; flex: none; }
+    .sub { font-size: 13px; color: var(--fg-mute); }
+    .rule { height: 1px; background: var(--line); }
+    .cta { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px; border-radius: 4px; background: var(--accent); color: #14110E; font-size: 16px; font-weight: 600; min-height: 44px; }
+  </style>
+</helmet>
+
+<div class="shell">
+  <div style="display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line);">
+    <svg width="21" height="21" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>
+    <span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:12px;font-weight:600;letter-spacing:.02em;line-height:1;flex: 1;">LELANTOS</span>
+    <span style="display: flex; align-items: center; gap: 6px; padding: 6px 11px; border: 1px solid var(--line-strong); border-radius: 2px; font-size: 13px;">
+      <span class="mark" style="width: 14px; height: 14px; background: #2151f5; font-size: 8px; color: #fff;">B</span>Base
+    </span>
+    <span class="mark" style="width: 32px; height: 32px; background: var(--bg-2); border: 1px solid var(--line-strong); color: var(--fg-dim); font-size: 11px;">7a</span>
+  </div>
+  <div style="flex: 1; display: flex; flex-direction: column; gap: 22px; padding: 24px 18px 20px;">
+
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <div style="display: flex; align-items: center; gap: 7px;">
+        <svg width="14" height="14" viewBox="0 0 512 512" aria-hidden="true"><path d="M256 88 L400 144 V276 C400 356 336 408 256 438 C176 408 112 356 112 276 V144 Z" fill="rgba(224,121,74,0.18)" stroke="#E0794A" stroke-width="38" stroke-linejoin="round"/></svg>
+        <span style="font-size: 14px; font-weight: 500; color: var(--accent);">Shielded balance</span>
+      </div>
+      <span class="num" style="font-family: var(--display); font-size: 42px; font-weight: 600; line-height: 1.05; letter-spacing: -0.025em;">$12,480<span style="color: var(--fg-mute);">.55</span></span>
+      <span class="sub">3 assets · synced 2 min ago</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 14px 4px; border-radius: 4px; background: var(--accent); color: #14110E; min-height: 44px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 20 6.2v6.1c0 4.3-3.4 7.3-8 8.7-4.6-1.4-8-4.4-8-8.7V6.2Z"/><path d="M12 8v6"/><path d="m9 11 3-3 3 3"/></svg>
+        <span style="font-size: 13px; font-weight: 600;">Shield</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 14px 4px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--bg-1); min-height: 44px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h13"/><path d="m12 6 6 6-6 6"/><path d="M20 4v16"/></svg>
+        <span style="font-size: 13px; font-weight: 600;">Send</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 14px 4px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--bg-1); min-height: 44px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3v13"/><path d="m21 12-4 4-4-4"/><path d="M7 21V8"/><path d="m3 12 4-4 4 4"/></svg>
+        <span style="font-size: 13px; font-weight: 600;">Swap</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 14px 4px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--bg-1); min-height: 44px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 20 6.2v6.1c0 4.3-3.4 7.3-8 8.7-4.6-1.4-8-4.4-8-8.7V6.2Z"/><path d="M12 14V8"/><path d="m9 11 3 3 3-3"/></svg>
+        <span style="font-size: 13px; font-weight: 600;">Unshield</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <span style="font-family: var(--display); font-size: 17px; font-weight: 600;">Your assets</span>
+      <div style="border: 1px solid var(--line); border-radius: 4px; background: var(--bg-1); overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 15px 16px; border-bottom: 1px solid var(--line);">
+          <span class="mark" style="width: 36px; height: 36px; border-radius: 4px; background: rgba(122,160,180,0.16); border: 1px solid rgba(122,160,180,0.42); color: #8FB6C9; font-size: 11px;">USDC</span>
+          <div style="display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0;">
+            <div style="display: flex; align-items: center; gap: 7px;"><span style="font-size: 15px; font-weight: 600;">USDC</span><span style="padding: 1px 7px; border-radius: 2px; background: rgba(224,121,74,0.14); color: var(--accent); font-size: 11px; font-weight: 600;">4.18%</span></div>
+            <span class="num sub">8,420.00</span>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 1px;">
+            <span class="num" style="font-size: 15px; font-weight: 600;">$8,420.00</span>
+            <span class="num" style="font-size: 13px; color: var(--accent);">+12.40</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 15px 16px; border-bottom: 1px solid var(--line);">
+          <span class="mark" style="width: 36px; height: 36px; border-radius: 4px; background: rgba(224,169,63,0.13); border: 1px solid rgba(224,169,63,0.34); color: #E0A93F; font-size: 12px;">ETH</span>
+          <div style="display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0;">
+            <span style="font-size: 15px; font-weight: 600;">ETH</span><span class="num sub">1.2840</span>
+          </div>
+          <span class="num" style="font-size: 15px; font-weight: 600;">$3,401.20</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 15px 16px;">
+          <span class="mark" style="width: 36px; height: 36px; border-radius: 4px; background: rgba(198,138,74,0.15); border: 1px solid rgba(198,138,74,0.36); color: #C68A4A; font-size: 11px;">WBTC</span>
+          <div style="display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0;">
+            <span style="font-size: 15px; font-weight: 600;">WBTC</span><span class="num sub">0.0094</span>
+          </div>
+          <span class="num" style="font-size: 15px; font-weight: 600;">$659.35</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 4px; background: rgba(224,121,74,0.05); margin-top: auto;">
+      <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;">
+        <span class="sub">Your shielded address</span>
+        <span class="num" style="font-size: 13px; color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">lel1q9x8fk2mzp4v7n0shjr6cdyw…</span>
+      </div>
+      <span class="mark" style="width: 44px; height: 44px; border-radius: 4px; border: 1px solid var(--line-strong); color: var(--fg-dim);">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+      </span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

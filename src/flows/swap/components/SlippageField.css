@@ -1,0 +1,78 @@
+@layer features {
+  /* SLIPPAGE — inside the Details row */
+  .slip {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .slip__lbl {
+    float: left;
+    width: 100%;
+    margin: 0 0 var(--sp-8);
+    padding: 0;
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .slip__opts {
+    clear: both;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-8);
+  }
+  .slip__opt {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    min-height: 44px;
+    padding: var(--sp-8);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-1);
+    color: var(--fg-dim);
+    cursor: pointer;
+    transition: border-color var(--dur-120) var(--ease-soft), background var(--dur-120) var(--ease-soft), color var(--dur-120) var(--ease-soft);
+  }
+  .slip__opt:hover { border-color: var(--fg-mute); color: var(--fg); }
+
+  /* The radio stays focusable and screen-reader visible; the label is the
+     rendered control, so it carries the focus ring. */
+  .slip__radio {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .slip__opt:has(.slip__radio:focus-visible) {
+    outline: var(--ring);
+    outline-offset: 2px;
+  }
+  .slip__opt--on,
+  .slip__opt--on:hover {
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.08);
+    color: var(--accent);
+  }
+  .slip__pct {
+    font-family: var(--mono);
+    font-size: var(--fs-15);
+    font-weight: 600;
+  }
+  .slip__sub {
+    font-size: var(--fs-12);
+    color: var(--fg-mute);
+  }
+  .slip__opt--on .slip__sub { color: var(--accent); }
+  .slip__opt--warn.slip__opt--on .slip__sub { color: var(--warn); }
+  .slip__err {
+    display: block;
+    margin-top: var(--sp-8);
+    font-size: var(--fs-14);
+    color: var(--err);
+  }
+}

@@ -1,0 +1,26 @@
+@layer components {
+  /* Wallet-data modal: one block per action, so a destructive one is visibly its
+     own thing rather than another item in a row. */
+  .wdm__act {
+    display: grid;
+    gap: var(--sp-8);
+    padding: var(--sp-12) 0;
+    border-top: 1px solid var(--line);
+  }
+  .wdm__act .btn { justify-self: start; }
+  .wdm__t {
+    font-size: var(--fs-13);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .wdm__act--danger { border-top-color: var(--warn-dim); }
+  .wdm__ack {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-8);
+    font-size: var(--fs-12);
+    color: var(--fg-dim);
+    cursor: pointer;
+  }
+  .wdm__ack input { accent-color: var(--err); cursor: pointer; }
+}

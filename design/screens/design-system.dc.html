@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root{
+      --bg:#14110E;--bg-1:#1C1815;--bg-2:#241F1A;--bg-3:#2E2822;
+      --fg:#F5F1E8;--fg-dim:#BEB5A6;--fg-mute:#9E9486;
+      --line:#2A241E;--line-strong:#3A332B;
+      --accent:#E0794A;--accent-2:#EA8C60;--warn:#E0A93F;--err:#E67A6E;
+      --display:"Newsreader",Georgia,serif;
+      --sans:"Public Sans",-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+      --mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+    a{color:var(--accent);}a:hover{color:var(--accent-2);}
+    .num{font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;font-feature-settings:"zero" 1;}
+    .lbl{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);}
+    .card{border:1px solid var(--line-strong);background:var(--bg-1);}
+    td,th{text-align:left;vertical-align:top;padding:10px 16px 10px 0;border-bottom:1px solid var(--line);}
+    th{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);border-bottom:1px solid var(--line-strong);}
+  </style>
+</helmet>
+
+<div style="min-height:1500px;padding:0 0 46px;">
+  <div style="background:var(--fg);color:var(--bg);padding:18px 40px;display:flex;align-items:baseline;justify-content:space-between;gap:20px;">
+    <span style="font-family:var(--display);font-size:28px;font-weight:600;">v2 — what changed, and why</span>
+    <span class="num" style="font-size:13px;opacity:.7;">SAME SCREENS · NEW SURFACE</span>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:32px 40px 0;display:flex;flex-direction:column;gap:28px;">
+
+    <div class="card" style="padding:26px 30px;">
+      <div class="lbl" style="margin-bottom:12px;">Five substitutions</div>
+      <p style="margin:0 0 16px;font-size:16px;color:var(--fg-dim);max-width:78ch;">v1's layout is unchanged. Every change below targets one of the traits that made it interchangeable with nine other DeFi apps.</p>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr><th style="width:22%;">Element</th><th style="width:26%;">v1</th><th style="width:26%;">v2</th><th>Reason</th></tr>
+        <tr>
+          <td>Display face</td>
+          <td>Space Grotesk</td>
+          <td style="font-family:var(--display);font-size:19px;">Newsreader</td>
+          <td>Space Grotesk is a documented "slop font" <em>and</em> Namada's typeface — an adjacent shielded-pool project. Newsreader is a serif with an optical-size axis and tabular figures in the binary.</td>
+        </tr>
+        <tr>
+          <td>UI face</td>
+          <td>system stack</td>
+          <td style="font-size:17px;font-weight:600;">Public Sans</td>
+          <td>The US Web Design System face, Franklin Gothic lineage. Institutional provenance, and deliberately unmemorable at 13px — which is what UI text should be.</td>
+        </tr>
+        <tr>
+          <td>Numerals</td>
+          <td>JetBrains Mono</td>
+          <td class="num" style="font-size:16px;">Atkinson Mono</td>
+          <td>JetBrains reads as <em>IDE</em>. Atkinson Hyperlegible Mono was drawn by the Braille Institute to separate <span class="num">0O</span> <span class="num">1lI</span> <span class="num">5S</span> <span class="num">8B</span> — the exact failure mode of an address.</td>
+        </tr>
+        <tr>
+          <td>Ground</td>
+          <td class="num" style="font-size:14px;">#0f0f14</td>
+          <td class="num" style="font-size:14px;">#14110E</td>
+          <td>Every surveyed app sits in the <span class="num">#131313</span> blue-black family. A warm near-black is the same darkness in a hue nobody occupies.</td>
+        </tr>
+        <tr>
+          <td>Accent</td>
+          <td class="num" style="font-size:14px;">#7c74f5</td>
+          <td class="num" style="font-size:14px;">#E0794A</td>
+          <td>Blue-violet is the field's default. Serious privacy tools outside crypto run warm — Tailscale brick, Cloudflare orange, Mullvad yellow — and demote green and red to pure state semantics.</td>
+        </tr>
+        <tr style="border-bottom:none;">
+          <td>Radii</td>
+          <td>14px · 999px pills</td>
+          <td>4px · 2px</td>
+          <td>The 12–24px family with pill chips is the single most recognisable DeFi tell. Near-zero is unoccupied and costs nothing.</td>
+        </tr>
+      </table>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start;">
+      <div class="card" style="padding:24px 28px;">
+        <div class="lbl" style="margin-bottom:14px;">Palette</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <span style="width:52px;height:52px;background:#14110E;border:1px solid var(--line-strong);"></span>
+          <span style="width:52px;height:52px;background:#1C1815;border:1px solid var(--line-strong);"></span>
+          <span style="width:52px;height:52px;background:#241F1A;border:1px solid var(--line-strong);"></span>
+          <span style="width:52px;height:52px;background:#E0794A;"></span>
+          <span style="width:52px;height:52px;background:#E0A93F;"></span>
+          <span style="width:52px;height:52px;background:#E67A6E;"></span>
+        </div>
+        <div class="num" style="font-size:12px;color:var(--fg-mute);margin-bottom:14px;">14110E · 1C1815 · 241F1A · E0794A · E0A93F · E67A6E</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <span style="width:52px;height:52px;background:#F7F4ED;border:1px solid var(--line-strong);"></span>
+          <span style="width:52px;height:52px;background:#FFFDF8;border:1px solid var(--line-strong);"></span>
+          <span style="width:52px;height:52px;background:#F1EDE4;border:1px solid var(--line-strong);"></span>
+          <span style="width:52px;height:52px;background:#A8481B;"></span>
+          <span style="width:52px;height:52px;background:#8A6210;"></span>
+          <span style="width:52px;height:52px;background:#A63A2E;"></span>
+        </div>
+        <div class="num" style="font-size:12px;color:var(--fg-mute);margin-bottom:14px;">F7F4ED · FFFDF8 · F1EDE4 · A8481B · 8A6210 · A63A2E</div>
+        <p style="margin:0;font-size:14px;color:var(--fg-dim);">Both themes checked: every text-on-ground pair clears <span class="num">4.5:1</span>. The accent is a light fill, so it takes dark ink on dark and near-white on paper — white on ember was <span class="num">3.0:1</span> and would have shipped in v1.</p>
+      </div>
+
+      <div class="card" style="padding:24px 28px;">
+        <div class="lbl" style="margin-bottom:14px;">Type scale</div>
+        <div class="num" style="font-family:var(--display);font-size:46px;font-weight:500;line-height:1.05;">$12,480.55</div>
+        <div style="font-size:13px;color:var(--fg-mute);margin-bottom:14px;">Newsreader 500 · balances · tabular by default</div>
+        <div style="font-family:var(--display);font-size:26px;font-weight:600;">Send privately</div>
+        <div style="font-size:13px;color:var(--fg-mute);margin-bottom:14px;">Newsreader 600 · screen titles</div>
+        <div style="font-size:16px;">Body stays 16px, secondary 14px — unchanged from v1.</div>
+        <div style="font-size:13px;color:var(--fg-mute);margin-bottom:14px;">Public Sans</div>
+        <div class="num" style="font-size:15px;">lel1q9x8fk2mzp4v7n0shjr6cdyw3aqt5eu</div>
+        <div style="font-size:13px;color:var(--fg-mute);">Atkinson Mono · slashed zero forced on every address</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:26px 30px;">
+      <div class="lbl" style="margin-bottom:14px;">Three devices added to the screens</div>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;">
+        <div>
+          <div style="font-family:var(--display);font-size:20px;font-weight:600;margin-bottom:5px;">The amount, twice</div>
+          <p style="margin:0;font-size:14px;color:var(--fg-dim);">Figures and words, closed by a trailing rule so nothing can be appended. Cheques have done this for a century against the decimal-point slip — the characteristic catastrophic error here too. On Shield, Send and Unshield.</p>
+        </div>
+        <div>
+          <div style="font-family:var(--display);font-size:20px;font-weight:600;margin-bottom:5px;">The warning band</div>
+          <p style="margin:0;font-size:14px;color:var(--fg-dim);">A printed legend of what you can verify, in place of a padlock: <em>decrypted on this device · checked against block 2,214,908 · no server was asked what you hold</em>. Followed by the anti-boast — nobody here can see your balance, and that cuts both ways.</p>
+        </div>
+        <div>
+          <div style="font-family:var(--display);font-size:20px;font-weight:600;margin-bottom:5px;">The observer view</div>
+          <p style="margin:0;font-size:14px;color:var(--fg-dim);">On Unshield: exactly what the chain reveals. The only place a redaction bar appears — it shows what someone <em>else</em> is denied. Never your own figures from you.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,106 @@
+@layer components {
+  /* ACCOUNT PILL — address and a power button, as one control. */
+  .account {
+    gap: var(--sp-10);
+    padding: 7px var(--sp-8) 7px var(--sp-14);
+    background: var(--bg-2);
+  }
+  .account__addr {
+    font-size: var(--fs-14);
+    line-height: 1;
+    color: var(--fg-dim);
+  }
+  .account__power {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-round);
+    background: var(--bg-3);
+    color: var(--fg-mute);
+    cursor: pointer;
+    transition: color var(--dur-120) var(--ease-soft), background var(--dur-120) var(--ease-soft);
+  }
+  .account__power:hover { color: var(--err); }
+  .account__power:focus-visible { outline: var(--ring); outline-offset: 2px; }
+
+  /* Avatar menu: phones only. */
+  .account-menu {
+    position: relative;
+    display: none;
+  }
+  .account-menu__avatar {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-round);
+    background: var(--bg-2);
+    color: var(--fg-dim);
+    font-size: var(--fs-11);
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  /* 32px drawn, 44px pressed. */
+  .account-menu__avatar::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+  .account-menu__avatar[aria-expanded="true"] { border-color: var(--accent); color: var(--fg); }
+  .account-menu__avatar:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .account-menu__panel {
+    position: absolute;
+    top: calc(100% + var(--sp-10));
+    right: 0;
+    z-index: var(--z-menu);
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    padding: var(--sp-6);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-1);
+    box-shadow: var(--shadow-pop);
+    animation: drop-in var(--dur-140) var(--ease) both;
+  }
+  .account-menu__addr {
+    padding: var(--sp-8) var(--sp-10) var(--sp-10);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: var(--sp-4);
+    font-size: var(--fs-13);
+    color: var(--fg-mute);
+  }
+  .account-menu__item {
+    padding: 0 var(--sp-10);
+    border-radius: var(--radius-sm);
+    color: var(--fg);
+    font-size: var(--fs-15);
+    text-align: left;
+  }
+  .account-menu__item:hover { background: var(--bg-2); }
+  .account-menu__item:focus-visible { outline: var(--ring); outline-offset: -2px; }
+  .account-menu__item--danger { color: var(--err); }
+
+  /* Phones: see `Layout.css`. */
+  @media (max-width: 480px) {
+    .account { display: none; }
+    .account-menu { display: inline-flex; }
+  }
+
+  /* Finger-sized targets keyed on the pointer, not the viewport: the constraint
+     is the fingertip, and a phone-width desktop window should keep the dense
+     bar this header is designed around. */
+  @media (pointer: coarse) {
+    .account__power { position: relative; }
+    .account__power::after { content: ""; position: absolute; inset: -9px; }
+  }
+}

@@ -1,0 +1,97 @@
+@layer components {
+  /* The withdrawal denomination picker, "Private amounts".
+   *
+   * Chips rather than a `<select>`: the whole point is that the set is small,
+   * shared and worth reading at a glance, and a collapsed control hides it. A
+   * wrapping row, since a ladder runs to about fifteen entries at its widest and
+   * a horizontal scroller would put the largest ones out of sight. */
+  .den {
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .den__hdr {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-12);
+  }
+  .den__t {
+    font-size: var(--fs-15);
+    font-weight: 500;
+    color: var(--fg);
+  }
+
+  /* The verdict badge (`.badge`), a size up from the swap venue's. */
+  .den__tag {
+    font-size: var(--fs-13);
+    letter-spacing: 0;
+  }
+
+  /* A `<fieldset>`, so the chips group as the single choice they are. The UA
+     border, padding and `min-inline-size: min-content` all have to go — the last
+     would otherwise stop the row wrapping. */
+  .den__opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-8);
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-width: 0;
+  }
+  .den__opt {
+    display: inline-flex;
+    align-items: center;
+    /* 44 rather than the 39 drawn: the touch floor holds on desktop too. */
+    min-height: 44px;
+    padding: 9px 15px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--fg-dim);
+    font-family: var(--mono);
+    font-size: var(--fs-14);
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color var(--dur-120) var(--ease-soft), color var(--dur-120) var(--ease-soft),
+      background var(--dur-120) var(--ease-soft);
+  }
+  .den__opt:hover {
+    border-color: var(--accent-dim);
+    color: var(--fg);
+  }
+  .den__opt:focus-visible {
+    outline: var(--ring);
+    outline-offset: 2px;
+  }
+  .den__opt--chosen,
+  .den__opt--chosen:hover {
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.1);
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* The denomination the notice names. Dashed rather than filled, so it reads as
+     an offer next to the solid ring the current choice carries. */
+  .den__opt--suggested {
+    border-style: dashed;
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  .den__hint {
+    font-size: var(--fs-14);
+    line-height: 1.55;
+    color: var(--fg-mute);
+  }
+
+  /* Phones: 44px chips, a tighter row, and no hint line. */
+  @media (max-width: 480px) {
+    .den { gap: 9px; }
+    .den__tag { padding: 3px 9px; font-size: var(--fs-12); }
+    .den__opts { gap: 7px; }
+    .den__opt { padding: 10px 14px; }
+    .den__hint { display: none; }
+  }
+}

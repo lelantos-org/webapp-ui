@@ -1,0 +1,67 @@
+@layer features {
+  /* Shielded address. A quiet accent tint: reference material at the foot of
+     the page, not a masthead. */
+  .acct {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--sp-10) var(--sp-16);
+    padding: var(--sp-16) var(--sp-20);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: rgba(var(--accent-rgb), 0.05);
+  }
+  .acct__main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .acct__lbl {
+    margin: 0;
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .acct__addr {
+    margin: 0;
+    font-size: var(--fs-15);
+    line-height: 1.45;
+    color: var(--fg-dim);
+    overflow-wrap: anywhere;
+  }
+  .acct__actions { display: flex; gap: var(--sp-8); }
+  .acct__btn {
+    width: 44px;
+    height: 44px;
+    background: transparent;
+    transition: color var(--dur-120) var(--ease-soft), border-color var(--dur-120) var(--ease-soft);
+  }
+  .acct__btn[aria-expanded="true"] { color: var(--accent); border-color: var(--accent); }
+  .acct__qr {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: var(--sp-6);
+    justify-items: center;
+    padding: var(--sp-12);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+  }
+  .acct__qr p {
+    margin: 0;
+    font-size: var(--fs-12);
+    text-align: center;
+    color: var(--fg-mute);
+  }
+
+  /* Narrow: one line, ellipsised — the copy button is how it leaves the page. */
+  @media (max-width: 720px) {
+    .acct__addr {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow-wrap: normal;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .acct { gap: var(--sp-8) var(--sp-12); padding: var(--sp-14) var(--sp-16); }
+    .acct__lbl { font-size: var(--fs-13); }
+    .acct__addr { font-size: var(--fs-13); }
+  }
+}

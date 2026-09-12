@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root {
+      --bg: #14110E; --bg-1: #1C1815; --bg-2: #241F1A; --bg-3: #2E2822;
+      --fg: #F5F1E8; --fg-dim: #BEB5A6; --fg-mute: #9E9486;
+      --line: #2A241E; --line-strong: #3A332B;
+      --accent: #E0794A; --accent-2: #EA8C60; --accent-dim: #7A4526;
+      --warn: #E0A93F; --err: #E67A6E;
+      --display: "Newsreader", Georgia, "Times New Roman", serif;
+      --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: "zero" 1; }
+  </style>
+</helmet>
+
+
+<div style="min-height: 900px; display: flex; flex-direction: column; background:
+  radial-gradient(900px 420px at 50% -10%, rgba(224,121,74,0.14), transparent 62%), #14110E;">
+
+  <!-- header -->
+  <div style="display: flex; align-items: center; gap: 16px; padding: 14px 32px; border-bottom: 1px solid var(--line); background: rgba(28,24,21,0.78);">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:13px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 2px; font-size: 14px;">
+        <span style="width: 16px; height: 16px; border-radius: 50%; background: #2151f5; display: inline-grid; place-items: center; font-size: 9px; font-weight: 700; color: #fff;">B</span>
+        <span>Base</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 7px 8px 7px 14px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--bg-2); font-size: 14px;">
+        <span class="num" style="color: var(--fg-dim);">0x7a4f…c2e1</span>
+        <span style="width: 26px; height: 26px; border-radius: 50%; background: var(--bg-3); display: inline-grid; place-items: center; color: var(--fg-mute);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div style="flex: 1; width: 100%; max-width: 560px; margin: 0 auto; padding: 36px 24px 48px; display: flex; flex-direction: column; gap: 18px;">
+
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <span style="width: 40px; height: 40px; border: 1px solid var(--line-strong); background: var(--bg-1); display: inline-grid; place-items: center; color: var(--fg-dim); flex: none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </span>
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <span style="font-family: var(--display); font-size: 26px; font-weight: 600;">Choose an asset</span>
+        <span style="font-size: 14px; color: var(--fg-mute);">Everything the pool accepts on Base</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;"><div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--accent);background:rgba(224,121,74,0.06);min-height:44px;"><span style="width:32px;height:32px;border-radius:4px;background:rgba(224,169,63,0.13);border:1px solid rgba(224,169,63,0.34);color:#E0A93F;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">ETH</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">ETH</span><span class="num" style="font-size:13px;color:var(--fg-mute);">You hold 2.4180</span></div><span style="font-size:14px;color:var(--fg-mute);">—</span><span style="width:20px;height:20px;border-radius:50%;background:var(--accent);display:inline-grid;place-items:center;flex:none;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#14110E" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span></div><div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--line);background:var(--bg-1);min-height:44px;"><span style="width:32px;height:32px;border-radius:4px;background:rgba(122,160,180,0.16);border:1px solid rgba(122,160,180,0.42);color:#8FB6C9;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">USDC</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">USDC</span><span class="num" style="font-size:13px;color:var(--fg-mute);">You hold 8,420.00</span></div><span style="display:flex;flex-direction:column;gap:1px;align-items:flex-end;"><span class="num" style="font-size:15px;font-weight:600;color:var(--accent);">4.18% / yr</span><span style="font-size:12px;color:var(--fg-mute);">measured over 30d</span></span></div><div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--line);background:var(--bg-1);min-height:44px;"><span style="width:32px;height:32px;border-radius:4px;background:rgba(200,160,90,0.14);border:1px solid rgba(200,160,90,0.34);color:#D2A85C;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">DAI</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">DAI</span><span style="font-size:13px;color:var(--fg-mute);">Not held yet</span></div><span style="display:flex;flex-direction:column;gap:1px;align-items:flex-end;"><span class="num" style="font-size:15px;font-weight:600;color:var(--accent);">3.91% / yr</span><span style="font-size:12px;color:var(--fg-mute);">measured over 30d</span></span></div><div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--line);background:var(--bg-1);min-height:44px;"><span style="width:32px;height:32px;border-radius:4px;background:rgba(120,175,150,0.14);border:1px solid rgba(120,175,150,0.34);color:#7FB49B;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">USDT</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">USDT</span><span style="font-size:13px;color:var(--fg-mute);">Not held yet</span></div><span style="font-size:14px;color:var(--fg-mute);">—</span></div><div style="display:grid;grid-template-columns:auto 1fr auto auto;gap:13px;align-items:center;padding:14px 16px;border:1px solid var(--line);background:var(--bg-1);min-height:44px;"><span style="width:32px;height:32px;border-radius:4px;background:rgba(198,138,74,0.15);border:1px solid rgba(198,138,74,0.36);color:#C68A4A;display:inline-grid;place-items:center;font-size:10px;font-weight:700;flex:none;">WBTC</span><div style="display:flex;flex-direction:column;gap:2px;min-width:0;"><span style="font-size:15px;font-weight:600;">WBTC</span><span class="num" style="font-size:13px;color:var(--fg-mute);">You hold 0.0094</span></div><span style="display:flex;flex-direction:column;gap:1px;align-items:flex-end;"><span class="num" style="font-size:15px;font-weight:600;color:var(--warn);">paused</span><span style="font-size:12px;color:var(--fg-mute);">still fully backed</span></span></div></div>
+
+    <div style="display: flex; flex-direction: column; gap: 9px; padding: 16px 18px; border: 1px solid var(--line); background: var(--bg-2);">
+      <span style="font-size: 14px; color: var(--fg-dim); line-height: 1.65;">
+        A rate is what that venue returned over the window shown, net of the pool&rsquo;s cut. It is an estimate of what it pays — not a promise, and not what you will earn, which depends on when you arrive.
+      </span>
+      <span style="font-size: 14px; color: var(--fg-mute); line-height: 1.65;">
+        A dash means the rate cannot be measured, which is not the same as earning nothing. The order here is the registry&rsquo;s own — nothing on this screen is ranked or recommended.
+      </span>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

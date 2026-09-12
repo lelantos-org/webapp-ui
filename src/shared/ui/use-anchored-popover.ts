@@ -47,13 +47,12 @@ export interface AnchoredPopover<A extends HTMLElement, F extends HTMLElement> {
   style: CSSProperties;
 }
 
-/**
- * @param open whether the floating element is rendered. Placement is dropped
- * when it is not, so the next open measures rather than reusing stale
- * coordinates.
- * @param onDismiss called on a pointer press outside both elements. Read through
- * a ref, so a fresh closure each render does not re-subscribe the listeners.
- */
+/// `open` is whether the floating element is rendered. Placement is dropped
+/// when it is not, so the next open measures rather than reusing stale
+/// coordinates.
+///
+/// `onDismiss` is called on a pointer press outside both elements. Read through
+/// a ref, so a fresh closure each render does not re-subscribe the listeners.
 export function useAnchoredPopover<A extends HTMLElement, F extends HTMLElement>(
   open: boolean,
   onDismiss: () => void,

@@ -1,0 +1,12 @@
+@layer primitives {
+  .err {
+    color: var(--err);
+    border: 1px solid rgba(var(--err-rgb),0.25);
+    background: rgba(var(--err-rgb),0.06);
+    padding: 9px var(--sp-14);
+    border-radius: var(--radius);
+    margin-bottom: var(--sp-12);
+    font-family: var(--sans);
+    font-size: var(--fs-13);
+  }
+}

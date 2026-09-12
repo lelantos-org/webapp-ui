@@ -1,15 +1,17 @@
 import { type ReactNode, useEffect } from "react";
 import { useLocation } from "react-router-dom";
-import { describeError } from "@/shared/lib/errors";
+import { rawMessage, userMessage } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
+import { SESSION_KEYS } from "@/shared/lib/storage-keys";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
+import { ErrorCard } from "@/shared/ui/ErrorCard";
 
 const log = createLogger("route-boundary");
 
 /// Session key marking that a reload was already attempted for a chunk error.
 /// Without it, a chunk that is genuinely missing — a bad deploy rather than a
 /// stale one — would reload indefinitely.
-const RELOADED_KEY = "lelantos:chunk-reload";
+const RELOADED_KEY = SESSION_KEYS.chunkReload;
 
 /// True for the failure a `React.lazy` import throws when its hashed chunk is
 /// no longer on the server.
@@ -17,7 +19,7 @@ const RELOADED_KEY = "lelantos:chunk-reload";
 /// Matched on message text because there is no typed error: browsers report a
 /// dynamic-import failure as a plain `TypeError`, worded differently per engine.
 function isChunkLoadError(error: unknown): boolean {
-  const msg = describeError(error);
+  const msg = rawMessage(error);
   return (
     /Failed to fetch dynamically imported module/i.test(msg) ||
     /error loading dynamically imported module/i.test(msg) ||
@@ -59,9 +61,9 @@ function markReloaded(): void {
 /// since it re-renders the subtree that threw.
 ///
 /// Uses `resetKey` rather than `key`. Keying the boundary on the location would
-/// remount everything below it on every navigation, tearing down `HomeLayout`,
-/// replaying its entrance animation, re-firing the route `<Suspense>` fallback
-/// and refetching balances. `resetKey` drops only the error.
+/// remount everything below it on every navigation, tearing down `Home` or the
+/// `ActionScreen`, replaying its entrance animation, re-firing the route
+/// `<Suspense>` fallback and refetching balances. `resetKey` drops only the error.
 export function RouteErrorBoundary({ children }: { children: ReactNode }) {
   const { key } = useLocation();
   return (
@@ -72,22 +74,17 @@ export function RouteErrorBoundary({ children }: { children: ReactNode }) {
           return <ChunkReload error={error} />;
         }
         return (
-          <div className="card m-20">
-            <div className="card__hdr">
-              <h2 className="card__t">This page failed to load</h2>
+          <ErrorCard title="This page failed to load">
+            <div className="err">{userMessage(error)}</div>
+            <div className="row">
+              <button type="button" className="btn" onClick={reset}>
+                try again
+              </button>
+              <button type="button" className="btn" onClick={() => window.location.reload()}>
+                reload
+              </button>
             </div>
-            <div className="stack stack--md">
-              <div className="err">{describeError(error)}</div>
-              <div className="row">
-                <button type="button" className="btn" onClick={reset}>
-                  try again
-                </button>
-                <button type="button" className="btn" onClick={() => window.location.reload()}>
-                  reload
-                </button>
-              </div>
-            </div>
-          </div>
+          </ErrorCard>
         );
       }}
     >

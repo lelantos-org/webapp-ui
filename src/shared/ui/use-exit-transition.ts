@@ -12,17 +12,15 @@ export interface ExitTransition {
   exit(done: () => void): void;
 }
 
-/**
- * A parent that renders `{open ? <Modal /> : null}` tears the subtree down on
- * the same frame the close callback fires, so an exit animation never gets to
- * run. This inverts the order: flip the class first, call back afterwards.
- *
- * A timer rather than `animationend`: that event bubbles, so any descendant's
- * own animation ends the exit early, and it never fires at all when reduced
- * motion disables the animation being waited on.
- *
- * @param durationMs must match the CSS animation it is pairing with.
- */
+/// A parent that renders `{open ? <Modal /> : null}` tears the subtree down on
+/// the same frame the close callback fires, so an exit animation never gets to
+/// run. This inverts the order: flip the class first, call back afterwards.
+///
+/// A timer rather than `animationend`: that event bubbles, so any descendant's
+/// own animation ends the exit early, and it never fires at all when reduced
+/// motion disables the animation being waited on.
+///
+/// `durationMs` must match the CSS animation it is pairing with.
 export function useExitTransition(durationMs: number): ExitTransition {
   const [exiting, setExiting] = useState(false);
   const started = useRef(false);

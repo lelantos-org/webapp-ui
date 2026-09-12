@@ -1,0 +1,10 @@
+@layer components {
+  /* `MaxNotice`: the ceiling sentence, then the reassurance a shade quieter. */
+  .maxnote__lead,
+  .maxnote__follow { display: block; }
+  .maxnote__lead { color: var(--fg-dim); }
+  .maxnote__follow {
+    margin-top: 3px;
+    color: var(--fg-mute);
+  }
+}

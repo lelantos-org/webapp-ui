@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Public+Sans:wght@300..900&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&family=Newsreader:opsz,wght@6..72,300..700&display=swap">
+  <style>
+    :root{
+      --bg:#14110E;--bg-1:#1C1815;--bg-2:#241F1A;--bg-3:#2E2822;
+      --fg:#F5F1E8;--fg-dim:#BEB5A6;--fg-mute:#9E9486;
+      --line:#2A241E;--line-strong:#3A332B;
+      --accent:#E0794A;--warn:#E0A93F;--err:#E67A6E;
+      --sans:"Public Sans",-apple-system,Arial,sans-serif;
+      --mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+    .num{font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;}
+    .lbl{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--fg-mute);}
+    .card{border:1px solid var(--line-strong);background:var(--bg-1);}
+  </style>
+</helmet>
+
+<div style="min-height:2020px;padding:0 0 46px;">
+  <div style="background:var(--accent);color:#14110E;padding:22px 40px;display:flex;align-items:center;justify-content:space-between;gap:20px;">
+    <span style="display:inline-flex;align-items:center;gap:16px;"><svg width="34" height="34" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="#14110E"/><circle cx="6.5" cy="25.5" r="4" fill="#14110E"/><circle cx="25.5" cy="25.5" r="4" fill="#14110E"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="#14110E" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:22px;font-weight:600;letter-spacing:.02em;">LELANTOS</span></span>
+    <span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:12px;font-weight:500;letter-spacing:.1em;opacity:.7;">IDENTITY · FINAL</span>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:34px 40px 0;display:flex;flex-direction:column;gap:24px;">
+
+    <div class="card" style="padding:60px 40px;display:grid;place-items:center;"><span style="display:inline-flex;align-items:center;gap:32px;color:var(--fg);"><svg width="74" height="74" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--fg)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--fg)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--fg)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--fg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:45px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span></span></div>
+
+    <div style="display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:start;">
+      <div class="card" style="padding:22px;"><svg width="280" height="280" viewBox="0 0 32 32" style="display:block;">
+  <defs><pattern id="gr" width="4" height="4" patternUnits="userSpaceOnUse"><path d="M4 0 L0 0 0 4" fill="none" stroke="var(--line)" stroke-width="0.25"/></pattern></defs>
+  <rect width="32" height="32" fill="url(#gr)"/>
+  <path d="M16 6.5 L6.5 25.5 M16 6.5 L25.5 25.5" stroke="var(--fg-mute)" stroke-width="0.35" stroke-dasharray="1 1"/>
+  <circle cx="16" cy="6.5" r="7.4" fill="none" stroke="var(--err)" stroke-width="0.35" stroke-dasharray="0.8 0.8"/>
+  <circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  <text x="16" y="18.4" font-size="1.5" fill="var(--err)" text-anchor="middle" font-family="monospace">edges stop 7.4u short</text>
+  <text x="16" y="31.2" font-size="1.5" fill="var(--fg-mute)" text-anchor="middle" font-family="monospace">r=4 · stroke 2.6 · 32u grid</text>
+</svg></div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div>
+          <span class="lbl" style="display:block;margin-bottom:8px;">The mark</span>
+          <p style="margin:0;font-size:16px;color:var(--fg-dim);line-height:1.7;">
+            A Merkle root and two leaves on a 32-unit grid. Nodes are <span class="num">r=4</span>; the edges run at the angle between node centres, <span class="num">stroke 2.6</span>, and stop <span class="num">7.4u</span> short of the root. Everything else follows from those three numbers.
+          </p>
+        </div>
+        <div>
+          <span class="lbl" style="display:block;margin-bottom:8px;">Why this one</span>
+          <p style="margin:0;font-size:16px;color:var(--fg-dim);line-height:1.7;">
+            It is the structure the wallet actually keeps — <span class="num">tree-store.ts</span> mirrors a Merkle tree locally. The tree is public; which leaf is yours is not. It reads as crypto on sight without a hexagon or a gradient, and it replaces the old icon on that icon's own terms: the same node triad, with the shield gone.
+          </p>
+        </div>
+        <div>
+          <span class="lbl" style="display:block;margin-bottom:8px;">The wordmark</span>
+          <p style="margin:0;font-size:16px;color:var(--fg-dim);line-height:1.7;">
+            Martian Mono 600, <span class="num">+0.02em</span>, uppercase. An instrumentation face — wide, squared, systematic — set at <span class="num">0.62×</span> the mark's height, with a gap of <span class="num">0.44×</span> between them. Barely used anywhere: #875 in the Google catalogue.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:24px;align-items:start;">
+      <div class="card">
+        <div style="padding:15px 22px;border-bottom:1px solid var(--line);"><span class="lbl">Lockups</span></div>
+        <div style="padding:30px 26px;display:flex;flex-direction:column;gap:26px;">
+          <div><span style="display:inline-flex;align-items:center;gap:20px;color:var(--fg);"><svg width="46" height="46" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--fg)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--fg)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--fg)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--fg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:28px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span></span></div>
+          <div style="height:1px;background:var(--line);"></div>
+          <div style="display:flex;flex-direction:column;gap:16px;">
+            <div><span style="display:inline-flex;align-items:center;gap:12px;color:var(--fg);"><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--fg)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--fg)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--fg)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--fg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:17px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:8px;font-weight:400;letter-spacing:.16em;color:var(--fg-mute);padding-left:1px;">WALLET</span></span></div>
+            <div><span style="display:inline-flex;align-items:center;gap:12px;color:var(--fg);"><svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--fg)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--fg)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--fg)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--fg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:17px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:8px;font-weight:400;letter-spacing:.16em;color:var(--fg-mute);padding-left:1px;">EXPLORER</span></span></div>
+          </div>
+          <div style="height:1px;background:var(--line);"></div>
+          <div style="display:flex;align-items:center;gap:34px;flex-wrap:wrap;">
+            <div><span style="display:inline-flex;align-items:center;gap:8px;color:var(--fg);"><svg width="19" height="19" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--fg)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--fg)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--fg)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--fg)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:11px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span></span></div><div><span style="display:inline-flex;align-items:center;gap:6px;color:var(--fg-mute);"><svg width="15" height="15" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--fg-mute)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--fg-mute)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--fg-mute)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--fg-mute)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:9px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span></span></div>
+            <div style="display:flex;align-items:flex-end;gap:18px;">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><svg width="16" height="16" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span class="num" style="font-size:11px;color:var(--fg-mute);">16</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span class="num" style="font-size:11px;color:var(--fg-mute);">24</span></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:6px;"><svg width="32" height="32" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span class="num" style="font-size:11px;color:var(--fg-mute);">32</span></div>
+            </div>
+          </div>
+          <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">Clear space on every side equals the node radius. Below 16px use the mark alone — the wordmark stops being legible before the mark does.</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="padding:15px 22px;border-bottom:1px solid var(--line);"><span class="lbl">Colour and tiles</span></div>
+        <div style="padding:26px;display:flex;flex-direction:column;gap:20px;">
+          <div style="display:flex;gap:14px;flex-wrap:wrap;">
+            <div style="width:92px;height:92px;border-radius:20px;background:#14110E;display:grid;place-items:center;"><svg width="47" height="47" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="#E0794A"/><circle cx="6.5" cy="25.5" r="4" fill="#E0794A"/><circle cx="25.5" cy="25.5" r="4" fill="#E0794A"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="#E0794A" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg></div><div style="width:92px;height:92px;border-radius:20px;background:#E0794A;display:grid;place-items:center;"><svg width="47" height="47" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="#14110E"/><circle cx="6.5" cy="25.5" r="4" fill="#14110E"/><circle cx="25.5" cy="25.5" r="4" fill="#14110E"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="#14110E" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg></div><div style="width:92px;height:92px;border-radius:20px;background:#FFFDF8;display:grid;place-items:center;"><svg width="47" height="47" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="#14110E"/><circle cx="6.5" cy="25.5" r="4" fill="#14110E"/><circle cx="25.5" cy="25.5" r="4" fill="#14110E"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="#14110E" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg></div>
+          </div>
+          <div style="display:flex;gap:9px;">
+            <div style="flex:1;"><div style="height:42px;background:#E0794A;"></div><div class="num" style="font-size:11px;color:var(--fg-mute);margin-top:5px;">#E0794A</div></div>
+            <div style="flex:1;"><div style="height:42px;background:#14110E;border:1px solid var(--line-strong);"></div><div class="num" style="font-size:11px;color:var(--fg-mute);margin-top:5px;">#14110E</div></div>
+            <div style="flex:1;"><div style="height:42px;background:#FFFDF8;"></div><div class="num" style="font-size:11px;color:var(--fg-mute);margin-top:5px;">#FFFDF8</div></div>
+          </div>
+          <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">One flat ink, always. The mark never carries two colours at once.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="padding:15px 22px;border-bottom:1px solid var(--line);"><span class="lbl">Never</span></div>
+      <div style="padding:26px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;">
+        <div style="display:flex;flex-direction:column;gap:9px;align-items:center;text-align:center;"><div style="width:100%;padding:22px;border:1px solid var(--err);background:rgba(224,104,92,0.05);display:grid;place-items:center;"><svg width="60" height="60" viewBox="0 0 32 32"><circle cx="16" cy="6.5" r="4" fill="var(--fg-mute)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--fg-mute)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--fg-mute)"/><path d="M9 21 L14 10 M23 21 L18 10" stroke="var(--fg-mute)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg></div><span style="font-size:13px;color:var(--fg-mute);line-height:1.5;">Do not close the edges to the root. The gap is the whole idea.</span></div>
+        <div style="display:flex;flex-direction:column;gap:9px;align-items:center;text-align:center;"><div style="width:100%;padding:22px;border:1px solid var(--err);background:rgba(224,104,92,0.05);display:grid;place-items:center;"><svg width="60" height="60" viewBox="0 0 32 32"><path d="M16 3 L28 7.5 V17 C28 23 22.5 27 16 29 C9.5 27 4 23 4 17 V7.5 Z" fill="none" stroke="var(--fg-mute)" stroke-width="1.6"/><g transform="translate(16 17) scale(0.46) translate(-16 -16)"><circle cx="16" cy="6.5" r="4" fill="var(--fg-mute)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--fg-mute)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--fg-mute)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--fg-mute)" stroke-width="2.6" stroke-linecap="round" fill="none"/></g></svg></div><span style="font-size:13px;color:var(--fg-mute);line-height:1.5;">Do not put it back in a shield. That is the symbol it replaces.</span></div>
+        <div style="display:flex;flex-direction:column;gap:9px;align-items:center;text-align:center;"><div style="width:100%;padding:22px;border:1px solid var(--err);background:rgba(224,104,92,0.05);display:grid;place-items:center;"><span style="font-family:var(--display),Georgia,serif;font-size:23px;font-weight:600;color:var(--fg-mute);">Lelantos</span></div><span style="font-size:13px;color:var(--fg-mute);line-height:1.5;">Do not set the wordmark in the serif. Newsreader is for balances, not the logo.</span></div>
+        <div style="display:flex;flex-direction:column;gap:9px;align-items:center;text-align:center;"><div style="width:100%;padding:22px;border:1px solid var(--err);background:rgba(224,104,92,0.05);display:grid;place-items:center;"><svg width="60" height="60" viewBox="0 0 32 32"><defs><linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E0794A"/><stop offset="1" stop-color="#7b5fc9"/></linearGradient></defs><circle cx="16" cy="6.5" r="4" fill="url(#bg2)"/><circle cx="6.5" cy="25.5" r="4" fill="url(#bg2)"/><circle cx="25.5" cy="25.5" r="4" fill="url(#bg2)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="url(#bg2)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg></div><span style="font-size:13px;color:var(--fg-mute);line-height:1.5;">Do not add a gradient or a second weight.</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="background:var(--bg-2);padding:24px 26px;">
+      <span class="lbl" style="display:block;margin-bottom:12px;">Files, and one thing still open</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:26px;">
+        <div>
+          <div style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:15px;font-weight:600;margin-bottom:7px;">Delivered</div>
+          <div class="num" style="font-size:14px;color:var(--fg-dim);line-height:1.9;">
+            icon.svg &nbsp;— app icon, ember on ink, 112 radius<br>
+            icon-maskable.svg &nbsp;— 80% safe zone, full bleed<br>
+            mark.svg &nbsp;— transparent, inherits currentColor
+          </div>
+          <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;display:block;margin-top:9px;">Sitting in the scratchpad, not in the repo. Say the word and they go into <span class="num">webapp-ui/public/</span>.</span>
+        </div>
+        <div>
+          <div style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:15px;font-weight:600;margin-bottom:7px;">Still open</div>
+          <span style="font-size:15px;color:var(--fg-dim);line-height:1.65;">
+            The shielded-state glyph inside the product is still a filled shield — the small mark beside “Shielded balance”. The logo has dropped the shield, so keeping one as a state icon is now inconsistent. It should probably become a filled node, but that changes UI meaning rather than branding, so it is left for you to call.
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

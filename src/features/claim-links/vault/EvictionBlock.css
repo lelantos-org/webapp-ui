@@ -1,0 +1,18 @@
+@layer features {
+  /* The eviction block's two ways out. */
+  .evict__actions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-8) var(--sp-16);
+  }
+  .evict__link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: var(--fs-14);
+    color: var(--err-strong);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+}

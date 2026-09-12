@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root {
+      --bg: #14110E; --bg-1: #1C1815; --bg-2: #241F1A; --bg-3: #2E2822;
+      --fg: #F5F1E8; --fg-dim: #BEB5A6; --fg-mute: #9E9486;
+      --line: #2A241E; --line-strong: #3A332B;
+      --accent: #E0794A; --accent-2: #EA8C60; --accent-dim: #7A4526;
+      --warn: #E0A93F; --err: #E67A6E;
+      --display: "Newsreader", Georgia, "Times New Roman", serif;
+      --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: "zero" 1; }
+    .shell { min-height: 900px; display: flex; flex-direction: column; background: radial-gradient(900px 420px at 50% -10%, rgba(224,121,74,0.14), transparent 62%), #14110E; }
+    .hdr { display: flex; align-items: center; gap: 16px; padding: 14px 32px; border-bottom: 1px solid var(--line); background: rgba(28,24,21,0.78); }
+    .pill { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 2px; font-size: 14px; }
+    .card { border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-1); padding: 26px 24px 24px; display: flex; flex-direction: column; gap: 18px; }
+    .rule { height: 1px; background: var(--line); }
+    .cta { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 17px; border-radius: 4px; background: var(--accent); color: #14110E; font-size: 17px; font-weight: 600; box-shadow: 0 6px 22px rgba(224,121,74,0.3); min-height: 44px; }
+    .tokpill { display: flex; align-items: center; gap: 9px; padding: 9px 16px 9px 10px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--bg-2); flex: none; }
+    .mark { border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; flex: none; }
+    .amt { font-family: var(--display); font-size: 46px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; flex: 1; min-width: 0; }
+    .back { width: 40px; height: 40px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--bg-1); display: inline-grid; place-items: center; color: var(--fg-dim); flex: none; }
+    .h1 { font-family: var(--display); font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+    .muted { color: var(--fg-mute); }
+    .sub { font-size: 14px; color: var(--fg-mute); }
+  </style>
+</helmet>
+
+<div class="shell">
+  <div class="hdr">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:13px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span>
+    </div>
+  </div>
+  <div style="flex: 1; width: 100%; max-width: 620px; margin: 0 auto; padding: 44px 24px 48px; display: flex; flex-direction: column; gap: 24px;">
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;">
+      <span style="width: 62px; height: 62px; border-radius: 4px; background: rgba(224,121,74,0.12); border: 1px solid rgba(224,121,74,0.34); display: inline-grid; place-items: center;">
+        <svg width="30" height="30" viewBox="0 0 512 512" aria-hidden="true"><path d="M256 88 L400 144 V276 C400 356 336 408 256 438 C176 408 112 356 112 276 V144 Z" fill="rgba(224,121,74,0.18)" stroke="#E0794A" stroke-width="32" stroke-linejoin="round"/><circle cx="256" cy="228" r="26" fill="#E0794A"/><path d="M256 254 L256 320" stroke="#E0794A" stroke-width="22" stroke-linecap="round"/></svg>
+      </span>
+      <span style="font-family: var(--display); font-size: 32px; font-weight: 600; letter-spacing: -0.015em;">Someone sent you funds</span>
+      <span style="font-size: 16px; color: var(--fg-dim); max-width: 420px;">Check what's here, then claim it. The funds land in your own shielded wallet — private from the moment they arrive.</span>
+    </div>
+
+    <!-- progress -->
+    <div style="display: flex; align-items: center; gap: 0;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 7px; flex: 1;">
+        <span style="width: 26px; height: 26px; border-radius: 50%; background: var(--accent); display: inline-grid; place-items: center; color: #14110E;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+        <span style="font-size: 13px; color: var(--fg-dim);">Link read</span>
+      </div>
+      <span style="height: 2px; background: var(--accent); flex: 1; margin-top: -20px;"></span>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 7px; flex: 1;">
+        <span style="width: 26px; height: 26px; border-radius: 50%; background: var(--accent); display: inline-grid; place-items: center; color: #14110E;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+        <span style="font-size: 13px; color: var(--fg-dim);">Wallet connected</span>
+      </div>
+      <span style="height: 2px; background: var(--accent); flex: 1; margin-top: -20px;"></span>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 7px; flex: 1;">
+        <span style="width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--accent); background: rgba(224,121,74,0.14); display: inline-grid; place-items: center; color: var(--accent); font-size: 12px; font-weight: 600;">3</span>
+        <span style="font-size: 13px; font-weight: 600; color: var(--accent);">Claim</span>
+      </div>
+    </div>
+
+    <!-- claimable -->
+    <div class="card" style="gap: 14px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+        <span style="font-size: 17px; font-weight: 600;">Waiting for you</span>
+        <span class="sub">2 assets</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 15px; padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-2);">
+        <span class="mark" style="width: 44px; height: 44px; border-radius: 4px; background: rgba(122,160,180,0.16); border: 1px solid rgba(122,160,180,0.42); color: #8FB6C9; font-size: 12px;">USDC</span>
+        <div style="display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0;">
+          <span class="num" style="font-size: 21px; font-weight: 600;">75.00 USDC</span>
+          <span class="sub">≈ $75.00</span>
+        </div>
+        <span class="cta" style="padding: 13px 26px; font-size: 15px; box-shadow: none;">Claim</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 15px; padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-2);">
+        <span class="mark" style="width: 44px; height: 44px; border-radius: 4px; background: rgba(224,169,63,0.13); border: 1px solid rgba(224,169,63,0.34); color: #E0A93F; font-size: 13px;">ETH</span>
+        <div style="display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0;">
+          <span class="num" style="font-size: 21px; font-weight: 600;">0.0500 ETH</span>
+          <span class="sub">≈ $132.45</span>
+        </div>
+        <span class="cta" style="padding: 13px 26px; font-size: 15px; box-shadow: none;">Claim</span>
+      </div>
+
+      <div class="rule"></div>
+
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span class="sub" style="flex: none;">Claiming to</span>
+        <span class="num" style="font-size: 14px; color: var(--fg-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">lel1q9x8fk2mzp4v7n0shjr6cdyw3aqt5eu…</span>
+      </div>
+    </div>
+
+    <p style="margin: 0; text-align: center; font-size: 14px; color: var(--fg-mute);">The claim code is stripped from the address bar the moment this page opens.</p>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

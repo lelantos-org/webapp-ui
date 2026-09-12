@@ -1,0 +1,147 @@
+@layer features {
+  /* Welcome: the pitch on the left, the wallet card on the right; stacked on
+     narrow screens with the card after the pitch. */
+  .welcome {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    gap: 40px;
+    align-items: center;
+    width: 100%;
+    max-width: 1080px;
+    min-height: 60vh;
+    min-height: 60dvh;
+    margin: 0 auto;
+    padding: 12px 8px 28px;
+  }
+  .welcome__pitch {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-22);
+    min-width: 0;
+  }
+  .welcome__eyebrow {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: var(--sp-8);
+    padding: var(--sp-6) var(--sp-14);
+    border: 1px solid rgba(var(--accent-rgb), 0.4);
+    border-radius: var(--radius-sm);
+    background: rgba(var(--accent-rgb), 0.08);
+    font-size: var(--fs-14);
+    color: var(--accent);
+  }
+  .welcome__eyebrow-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-round);
+    background: var(--accent);
+  }
+  .welcome__t {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 54px;
+    font-weight: 600;
+    line-height: 1.06;
+    letter-spacing: -0.03em;
+    color: var(--fg);
+  }
+  .welcome__t-accent { color: var(--accent); }
+  .welcome__lead {
+    margin: 0;
+    max-width: 460px;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--fg-dim);
+  }
+  .welcome__cta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-14);
+  }
+  .welcome__cta-btn {
+    align-self: flex-start;
+    width: auto;
+    padding: 17px 34px;
+  }
+  .welcome__hint {
+    margin: 0;
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .welcome__points {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 26px;
+    margin: 0;
+    padding: var(--sp-10) 0 0;
+    list-style: none;
+  }
+  .welcome__points li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .welcome__points strong { font-size: var(--fs-15); font-weight: 600; color: var(--fg); }
+  .welcome__points span { font-size: var(--fs-14); color: var(--fg-mute); }
+
+  /* THE WALLET CARD — the picker itself, or whatever the connection is doing. */
+  .welcome__card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-14);
+    min-width: 0;
+    padding: var(--sp-24);
+    box-shadow: var(--shadow-card);
+  }
+  .welcome__card-hdr { display: flex; flex-direction: column; gap: 3px; }
+  .welcome__card-t {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  /* A state's title in its tone: text only. Not `.warn` (loses to the colour
+     above) or `.err` (the boxed error panel, border and all). */
+  .welcome__card-t--warn { color: var(--warn); }
+  .welcome__card-t--err { color: var(--err); }
+  .welcome__card-sub {
+    margin: 0;
+    font-size: var(--fs-14);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+  .welcome__card-warn {
+    margin: 0;
+    font-size: var(--fs-14);
+    line-height: 1.5;
+  }
+  .welcome__busy {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-14);
+  }
+  .welcome__busy .spinner { flex: none; margin-top: 4px; }
+
+  @media (max-width: 900px) {
+    .welcome {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 32px;
+      max-width: 560px;
+      align-items: start;
+    }
+    .welcome__t { font-size: 44px; }
+  }
+
+  @media (max-width: 480px) {
+    .welcome { gap: var(--sp-24); padding: var(--sp-10) var(--sp-8) var(--sp-20); }
+    .welcome__pitch { gap: var(--sp-18); }
+    .welcome__t { font-size: 36px; }
+    .welcome__lead { font-size: var(--fs-16); }
+    .welcome__cta-btn { align-self: stretch; width: 100%; }
+    .welcome__points { gap: var(--sp-14) var(--sp-22); }
+    .welcome__card { padding: var(--sp-18) var(--sp-16); box-shadow: none; }
+  }
+}

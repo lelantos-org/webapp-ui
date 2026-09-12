@@ -9,7 +9,6 @@ coverage
 .env.local
 .vite
 tsconfig.tsbuildinfo
-dev-dist
 
 # Generated per build by the `linkHeaders` plugin in vite.config.ts.
 .nginx/

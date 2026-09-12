@@ -4,17 +4,25 @@
 // carries every registered asset with its symbol and decimals, so no explorer,
 // wallet, or per-token `symbol()` / `decimals()` round trip is needed.
 
+import { type AssetEntry, assetId, type WalletApi } from "@lelantos-org/sdk";
+import { DEFAULT_ASSET as SDK_DEFAULT_ASSET } from "@lelantos-org/sdk/wallet";
 import type { RegisteredAsset } from "@/config/chains";
 import { useActiveChainOrUndefined } from "@/features/chain";
 
-export type { RegisteredAsset, VenueRate } from "@/config/chains";
+/// The asset an op falls back to when none is named.
+///
+/// The SDK's own default rather than a second `1n`: an op submitted without an
+/// asset moves this one, so anything recorded or tagged about that op — the
+/// pending overlay, a claim link's vault record — has to name the same id or it
+/// describes a different asset from the one that moved.
+export const DEFAULT_ASSET: bigint = SDK_DEFAULT_ASSET;
 
-/// Asset a form starts on, and the id the pickers fall back to while the
-/// registry is empty or still loading.
+/// `DEFAULT_ASSET` in form spelling: the value a form starts on, and the id the
+/// pickers fall back to while the registry is empty or still loading.
 ///
 /// A string, matching a `<select>` value and the zod form schemas; `findAsset`
 /// parses it back to the `bigint` id.
-export const DEFAULT_ASSET_ID = "1";
+export const DEFAULT_ASSET_ID = DEFAULT_ASSET.toString();
 
 /// Assets registered on the active chain, lowest id first.
 ///
@@ -28,9 +36,9 @@ export const DEFAULT_ASSET_ID = "1";
 /// Shared empty result. A literal `[]` would produce a new array identity on
 /// every render while there is no active chain, invalidating any downstream
 /// `useMemo` or `useEffect` listing `assets` as a dependency.
-const NO_ASSETS: RegisteredAsset[] = [];
+const NO_ASSETS: readonly RegisteredAsset[] = [];
 
-export function useRegisteredAssets(): RegisteredAsset[] {
+export function useRegisteredAssets(): readonly RegisteredAsset[] {
   return useActiveChainOrUndefined()?.tokens ?? NO_ASSETS;
 }
 
@@ -54,4 +62,14 @@ function safeParseAssetId(s: string): bigint | undefined {
   } catch {
     return undefined;
   }
+}
+
+/// Read the on-chain registry entry for `asset`: the single boundary between the
+/// webapp's plain-bigint asset ids and the SDK's branded `AssetId`.
+///
+/// `ChainAdapter.fetchAsset` takes a branded `AssetId`, while the UI carries
+/// plain bigints from form state and the explorer registry. Branding happens
+/// here, so `assetId` validation has a single call site.
+export function fetchAssetEntry(wallet: WalletApi, asset: bigint): Promise<AssetEntry> {
+  return wallet.chain.fetchAsset(assetId(asset));
 }

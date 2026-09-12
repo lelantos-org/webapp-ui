@@ -1,0 +1,24 @@
+@layer features {
+  /* Shield, unavailable: the card shown in place of the form when the wallet
+     cannot deposit at all. */
+
+  .shield-off { gap: var(--sp-14); }
+  .shield-off__t {
+    margin: 0;
+    font-size: var(--fs-17);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .shield-off__p {
+    margin: 0;
+    font-size: var(--fs-14);
+    line-height: 1.55;
+    color: var(--fg-dim);
+  }
+  .shield-off__p--mute { color: var(--fg-mute); }
+
+  @media (max-width: 480px) {
+    /* The line under the setup card steps down a size. */
+    .screen-note { font-size: var(--fs-13); }
+  }
+}

@@ -1,4 +1,5 @@
 import { type IDBPDatabase, openDB } from "idb";
+import { IDB_NAME } from "@/shared/lib/storage-keys";
 
 /// Single `lelantos-wallet` database shared by the note, tree and nullifier
 /// stores.
@@ -12,7 +13,7 @@ import { type IDBPDatabase, openDB } from "idb";
 /// tab's upgrade the same way. `blocked` and `blocking` below handle that;
 /// without them the deadlock reappears as a wallet build that hangs on
 /// `deriving` with nothing logged.
-const DB_NAME = "lelantos-wallet";
+const DB_NAME = IDB_NAME;
 
 /// Bump on any schema change. History:
 ///   2 — notes + tree
@@ -44,7 +45,7 @@ let dbp: Promise<IDBPDatabase<WalletSchema>> | undefined;
 ///
 /// A distinct error type because the resolution is the user's rather than a
 /// retry: the other tab must close before this one can open.
-export class DatabaseBlockedError extends Error {
+class DatabaseBlockedError extends Error {
   constructor() {
     super("Another tab is using an older version of this wallet. Close it and reload.");
     this.name = "DatabaseBlockedError";

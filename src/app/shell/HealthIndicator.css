@@ -1,0 +1,79 @@
+@layer components {
+  .health {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    cursor: default;
+  }
+
+  /* The pill is the button, so the whole capsule is the hit area and the focus
+     ring draws round what is seen. */
+  .health__hit {
+    gap: var(--sp-8);
+    padding: var(--sp-8) var(--sp-14);
+    font: inherit;
+    font-size: var(--fs-14);
+    line-height: 1;
+    color: var(--fg-dim);
+    cursor: pointer;
+  }
+  .health__hit:focus-visible {
+    outline: var(--ring);
+    outline-offset: 2px;
+  }
+
+  @media (pointer: coarse) {
+    .health__hit { min-height: 44px; }
+  }
+  .health__dot {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: var(--radius-round);
+    display: inline-block;
+    transition: background var(--dur-200) var(--ease-soft), box-shadow var(--dur-200) var(--ease-soft);
+  }
+  .health__dot--sm {
+    width: 6px;
+    height: 6px;
+  }
+  .health__tooltip {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: var(--z-tooltip);
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 10px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-tooltip);
+    white-space: nowrap;
+    font-size: var(--fs-12);
+    pointer-events: none;
+  }
+  .health:hover .health__tooltip,
+  .health:focus-within .health__tooltip {
+    display: flex;
+  }
+  .health__row {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .health__label {
+    color: var(--fg);
+  }
+  .health__state {
+    color: var(--fg-mute);
+    margin-left: auto;
+  }
+
+  /* A mid-width window cannot hold three sentence-wide pills: the health pill
+     keeps its dot, and the sentence stays in its accessible name and tooltip. */
+  @media (max-width: 860px) {
+    .health__txt { display: none; }
+  }
+}

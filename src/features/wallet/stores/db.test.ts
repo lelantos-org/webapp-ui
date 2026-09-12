@@ -3,7 +3,7 @@
 // failure, and the app has no way back from it short of a reload.
 
 import "fake-indexeddb/auto";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 /// Set to make the next `openDB` reject; consumed on use.
 let failNextOpen: Error | undefined;
@@ -26,10 +26,6 @@ vi.mock("idb", async (importOriginal) => {
 beforeEach(() => {
   failNextOpen = undefined;
   vi.resetModules();
-});
-
-afterEach(() => {
-  vi.restoreAllMocks();
 });
 
 describe("walletDb", () => {

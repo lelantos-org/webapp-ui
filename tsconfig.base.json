@@ -1,0 +1,31 @@
+{
+  // Compiler settings every project shares. The projects themselves are
+  // `tsconfig.app.json` (the browser app and its tests) and `tsconfig.node.json`
+  // (build and test tooling), assembled by `tsconfig.json`.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    // An index can miss: `arr[i]` and `record[key]` read as `T | undefined`.
+    "noUncheckedIndexedAccess": true,
+    // `prop?: T` means "absent or T"; a key that may hold `undefined` says so.
+    "exactOptionalPropertyTypes": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "noUncheckedSideEffectImports": true,
+    "verbatimModuleSyntax": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "allowSyntheticDefaultImports": true,
+    "useDefineForClassFields": true,
+    "noEmit": true
+  }
+}

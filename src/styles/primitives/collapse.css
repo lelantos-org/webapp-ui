@@ -1,0 +1,24 @@
+/* The animated disclosure body: Details rows and the portfolio's row detail. */
+@layer primitives {
+  /* A content-sized height, animated: `grid-template-rows: 0fr -> 1fr` is the
+     one way to transition to `auto` without measuring in JS; the inner element
+     carries the `overflow: hidden` that makes the collapse cut rather than
+     squash. The duration must match `PANEL_COLLAPSE_MS` (`shared/lib/motion.ts`),
+     which holds the body mounted for exactly this long. */
+  .collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows var(--dur-220) var(--ease), opacity var(--dur-160) var(--ease);
+  }
+  .collapse--open {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  .collapse__inner {
+    /* A grid item's automatic minimum size is its content, which would defeat
+       the 0fr track. */
+    min-height: 0;
+    overflow: hidden;
+  }
+}

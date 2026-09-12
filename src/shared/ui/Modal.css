@@ -1,0 +1,98 @@
+@layer components {
+  /* The shared modal shell: overlay, panel, title, and the body classes the
+     panels fill themselves with. Rendered by `shared/ui/Modal`; the overlay and
+     the panel each play their own fade on the way out. */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--scrim);
+    display: grid;
+    place-items: center;
+    z-index: var(--z-modal);
+    backdrop-filter: blur(4px);
+    animation: modal-fade var(--dur-160) ease;
+    padding: var(--sp-16);
+  }
+  .modal-overlay--locked { cursor: progress; }
+  @keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+  .modal-panel {
+    width: min(440px, 100%);
+    padding: var(--sp-22) var(--sp-22) var(--sp-18);
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    display: grid;
+    gap: var(--sp-14);
+    box-shadow: var(--shadow-modal);
+    animation: modal-rise var(--dur-200) ease;
+  }
+  @keyframes modal-rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .modal-panel:focus { outline: none; }
+  .modal-title {
+    margin: 0;
+    font-size: var(--fs-13);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg);
+  }
+  .modal-copy {
+    margin: 0;
+    font-size: var(--fs-13);
+    line-height: 1.55;
+    color: var(--fg-dim);
+  }
+  .modal-copy strong { color: var(--fg); font-weight: 500; }
+  .modal-meta,
+  .modal-tx {
+    margin: 0;
+    font-size: var(--fs-11);
+    color: var(--fg-mute);
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+  .modal-actions {
+    display: flex;
+    gap: var(--sp-10);
+    justify-content: flex-end;
+    margin-top: var(--sp-4);
+  }
+  .modal-advanced {
+    font-size: var(--fs-11);
+    color: var(--fg-mute);
+    font-family: var(--mono);
+    letter-spacing: 0.06em;
+  }
+  .modal-advanced > summary {
+    cursor: pointer;
+    user-select: none;
+    padding: var(--sp-4) 0;
+    text-transform: uppercase;
+  }
+  .modal-advanced > summary:hover { color: var(--accent); }
+  .modal-advanced[open] > summary { color: var(--fg-dim); }
+  .modal-advanced .modal-meta { margin-top: var(--sp-6); }
+  .modal-tx a {
+    color: var(--fg-dim);
+    border-bottom: 1px dotted var(--fg-mute);
+    text-decoration: none;
+    transition: color var(--dur-120) var(--ease-soft);
+  }
+  .modal-tx a:hover { color: var(--accent); border-color: var(--accent); }
+
+  .modal-overlay--fade-out {
+    animation: modal-overlay-fade var(--dur-240) ease-in forwards;
+    pointer-events: none;
+  }
+  .modal-panel--fade-out {
+    animation: modal-panel-fade var(--dur-240) ease-in forwards;
+  }
+  @keyframes modal-overlay-fade {
+    to { opacity: 0; }
+  }
+  @keyframes modal-panel-fade {
+    to { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  }
+}

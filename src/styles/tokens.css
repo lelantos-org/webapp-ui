@@ -1,86 +1,201 @@
-:root {
-  /* Soft-neutral light palette, biased a few degrees cool so the indigo accent
-     and the ambient backdrop read as part of the same set. */
-  --bg: #f2f3f7;
-  --bg-1: #ffffff;
-  --bg-2: #f9fafc;
-  --bg-3: #edeef4;
-  --fg: #191922;
-  --fg-dim: #43434f;
-  --fg-mute: #76768a;
-  --line: #e5e6ee;
-  --line-strong: #d2d4e0;
-  --accent: #4f46e5;
-  --accent-rgb: 79, 70, 229;
-  --accent-2: #6366f1;
-  --accent-dim: #c7d2fe;
-  --warn: #d97706;
-  --warn-rgb: 217, 119, 6;
-  --warn-dim: #fde68a;
-  /* Opaque amber pair for the beta banner. Deliberately flat colours rather
-     than an rgba() derived from --warn-rgb: the banner sits over the animated
-     gradient backdrop, and a warning whose contrast moves as the backdrop
-     animates is a warning that is sometimes unreadable. */
-  --warn-bg: #fef6e7;
-  --warn-strong: #7a4204;
-  --err: #dc2626;
-  --err-rgb: 220, 38, 38;
-  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
-  --shadow-glow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.06);
-  /* Shared motion curves: --ease decelerates into rest (entrances, fades),
-     --ease-soft is symmetric for hover and state swaps. */
-  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
-  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
-  --radius: 8px;
-  --radius-sm: 6px;
-  --radius-pill: 999px;
+/* The palette. Dark is the default; light is a deliberate second set, not an
+   automatic inversion — each step was checked against its own grounds rather
+   than flipped.
 
-  /* Keyboard focus ring. An outline rather than a box-shadow, matching the
-     rules that already existed on the denomination, slippage, wallet and
-     fee-asset controls: outline is not clipped by an ancestor's
-     `overflow: hidden` (the segmented nav has one) and does not compete with
-     `.btn:active`'s transform. Pair it with an explicit `outline-offset` —
-     negative where a parent clips, so the ring draws inside the control. */
-  --ring: 2px solid var(--accent);
+   Every text colour here clears 4.5:1 on all four grounds in both themes. The
+   two that did not, on first pass, were the success green and `--warn` on
+   `--bg-3` in light; both were darkened rather than the ground being lightened,
+   because the ground is shared by far more surfaces than either signal colour.
 
-  /* Spacing, measured from what the stylesheet already does rather than picked
-     off a grid. This file is not on an 8pt system and should not be moved onto
-     one: its finest step is 2px and its spine is 6/8/10/12/14, which is what
-     makes the dense surfaces (the portfolio row, the fee panel, the header
-     pill) hold together at 14px base.
+   Warm throughout: a warm ground and an ember accent are what stop the app
+   reading as every other app in its category. Keep explorer-ui in step: these
+   values are authored once and pasted into both (this one keeps only the tokens
+   it uses), and no package enforces that. */
 
-     The even ramp below covers ~85% of every padding, margin and gap here. The
-     odd values it omits — 3, 5, 7, 9, 11 — are deliberate optical nudges, and
-     several carry a comment saying so (see header.css, where 8px is documented
-     as a correction for leading cut out of the pill). Leave those literal;
-     rounding them onto the ramp is what this scale is meant to prevent, not
-     what it is for. */
-  --sp-2: 2px;
-  --sp-4: 4px;
-  --sp-6: 6px;
-  --sp-8: 8px;
-  --sp-10: 10px;
-  --sp-12: 12px;
-  --sp-14: 14px;
-  --sp-16: 16px;
-  --sp-18: 18px;
-  --sp-20: 20px;
-  --sp-22: 22px;
-  --sp-24: 24px;
+@layer tokens {
+  :root {
+    --bg: #14110E;
+    --bg-1: #1C1815;
+    --bg-2: #241F1A;
+    --bg-3: #2E2822;
+    /* Translucent surface for chrome that blurs what scrolls under it.
+       Per-theme rather than a white with alpha: a white veil over a dark
+       ground is a grey smear, not a glass. */
+    --bg-glass: rgba(28, 24, 21, 0.72);
+    --fg: #F5F1E8;
+    --fg-dim: #BEB5A6;
+    --fg-mute: #9E9486;
+    --line: #2A241E;
+    --line-strong: #3A332B;
+    --accent: #E0794A;
+    --accent-rgb: 224, 121, 74;
+    /* Ink for anything sitting ON a filled accent or error surface. It flips
+       with the theme and cannot be a literal: white on the dark theme's ember
+       is 3.0:1, and the dark ink on the light theme's brick is 3.2:1. Both
+       directions fail; only the pairing below clears AA on each. */
+    --on-fill: #14110E;
+    --accent-2: #EA8C60;
+    --accent-dim: #7A4526;
+    --warn: #E0A93F;
+    --warn-rgb: 224, 169, 63;
+    /* The beta banner sits over an animated backdrop, so these are flat and
+       opaque rather than an rgba() of --warn: a warning whose contrast moves
+       as the backdrop animates is a warning that is sometimes unreadable. */
+    --warn-dim: #4A3A18;
+    --warn-bg: #2A2115;
+    /* Text inside a warn-tinted box (`rgba(var(--warn-rgb), .08)` over any
+       ground): --warn-ink for its first line, --warn-ink-2 for the body under
+       it. --warn itself is a signal colour, too saturated to read as a
+       paragraph. --warn-emph is the bold lead of the beta banner. */
+    --warn-ink: #EDD09A;
+    --warn-ink-2: #D8BE93;
+    --warn-emph: #F6E4C4;
+    --err: #E67A6E;
+    --err-rgb: 230, 122, 110;
+    /* Text inside an err-tinted box, and the failure line on a failed card. */
+    --err-strong: #E5AAA2;
+    /* A card lifted off the ground (the Welcome wallet card). Per theme: the
+       deep black drop that separates a card on the dark ground reads as a smudge
+       on paper, where a hairline lifts a surface instead. */
+    --shadow-card: 0 24px 60px rgba(0, 0, 0, 0.5);
+  }
 
-  /* Type, body spine only. These five sizes are 80% of every font-size in the
-     stylesheet and they encode a real shared decision: 14 body, 13 controls,
-     12 secondary, 11 dense, 10 micro.
+  /* The light palette, authored once. This block is the explicit choice
+     (`data-theme="light"`, stamped by `public/theme-init.js` or the toggle); the
+     build repeats it under `@media (prefers-color-scheme: light)` as
+     `:root:not([data-theme="dark"])`, so the system preference applies whenever
+     no choice has been made — see `vite/plugins/light-theme.ts`. An explicit
+     choice wins over the system preference in both directions. */
+  :root[data-theme="light"] {
+    --bg: #F7F4ED;
+    --bg-1: #FFFDF8;
+    --bg-2: #F1EDE4;
+    --bg-3: #E8E3D8;
+    --bg-glass: rgba(255, 253, 248, 0.72);
+    --fg: #14110E;
+    --fg-dim: #514B42;
+    --fg-mute: #6B6459;
+    --line: #E2DCD0;
+    --line-strong: #CFC7B8;
+    --accent: #A8481B;
+    --accent-rgb: 168, 72, 27;
+    --on-fill: #FFFDF8;
+    --accent-2: #8E3C14;
+    --accent-dim: #E8C9B4;
+    --warn: #7E590E;
+    --warn-rgb: 126, 89, 14;
+    --warn-dim: #E8CE96;
+    --warn-bg: #FDF3E0;
+    /* Darkened, not the dark theme's creams inverted: each clears 4.5:1 against
+       all four light grounds with the warn/err wash laid over them (worst case
+       --bg-3 + wash: ink 6.3, ink-2 5.2, emph 7.9, err-strong 5.7). */
+    --warn-ink: #5C4108;
+    --warn-ink-2: #664E26;
+    --warn-emph: #4A3305;
+    --err: #A63A2E;
+    --err-rgb: 166, 58, 46;
+    --err-strong: #8A2E23;
+    --shadow-card: 0 1px 2px rgba(20, 17, 14, 0.05), 0 12px 32px rgba(20, 17, 14, 0.08);
+  }
 
-     The display sizes (20 through 56) are deliberately absent. Each is used
-     once or twice, in a hero or a per-breakpoint ramp, and tokenising them
-     would assert a shared step where there is only a one-off optical choice —
-     including the 12.5px in the claim hero, which is exactly the kind of value
-     a scale would destroy. */
-  --fs-10: 10px;
-  --fs-11: 11px;
-  --fs-12: 12px;
-  --fs-13: 13px;
-  --fs-14: 14px;
+  :root {
+    --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    /* Balances and screen titles. Tabular in the binary, with a real optical-size
+       axis, so a 56px figure and a 13px label are genuinely different drawings. */
+    --display: "Newsreader", Georgia, "Times New Roman", serif;
+    --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    /* The wordmark face, and nothing else. Martian Mono is self-hosted at the
+       one weight the wordmark uses (600); a second use at another weight would
+       be synthesised, so reach for --mono instead. */
+    --brand: "Martian Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --shadow-glow: 0 1px 2px rgba(0,0,0,0.28), 0 4px 12px rgba(0,0,0,0.22);
+    /* Shared motion curves: --ease decelerates into rest (entrances, fades),
+       --ease-soft is symmetric for hover and state swaps. */
+    --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+    --radius: 4px;
+    --radius-sm: 2px;
+    /* Dots, rings and round buttons. */
+    --radius-round: 50%;
+
+    /* Keyboard focus ring. An outline rather than a box-shadow, matching the
+       rules that already existed on the denomination, slippage, wallet and
+       fee-asset controls: outline is not clipped by an ancestor's
+       `overflow: hidden` and does not compete with
+       `.btn:active`'s transform. Pair it with an explicit `outline-offset` —
+       negative where a parent clips, so the ring draws inside the control. */
+    --ring: 2px solid var(--accent);
+
+    /* Spacing, measured from what the stylesheet already does rather than picked
+       off a grid. This file is not on an 8pt system and should not be moved onto
+       one: its finest step is 2px and its spine is 6/8/10/12/14, which is what
+       makes the dense surfaces (the portfolio row, the fee panel, the header
+       pill) hold together at 14px base.
+
+       The even ramp below covers ~85% of every padding, margin and gap here. The
+       odd values it omits — 3, 5, 7, 9, 11 — are deliberate optical nudges, and
+       several carry a comment saying so. Leave those literal;
+       rounding them onto the ramp is what this scale is meant to prevent, not
+       what it is for. */
+    --sp-2: 2px;
+    --sp-4: 4px;
+    --sp-6: 6px;
+    --sp-8: 8px;
+    --sp-10: 10px;
+    --sp-12: 12px;
+    --sp-14: 14px;
+    --sp-16: 16px;
+    --sp-18: 18px;
+    --sp-20: 20px;
+    --sp-22: 22px;
+    --sp-24: 24px;
+
+    /* Type, body spine only. These five sizes are 80% of every font-size in the
+       stylesheet and they encode a real shared decision: 14 body, 13 controls,
+       12 secondary, 11 dense, 10 micro.
+
+       The display sizes (20 through 56) are deliberately absent. Each is used
+       once or twice, in a hero or a per-breakpoint ramp, and tokenising them
+       would assert a shared step where there is only a one-off optical choice —
+       including the 12.5px in the claim hero, which is exactly the kind of value
+       a scale would destroy. */
+    --fs-10: 10px;
+    --fs-11: 11px;
+    --fs-12: 12px;
+    --fs-13: 13px;
+    --fs-14: 14px;
+    /* Cards set their rows a step up: 15 for labels and rows, 16 for buttons and
+       names, 17 for card titles and large CTAs. */
+    --fs-15: 15px;
+    --fs-16: 16px;
+    --fs-17: 17px;
+
+    /* Motion durations, named for the value like the spacing ramp. 120 is every
+       hover and state swap; 220 is the height collapse, which `PANEL_COLLAPSE_MS`
+       in `shared/lib/motion.ts` mirrors; 160 its opacity. */
+    --dur-80: 80ms;
+    --dur-120: 120ms;
+    --dur-140: 140ms;
+    --dur-160: 160ms;
+    --dur-200: 200ms;
+    --dur-220: 220ms;
+    --dur-240: 240ms;
+    --dur-420: 420ms;
+
+    /* The page's global stacking order. Stacking inside one component (a flip
+       button over its seam, a sticky CTA over its card) stays a local 1 or 2. */
+    --z-header: 10;
+    --z-menu: 20;
+    --z-popover: 40;
+    --z-modal: 50;
+    --z-tooltip: 50;
+    --z-skip: 100;
+
+    /* Elevation for things that float over the page. Black in both themes, as
+       drawn; `--shadow-card` is the per-theme one. */
+    --shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.35);
+    --shadow-tooltip: 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-modal: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 32px rgba(var(--accent-rgb), 0.06);
+    --scrim: rgba(0, 0, 0, 0.7);
+  }
 }

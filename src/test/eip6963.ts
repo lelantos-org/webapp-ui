@@ -2,10 +2,10 @@
 //
 // Several test files drive wallet discovery by dispatching the announce event.
 // Sharing the fixtures keeps one spelling of the event name, which must stay in
-// step with `features/eip1193/discovery.ts`.
+// step with `features/wallet-kinds/eip1193/discovery.ts`.
 
 import { vi } from "vitest";
-import type { Eip6963ProviderDetail } from "@/features/eip1193";
+import type { Eip6963ProviderDetail } from "@/features/wallet-kinds";
 
 /// An announced wallet. `name` defaults to the rdns, which suffices for tests
 /// that only assert on identity.

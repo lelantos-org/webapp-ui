@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root {
+      --bg: #14110E; --bg-1: #1C1815; --bg-2: #241F1A; --bg-3: #2E2822;
+      --fg: #F5F1E8; --fg-dim: #BEB5A6; --fg-mute: #9E9486;
+      --line: #2A241E; --line-strong: #3A332B;
+      --accent: #E0794A; --accent-2: #EA8C60; --accent-dim: #7A4526;
+      --warn: #E0A93F; --err: #E67A6E;
+      --display: "Newsreader", Georgia, "Times New Roman", serif;
+      --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: "zero" 1; }
+    .shell { min-height: 900px; display: flex; flex-direction: column; background: radial-gradient(900px 420px at 50% -10%, rgba(224,121,74,0.14), transparent 62%), #14110E; }
+    .hdr { display: flex; align-items: center; gap: 16px; padding: 14px 32px; border-bottom: 1px solid var(--line); background: rgba(28,24,21,0.78); }
+    .pill { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 2px; font-size: 14px; }
+    .card { border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-1); padding: 26px 24px 24px; display: flex; flex-direction: column; gap: 18px; }
+    .rule { height: 1px; background: var(--line); }
+    .cta { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 17px; border-radius: 4px; background: var(--accent); color: #14110E; font-size: 17px; font-weight: 600; box-shadow: 0 6px 22px rgba(224,121,74,0.3); min-height: 44px; }
+    .tokpill { display: flex; align-items: center; gap: 9px; padding: 9px 16px 9px 10px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--bg-2); flex: none; }
+    .mark { border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; flex: none; }
+    .amt { font-family: var(--display); font-size: 46px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; flex: 1; min-width: 0; }
+    .back { width: 40px; height: 40px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--bg-1); display: inline-grid; place-items: center; color: var(--fg-dim); flex: none; }
+    .h1 { font-family: var(--display); font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+    .muted { color: var(--fg-mute); }
+    .sub { font-size: 14px; color: var(--fg-mute); }
+  </style>
+</helmet>
+
+<div class="shell">
+  <div class="hdr">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:13px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+      <div class="pill">
+        <span class="mark" style="width: 16px; height: 16px; background: #2151f5; font-size: 9px; color: #fff;">B</span>
+        <span>Base</span>
+      </div>
+      <div class="pill" style="gap: 10px; padding: 7px 8px 7px 14px; background: var(--bg-2);">
+        <span class="num" style="color: var(--fg-dim);">0x7a4f…c2e1</span>
+        <span class="mark" style="width: 26px; height: 26px; background: var(--bg-3); color: var(--fg-mute);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+        </span>
+      </div>
+    </div>
+  </div>
+  <div style="flex: 1; width: 100%; max-width: 1120px; margin: 0 auto; padding: 36px 32px 48px; display: flex; flex-direction: column; gap: 22px;">
+
+    <div style="display: flex; flex-direction: column; gap: 3px;">
+      <span class="h1">While it works</span>
+      <span class="sub">Proving takes 20–40 seconds on most machines. Today that wait is a bare stepper; here it explains itself.</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; align-items: start;">
+
+      <!-- in progress -->
+      <div class="card" style="gap: 20px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+          <span style="width: 46px; height: 46px; border-radius: 4px; background: rgba(224,121,74,0.14); border: 1px solid rgba(224,121,74,0.36); display: inline-grid; place-items: center; flex: none;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>
+          </span>
+          <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0;">
+            <span style="font-size: 19px; font-weight: 600;">Proving your transfer</span>
+            <span class="sub">250 USDC · about 20 seconds left</span>
+          </div>
+        </div>
+
+        <div style="height: 6px; border-radius: 2px; background: var(--bg-3); overflow: hidden;">
+          <div style="width: 58%; height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent-dim), var(--accent));"></div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; align-items: center; gap: 13px;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; background: rgba(224,121,74,0.16); border: 1px solid var(--accent-dim); display: inline-grid; place-items: center; color: var(--accent); flex: none;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+            <span style="font-size: 15px; color: var(--fg-mute); text-decoration: line-through; text-decoration-color: var(--fg-mute);">Picked the funds to spend</span>
+          </div>
+          <div style="display: flex; align-items: flex-start; gap: 13px;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--accent); background: rgba(224,121,74,0.1); display: inline-grid; place-items: center; flex: none; box-shadow: 0 0 10px rgba(224,121,74,0.5);"><span style="width: 8px; height: 8px; border-radius: 50%; background: var(--accent);"></span></span>
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <span style="font-size: 15px; font-weight: 600;">Building the zero-knowledge proof</span>
+              <span class="sub">This is the slow part. Your device is proving you own the funds without revealing which ones.</span>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 13px;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line-strong); display: inline-grid; place-items: center; color: var(--fg-mute); font-size: 12px; flex: none;">3</span>
+            <span style="font-size: 15px; color: var(--fg-mute);">Hand to the relayer</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 13px;">
+            <span style="width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line-strong); display: inline-grid; place-items: center; color: var(--fg-mute); font-size: 12px; flex: none;">4</span>
+            <span style="font-size: 15px; color: var(--fg-mute);">Confirmed on-chain</span>
+          </div>
+        </div>
+
+        <div class="rule"></div>
+
+        <div style="display: flex; align-items: flex-start; gap: 11px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" stroke-width="1.9" stroke-linecap="round" style="flex: none; margin-top: 2px;"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <span class="sub">Keep this tab open until the proof is built. After that you can leave — we'll finish in the background and tell you when it lands.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- settled -->
+        <div class="card" style="gap: 14px; border-color: rgba(224,121,74,0.4);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <span style="width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--accent); display: inline-grid; place-items: center; color: var(--accent); flex: none;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+            <div style="display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 17px; font-weight: 600;">Sent privately</span>
+              <span class="num sub">250.00 USDC</span>
+            </div>
+          </div>
+          <div class="rule"></div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="sub" style="flex: none;">Transaction</span>
+            <span class="num" style="flex: 1; font-size: 14px; color: var(--fg-dim);">0x4c8e…91af</span>
+            <span style="font-size: 14px; color: var(--accent);">Copy</span>
+            <span style="font-size: 14px; color: var(--accent);">Explorer ↗</span>
+          </div>
+        </div>
+
+        <!-- failed -->
+        <div class="card" style="gap: 14px; border-color: rgba(224,104,92,0.4);">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <span style="width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--err); display: inline-grid; place-items: center; color: var(--err); flex: none;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg></span>
+            <div style="display: flex; flex-direction: column; gap: 1px;">
+              <span style="font-size: 17px; font-weight: 600;">Couldn't submit</span>
+              <span class="sub" style="color: #E5AAA2;">The relayer didn't respond in time.</span>
+            </div>
+          </div>
+          <span class="sub">Your funds never left the pool — nothing was spent. Trying again is safe.</span>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+            <div class="cta" style="padding: 13px; font-size: 15px; box-shadow: none;"><span>Try again</span></div>
+            <div style="display: flex; align-items: center; justify-content: center; padding: 13px; border: 1px solid var(--line-strong); border-radius: 4px; font-size: 15px; font-weight: 600; min-height: 44px;">Back home</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

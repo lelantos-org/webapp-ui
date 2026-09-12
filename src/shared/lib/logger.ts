@@ -7,9 +7,11 @@
 // query string is stripped from the address bar immediately afterwards. The
 // explicit `window.__lelantosDebug(true)` toggle does persist.
 
+import { LOCAL_KEYS } from "@/shared/lib/storage-keys";
+
 type Level = "debug" | "info" | "warn" | "error";
 
-const DEBUG_KEY = "lelantos:debug";
+const DEBUG_KEY = LOCAL_KEYS.debug;
 
 function readDebugFlag(): boolean {
   if (import.meta.env.VITE_DEBUG === "true" || import.meta.env.VITE_DEBUG === "1") return true;

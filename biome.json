@@ -9,6 +9,8 @@
     "includes": [
       "src/**/*.ts",
       "src/**/*.tsx",
+      "vite/**/*.ts",
+      "scripts/**/*.mjs",
       "vite.config.ts",
       "vitest.config.ts",
       "vitest.setup.ts",
@@ -30,21 +32,138 @@
       "recommended": true,
       "style": {
         "noNonNullAssertion": "off",
-        "useImportType": "warn",
+        "useImportType": "error",
         "useNamingConvention": "off"
       },
       "suspicious": {
-        "noExplicitAny": "warn",
-        "noConsole": { "level": "warn", "options": { "allow": ["warn", "error"] } }
+        "noExplicitAny": "error",
+        "noFocusedTests": "error",
+        "noConsole": {
+          "level": "warn",
+          "options": {
+            "allow": ["warn", "error"]
+          }
+        }
       },
       "correctness": {
-        "useExhaustiveDependencies": "warn"
+        "useExhaustiveDependencies": "error"
       },
       "complexity": {
         "noBannedTypes": "off"
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["src/shared/**", "src/config/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": [
+                      "@/features",
+                      "@/features/**",
+                      "@/flows",
+                      "@/flows/**",
+                      "@/app",
+                      "@/app/**"
+                    ],
+                    "message": "shared/ and config/ sit below every feature, flow and the app shell, and may not import any of them."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/features/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/flows", "@/flows/**", "@/app", "@/app/**"],
+                    "message": "A feature may not import a flow or the app shell."
+                  },
+                  {
+                    "group": ["@/features/*/**"],
+                    "message": "Import another feature through its barrel (\"@/features/x\"); within a feature, use a relative path."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/flows/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/flows", "@/flows/**", "@/app", "@/app/**"],
+                    "message": "A flow may not import another flow or the app shell. Routes reach flows through src/flows/loaders.ts."
+                  },
+                  {
+                    "group": ["@/features/*/**"],
+                    "message": "Import a feature through its barrel (\"@/features/x\")."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/app/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["@/features/*/**"],
+                    "message": "Import a feature through its barrel (\"@/features/x\")."
+                  },
+                  {
+                    "group": ["@/flows/**", "!@/flows/loaders"],
+                    "message": "Reach a flow through \"@/flows/loaders\", so it stays its own lazy chunk."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double",

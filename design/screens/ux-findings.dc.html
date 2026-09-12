@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    q{quotes:'\201C' '\201D';font-style:italic;color:var(--fg);}
+    :root{
+      --bg:#14110E;--bg-1:#1C1815;--bg-2:#241F1A;--bg-3:#2E2822;
+      --fg:#F5F1E8;--fg-dim:#BEB5A6;--fg-mute:#9E9486;
+      --line:#2A241E;--line-strong:#3A332B;
+      --accent:#E0794A;--accent-2:#EA8C60;--warn:#E0A93F;--err:#E67A6E;
+      --display:"Newsreader",Georgia,serif;
+      --sans:"Public Sans",-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+      --mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+    a{color:var(--accent);}a:hover{color:var(--accent-2);}
+    .num{font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;font-feature-settings:"zero" 1;}
+    .lbl{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);}
+    .card{border:1px solid var(--line-strong);background:var(--bg-1);}
+    td,th{text-align:left;vertical-align:top;padding:10px 16px 10px 0;border-bottom:1px solid var(--line);}
+    th{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);border-bottom:1px solid var(--line-strong);}
+  </style>
+</helmet>
+
+<div style="min-height:2180px;padding:0 0 46px;">
+  <div style="background:var(--fg);color:var(--bg);padding:20px 40px;display:flex;align-items:baseline;justify-content:space-between;gap:20px;">
+    <span style="font-family:var(--display);font-size:29px;font-weight:600;">v2.1 — what still needs fixing</span>
+    <span class="num" style="font-size:13px;opacity:.72;">UX, NOT LOOKS</span>
+  </div>
+
+  <div style="max-width:1200px;margin:0 auto;padding:30px 40px 0;display:flex;flex-direction:column;gap:18px;">
+
+    <p style="margin:0 0 4px;font-size:16px;color:var(--fg-dim);max-width:100ch;line-height:1.7;">
+      The v2 reskin changed the surface and left the flows exactly as v1 had them. Eight problems survived. Two of them cost real money or a real proof; the rest cost trust. Every one is checked against the source, and where the code already gets something right, it says so.
+    </p>
+    
+      <div class="card" style="padding:22px 26px;border-color:var(--err);">
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:9px;">
+          <span class="num" style="font-size:15px;font-weight:700;color:var(--err);">01</span>
+          <span style="font-family:var(--display);font-size:21px;font-weight:600;flex:1;">Claim links are silently evicted at 50 records — this loses funds</span>
+          <span style="flex:none;padding:3px 10px;border:1px solid var(--err);color:var(--err);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Can lose funds</span>
+        </div>
+        <p style="margin:0 0 12px;font-size:15px;color:var(--fg-dim);line-height:1.65;max-width:104ch;">link-vault.ts caps the store at MAX_RECORDS = 50 and keeps the newest. The 51st link drops the oldest record, and that record <em>is the spending key</em>. The file says what follows: <q>Once lost, the funds sit at an ephemeral address with no recoverable key.</q> There is a 30-day TTL too, and the store is browser-local.</p>
+        <div style="display:flex;gap:11px;align-items:flex-start;padding-top:11px;border-top:1px solid var(--line);">
+          <span class="num" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;flex:none;padding-top:2px;">FIX</span>
+          <span style="font-size:15px;color:var(--fg);line-height:1.6;">Show capacity before it bites. Warn on eviction instead of doing it silently. Offer an export.</span>
+        </div>
+      </div>
+      <div class="card" style="padding:22px 26px;border-color:var(--line-strong);">
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:9px;">
+          <span class="num" style="font-size:15px;font-weight:700;color:var(--warn);">02</span>
+          <span style="font-family:var(--display);font-size:21px;font-weight:600;flex:1;">An unaffordable fee asset lets you submit, then fails after a full proof</span>
+          <span style="flex:none;padding:3px 10px;border:1px solid var(--warn);color:var(--warn);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">High</span>
+        </div>
+        <p style="margin:0 0 12px;font-size:15px;color:var(--fg-dim);line-height:1.65;max-width:104ch;">The picker refuses an unaffordable asset correctly — but the default is never checked (<span class='num'>payingWith = feeAsset ?? selected?.id</span>) and <span class='num'>affordable</span> appears nowhere in the submit gate. Never open the picker and you pay a whole prepare-and-prove cycle to be told <q>Insufficient balance for this amount.</q>, which does not name the fee asset.</p>
+        <div style="display:flex;gap:11px;align-items:flex-start;padding-top:11px;border-top:1px solid var(--line);">
+          <span class="num" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;flex:none;padding-top:2px;">FIX</span>
+          <span style="font-size:15px;color:var(--fg);line-height:1.6;">Resolve the fee asset up front, show it in the closed Details row, and refuse before the proof — naming the asset.</span>
+        </div>
+      </div>
+      <div class="card" style="padding:22px 26px;border-color:var(--line-strong);">
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:9px;">
+          <span class="num" style="font-size:15px;font-weight:700;color:var(--warn);">03</span>
+          <span style="font-family:var(--display);font-size:21px;font-weight:600;flex:1;">Irreversible sends have no review step</span>
+          <span style="flex:none;padding:3px 10px;border:1px solid var(--warn);color:var(--warn);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">High</span>
+        </div>
+        <p style="margin:0 0 12px;font-size:15px;color:var(--fg-dim);line-height:1.65;max-width:104ch;">Send and Unshield go from form straight to a filled button. The transfer cannot be reversed, cancelled, or confirmed by the recipient. The claim-link generator gates itself behind a checkbox because its authors judged that risk worth a pause — a transfer is no less final.</p>
+        <div style="display:flex;gap:11px;align-items:flex-start;padding-top:11px;border-top:1px solid var(--line);">
+          <span class="num" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;flex:none;padding-top:2px;">FIX</span>
+          <span style="font-size:15px;color:var(--fg);line-height:1.6;">A review step: figures and words, destination in readable groups, resolved fees, the boundary named, one deliberate confirm.</span>
+        </div>
+      </div>
+      <div class="card" style="padding:22px 26px;border-color:var(--line-strong);">
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:9px;">
+          <span class="num" style="font-size:15px;font-weight:700;color:var(--warn);">04</span>
+          <span style="font-family:var(--display);font-size:21px;font-weight:600;flex:1;">“Needs consolidating” names a remedy the user cannot perform</span>
+          <span style="flex:none;padding:3px 10px;border:1px solid var(--warn);color:var(--warn);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">High</span>
+        </div>
+        <p style="margin:0 0 12px;font-size:15px;color:var(--fg-dim);line-height:1.65;max-width:104ch;">The wallet <em>does</em> explain why Max sits under the balance — <span class='num'>balance-hint.ts</span> renders <q>42 WETH needs consolidating</q>, because the circuit spends at most 4 notes. But the only control that sounds like the remedy is <strong>Compact</strong>, whose own copy says <q>Balances are unchanged.</q> Real consolidation is <span class='num'>autoConsolidate: true</span>, hardcoded and invisible.</p>
+        <div style="display:flex;gap:11px;align-items:flex-start;padding-top:11px;border-top:1px solid var(--line);">
+          <span class="num" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;flex:none;padding-top:2px;">FIX</span>
+          <span style="font-size:15px;color:var(--fg);line-height:1.6;">Say what the user can actually do — name the automatic behaviour, or offer consolidation explicitly with its cost. Stop “compact” implying it.</span>
+        </div>
+      </div>
+      <div class="card" style="padding:22px 26px;border-color:var(--line-strong);">
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:9px;">
+          <span class="num" style="font-size:15px;font-weight:700;color:var(--fg-mute);">05</span>
+          <span style="font-family:var(--display);font-size:21px;font-weight:600;flex:1;">A syncing wallet is indistinguishable from an empty one</span>
+          <span style="flex:none;padding:3px 10px;border:1px solid var(--fg-mute);color:var(--fg-mute);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Medium</span>
+        </div>
+        <p style="margin:0 0 12px;font-size:15px;color:var(--fg-dim);line-height:1.65;max-width:104ch;">Balances exist only after <span class='num'>syncNotes</span> completes, and a cold sync <q>can run for minutes</q>. The forms stay live with zero balances, so input is rejected as insufficient funds. <span class='num'>SyncErrorNotice</span> states this hazard exactly — but <q>renders nothing while a sync is succeeding</q>, so it covers the error case, not the slow one every new user hits.</p>
+        <div style="display:flex;gap:11px;align-items:flex-start;padding-top:11px;border-top:1px solid var(--line);">
+          <span class="num" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;flex:none;padding-top:2px;">FIX</span>
+          <span style="font-size:15px;color:var(--fg);line-height:1.6;">Extend the notice to slow success. Hold the forms in an explicit “still adding up your balance” state instead of letting them read as empty.</span>
+        </div>
+      </div>
+      <div class="card" style="padding:22px 26px;border-color:var(--line-strong);">
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:9px;">
+          <span class="num" style="font-size:15px;font-weight:700;color:var(--fg-mute);">06</span>
+          <span style="font-family:var(--display);font-size:21px;font-weight:600;flex:1;">Transfer and Withdraw disable submit without saying why</span>
+          <span style="flex:none;padding:3px 10px;border:1px solid var(--fg-mute);color:var(--fg-mute);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Medium</span>
+        </div>
+        <p style="margin:0 0 12px;font-size:15px;color:var(--fg-dim);line-height:1.65;max-width:104ch;">The swap form does this well — an ordered reason table with a stated rationale. Transfer and Withdraw pass <span class='num'>submitDisabled={!v.valid}</span> with no reason string at all, and the recipient is not gated: a malformed address is caught only after the click.</p>
+        <div style="display:flex;gap:11px;align-items:flex-start;padding-top:11px;border-top:1px solid var(--line);">
+          <span class="num" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;flex:none;padding-top:2px;">FIX</span>
+          <span style="font-size:15px;color:var(--fg);line-height:1.6;">Give both the swap form's treatment, and gate the recipient.</span>
+        </div>
+      </div>
+      <div class="card" style="padding:22px 26px;border-color:var(--line-strong);">
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:9px;">
+          <span class="num" style="font-size:15px;font-weight:700;color:var(--fg-mute);">07</span>
+          <span style="font-family:var(--display);font-size:21px;font-weight:600;flex:1;">The claim-link form never reads your balance</span>
+          <span style="flex:none;padding:3px 10px;border:1px solid var(--fg-mute);color:var(--fg-mute);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Medium</span>
+        </div>
+        <p style="margin:0 0 12px;font-size:15px;color:var(--fg-dim);line-height:1.65;max-width:104ch;">Stated outright in <span class='num'>GenerateLinkForm.tsx</span>: <q>this form does not read the sender's shielded balance, so insufficient is not something it can determine.</q> You can request a link for more than you hold and find out at submit.</p>
+        <div style="display:flex;gap:11px;align-items:flex-start;padding-top:11px;border-top:1px solid var(--line);">
+          <span class="num" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;flex:none;padding-top:2px;">FIX</span>
+          <span style="font-size:15px;color:var(--fg);line-height:1.6;">Read the balance, or say plainly that the amount is unchecked until submit.</span>
+        </div>
+      </div>
+      <div class="card" style="padding:22px 26px;border-color:var(--line-strong);">
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:9px;">
+          <span class="num" style="font-size:15px;font-weight:700;color:var(--fg-mute);">08</span>
+          <span style="font-family:var(--display);font-size:21px;font-weight:600;flex:1;">The mobile set stops after two screens</span>
+          <span style="flex:none;padding:3px 10px;border:1px solid var(--fg-mute);color:var(--fg-mute);font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;">Medium</span>
+        </div>
+        <p style="margin:0 0 12px;font-size:15px;color:var(--fg-dim);line-height:1.65;max-width:104ch;">Only Home and Shield are drawn. Send, Unshield, Swap and Claim are desktop-only — and Claim is the most likely of all to be opened on a phone, because it arrives as a shared link.</p>
+        <div style="display:flex;gap:11px;align-items:flex-start;padding-top:11px;border-top:1px solid var(--line);">
+          <span class="num" style="font-size:12px;font-weight:700;color:var(--accent);letter-spacing:.06em;flex:none;padding-top:2px;">FIX</span>
+          <span style="font-size:15px;color:var(--fg);line-height:1.6;">Draw the remaining four at 390×844.</span>
+        </div>
+      </div>
+
+    <div class="card" style="padding:22px 26px;background:var(--bg-2);">
+      <span class="lbl" style="margin-bottom:10px;display:block;">Found, and left out of this round at your call</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;">
+        <div>
+          <div style="font-family:var(--display);font-size:19px;font-weight:600;margin-bottom:4px;">No activity or history, anywhere</div>
+          <p style="margin:0;font-size:15px;color:var(--fg-dim);line-height:1.6;">Six routes, all of them actions. Nothing on Home. The only trace of a completed send is a tx hash in React state — <q>cleared on the next interaction and lost on reload</q>. You send money and it leaves the interface. This is the largest single gap in the product.</p>
+        </div>
+        <div>
+          <div style="font-family:var(--display);font-size:19px;font-weight:600;margin-bottom:4px;">No address book</div>
+          <p style="margin:0;font-size:15px;color:var(--fg-dim);line-height:1.6;">Zero matches in the codebase for contacts or recent recipients. Every send needs a long shielded address obtained out of band and pasted, every time — and the field is cleared on submit and destroyed on a chain switch.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

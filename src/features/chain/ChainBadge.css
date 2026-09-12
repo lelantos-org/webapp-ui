@@ -1,0 +1,24 @@
+@layer components {
+  /* NETWORK PILL — mark and name. */
+  .chain-badge {
+    gap: var(--sp-8);
+    padding: var(--sp-8) var(--sp-14);
+    font-size: var(--fs-14);
+    line-height: 1;
+    color: var(--fg);
+  }
+  .chain-badge__mark {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    vertical-align: 0;
+    border-radius: var(--radius-round);
+  }
+  .chain-badge__name { line-height: 1; }
+
+  /* Phones: see `Layout.css`. */
+  @media (max-width: 480px) {
+    .chain-badge { gap: var(--sp-6); padding: var(--sp-6) 11px; font-size: var(--fs-13); }
+    .chain-badge__mark { width: 14px; height: 14px; }
+  }
+}

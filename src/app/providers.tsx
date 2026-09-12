@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { type ReactNode, useEffect } from "react";
+import type { ReactNode } from "react";
 import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "sonner";
 import { PwaUpdatePrompt } from "@/app/PwaUpdatePrompt";
+import { ROUTER_FUTURE } from "@/app/router-future";
 import { ChainProvider } from "@/features/chain";
-import { walletStore } from "@/features/eip1193";
 import { WalletProvider } from "@/features/wallet";
 import { ErrorBoundary } from "@/shared/ui/ErrorBoundary";
+// Unlayered, unlike every other stylesheet: see the note in toast.css.
+import "./toast.css";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,17 +17,6 @@ const queryClient = new QueryClient({
   },
 });
 
-/// Boot the wallet store once at mount: EIP-6963 discovery plus a silent
-/// reconnect to the last connected wallet. Prompts only when the site's
-/// permission has been revoked.
-function WalletBoot({ children }: { children: ReactNode }) {
-  useEffect(() => {
-    walletStore.startDiscovery();
-    void walletStore.resumeFromStorage();
-  }, []);
-  return <>{children}</>;
-}
-
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
@@ -33,11 +24,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
         {/* Router above `ChainProvider`, so `RouteErrorBoundary` — which resets
             on the location — has one available. `ChainProvider` itself reads no
             route state; the chain comes from the wallet. */}
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <BrowserRouter future={ROUTER_FUTURE}>
           <ChainProvider>
-            <WalletBoot>
-              <WalletProvider>{children}</WalletProvider>
-            </WalletBoot>
+            <WalletProvider>{children}</WalletProvider>
           </ChainProvider>
         </BrowserRouter>
       </QueryClientProvider>

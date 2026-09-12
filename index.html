@@ -5,23 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <!-- Matches --bg in src/styles/tokens.css. Keep these in step: the browser
          paints its chrome with this before any CSS loads, so a stale value
-         shows as a band of the wrong colour above the app on every cold start. -->
-    <meta name="theme-color" content="#f2f3f7" />
+         shows as a band of the wrong colour above the app on every cold start.
+         Dark is the default; theme-init.js rewrites this to the light ground
+         when that theme is active. -->
+    <meta name="theme-color" content="#14110E" />
     <meta name="referrer" content="no-referrer" />
     <!--
       CSP via meta is partial: `frame-ancestors`, `sandbox`, `report-uri` are ignored here
       and must be set as HTTP response headers in production (see security-headers.conf).
 
-      This is the *development* policy. The SDK uses `new Function` (jubjub-wasm), which
-      needs 'unsafe-eval' everywhere; `@vitejs/plugin-react` injects an inline Fast Refresh
-      preamble, which needs 'unsafe-inline' in dev only. `tightenCsp` in vite.config.ts
-      rewrites both `script-src` and `connect-src` for the built app — a production build
-      emits no inline script, so do not add one without revisiting that plugin.
+      This is the *development* policy. `@vitejs/plugin-react` injects an inline Fast
+      Refresh preamble, which needs 'unsafe-inline' in dev only. `tightenCsp` in
+      vite.config.ts rewrites `script-src` and `connect-src` for the built app and adds
+      Trusted Types there — a production build emits no inline script, so do not add one
+      without revisiting that plugin. Those rewrites throw if they stop matching, so
+      rewording this tag fails the build rather than shipping the dev policy.
+
+      No 'unsafe-eval': nothing here reaches `eval` or the `Function` constructor. The
+      wasm prover instantiates through WebAssembly, which 'wasm-unsafe-eval' covers, and
+      the snarkjs fallback does not eval either. Verify before re-adding it — on a page
+      that derives a spending key, 'unsafe-eval' hands any injection a code path.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' http: https: ws: wss:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'self'; form-action 'none'"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; worker-src 'self' blob:; connect-src 'self' http: https: ws: wss:; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'self'; font-src 'self'; form-action 'none'"
     />
+    <script src="/theme-init.js"></script>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <!-- No hand-written `<link rel="manifest">`: VitePWA injects one at build. -->
     <title>Lelantos Wallet</title>

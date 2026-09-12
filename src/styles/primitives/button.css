@@ -1,0 +1,161 @@
+@layer primitives {
+  .btn {
+    background: var(--accent);
+    color: var(--on-fill);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: var(--sp-10) var(--sp-16);
+    font-family: var(--sans);
+    font-size: var(--fs-13);
+    font-weight: 500;
+    letter-spacing: 0;
+    cursor: pointer;
+    transition: background var(--dur-120) var(--ease-soft), border-color var(--dur-120) var(--ease-soft), box-shadow var(--dur-120) var(--ease-soft), transform var(--dur-80) var(--ease-soft);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  }
+  .btn:hover:not(:disabled) {
+    background: var(--accent-2);
+    border-color: var(--accent-2);
+    box-shadow: 0 2px 6px rgba(var(--accent-rgb),0.25);
+  }
+  .btn:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+
+  /* After `:active` deliberately: an outline is independent of the press
+     transform, so the ring travels with the button rather than fighting it. */
+  .btn:focus-visible {
+    outline: var(--ring);
+    outline-offset: 2px;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn--ghost {
+    background: transparent;
+    color: var(--fg);
+    border-color: var(--line-strong);
+    box-shadow: none;
+    font-weight: 600;
+  }
+  .btn--ghost:hover:not(:disabled) {
+    background: var(--bg-3);
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: none;
+  }
+
+  /* Destructive: a wipe-and-rescan must not read as an ordinary link. */
+  .btn--danger {
+    background: var(--err);
+    border-color: var(--err);
+    color: var(--on-fill);
+  }
+  .btn--danger:hover:not(:disabled) {
+    background: var(--err);
+    border-color: var(--err);
+    box-shadow: 0 2px 6px rgba(var(--err-rgb), 0.3);
+  }
+  .btn--danger:focus-visible { outline: 2px solid var(--err); outline-offset: 2px; }
+
+  /* The call to action: the one filled, full-width button a screen ends on. Sentence case, set at
+     the call site ("Review", "Shield 1.5 ETH"); nothing here transforms case.
+
+     Disabled is a different surface, not a faded one. At half opacity the ember
+     fill still reads as pressable, and the reason under the button is what
+     explains the dead state — so the button itself steps back to --bg-3 and
+     --fg-mute. */
+  .btn--cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-10);
+    width: 100%;
+    min-height: 44px;
+    padding: 17px;
+    border-radius: var(--radius);
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-fill);
+    font-size: var(--fs-17);
+    font-weight: 600;
+    line-height: 1.25;
+    text-decoration: none;
+    box-shadow: 0 6px 22px rgba(var(--accent-rgb), 0.3);
+  }
+  .btn--cta:hover:not(:disabled) {
+    background: var(--accent-2);
+    border-color: var(--accent-2);
+    box-shadow: 0 6px 22px rgba(var(--accent-rgb), 0.38);
+  }
+  .btn--cta:disabled {
+    opacity: 1;
+    background: var(--bg-3);
+    border-color: var(--bg-3);
+    color: var(--fg-mute);
+    box-shadow: none;
+  }
+
+  /* The secondary button beside or under a CTA: "Back", "Back home", "Retry now".
+     A 1px line and the foreground ink, at the CTA's height. */
+  .btn--outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-8);
+    min-height: 44px;
+    padding: 13px 22px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: transparent;
+    color: var(--fg);
+    font-size: var(--fs-16);
+    font-weight: 600;
+    line-height: 1.25;
+    text-decoration: none;
+    box-shadow: none;
+  }
+  .btn--outline:hover:not(:disabled) {
+    background: var(--bg-2);
+    border-color: var(--fg-mute);
+    color: var(--fg);
+    box-shadow: none;
+  }
+
+  /* The smaller button inside a card, filled or outlined — "Try again" and
+     "Back home" on the failed card, "Create link" beside "Share…". No lift.
+     After the CTA and the outline, so it sizes either. */
+  .btn--sm {
+    padding: 13px;
+    font-size: var(--fs-15);
+    box-shadow: none;
+  }
+  .btn--sm:hover:not(:disabled) { box-shadow: none; }
+
+  /* Toned outlines, for the action inside a notice of that tone: "Set up" on
+     the accent setup card, "Pay the fee in ETH" on a warn box. */
+  .btn--outline-accent,
+  .btn--outline-accent:hover:not(:disabled) {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn--outline-accent:hover:not(:disabled) { background: rgba(var(--accent-rgb), 0.08); }
+  .btn--outline-warn,
+  .btn--outline-warn:hover:not(:disabled) {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  .btn--outline-warn:hover:not(:disabled) { background: rgba(var(--warn-rgb), 0.1); }
+  .btn--outline-err,
+  .btn--outline-err:hover:not(:disabled) {
+    border-color: var(--err);
+    color: var(--err);
+  }
+  .btn--outline-err:hover:not(:disabled) { background: rgba(var(--err-rgb), 0.08); }
+
+  @media (max-width: 480px) {
+    /* Grown rather than shrunk. `.row > .btn` already goes full-width at this
+       breakpoint, so the height a thumb needs costs no horizontal room. */
+    .btn--ghost {
+      padding: var(--sp-12) var(--sp-14);
+      font-size: var(--fs-12);
+      min-height: 44px;
+    }
+  }
+}

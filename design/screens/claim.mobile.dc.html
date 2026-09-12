@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root {
+      --bg: #14110E; --bg-1: #1C1815; --bg-2: #241F1A; --bg-3: #2E2822;
+      --fg: #F5F1E8; --fg-dim: #BEB5A6; --fg-mute: #9E9486;
+      --line: #2A241E; --line-strong: #3A332B;
+      --accent: #E0794A; --accent-2: #EA8C60; --accent-dim: #7A4526;
+      --warn: #E0A93F; --err: #E67A6E;
+      --display: "Newsreader", Georgia, "Times New Roman", serif;
+      --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: "zero" 1; }
+    .shell { min-height: 844px; display: flex; flex-direction: column; background: radial-gradient(420px 300px at 50% -6%, rgba(224,121,74,0.16), transparent 66%), #14110E; }
+    .mark { border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; flex: none; }
+    .sub { font-size: 13px; color: var(--fg-mute); }
+    .rule { height: 1px; background: var(--line); }
+    .cta { display: flex; align-items: center; justify-content: center; gap: 9px; padding: 16px; border-radius: 4px; background: var(--accent); color: #14110E; font-size: 16px; font-weight: 600; min-height: 44px; }
+  </style>
+</helmet>
+
+
+<div class="shell">
+  <div style="display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line);">
+    <svg width="21" height="21" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>
+    <span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:12px;font-weight:600;letter-spacing:.02em;line-height:1;flex: 1;">LELANTOS</span>
+    <span style="display: flex; align-items: center; gap: 6px; padding: 6px 11px; border: 1px solid var(--line-strong); border-radius: 2px; font-size: 13px;">
+      <span class="mark" style="width: 14px; height: 14px; background: #2151f5; font-size: 8px; color: #fff;">B</span>Base
+    </span>
+    <span class="mark" style="width: 32px; height: 32px; background: var(--bg-2); border: 1px solid var(--line-strong); color: var(--fg-dim); font-size: 11px;">7a</span>
+  </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:16px;padding:20px 18px;">
+
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="mark" style="width:38px;height:38px;border-radius:4px;border:1px solid var(--line-strong);background:var(--bg-1);color:var(--fg-dim);">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+      </span>
+      <div style="display:flex;flex-direction:column;gap:0;">
+        <span style="font-family:var(--display);font-size:22px;font-weight:600;">Claim</span>
+        <span style="font-size:13px;color:var(--fg-mute);">Arrived by link</span>
+      </div>
+    </div>
+
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:9px;text-align:center;padding:6px 0 2px;">
+      <span style="width:54px;height:54px;border:1px solid rgba(224,121,74,0.34);background:rgba(224,121,74,0.1);display:inline-grid;place-items:center;">
+        <svg width="26" height="26" viewBox="0 0 512 512" aria-hidden="true"><path d="M256 88 L400 144 V276 C400 356 336 408 256 438 C176 408 112 356 112 276 V144 Z" fill="rgba(224,121,74,0.18)" stroke="#E0794A" stroke-width="32" stroke-linejoin="round"/></svg>
+      </span>
+      <span style="font-family:var(--display);font-size:25px;font-weight:600;line-height:1.15;">Someone sent you funds</span>
+      <span style="font-size:14px;color:var(--fg-dim);">Claim them into your own shielded wallet.</span>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:0;padding:2px 0;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;">
+        <span style="width:22px;height:22px;background:var(--accent);display:inline-grid;place-items:center;color:#14110E;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5L20 7"/></svg></span>
+        <span style="font-size:11px;color:var(--fg-dim);">Link read</span>
+      </div>
+      <span style="height:2px;background:var(--accent);flex:1;margin-top:-16px;"></span>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;">
+        <span class="num" style="width:22px;height:22px;border:2px solid var(--accent);background:rgba(224,121,74,0.14);display:inline-grid;place-items:center;color:var(--accent);font-size:11px;font-weight:600;">2</span>
+        <span style="font-size:11px;font-weight:600;color:var(--accent);">Connect</span>
+      </div>
+      <span style="height:2px;background:var(--bg-3);flex:1;margin-top:-16px;"></span>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:5px;flex:1;">
+        <span class="num" style="width:22px;height:22px;border:1px solid var(--line-strong);display:inline-grid;place-items:center;color:var(--fg-mute);font-size:11px;">3</span>
+        <span style="font-size:11px;color:var(--fg-mute);">Claim</span>
+      </div>
+    </div>
+
+    <div style="border:1px solid var(--line-strong);background:var(--bg-1);padding:16px;display:flex;flex-direction:column;gap:13px;">
+      <span class="sub">Waiting for you</span>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <span class="mark" style="width:40px;height:40px;background:rgba(122,160,180,0.16);border:1px solid rgba(122,160,180,0.42);color:#8FB6C9;font-size:10px;">USDC</span>
+        <div style="display:flex;flex-direction:column;gap:0;flex:1;min-width:0;">
+          <span class="num" style="font-size:19px;font-weight:600;">75.00 USDC</span>
+          <span class="sub">≈ $75.00</span>
+        </div>
+      </div>
+      <div style="height:1px;background:var(--line);"></div>
+      <span style="font-size:14px;color:var(--fg-dim);line-height:1.6;">Connect a wallet to derive the shielded address these funds will land in. No funds move to connect.</span>
+    </div>
+
+    <div class="cta" style="margin-top:auto;">Connect wallet</div>
+    <p style="margin:0;text-align:center;font-size:13px;color:var(--fg-mute);line-height:1.55;">The claim code is stripped from the address bar the moment this page opens.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

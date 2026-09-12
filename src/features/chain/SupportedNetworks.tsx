@@ -1,6 +1,7 @@
 import type { ChainEntry } from "@/config/chains";
-import { ChainIcon } from "@/features/icons";
+import { ChainIcon } from "@/shared/ui/icons/ChainIcon";
 import { useChainRegistry } from "./ChainProvider";
+import "./SupportedNetworks.css";
 
 /// The networks this deployment serves, named before a wallet is connected.
 ///
@@ -16,19 +17,17 @@ export function SupportedNetworks() {
 
   return (
     <div className="networks">
-      <span className="networks__label muted">supported networks</span>
-      <span className="networks__list">
-        {registry.map((c: ChainEntry) => (
-          <span
-            key={c.chainId.toString()}
-            className="pill pill--sm"
-            title={`chain id ${c.chainId}`}
-          >
-            <ChainIcon chainId={c.chainId} chainName={c.chainName} />
-            {c.chainName}
-          </span>
-        ))}
-      </span>
+      <span className="networks__label">Available on</span>
+      {registry.map((c: ChainEntry) => (
+        <span
+          key={c.chainId.toString()}
+          className="pill networks__pill"
+          title={`chain id ${c.chainId}`}
+        >
+          <ChainIcon chainId={c.chainId} chainName={c.chainName} className="networks__mark" />
+          {c.chainName}
+        </span>
+      ))}
     </div>
   );
 }

@@ -1,0 +1,35 @@
+@layer components {
+  /* The pool boundary, stated under an action's title. Reads as a route rather
+     than a warning: an arrow between two plain words, with the shielded end in
+     the accent — or, for an op that never leaves the pool, one accent sentence
+     behind the pool's shield. See `BoundaryLine`. */
+  .boundary {
+    margin: 0;
+    font-size: var(--fs-14);
+    line-height: 1.45;
+    color: var(--fg-mute);
+  }
+  .boundary__full {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  .boundary__arrow {
+    flex: none;
+    color: var(--fg-mute);
+  }
+  .boundary__arrow--in { color: var(--accent); }
+  .boundary--sentence { color: var(--accent); }
+  .boundary__shield { flex: none; }
+
+  /* Phone copy; swapped in at the phone breakpoint below. */
+  .boundary__short { display: none; }
+
+  @media (max-width: 480px) {
+    .boundary { font-size: var(--fs-13); }
+    .boundary--has-short .boundary__full { display: none; }
+    .boundary--has-short .boundary__short { display: inline; }
+    .boundary--has-short.boundary--sentence { color: var(--fg-mute); }
+  }
+}

@@ -1,0 +1,257 @@
+@layer features {
+  .vault-meter {
+    display: block;
+    height: 9px;
+    background: var(--bg-3);
+    overflow: hidden;
+  }
+  .vault-meter--sm { height: 6px; }
+  .vault-meter__fill {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+    transition: width var(--dur-220) var(--ease);
+  }
+  .vault-cap--err .vault-meter__fill,
+  .vault-sum--err .vault-meter__fill { background: var(--err); }
+
+  /* The capacity box. Neutral while there is room; the err tone once there is not. */
+  .vault-cap {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+    padding: var(--sp-20) 22px;
+  }
+  .vault-cap--err {
+    border-color: var(--err);
+    background: rgba(var(--err-rgb), 0.07);
+  }
+  .vault-cap__head {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+  }
+  .vault-cap__icon { flex: none; color: var(--err); }
+  .vault-cap__t {
+    margin: 0;
+    font-size: var(--fs-17);
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--fg);
+  }
+  .vault-cap--err .vault-cap__t { color: var(--err-strong); }
+  .vault-cap__body {
+    margin: 0;
+    max-width: 84ch;
+    font-size: var(--fs-15);
+    line-height: 1.65;
+    color: var(--fg-dim);
+  }
+  .vault-cap--err .vault-cap__body { color: var(--err-strong); }
+  .vault-cap__actions,
+  .vault-cap__confirm {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-10);
+  }
+  .vault-cap__export {
+    width: auto;
+    padding: var(--sp-14) 22px;
+    font-size: var(--fs-16);
+  }
+  .vault-cap__note {
+    margin: 0;
+    font-size: var(--fs-13);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+
+  .vault-list {
+    min-width: 0;
+  }
+  .vault-list__hdr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-8) var(--sp-16);
+    padding: 17px 22px;
+    border-bottom: 1px solid var(--line);
+  }
+  .vault-list__t {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 19px;
+    font-weight: 600;
+  }
+  .vault-list__count {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .vault-list__body { padding: 2px 22px var(--sp-20); }
+  .vault-list__rows {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .vault-list__empty {
+    margin: 0;
+    padding: var(--sp-18) 0 0;
+    font-size: var(--fs-15);
+    line-height: 1.6;
+    color: var(--fg-dim);
+  }
+
+  /* The UA's own link colours otherwise: nothing in base.css styles a bare <a>. */
+  .vault-list__empty a {
+    color: var(--accent);
+    font-weight: 500;
+    text-decoration: none;
+  }
+  .vault-list__empty a:hover { color: var(--accent-2); }
+  .vault-list__empty a:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .vault-list__more {
+    margin-top: var(--sp-6);
+    padding: 0;
+    font-size: var(--fs-14);
+    font-weight: 500;
+  }
+  .vault-list__more:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .vault-list__foot {
+    margin: 15px 0 0;
+    max-width: 88ch;
+    font-size: var(--fs-14);
+    line-height: 1.65;
+    color: var(--fg-mute);
+  }
+  .vault-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--sp-16);
+    padding: 15px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .vault-row__main {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-8) var(--sp-12);
+    min-width: 0;
+  }
+  .vault-row__amt {
+    font-family: var(--mono);
+    font-size: var(--fs-17);
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+  .vault-row__age {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+    white-space: nowrap;
+  }
+
+  /* A fixed lane: the delete confirmation swaps two buttons for two others, and
+     without a reserved width every row below it jumped. */
+  .vault-row__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: var(--sp-8);
+    min-width: 15.5em;
+  }
+  .vault-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 9px 15px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font: inherit;
+    font-size: var(--fs-14);
+    color: var(--fg);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color var(--dur-120) var(--ease-soft), color var(--dur-120) var(--ease-soft);
+  }
+  .vault-btn:hover { border-color: var(--fg-mute); }
+  .vault-btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .vault-btn--strong { font-weight: 600; }
+  .vault-btn--mute { color: var(--fg-mute); }
+  .vault-btn--mute:hover { color: var(--fg-dim); }
+  .vault-btn--err,
+  .vault-btn--err:hover { border-color: var(--err); color: var(--err); font-weight: 600; }
+  .vault-tag {
+    padding: 2px 9px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    font-size: var(--fs-12);
+    font-weight: 600;
+    color: var(--fg-mute);
+    white-space: nowrap;
+  }
+  .vault-tag--warn { border-color: var(--warn); color: var(--warn); }
+  .vault-tag--err { border-color: var(--err); color: var(--err); }
+
+  /* The vault as one panel under Send by link. */
+  .vault-sum {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-10);
+    padding: var(--sp-18) var(--sp-20);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-1);
+  }
+  .vault-sum__hdr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-6) var(--sp-12);
+  }
+  .vault-sum__t {
+    margin: 0;
+    font-size: var(--fs-15);
+    font-weight: 600;
+  }
+  .vault-sum__count {
+    font-family: var(--mono);
+    font-size: var(--fs-13);
+    color: var(--fg-mute);
+  }
+  .vault-sum--err .vault-sum__count { color: var(--err); }
+  .vault-sum__link {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-6);
+    min-height: 44px;
+    font-size: var(--fs-14);
+    font-weight: 500;
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .vault-sum__link:hover { color: var(--accent-2); }
+
+  @media (max-width: 560px) {
+    .vault-cap { padding: var(--sp-16); }
+    .vault-cap__actions > .btn,
+    .vault-cap__confirm { flex: 1 1 100%; }
+    .vault-cap__export { width: 100%; }
+    .vault-list__hdr { padding: var(--sp-14) var(--sp-16); }
+    .vault-list__body { padding: 2px var(--sp-16) var(--sp-16); }
+    /* Amount and age share a line; the two actions take the next one. */
+    .vault-row {
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: var(--sp-10) var(--sp-12);
+    }
+    .vault-row__actions {
+      grid-column: 1 / -1;
+      justify-content: flex-start;
+      min-width: 0;
+    }
+    .vault-row__actions > .vault-btn { flex: 1; }
+  }
+}

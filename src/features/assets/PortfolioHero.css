@@ -1,0 +1,102 @@
+/* Home balance: the hero figure. The asset list is `AssetsCard.css` and
+   `AssetList.css`. */
+
+@layer features {
+  /* HERO — label, figure, one line. Outside any card: it is the page's answer,
+     not a property of a panel. */
+  .pf-hero {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-6);
+    min-width: 0;
+  }
+  .pf-hero__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: var(--fs-15);
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .pf-hero__shield { flex: none; }
+  .pf-hero__val {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 60px;
+    font-weight: 600;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+
+  /* Nothing shielded, or nothing priced: the figure is true but carries nothing
+     to read first. */
+  .pf-hero__val--muted { color: var(--fg-mute); }
+
+  /* Cents at the dollars' size, in the muted ink: kept for precision, stepped
+     back so the magnitude reads first. */
+  .pf-hero__cents { color: var(--fg-mute); }
+  .pf-hero__approx {
+    margin-right: 4px;
+    font-weight: 500;
+    color: var(--fg-mute);
+  }
+  .pf-hero__sub {
+    margin: 0;
+    font-size: var(--fs-15);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+  .pf-hero__earned { color: var(--accent); }
+  .pf-hero__earned--down { color: var(--warn); }
+  .pf-hero__partial { color: var(--warn); }
+  .pf-hero__scan { color: var(--fg-dim); }
+
+  /* Stale, not empty: the last good figure stands, in warn ink, with a retry. */
+  .pf-hero__stale {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-6) var(--sp-12);
+    color: var(--warn-ink);
+  }
+  .pf-hero__retry {
+    padding: 9px var(--sp-14);
+    font-size: var(--fs-14);
+  }
+
+  /* Counting: two bars where the figure goes, at roughly its height. */
+  .pf-hero__skel {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-8);
+    padding: var(--sp-12) 0 var(--sp-10);
+    max-width: 420px;
+  }
+  .pf-hero__skel-bar {
+    display: block;
+    width: 100%;
+    height: 22px;
+    background: var(--bg-3);
+  }
+  .pf-hero__skel-bar--short { width: 72%; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pf-hero__skel-bar { animation: none; opacity: 0.6; }
+  }
+
+  @media (max-width: 720px) {
+    .pf-hero__val { font-size: 48px; }
+  }
+
+  @media (max-width: 480px) {
+    .pf-hero { gap: 5px; }
+    .pf-hero__label { gap: 7px; font-size: var(--fs-14); }
+    .pf-hero__shield { width: 14px; height: 14px; }
+    .pf-hero__val { font-size: 42px; }
+    .pf-hero__sub { font-size: var(--fs-13); }
+    .pf-hero__skel-bar { height: 18px; }
+  }
+}

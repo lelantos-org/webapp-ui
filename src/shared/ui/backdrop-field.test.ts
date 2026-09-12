@@ -14,7 +14,7 @@ const PALETTE = buildPalette([10, 20, 30]);
 function seededRandom(): () => number {
   let i = 0;
   const ramp = [0.1, 0.9, 0.35, 0.6, 0.05, 0.75, 0.5, 0.25];
-  return () => ramp[i++ % ramp.length];
+  return () => ramp[i++ % ramp.length]!;
 }
 
 function field(w = 1440, h = 900): BackdropField {
@@ -141,7 +141,6 @@ describe("BackdropField.draw", () => {
     const { ctx } = recordingContext();
     f.draw(ctx);
     expect(spy).not.toHaveBeenCalled();
-    spy.mockRestore();
   });
 
   it("paints an empty field without touching a node path", () => {
@@ -161,6 +160,6 @@ describe("buildPalette", () => {
     expect(p.link[0]).toContain("rgba(1, 2, 3,");
     // Monotonic ramp; index 0 is the faintest.
     const alpha = (s: string) => Number(s.slice(s.lastIndexOf(",") + 1, -1));
-    expect(alpha(p.link[0])).toBeLessThan(alpha(p.link[9]));
+    expect(alpha(p.link[0]!)).toBeLessThan(alpha(p.link[9]!));
   });
 });

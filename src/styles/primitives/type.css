@@ -1,0 +1,51 @@
+/* Type patterns more than one surface sets the same way. */
+@layer primitives {
+  /* A section label: small, spaced capitals in the muted ink ("You are
+     sending", "What an observer sees", "Where these figures come from"). */
+  .caps {
+    font-size: var(--fs-12);
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--fg-mute);
+  }
+
+  /* The centred quiet line a card or column ends on. */
+  .footnote {
+    margin: 0;
+    text-align: center;
+    font-size: var(--fs-14);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+
+  /* A figure set large in the display face, tabular so digits do not shift as they change (the amount field, the review's
+     amount, the swap's receive leg). Size is the caller's. */
+  .figure {
+    font-family: var(--display);
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The same figure in words, closed by a rule, as on a cheque. */
+  .cheque {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-10);
+  }
+  .cheque__txt {
+    font-family: var(--display);
+    font-style: italic;
+    color: var(--fg-dim);
+    overflow-wrap: anywhere;
+  }
+  .cheque__rule {
+    flex: 1;
+    min-width: 24px;
+    height: 1px;
+    align-self: center;
+    background: var(--line-strong);
+  }
+}

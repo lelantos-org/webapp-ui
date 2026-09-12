@@ -1,0 +1,197 @@
+@layer features {
+  .pf-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg-1);
+    overflow: hidden;
+  }
+  .pf-list--msg {
+    padding: var(--sp-18) var(--sp-20);
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+
+  /* ROW — mark, then name over balance; value over earned on the right. */
+  .pf-row { border-bottom: 1px solid var(--line); }
+  .pf-row:last-child { border-bottom: 0; }
+  .pf-row__btn {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 13px;
+    width: 100%;
+    min-height: 44px;
+    padding: 17px var(--sp-20);
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: background var(--dur-80) var(--ease-soft);
+  }
+  .pf-row__btn:hover,
+  .pf-row--open .pf-row__btn { background: var(--bg-2); }
+  .pf-row__btn:focus-visible { outline: var(--ring); outline-offset: -2px; }
+  .pf-row__mark {
+    width: 36px;
+    height: 36px;
+  }
+  .pf-row__left,
+  .pf-row__right {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .pf-row__right { align-items: flex-end; text-align: right; }
+  .pf-row__name {
+    font-size: var(--fs-16);
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .pf-row__vault {
+    font-weight: 400;
+    color: var(--fg-mute);
+  }
+  .pf-row__bal {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--sp-8);
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .pf-row__usd {
+    font-size: var(--fs-17);
+    font-weight: 600;
+    color: var(--fg);
+    white-space: nowrap;
+  }
+  .pf-row__usd--none { color: var(--fg-mute); }
+  .pf-row__earned {
+    font-size: var(--fs-14);
+    white-space: nowrap;
+  }
+  .pf-row__earned--up { color: var(--accent); }
+
+  /* A venue loss or a paused venue: a direction, not an error. */
+  .pf-row__earned--down,
+  .pf-row__earned--paused { color: var(--warn); }
+
+  /* In-flight legs, ahead of the figure they are moving. Never wraps apart: a
+     swap has both legs in flight at once. */
+  .bal__flow {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    white-space: nowrap;
+    font-size: var(--fs-12);
+    font-weight: 600;
+    line-height: 1;
+    animation: bal-settle-in var(--dur-200) var(--ease) both;
+  }
+  @keyframes bal-settle-in {
+    from { opacity: 0; transform: translateX(3px); }
+    to { opacity: 1; transform: none; }
+  }
+  .bal__delta--in { color: var(--accent); }
+  .bal__delta--out { color: var(--warn); }
+
+  /* Quieter than either delta: it says "still moving", it is not the number. */
+  .bal__spin {
+    flex: none;
+    width: 7px; height: 7px;
+    border-radius: var(--radius-round);
+    border: 1.5px solid var(--fg-mute);
+    border-top-color: transparent;
+    animation: spin 800ms linear infinite;
+  }
+
+  /* ROW DETAIL — an inline disclosure under the row, in a `.collapse`. */
+  .pf-detail {
+    border-top: 1px solid var(--line);
+    background: var(--bg-1);
+  }
+  .pf-detail__body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-18);
+    padding: var(--sp-22);
+  }
+  .pf-detail__stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--sp-18);
+    margin: 0;
+  }
+  .pf-detail__stat { min-width: 0; }
+  .pf-detail__lbl {
+    margin-bottom: 4px;
+    font-size: var(--fs-12);
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--fg-mute);
+  }
+  .pf-detail__fig { margin: 0; }
+  .pf-detail__num {
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .pf-detail__num--earned { color: var(--accent); }
+  .pf-detail__num--down,
+  .pf-detail__num--paused { color: var(--warn); }
+  .pf-detail__pct {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .pf-detail__note {
+    display: block;
+    font-size: var(--fs-13);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+  .pf-detail__p {
+    margin: 0;
+    font-size: var(--fs-15);
+    line-height: 1.6;
+    color: var(--fg-dim);
+  }
+  .pf-list__foot {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-10);
+    padding: 13px var(--sp-20);
+    background: var(--bg-2);
+    font-size: var(--fs-13);
+    color: var(--fg-dim);
+  }
+  .pf-list__spin {
+    flex: none;
+    width: 13px;
+    height: 13px;
+    border: 2px solid var(--line-strong);
+    border-top-color: var(--accent);
+    border-radius: var(--radius-round);
+    animation: spin 900ms linear infinite;
+  }
+
+  @media (max-width: 480px) {
+    .pf-row__btn { column-gap: var(--sp-12); padding: 15px var(--sp-16); }
+    .pf-row__name { font-size: var(--fs-15); }
+    .pf-row__bal { font-size: var(--fs-13); }
+    .pf-row__usd { font-size: var(--fs-15); }
+    .pf-row__earned { font-size: var(--fs-13); }
+    .pf-detail__body { padding: var(--sp-16); gap: var(--sp-14); }
+    .pf-detail__stats { gap: var(--sp-14); }
+    .pf-detail__num { font-size: 18px; }
+    .pf-detail__p { font-size: var(--fs-14); }
+    .pf-list__foot { padding: 13px var(--sp-16); }
+  }
+}

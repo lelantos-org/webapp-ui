@@ -1,12 +1,10 @@
+// @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { stubReducedMotion } from "@/test/dom";
 import { useCollapseTransition } from "./use-collapse-transition";
 
 const DURATION = 220;
-
-function stubReducedMotion(reduce: boolean) {
-  vi.stubGlobal("matchMedia", (media: string) => ({ media, matches: reduce }));
-}
 
 const render = (open: boolean) =>
   renderHook(({ o }) => useCollapseTransition(o, DURATION), { initialProps: { o: open } });
@@ -19,7 +17,6 @@ describe("useCollapseTransition", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
   });
 
   it("mounts already expanded when it starts open", () => {

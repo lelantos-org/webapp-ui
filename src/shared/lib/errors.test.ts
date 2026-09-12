@@ -10,51 +10,45 @@ import {
   TxMiningError,
   WalletConfigError,
 } from "@lelantos-org/sdk/errors";
-import { describe, expect, it } from "vitest";
-import { classifyError, describeError, friendlyMessage, isDuplicateSpend } from "./errors";
+import { describe, expect, it, vi } from "vitest";
+import {
+  CANCELED_IN_WALLET,
+  classifyError,
+  isDuplicateSpend,
+  rawMessage,
+  reportError,
+  userMessage,
+} from "./errors";
 
 /// What the relayer answers a spend whose nullifier it has seen: 409 plus the
 /// reason as the body. See `nullifier_guard.rs`.
 const spendConflict = (body: string) =>
   new NetworkError("RELAYER_FAILED", "/relayer/v1/spend", "HTTP 409", { status: 409, body });
 
-describe("describeError", () => {
-  it("string fallback for raw values", () => {
-    expect(describeError("boom")).toBe("boom");
-  });
-
-  it("Error fallback uses message", () => {
-    expect(describeError(new Error("nope"))).toBe("nope");
+describe("rawMessage", () => {
+  it("reads a raw string, or an Error's message", () => {
+    expect(rawMessage("boom")).toBe("boom");
+    expect(rawMessage(new Error("nope"))).toBe("nope");
   });
 
   it("reads the message off an EIP-1193 rejection", () => {
     // Wallets reject with a plain object, not an `Error`. Falling through to
     // `String(e)` rendered every one of them as "[object Object]".
-    expect(describeError({ code: 4902, message: 'Unrecognized chain ID "0x7a69".' })).toBe(
+    expect(rawMessage({ code: 4902, message: 'Unrecognized chain ID "0x7a69".' })).toBe(
       'Unrecognized chain ID "0x7a69".',
     );
   });
 
   it("names the code when the wallet sent no message", () => {
     // "-32603" in a bug report can be looked up; "[object Object]" cannot.
-    expect(describeError({ code: -32603 })).toBe("Wallet error -32603");
-  });
-
-  it("prefers the innermost message over the generic wrapper", () => {
-    expect(
-      describeError({
-        code: -32603,
-        message: "Internal JSON-RPC error.",
-        data: { originalError: { code: 4001, message: "User rejected the request." } },
-      }),
-    ).toBe("User rejected the request.");
+    expect(rawMessage({ code: -32603 })).toBe("Wallet error -32603");
   });
 
   it("keeps the unknown-network line out of the hex guard", () => {
     // The wallet names the chain in hex, which the generic `0x` guard would
     // otherwise flatten to "Something went wrong".
     expect(
-      friendlyMessage({
+      userMessage({
         code: -32603,
         message: 'Unrecognized chain ID "0x7a69". Try adding the chain first.',
       }),
@@ -71,7 +65,7 @@ describe("describeError", () => {
       ],
       consolidateSum: 30n,
     });
-    const msg = describeError(err);
+    const msg = rawMessage(err);
     expect(msg).toMatch(/Insufficient cover/);
     expect(msg).toMatch(/Consolidate 2/);
   });
@@ -88,7 +82,7 @@ describe("describeError", () => {
     [new TxMiningError("no receipt"), /Transaction did not mine/],
     [new SelectionError("no spendable notes"), /no spendable notes/],
   ])("maps %s", (err, re) => {
-    expect(describeError(err)).toMatch(re);
+    expect(rawMessage(err)).toMatch(re);
   });
 });
 
@@ -97,13 +91,13 @@ describe("prover faults keep their own diagnosis", () => {
   // pass would rewrite all of them to "Proof generation failed", which an
   // unreachable or 404ing zkey is not.
   it("a missing artifact is not reported as a failed proof", () => {
-    const msg = friendlyMessage(new ProverArtifactsMissingError(["opts.cdn"], "3x3"));
+    const msg = userMessage(new ProverArtifactsMissingError(["opts.cdn"], "3x3"));
     expect(msg).toMatch(/artifacts missing/i);
     expect(msg).not.toMatch(/Proof generation failed/);
   });
 
   it("an artifact that failed to download points at the connection", () => {
-    const msg = friendlyMessage(
+    const msg = userMessage(
       new ProverArtifactsFailedError("/3x3_final.zkey", "HTTP 404", { retryable: false }),
     );
     expect(msg).toMatch(/failed to load/i);
@@ -111,7 +105,7 @@ describe("prover faults keep their own diagnosis", () => {
   });
 
   it("a real prover failure still reads as one", () => {
-    expect(friendlyMessage(new ProverError("witness calculation failed"))).toMatch(
+    expect(userMessage(new ProverError("witness calculation failed"))).toMatch(
       /Proof generation failed/,
     );
   });
@@ -123,24 +117,24 @@ describe("notes tied up in an earlier spend", () => {
       "no spendable notes for asset 1 (3 in store: 2 awaiting an earlier spend, 1 spent)",
       { asset: 1n },
     );
-    expect(friendlyMessage(err)).toMatch(/tied up in an earlier spend/);
+    expect(userMessage(err)).toMatch(/tied up in an earlier spend/);
   });
 });
 
 describe("duplicate spend", () => {
   it("tells a spend still in flight apart from one already landed", () => {
-    expect(describeError(spendConflict("nullifier in flight: chain 1"))).toMatch(/Wait for it/);
-    expect(describeError(spendConflict("nullifier already spent: chain 1 (1 hit)"))).toMatch(
+    expect(rawMessage(spendConflict("nullifier in flight: chain 1"))).toMatch(/Wait for it/);
+    expect(rawMessage(spendConflict("nullifier already spent: chain 1 (1 hit)"))).toMatch(
       /already spent/,
     );
   });
 
   it("survives a relayer that sent no body", () => {
-    expect(describeError(spendConflict(""))).toMatch(/already spent/);
+    expect(rawMessage(spendConflict(""))).toMatch(/already spent/);
   });
 
-  it("keeps the advice through friendlyMessage, which flattens 'relayer' to one line", () => {
-    expect(friendlyMessage(spendConflict("nullifier in flight: chain 1"))).toMatch(/Wait for it/);
+  it("keeps the advice through userMessage, which flattens 'relayer' to one line", () => {
+    expect(userMessage(spendConflict("nullifier in flight: chain 1"))).toMatch(/Wait for it/);
   });
 
   it("is only a duplicate spend on 409", () => {
@@ -178,7 +172,7 @@ describe("classifyError", () => {
   });
 
   it("does not read the relayer's own refusal as a user cancellation", () => {
-    // `describeError` renders a relayer 500 as "Relayer rejected the request…",
+    // `rawMessage` renders a relayer 500 as "Relayer rejected the request…",
     // which a bare "rejected the request" match would claim as a cancellation,
     // reporting a server fault as "Canceled in wallet." and leaving no record,
     // since cancellations are not logged.
@@ -189,18 +183,42 @@ describe("classifyError", () => {
   });
 });
 
-describe("friendlyMessage hex guard", () => {
+describe("userMessage hex guard", () => {
   it("passes through a message naming a chain id", () => {
     // A bare `includes("0x")` swallowed this, so every wallet line naming a
     // chain in hex needed its own curated branch to escape.
-    expect(friendlyMessage(new Error('Chain "0x7a69" is not available.'))).toBe(
+    expect(userMessage(new Error('Chain "0x7a69" is not available.'))).toBe(
       'Chain "0x7a69" is not available.',
     );
   });
 
   it("still withholds a raw selector or address", () => {
-    expect(friendlyMessage(new Error("call to 0x1e4fbdf7abcdef0123456789 did not complete"))).toBe(
+    expect(userMessage(new Error("call to 0x1e4fbdf7abcdef0123456789 did not complete"))).toBe(
       "Something went wrong. Please try again.",
     );
+  });
+});
+
+// `reportError` is the one call that both shows and keeps a failure: the user
+// gets a line they can read, the log gets the cause that line may have dropped.
+describe("reportError", () => {
+  it("words a cancellation like every other surface does, and does not log it", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const r = reportError("test", { code: 4001, message: "User rejected the request." });
+
+    expect(r).toEqual({ kind: "rejected", message: CANCELED_IN_WALLET });
+    expect(userMessage({ code: 4001 })).toBe(CANCELED_IN_WALLET);
+    expect(logged).not.toHaveBeenCalled();
+  });
+
+  it("shows the user's line and logs the raw cause", () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const raw = new Error(`call failed with data 0x${"ab".repeat(40)}`);
+    const r = reportError("test", raw);
+
+    expect(r.kind).toBe("failed");
+    expect(r.message).toBe("Something went wrong. Please try again.");
+    expect(logged).toHaveBeenCalled();
+    expect(logged.mock.calls.flat()).toContain(raw);
   });
 });

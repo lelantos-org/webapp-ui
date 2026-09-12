@@ -1,0 +1,15 @@
+/* The pinned call to action on a phone. */
+@layer primitives {
+  /* On a phone, the block a form ends on rides the bottom of the viewport while
+     its card is on screen, over a fade into the card's ground. Sticky rather
+     than fixed, so it settles back into the card at the end. Margins and
+     padding stay with each caller, which knows its card's padding. */
+  @media (max-width: 480px) {
+    .sticky-cta {
+      position: sticky;
+      bottom: 0;
+      z-index: 2;
+      background: linear-gradient(to bottom, transparent, var(--bg-1) 18px);
+    }
+  }
+}

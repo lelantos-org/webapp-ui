@@ -1,0 +1,126 @@
+@layer features {
+  /* `ShieldAssetPicker`: every asset the pool accepts, what the public wallet
+     holds of each, and each venue's rate. The chosen row carries the accent. The
+     footnote box under the list is what makes the rate column honest, so it is
+     part of the screen, not a tooltip. */
+  .apick {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-18);
+  }
+  .apick__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-8);
+  }
+  .apick__row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto 20px;
+    align-items: center;
+    gap: 13px;
+    width: 100%;
+    min-height: 44px;
+    padding: var(--sp-14) var(--sp-16);
+    border: 1px solid var(--line);
+    border-radius: 0;
+    background: var(--bg-1);
+    color: var(--fg);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color var(--dur-120) var(--ease-soft), background var(--dur-120) var(--ease-soft);
+  }
+  .apick__row:hover { border-color: var(--line-strong); }
+  .apick__row:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .apick__row--on,
+  .apick__row--on:hover {
+    border-color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.06);
+  }
+  .apick__mark {
+    width: 32px;
+    height: 32px;
+    font-size: var(--fs-10);
+  }
+  .apick__name {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .apick__sym {
+    font-size: var(--fs-15);
+    font-weight: 600;
+  }
+  .apick__vault {
+    font-weight: 400;
+    color: var(--fg-mute);
+  }
+  .apick__have {
+    font-size: var(--fs-13);
+    color: var(--fg-mute);
+  }
+  .apick__rate {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    text-align: right;
+  }
+  .apick__rate-v {
+    font-size: var(--fs-15);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .apick__rate-v--paused { color: var(--warn); }
+  .apick__rate-w {
+    font-size: var(--fs-12);
+    color: var(--fg-mute);
+  }
+  .apick__rate--none {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+
+  /* The chosen mark. Always in the grid, so choosing a row does not shift it. */
+  .apick__check {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-round);
+  }
+  .apick__row--on .apick__check {
+    background: var(--accent);
+    color: var(--on-fill);
+  }
+  .apick__empty {
+    margin: 0;
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .apick__foot {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: var(--sp-16) var(--sp-18);
+  }
+  .apick__foot p {
+    margin: 0;
+    font-size: var(--fs-14);
+    line-height: 1.65;
+    color: var(--fg-mute);
+  }
+  .apick__foot .apick__foot-lead { color: var(--fg-dim); }
+
+  @media (max-width: 480px) {
+    .apick { gap: var(--sp-16); }
+    .apick__row { gap: 11px; padding: var(--sp-12) var(--sp-14); }
+    .apick__mark { width: 28px; height: 28px; }
+    .apick__foot { padding: var(--sp-14) var(--sp-16); }
+    .apick__foot p { font-size: var(--fs-13); }
+  }
+}

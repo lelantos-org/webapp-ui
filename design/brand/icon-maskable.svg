@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Lelantos">
+  <title>Lelantos</title>
+  <rect width="512" height="512" fill="#14110E"/>
+  <g transform="translate(256 256) scale(0.8) translate(-256 -256)">
+    <circle cx="256" cy="104" r="64" fill="#E0794A"/>
+    <circle cx="104" cy="408" r="64" fill="#E0794A"/>
+    <circle cx="408" cy="408" r="64" fill="#E0794A"/>
+    <path d="M144 336 L198 227 M368 336 L314 227"
+          stroke="#E0794A" stroke-width="42" stroke-linecap="round" fill="none"/>
+  </g>
+</svg>

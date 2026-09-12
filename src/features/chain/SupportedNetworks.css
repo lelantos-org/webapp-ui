@@ -1,0 +1,28 @@
+@layer features {
+  /* "Available on" and the network pills, in one wrapping run. */
+  .networks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-12);
+    padding-top: var(--sp-6);
+  }
+  .networks__label {
+    flex: none;
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .networks__pill {
+    padding: var(--sp-6) 13px;
+    font-size: var(--fs-13);
+    line-height: 1;
+    color: var(--fg);
+  }
+  .networks__mark {
+    width: 15px;
+    height: 15px;
+    margin: 0;
+    vertical-align: 0;
+    border-radius: var(--radius-round);
+  }
+}

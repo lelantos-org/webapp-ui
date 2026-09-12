@@ -1,0 +1,18 @@
+@layer primitives {
+  /* A bordered capsule. Several places want one — the header's three status
+     pills, the networks on the Welcome screen, and the two chain names in the
+     claim page's network gate. Same shape, so: one class, with padding and size
+     set where it is used.
+
+     `--radius-sm`: every pill is 2px; nothing in the app is pill-rounded. */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    /* Only pays out when a pill holds a mark beside its text. */
+    gap: 6px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: var(--bg-1);
+    white-space: nowrap;
+  }
+}

@@ -1,13 +1,6 @@
 import { toast } from "sonner";
-import { reportError } from "@/shared/lib/report-error";
-
-/// Pure: the explorer base is per-chain, so it is passed in rather than read from
-/// a module global. `undefined` when the chain has no explorer configured, which
-/// callers render as plain text instead of a link.
-export function txExplorerUrl(explorerUrl: string | undefined, txHash: string): string | undefined {
-  if (!explorerUrl) return undefined;
-  return `${explorerUrl.replace(/\/$/, "")}/tx/${txHash}`;
-}
+import { txExplorerUrl } from "@/config/chains/explorer";
+import { reportError } from "@/shared/lib/errors";
 
 export interface TxToastHandle {
   /// Phase 2: receipt mined.

@@ -1,0 +1,111 @@
+@layer components {
+  /* The amount, twice (`AmountHero`): the figure set large and bare, the asset
+     trigger beside it, the same figure in words closed by a rule, and the
+     balance row with Max. */
+  .amt-hero {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-14);
+    min-width: 0;
+  }
+  .amt-hero__lbl {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .amt-hero__row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-16);
+  }
+  .amt-hero__inp {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--fg);
+    font-size: 46px;
+    outline: none;
+  }
+  .amt-hero__inp::placeholder { color: var(--fg-mute); opacity: 1; }
+  .amt-hero__inp[aria-invalid] { color: var(--err); }
+  .amt-hero--md .amt-hero__inp { font-size: 40px; }
+  .amt-hero__words {
+    margin-top: -4px;
+    /* Holds its line while empty, so the first keystroke moves nothing. */
+    min-height: 1.6em;
+  }
+  .amt-hero__words-txt {
+    font-size: var(--fs-17);
+  }
+  .amt-hero__rule {
+    transition: background var(--dur-160) var(--ease-soft);
+  }
+
+  /* The input is bare, so focus is shown on the cheque line it writes into. The
+     caret marks the field itself. */
+  .amt-hero__row:focus-within + .amt-hero__words .amt-hero__rule { background: var(--accent); }
+  .amt-hero__bal {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-12);
+    min-height: 44px;
+  }
+  .amt-hero__usd {
+    font-family: var(--mono);
+    font-size: var(--fs-15);
+    color: var(--fg-mute);
+  }
+  .amt-hero__have {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-10);
+    margin-left: auto;
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+    min-width: 0;
+  }
+  .amt-hero__figure {
+    font-family: var(--mono);
+    color: var(--fg-dim);
+  }
+  .amt-hero__max {
+    flex: none;
+    min-height: 44px;
+    padding: 11px var(--sp-16);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--accent);
+    font-family: var(--sans);
+    font-size: var(--fs-13);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--dur-120) var(--ease-soft);
+  }
+  .amt-hero__max:hover { background: rgba(var(--accent-rgb), 0.1); }
+  .amt-hero__max:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .amt-hero__err {
+    font-size: var(--fs-14);
+    color: var(--err);
+  }
+  .amt-hero__hint {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+
+  @media (max-width: 480px) {
+    .amt-hero { gap: 13px; }
+    .amt-hero__row { gap: 11px; }
+    .amt-hero__inp,
+    .amt-hero--md .amt-hero__inp { font-size: 36px; }
+    .amt-hero__words-txt { font-size: var(--fs-15); }
+    .amt-hero__usd { font-size: var(--fs-14); }
+    .amt-hero__have { font-size: var(--fs-13); gap: 9px; }
+    .amt-hero__max { padding: 10px 14px; }
+  }
+}

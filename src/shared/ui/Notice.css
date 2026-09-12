@@ -1,0 +1,118 @@
+@layer components {
+  /* Notice: every tinted box — the review's warning, the linkability warning,
+     the setup card, the consolidation note, the vault's eviction box and the
+     state cards. One shape — glyph, title, body, action — in four tones.
+
+     Text in a warn or err box uses the -ink tokens rather than the signal colour:
+     --warn at 14px over its own wash is a highlighter, not a sentence. */
+  .notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-12);
+    padding: 15px 17px;
+    border: 1px solid rgba(var(--warn-rgb), 0.38);
+    border-radius: var(--radius);
+    background: rgba(var(--warn-rgb), 0.08);
+    color: var(--warn-ink);
+  }
+  .notice__icon {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    margin-top: 2px;
+    color: var(--warn);
+  }
+  .notice__body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex: 1;
+    min-width: 0;
+  }
+  .notice__t {
+    font-size: var(--fs-15);
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--warn-ink);
+  }
+  .notice__txt {
+    font-size: var(--fs-14);
+    line-height: 1.6;
+    color: var(--warn-ink);
+  }
+
+  /* Under a title the body steps down a shade. */
+  .notice__t + .notice__txt { color: var(--warn-ink-2); }
+  .notice__action {
+    flex: none;
+    display: inline-flex;
+  }
+  .notice--action-end { align-items: center; }
+  .notice--action-end .notice__icon { align-self: flex-start; }
+  .notice__body > .notice__action {
+    align-self: flex-start;
+    margin-top: var(--sp-6);
+  }
+  .notice .btn--outline {
+    min-height: 44px;
+    padding: 9px 15px;
+    font-size: var(--fs-14);
+    white-space: nowrap;
+  }
+
+  /* accent — an invitation, not a problem. */
+  .notice--accent {
+    padding: var(--sp-18) var(--sp-20);
+    gap: var(--sp-14);
+    border-color: rgba(var(--accent-rgb), 0.3);
+    background: rgba(var(--accent-rgb), 0.06);
+    color: var(--fg);
+  }
+  .notice--accent .notice__icon { color: var(--accent); margin-top: 0; }
+  .notice--accent .notice__t { color: var(--fg); }
+  .notice--accent .notice__txt,
+  .notice--accent .notice__t + .notice__txt { color: var(--fg-dim); }
+
+  /* The tinted square the setup card's glyph sits in. */
+  .notice__tile {
+    display: inline-grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius);
+    background: rgba(var(--accent-rgb), 0.16);
+    color: var(--accent);
+  }
+
+  /* err — something already wrong, or about to be lost. */
+  .notice--err {
+    border-color: rgba(var(--err-rgb), 0.45);
+    background: rgba(var(--err-rgb), 0.07);
+    color: var(--err-strong);
+  }
+  .notice--err .notice__icon { color: var(--err); }
+  .notice--err .notice__t,
+  .notice--err .notice__txt,
+  .notice--err .notice__t + .notice__txt { color: var(--err-strong); }
+
+  /* neutral — a fact worth knowing. No tint, the card's own inset ground. */
+  .notice--neutral {
+    padding: 13px 15px;
+    gap: 11px;
+    border-color: var(--line-strong);
+    border-radius: 0;
+    background: var(--bg-2);
+    color: var(--fg-dim);
+  }
+  .notice--neutral .notice__icon { color: var(--fg-mute); }
+  .notice--neutral .notice__t { color: var(--fg); }
+  .notice--neutral .notice__txt { color: var(--fg-dim); }
+  .notice--neutral .notice__t + .notice__txt { color: var(--fg-mute); }
+
+  @media (max-width: 480px) {
+    /* An action on the trailing edge squeezes the text to a column of words. */
+    .notice--action-end { flex-wrap: wrap; align-items: flex-start; }
+    .notice--action-end > .notice__action { flex-basis: 100%; }
+    .notice--accent { padding: 15px var(--sp-16); gap: var(--sp-12); }
+  }
+}

@@ -1,12 +1,10 @@
+// @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { stubReducedMotion } from "@/test/dom";
 import { useExitTransition } from "./use-exit-transition";
 
 const DURATION = 240;
-
-function stubReducedMotion(reduce: boolean) {
-  vi.stubGlobal("matchMedia", (media: string) => ({ media, matches: reduce }));
-}
 
 describe("useExitTransition", () => {
   beforeEach(() => {
@@ -16,7 +14,6 @@ describe("useExitTransition", () => {
 
   afterEach(() => {
     vi.useRealTimers();
-    vi.unstubAllGlobals();
   });
 
   it("flags `exiting` immediately and defers `done` until the animation ends", () => {

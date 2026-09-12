@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root {
+      --bg: #14110E; --bg-1: #1C1815; --bg-2: #241F1A; --bg-3: #2E2822;
+      --fg: #F5F1E8; --fg-dim: #BEB5A6; --fg-mute: #9E9486;
+      --line: #2A241E; --line-strong: #3A332B;
+      --accent: #E0794A; --accent-2: #EA8C60; --accent-dim: #7A4526;
+      --warn: #E0A93F; --err: #E67A6E;
+      --display: "Newsreader", Georgia, "Times New Roman", serif;
+      --sans: "Public Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+      --mono: "Atkinson Hyperlegible Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
+    .num { font-family: var(--mono); font-variant-numeric: tabular-nums slashed-zero; font-feature-settings: "zero" 1; }
+    .shell { min-height: 900px; display: flex; flex-direction: column; background: radial-gradient(900px 420px at 50% -10%, rgba(224,121,74,0.14), transparent 62%), #14110E; }
+    .hdr { display: flex; align-items: center; gap: 16px; padding: 14px 32px; border-bottom: 1px solid var(--line); background: rgba(28,24,21,0.78); }
+    .pill { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 2px; font-size: 14px; }
+    .card { border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-1); padding: 26px 24px 24px; display: flex; flex-direction: column; gap: 18px; }
+    .rule { height: 1px; background: var(--line); }
+    .cta { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 17px; border-radius: 4px; background: var(--accent); color: #14110E; font-size: 17px; font-weight: 600; box-shadow: 0 6px 22px rgba(224,121,74,0.3); min-height: 44px; }
+    .tokpill { display: flex; align-items: center; gap: 9px; padding: 9px 16px 9px 10px; border: 1px solid var(--line-strong); border-radius: 2px; background: var(--bg-2); flex: none; }
+    .mark { border-radius: 50%; display: inline-grid; place-items: center; font-weight: 700; flex: none; }
+    .amt { font-family: var(--display); font-size: 46px; font-weight: 600; line-height: 1; letter-spacing: -0.02em; flex: 1; min-width: 0; }
+    .back { width: 40px; height: 40px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--bg-1); display: inline-grid; place-items: center; color: var(--fg-dim); flex: none; }
+    .h1 { font-family: var(--display); font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+    .muted { color: var(--fg-mute); }
+    .sub { font-size: 14px; color: var(--fg-mute); }
+  </style>
+</helmet>
+
+<div class="shell">
+  <div class="hdr">
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:13px;font-weight:600;letter-spacing:.02em;line-height:1;">LELANTOS</span>
+    </div>
+    <div style="margin-left: auto; display: flex; align-items: center; gap: 10px;">
+      <div class="pill">
+        <span class="mark" style="width: 16px; height: 16px; background: #2151f5; font-size: 9px; color: #fff;">B</span>
+        <span>Base</span>
+      </div>
+      <div class="pill" style="gap: 10px; padding: 7px 8px 7px 14px; background: var(--bg-2);">
+        <span class="num" style="color: var(--fg-dim);">0x7a4f…c2e1</span>
+        <span class="mark" style="width: 26px; height: 26px; background: var(--bg-3); color: var(--fg-mute);">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg>
+        </span>
+      </div>
+    </div>
+  </div>
+  <div style="flex: 1; width: 100%; max-width: 1180px; margin: 0 auto; padding: 36px 32px 48px; display: flex; flex-direction: column; gap: 28px;">
+
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <span class="h1" style="font-size: 30px;">States</span>
+      <span class="sub" style="font-size: 15px;">Every state the app already has, rewritten to say what happened and what to do next.</span>
+    </div>
+
+    <!-- risk banner -->
+    <div style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 12px 24px; border: 1px solid rgba(224,169,63,0.3); border-radius: 4px; background: rgba(224,169,63,0.09); color: #EDD09A; font-size: 15px;">
+      <span style="flex: none; padding: 2px 9px; border: 1px solid rgba(224,169,63,0.5); border-radius: 2px; font-family: var(--mono); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: #E0A93F;">beta</span>
+      <span><strong style="font-weight: 600; color: #F6E4C4;">Not production ready.</strong> Unaudited software under active development — only put in what you can afford to lose.</span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start;">
+
+      <!-- empty -->
+      <div class="card" style="gap: 16px; align-items: center; text-align: center; padding: 32px 24px;">
+        <span style="width: 58px; height: 58px; border-radius: 4px; background: rgba(224,121,74,0.1); border: 1px dashed rgba(224,121,74,0.45); display: inline-grid; place-items: center;">
+          <svg width="27" height="27" viewBox="0 0 512 512" aria-hidden="true"><path d="M256 88 L400 144 V276 C400 356 336 408 256 438 C176 408 112 356 112 276 V144 Z" fill="none" stroke="#E0794A" stroke-width="34" stroke-linejoin="round" stroke-dasharray="44 32"/></svg>
+        </span>
+        <div style="display: flex; flex-direction: column; gap: 5px;">
+          <span style="font-size: 17px; font-weight: 600;">Nothing shielded yet</span>
+          <span class="sub" style="font-size: 14px;">Shield your first asset and your balance becomes private from that moment on.</span>
+        </div>
+        <span class="cta" style="align-self: stretch; padding: 14px; font-size: 15px; box-shadow: none;">Shield an asset</span>
+      </div>
+
+      <!-- loading -->
+      <div class="card" style="gap: 16px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line-strong); border-top-color: var(--accent); flex: none;"></span>
+          <div style="display: flex; flex-direction: column; gap: 1px;">
+            <span style="font-size: 16px; font-weight: 600;">Catching up</span>
+            <span class="sub" style="font-size: 14px;">Scanned 41,208 notes · found 12</span>
+          </div>
+        </div>
+        <div style="height: 5px; border-radius: 2px; background: var(--bg-3); overflow: hidden;"><span style="display: block; width: 72%; height: 100%; background: var(--accent); border-radius: 2px;"></span></div>
+        <div style="display: flex; flex-direction: column; gap: 9px;">
+          <span style="height: 15px; border-radius: 6px; background: var(--bg-3); width: 100%;"></span>
+          <span style="height: 15px; border-radius: 6px; background: var(--bg-3); width: 78%;"></span>
+          <span style="height: 15px; border-radius: 6px; background: var(--bg-3); width: 56%;"></span>
+        </div>
+        <span class="sub" style="font-size: 14px;">Your wallet reads the chain itself — nothing is asked of a server on your behalf.</span>
+      </div>
+
+      <!-- sync error -->
+      <div class="card" style="gap: 14px; border-color: rgba(224,169,63,0.4);">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E0A93F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px;"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 16px; font-weight: 600;">Balances may be out of date</span>
+            <span class="sub" style="font-size: 14px;">We couldn't reach the note scanner. What you see is the last successful sync — sending is paused until it catches up.</span>
+          </div>
+        </div>
+        <span style="display: flex; align-items: center; justify-content: center; padding: 13px; border: 1px solid var(--line-strong); border-radius: 4px; font-size: 15px; font-weight: 600; min-height: 44px;">Retry now</span>
+      </div>
+
+      <!-- blocked submit -->
+      <div class="card" style="gap: 14px;">
+        <span style="font-size: 16px; font-weight: 600;">Can't submit yet</span>
+        <div style="display: flex; align-items: center; justify-content: center; padding: 15px; border-radius: 4px; background: var(--bg-3); color: var(--fg-mute); font-size: 16px; font-weight: 600; min-height: 44px;">Swap</div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span class="sub" style="font-size: 14px;">The reason sits under the button, not in a tooltip:</span>
+          <span style="font-size: 14px; color: var(--fg-dim);">· The quote expired — refresh it</span>
+          <span style="font-size: 14px; color: var(--fg-dim);">· Enter an amount you hold</span>
+          <span style="font-size: 14px; color: var(--fg-dim);">· No assets on this network</span>
+        </div>
+      </div>
+
+      <!-- wrong network -->
+      <div class="card" style="gap: 14px; border-color: rgba(224,169,63,0.4);">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 16px; font-weight: 600;">These funds live on Base</span>
+          <span class="sub" style="font-size: 14px;">Your wallet is on Ethereum. They can only be claimed from the network they were sent on.</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span class="pill" style="padding: 7px 13px; font-size: 14px;"><span class="mark" style="width: 15px; height: 15px; background: #627eea; font-size: 8px; color: #fff;">E</span>Ethereum</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13"/><path d="m13 6 6 6-6 6"/></svg>
+          <span class="pill" style="padding: 7px 13px; font-size: 14px; border-color: var(--accent); color: var(--accent);"><span class="mark" style="width: 15px; height: 15px; background: #2151f5; font-size: 8px; color: #fff;">B</span>Base</span>
+        </div>
+        <span class="cta" style="padding: 13px; font-size: 15px; box-shadow: none;">Switch to Base</span>
+      </div>
+
+      <!-- destructive -->
+      <div class="card" style="gap: 14px; border-color: rgba(224,104,92,0.4);">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 16px; font-weight: 600; color: #E8ADA4;">Wipe and resync</span>
+          <span class="sub" style="font-size: 14px;">Deletes every note this browser has decrypted and rescans from the beginning. Several minutes, and no balance shows until it finishes. Your funds live on the network and are not affected.</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 11px; padding: 13px 15px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--bg-2);">
+          <span style="width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--line-strong); flex: none;"></span>
+          <span style="font-size: 14px; color: var(--fg-dim);">I understand this rescans from scratch</span>
+        </div>
+        <span style="display: flex; align-items: center; justify-content: center; padding: 13px; border-radius: 4px; background: var(--bg-3); color: var(--fg-mute); font-size: 15px; font-weight: 600; min-height: 44px;">Wipe and resync</span>
+      </div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

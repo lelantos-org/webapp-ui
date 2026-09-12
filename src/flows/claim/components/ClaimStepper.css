@@ -1,0 +1,77 @@
+@layer features {
+  .claim-steps {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .claim-step {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    text-align: center;
+  }
+
+  /* The line into each step from the one before, stopping short of both marks. */
+  .claim-step + .claim-step::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: calc(-50% + 20px);
+    right: calc(50% + 20px);
+    height: 2px;
+    background: var(--bg-3);
+  }
+  .claim-step--done + .claim-step::before { background: var(--accent); }
+  .claim-step__mark {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-round);
+    font-family: var(--mono);
+    font-size: var(--fs-12);
+    font-weight: 600;
+    color: var(--fg-mute);
+  }
+  .claim-step__lbl {
+    font-size: var(--fs-13);
+    color: var(--fg-mute);
+  }
+  .claim-step--done .claim-step__mark {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--on-fill);
+  }
+  .claim-step--done .claim-step__lbl { color: var(--fg-dim); }
+  .claim-step--current .claim-step__mark {
+    border: 2px solid var(--accent);
+    background: rgba(var(--accent-rgb), 0.14);
+    color: var(--accent);
+  }
+  .claim-step--current .claim-step__lbl {
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .claim-step--failed .claim-step__mark {
+    border: 2px solid var(--err);
+    background: rgba(var(--err-rgb), 0.1);
+    color: var(--err);
+  }
+  .claim-step--failed .claim-step__lbl {
+    font-weight: 600;
+    color: var(--err);
+  }
+
+  @media (max-width: 480px) {
+    .claim-step { gap: 5px; }
+    .claim-step + .claim-step::before { top: 10px; left: calc(-50% + 16px); right: calc(50% + 16px); }
+    .claim-step__mark { width: 22px; height: 22px; font-size: var(--fs-11); }
+    .claim-step__lbl { font-size: var(--fs-11); }
+  }
+}

@@ -11,21 +11,21 @@
 //
 // What does exist is per-note: a note's circuit-unit `value` never moves, and
 // `firstSeenBlock` says which block it was credited at. So the basis is
-// recoverable by asking the pool what the index *was* at that block. Recovering
-// it is `yield-index.ts`'s job; this module only folds the answers into gains.
+// recoverable from what the index *was* at that block. Reading that is
+// `yield-index-client.ts`'s job; this module only folds the answers into gains.
 //
 // Two things this figure is not, both of which the UI has to say out loud:
 //
 //   - **Not lifetime earnings.** Spending a note realises its gain and mints
 //     change at today's index, which resets that portion's basis. This is the
 //     unrealised gain on the notes held right now.
-//   - **Not always knowable.** Historical `eth_call` needs archive state, which
-//     plenty of RPCs prune. A block that cannot be answered leaves its notes out
-//     of the sum and is counted in `unknownNotes`, so the caller can mark the
-//     figure partial rather than print a confident understatement.
+//   - **Not always knowable.** A note older than the recorded history has no
+//     basis. It is left out of the sum and counted in `unknownNotes`, so the
+//     caller can mark the figure partial rather than print a confident
+//     understatement.
 
 import { circuitAmount, toTokenUnits } from "@lelantos-org/sdk/core";
-import type { RegisteredAsset } from "./registered-assets";
+import type { RegisteredAsset } from "@/config/chains";
 
 /// One asset's unrealised yield, in the token's own base units.
 export interface YieldGain {
@@ -72,22 +72,20 @@ export interface BasisNote {
 
 /// The assets that earn, indexed by id. One predicate, so "which assets have a
 /// basis worth resolving" and "which assets get a row" can never disagree.
-export function earningAssets(assets: readonly RegisteredAsset[]): Map<bigint, RegisteredAsset> {
+function earningAssets(assets: readonly RegisteredAsset[]): Map<bigint, RegisteredAsset> {
   return new Map(assets.filter((a) => a.yieldEnabled).map((a) => [a.id, a]));
 }
 
-/**
- * Unrealised gain per asset, from a resolved basis.
- *
- * Pure, and split out from the resolution that feeds it: this is the part with
- * arithmetic worth testing, and it has no opinion about where an index came
- * from.
- *
- * A note whose basis index is unknown is excluded from *both* sums rather than
- * counted at the current index. Counting it would fold a zero gain into the
- * average and pull the percentage toward zero, which reads as a real return
- * rather than as missing data.
- */
+/// Unrealised gain per asset, from a resolved basis.
+///
+/// Pure, and split out from the resolution that feeds it: this is the part with
+/// arithmetic worth testing, and it has no opinion about where an index came
+/// from.
+///
+/// A note whose basis index is unknown is excluded from *both* sums rather than
+/// counted at the current index. Counting it would fold a zero gain into the
+/// average and pull the percentage toward zero, which reads as a real return
+/// rather than as missing data.
 export function computeGains(
   notes: readonly BasisNote[],
   assets: readonly RegisteredAsset[],

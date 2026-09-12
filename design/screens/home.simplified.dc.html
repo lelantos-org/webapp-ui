@@ -1,0 +1,161 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300..700&family=Newsreader:opsz,wght@6..72,300..700&family=Public+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;700&display=swap">
+  <style>
+    :root{
+      --bg:#14110E;--bg-1:#1C1815;--bg-2:#241F1A;--bg-3:#2E2822;
+      --fg:#F5F1E8;--fg-dim:#BEB5A6;--fg-mute:#9E9486;
+      --line:#2A241E;--line-strong:#3A332B;
+      --accent:#E0794A;--accent-2:#EA8C60;--warn:#E0A93F;--err:#E67A6E;
+      --display:"Newsreader",Georgia,serif;
+      --sans:"Public Sans",-apple-system,BlinkMacSystemFont,Arial,sans-serif;
+      --mono:"Atkinson Hyperlegible Mono",ui-monospace,Menlo,monospace;
+    }
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;}
+    a{color:var(--accent);}a:hover{color:var(--accent-2);}
+    .num{font-family:var(--mono);font-variant-numeric:tabular-nums slashed-zero;font-feature-settings:"zero" 1;}
+    .lbl{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);}
+    .card{border:1px solid var(--line-strong);background:var(--bg-1);}
+    td,th{text-align:left;vertical-align:top;padding:10px 16px 10px 0;border-bottom:1px solid var(--line);}
+    th{font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--fg-mute);border-bottom:1px solid var(--line-strong);}
+  </style>
+</helmet>
+
+<div style="min-height:1780px;padding:0 0 46px;">
+  <div style="background:var(--fg);color:var(--bg);padding:20px 40px;display:flex;align-items:baseline;justify-content:space-between;gap:20px;">
+    <span style="font-family:var(--display);font-size:28px;font-weight:600;">Home, cut back</span>
+    <span class="num" style="font-size:13px;opacity:.72;">NOTHING DELETED — RELOCATED</span>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:30px 40px 0;display:grid;grid-template-columns:1.15fr 1fr;gap:28px;align-items:start;">
+
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <span class="lbl">The screen</span>
+      
+<div style="border:1px solid var(--line-strong);background:var(--bg);">
+  <div style="display:flex;align-items:center;justify-content:center;gap:9px;padding:9px 20px;background:rgba(224,169,63,0.11);border-bottom:1px solid rgba(224,169,63,0.28);color:#EDD09A;font-size:13px;">
+    <span style="padding:1px 8px;border:1px solid rgba(224,169,63,0.5);font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:11px;color:var(--warn);">BETA</span>
+    <span>Unaudited. Only put in what you can afford to lose.</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:14px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--bg-1);">
+    <svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true" style="display:block;flex:none;"><circle cx="16" cy="6.5" r="4" fill="var(--accent)"/><circle cx="6.5" cy="25.5" r="4" fill="var(--accent)"/><circle cx="25.5" cy="25.5" r="4" fill="var(--accent)"/><path d="M9 21 L12.4 14.2 M23 21 L19.6 14.2" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg><span style="font-family:"Martian Mono", ui-monospace, Menlo, monospace;font-size:15px;font-weight:600;letter-spacing:.02em;">LELANTOS</span>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+      <span style="padding:7px 13px;border:1px solid var(--line-strong);font-size:14px;color:var(--fg-dim);">Base</span>
+      <span class="num" style="padding:7px 13px;border:1px solid var(--line-strong);font-size:14px;color:var(--fg-dim);">0x7a4f…c2e1</span>
+    </div>
+  </div>
+
+  <div style="padding:34px 24px 30px;display:flex;flex-direction:column;gap:26px;">
+
+    <div style="display:flex;flex-direction:column;gap:5px;">
+      <span style="font-size:15px;font-weight:500;color:var(--accent);">Shielded balance</span>
+      <span class="num" style="font-family:var(--display);font-size:58px;font-weight:600;line-height:1.05;letter-spacing:-.025em;">$12,480<span style="color:var(--fg-mute);">.55</span></span>
+      <span style="font-size:15px;color:var(--fg-mute);">Private end to end · <span class="num" style="color:var(--accent);">+13.42 earned</span></span>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 10px;background:var(--accent);color:#14110E;min-height:44px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 20 6.2v6.1c0 4.3-3.4 7.3-8 8.7-4.6-1.4-8-4.4-8-8.7V6.2Z"/><path d="M12 8v6"/><path d="m9 11 3-3 3 3"/></svg><span style="font-size:15px;font-weight:600;">Shield</span></div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 10px;border:1px solid var(--line-strong);background:var(--bg-1);min-height:44px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h13"/><path d="m12 6 6 6-6 6"/><path d="M20 4v16"/></svg><span style="font-size:15px;font-weight:600;">Send</span></div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 10px;border:1px solid var(--line-strong);background:var(--bg-1);min-height:44px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3v13"/><path d="m21 12-4 4-4-4"/><path d="M7 21V8"/><path d="m3 12 4-4 4 4"/></svg><span style="font-size:15px;font-weight:600;">Swap</span></div><div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:18px 10px;border:1px solid var(--line-strong);background:var(--bg-1);min-height:44px;"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 20 6.2v6.1c0 4.3-3.4 7.3-8 8.7-4.6-1.4-8-4.4-8-8.7V6.2Z"/><path d="M12 14V8"/><path d="m9 11 3 3 3-3"/></svg><span style="font-size:15px;font-weight:600;">Unshield</span></div>
+    </div>
+
+    <div style="border:1px solid var(--line);background:var(--bg-1);overflow:hidden;">
+      <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:17px 20px;border-bottom:1px solid var(--line);"><div style="display:flex;align-items:center;gap:13px;min-width:0;"><span style="width:36px;height:36px;border-radius:4px;background:rgba(122,160,180,0.16);border:1px solid rgba(122,160,180,0.42);color:#8FB6C9;display:inline-grid;place-items:center;font-size:11px;font-weight:700;flex:none;">USDC</span><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:16px;font-weight:600;">USDC</span><span class="num" style="font-size:14px;color:var(--fg-mute);">8,420.00 USDC</span></div></div><div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span class="num" style="font-size:17px;font-weight:600;">$8,420.00</span><span class="num" style="font-size:14px;color:var(--accent);">+12.40 earned</span></div></div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:17px 20px;border-bottom:1px solid var(--line);"><div style="display:flex;align-items:center;gap:13px;min-width:0;"><span style="width:36px;height:36px;border-radius:4px;background:rgba(224,169,63,0.13);border:1px solid rgba(224,169,63,0.34);color:#E0A93F;display:inline-grid;place-items:center;font-size:11px;font-weight:700;flex:none;">ETH</span><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:16px;font-weight:600;">ETH</span><span class="num" style="font-size:14px;color:var(--fg-mute);">1.2840 ETH</span></div></div><div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span class="num" style="font-size:17px;font-weight:600;">$3,401.20</span></div></div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:17px 20px;"><div style="display:flex;align-items:center;gap:13px;min-width:0;"><span style="width:36px;height:36px;border-radius:4px;background:rgba(198,138,74,0.15);border:1px solid rgba(198,138,74,0.36);color:#C68A4A;display:inline-grid;place-items:center;font-size:11px;font-weight:700;flex:none;">WBTC</span><div style="display:flex;flex-direction:column;gap:2px;"><span style="font-size:16px;font-weight:600;">WBTC</span><span class="num" style="font-size:14px;color:var(--fg-mute);">0.0094 WBTC</span></div></div><div style="display:flex;flex-direction:column;gap:2px;align-items:flex-end;"><span class="num" style="font-size:17px;font-weight:600;">$659.35</span><span class="num" style="font-size:14px;color:var(--warn);">+1.02 earned</span></div></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:14px;padding:15px 18px;border:1px solid var(--line);background:rgba(224,121,74,0.05);">
+      <div style="display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;">
+        <span style="font-size:14px;color:var(--fg-mute);">Your shielded address</span>
+        <span class="num" style="font-size:15px;color:var(--fg-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">lel1q9x8fk2mzp4v7n0shjr6cdyw3aqt5eu…</span>
+      </div>
+      <span style="width:44px;height:44px;border:1px solid var(--line-strong);display:inline-grid;place-items:center;color:var(--fg-dim);flex:none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+    </div>
+  </div>
+</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:22px;">
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <span class="lbl">Tap a row for everything else</span>
+        
+<div style="border:1px solid var(--line-strong);background:var(--bg-1);">
+  <div style="padding:20px 22px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:13px;">
+    <span style="width:42px;height:42px;border-radius:4px;background:rgba(122,160,180,0.16);border:1px solid rgba(122,160,180,0.42);color:#8FB6C9;display:inline-grid;place-items:center;font-size:13px;font-weight:700;flex:none;">USDC</span>
+    <div style="display:flex;flex-direction:column;gap:1px;flex:1;">
+      <span style="font-size:18px;font-weight:600;">USDC</span>
+      <span class="num" style="font-size:15px;color:var(--fg-mute);">8,420.00 · $8,420.00</span>
+    </div>
+  </div>
+  <div style="padding:22px;display:flex;flex-direction:column;gap:18px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+      <div><div style="font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-mute);margin-bottom:4px;">You&rsquo;ve earned</div>
+        <span class="num" style="font-size:21px;font-weight:600;color:var(--accent);">+12.40</span>
+        <span class="num" style="font-size:14px;color:var(--fg-mute);"> +0.15%</span></div>
+      <div><div style="font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--fg-mute);margin-bottom:4px;">Pool pays</div>
+        <span class="num" style="font-size:21px;font-weight:600;">4.18% / yr</span>
+        <div style="font-size:13px;color:var(--fg-mute);">measured over 30d</div></div>
+    </div>
+    <div style="height:1px;background:var(--line);"></div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <span style="font-size:15px;color:var(--fg-dim);line-height:1.6;">Your balance grows without a transaction. The percentage is measured against what it was worth when it arrived — spending banks that gain and starts the next stretch from today.</span>
+      <span style="font-size:15px;color:var(--fg-mute);line-height:1.6;">The pool&rsquo;s rate is what the venue returned recently, net of its cut. An estimate of what it pays, not a promise, and not what you will earn — that depends on when you arrived.</span>
+    </div>
+  </div>
+</div>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">Both yield figures live here, each with the room to be labelled properly. On the list you see what you have; here you see how it behaves.</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:28px 40px 0;">
+    <div style="border:1px solid var(--line-strong);background:var(--bg-1);">
+      <div style="padding:16px 22px;border-bottom:1px solid var(--line);"><span class="lbl">Six things left the screen, and where each went</span></div>
+      <div style="padding:6px 22px 18px;">
+      <div style="display:grid;grid-template-columns:230px 1fr;gap:20px;align-items:start;padding:13px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">Table went 5 columns to 2</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">Asset and balance on the left, value and earnings on the right. The pool&rsquo;s rate moved to the row detail and the Shield picker — it is reference data, not your position.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:230px 1fr;gap:20px;align-items:start;padding:13px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">&ldquo;You could also shield&rdquo; card</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">Gone from a populated Home. It stays on the empty state and in the Shield picker, where choosing is actually the task.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:230px 1fr;gap:20px;align-items:start;padding:13px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">Two footnotes</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">Both moved into the row detail, where there is room to say them properly instead of in 13px grey.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:230px 1fr;gap:20px;align-items:start;padding:13px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">Provenance band</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">Three lines about viewing keys and block numbers became one line in the balance area, with the rest under the address.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:230px 1fr;gap:20px;align-items:start;padding:13px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">Refresh chip</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">Removed. It polls every 30 seconds on its own; a button implying otherwise was noise.</span>
+      </div>
+      <div style="display:grid;grid-template-columns:230px 1fr;gap:20px;align-items:start;padding:13px 0;border-bottom:1px solid var(--line);">
+        <span style="font-size:15px;font-weight:600;">&ldquo;Send by link&rdquo; text link</span>
+        <span style="font-size:14px;color:var(--fg-mute);line-height:1.6;">Folded into Send. It is a way of sending, not a fifth peer action.</span>
+      </div></div>
+    </div>
+  </div>
+
+  <div style="max-width:1240px;margin:0 auto;padding:24px 40px 0;">
+    <div style="border:1px solid var(--warn);background:rgba(224,169,63,0.06);padding:20px 24px;">
+      <span class="lbl" style="color:var(--warn);display:block;margin-bottom:8px;">One of these is yours to confirm</span>
+      <span style="font-size:16px;color:var(--fg-dim);line-height:1.7;">
+        You asked for the pool&rsquo;s rate on the row, and I have taken it off the list — it is the single biggest contributor to the table&rsquo;s weight, and it describes a venue rather than your holding. It is one tap away and it is on the Shield picker where the choice is made. If you want it back on the row, say so and it returns as a third column.
+      </span>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,94 +1,145 @@
-* { box-sizing: border-box; }
+/* Self-hosted, because webapp-ui's CSP is `default-src 'self'` with no
+   `font-src`, and its COEP is `require-corp` — a cross-origin font would need
+   CORP headers Google does not send. explorer-ui has no CSP and could reach
+   Google Fonts, but ships the same files so the two cannot drift.
 
-html {
-  scrollbar-gutter: stable;
-  overflow-y: scroll;
-}
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  background: var(--bg);
-  color: var(--fg);
-  font-family: var(--sans);
-  font-size: var(--fs-14);
-  line-height: 1.5;
-  min-height: 100%;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-/* AMBIENT BACKDROP
-   Three stacked layers, all fixed and inert, all in the accent hue only —
-   mixing hues at this opacity turns to mud behind the opaque cards.
-   1. body::before  light: a wide wash under the header, a cool floor tint.
-   2. .backdrop     canvas: drifting node/link field (see shared/ui/Backdrop).
-   3. body::after   texture: fine lattice + grain, masked away behind content. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background:
-    radial-gradient(1200px 520px at 50% -12%, rgba(var(--accent-rgb), 0.13), transparent 62%),
-    radial-gradient(800px 600px at 100% 0%, rgba(var(--accent-rgb), 0.06), transparent 60%),
-    linear-gradient(180deg, transparent 45%, rgba(var(--accent-rgb), 0.05) 100%);
-}
+   The first three are variable (weight ranges below are the real axes, not a
+   guess); Martian Mono is a static 600 cut, the only weight the wordmark
+   draws. Latin subset only. `swap` because a wallet that renders its balance
+   late is worse than one that renders it in a fallback for 100ms. */
 
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: 0.85;
-  /* Fade the field out under the centre column so card edges stay crisp. */
-  -webkit-mask-image: radial-gradient(72% 60% at 50% 42%, transparent 8%, #000 70%);
-  mask-image: radial-gradient(72% 60% at 50% 42%, transparent 8%, #000 70%);
-  animation: backdrop-in 1200ms var(--ease) both;
-}
+@layer base {
+  @font-face {
+    font-family: "Newsreader";
+    src: url("/fonts/newsreader.woff2") format("woff2-variations");
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+  }
 
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  background-image:
-    linear-gradient(to right, rgba(var(--accent-rgb), 0.055) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(var(--accent-rgb), 0.055) 1px, transparent 1px);
-  background-size: 96px 96px, 96px 96px;
-  -webkit-mask-image: radial-gradient(90% 70% at 50% 0%, #000 0%, transparent 72%);
-  mask-image: radial-gradient(90% 70% at 50% 0%, #000 0%, transparent 72%);
-}
+  @font-face {
+    font-family: "Public Sans";
+    src: url("/fonts/public-sans.woff2") format("woff2-variations");
+    font-weight: 300 800;
+    font-style: normal;
+    font-display: swap;
+  }
 
-@keyframes backdrop-in {
-  from { opacity: 0; }
-  to { opacity: 0.85; }
-}
+  @font-face {
+    font-family: "Atkinson Hyperlegible Mono";
+    src: url("/fonts/atkinson-hyperlegible-mono.woff2") format("woff2-variations");
+    font-weight: 300 700;
+    font-style: normal;
+    font-display: swap;
+  }
 
-@media (prefers-reduced-motion: reduce) {
-  .backdrop { animation: none; }
-}
+  /* Google Fonts' latin subset of Martian Mono 600 (OFL), fetched once rather
+     than linked, for the CSP and COEP reasons above. See --brand. */
+  @font-face {
+    font-family: "Martian Mono";
+    src: url("/fonts/martian-mono.woff2") format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap;
+  }
 
-.app {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  /* Progressive: an engine that does not know dvh drops this and keeps the
-     line above. dvh, not svh — svh sizes to the *smallest* viewport, leaving a
-     permanent gap under the page once mobile Safari's toolbar retracts. */
-  min-height: 100dvh;
+
+  html {
+    scrollbar-gutter: stable;
+    overflow-y: scroll;
+  }
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: var(--fs-14);
+    line-height: 1.5;
+    min-height: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* AMBIENT BACKDROP
+     Three stacked layers, all fixed and inert, all in the accent hue only —
+     mixing hues at this opacity turns to mud behind the opaque cards.
+     1. body::before  light: a wide wash under the header, a cool floor tint.
+     2. .backdrop     canvas: drifting node/link field (see shared/ui/Backdrop).
+     3. body::after   texture: fine lattice + grain, masked away behind content. */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(1200px 520px at 50% -12%, rgba(var(--accent-rgb), 0.13), transparent 62%),
+      radial-gradient(800px 600px at 100% 0%, rgba(var(--accent-rgb), 0.06), transparent 60%),
+      linear-gradient(180deg, transparent 45%, rgba(var(--accent-rgb), 0.05) 100%);
+  }
+
+  .backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.85;
+    /* Fade the field out under the centre column so card edges stay crisp. */
+    -webkit-mask-image: radial-gradient(72% 60% at 50% 42%, transparent 8%, #000 70%);
+    mask-image: radial-gradient(72% 60% at 50% 42%, transparent 8%, #000 70%);
+    animation: backdrop-in 1200ms var(--ease) both;
+  }
+
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      linear-gradient(to right, rgba(var(--accent-rgb), 0.055) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(var(--accent-rgb), 0.055) 1px, transparent 1px);
+    background-size: 96px 96px, 96px 96px;
+    -webkit-mask-image: radial-gradient(90% 70% at 50% 0%, #000 0%, transparent 72%);
+    mask-image: radial-gradient(90% 70% at 50% 0%, #000 0%, transparent 72%);
+  }
+
+  @keyframes backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 0.85; }
+  }
+
+  .app {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    /* Progressive: an engine that does not know dvh drops this and keeps the
+       line above. dvh, not svh — svh sizes to the *smallest* viewport, leaving a
+       permanent gap under the page once mobile Safari's toolbar retracts. */
+    min-height: 100dvh;
+  }
+  .main {
+    flex: 1;
+    padding: 28px var(--sp-24) 56px;
+    max-width: 1480px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  ::selection { background: rgba(var(--accent-rgb),0.3); color: var(--bg); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: var(--radius); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+  @media (max-width: 720px) {
+    .main { padding: 18px 14px 40px; }
+  }
+
+  @media (max-width: 480px) {
+    .main { padding: 14px 10px 32px; }
+    /* Decorative background overlay is heavy on tiny screens — drop it. */
+    body::before { display: none; }
+  }
 }
-.main {
-  flex: 1;
-  padding: 28px var(--sp-24) 56px;
-  max-width: 1480px;
-  width: 100%;
-  margin: 0 auto;
-}
-::selection { background: rgba(var(--accent-rgb),0.3); color: var(--bg); }
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 5px; }
-::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }

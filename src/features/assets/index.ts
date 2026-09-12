@@ -1,17 +1,17 @@
-// Public surface of the `assets` feature.
-//
-// Everything another feature is allowed to reach for, in one place. Anything
-// not re-exported here is internal: it can be renamed or moved without
-// checking the rest of the app. Within the feature, import the modules
-// directly — routing local imports back through this file would create a
-// cycle through the barrel.
-
-export { AssetPicker } from "./AssetPicker";
-export { AssetSelectField } from "./AssetSelectField";
 export { AssetsCard } from "./AssetsCard";
-export { fetchAssetEntry, fetchAssetFeeInputs } from "./asset-entry";
-export type { RegisteredAsset } from "./registered-assets";
-export { DEFAULT_ASSET_ID, findAsset, useRegisteredAssets } from "./registered-assets";
+export type { AssetSelectOption } from "./asset-option";
+export { useAssetSelectOptions } from "./asset-option";
+export { nativeEthView, useEthAssetField } from "./eth-option";
+export { PortfolioHero } from "./PortfolioHero";
+export { assetUsd, priceOf } from "./prices";
+export {
+  DEFAULT_ASSET,
+  DEFAULT_ASSET_ID,
+  fetchAssetEntry,
+  findAsset,
+  useRegisteredAssets,
+} from "./registered-assets";
+export { ShieldAssetPicker } from "./ShieldAssetPicker";
 export { useDepositSourceBalance, useInvalidateTransparentBalances } from "./transparent-balances";
-export { useAssetBalance, useAssetBalanceLabel } from "./use-balances";
-export { useEthAssetPicker } from "./use-eth-asset-picker";
+export { useAssetBalance, useBalances } from "./use-balances";
+export { usePrices } from "./use-prices";

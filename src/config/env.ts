@@ -1,5 +1,5 @@
-import { toAbsoluteUrl } from "@lelantos-org/sdk/core";
 import { z } from "zod";
+import { httpUrl } from "./url";
 
 /// A service URL, checked for shape as well as presence.
 ///
@@ -12,17 +12,6 @@ const url = z
   .string()
   .transform((v) => v.trim())
   .pipe(z.string().min(1, "required"));
-
-function isHttpUrl(value: string): boolean {
-  try {
-    const u = new URL(value);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-const HTTP_URL_MESSAGE = "must resolve to an http(s) URL";
 
 // An unset Docker build arg or CI variable reaches Vite as an empty string
 // rather than `undefined`. Blank must therefore mean absent, or declaring an
@@ -44,19 +33,29 @@ function opt<T extends z.ZodTypeAny>(schema: T) {
 // Base URL of a backend service. Deployments point these at dev-server or nginx
 // proxy paths (`/fmd`, `/relayer`), but the SDK's HTTP client and viem build
 // requests with `new URL(base + path)`, which throws on a page-relative base.
-// Resolving against the page origin makes both spellings work.
-const serviceUrl = url.transform(toAbsoluteUrl).refine(isHttpUrl, HTTP_URL_MESSAGE);
-const optServiceUrl = opt(z.string().transform(toAbsoluteUrl).refine(isHttpUrl, HTTP_URL_MESSAGE));
+// Resolving against the page origin makes both spellings work — see `httpUrl`,
+// which the per-chain URLs in `config/chains/schema.ts` are checked with too.
+const absoluteServiceUrl = httpUrl;
+
+const serviceUrl = url.pipe(absoluteServiceUrl);
+const optServiceUrl = opt(absoluteServiceUrl);
 
 /// Settings global to the deployment. Exported for tests; `env` below is the
 /// parsed singleton.
 ///
 /// Everything per-chain — chain id and name, RPC, contract addresses, tree depth,
-/// explorer — comes from the relayer's `/chains` at runtime, so one build serves
-/// every deployment. What remains are the services themselves, which are shared
-/// across chains and cannot be discovered from inside the app; `relayerUrl` is
-/// the bootstrap that makes the rest discoverable.
+/// explorer — is discovered at runtime, so one build serves every deployment.
+/// What remains are the services themselves, which are shared across chains and
+/// cannot be discovered from inside the app.
+///
+/// Two of them are the bootstrap, and both are required. `registryUrl` describes
+/// what each chain *is* — the deployment's own account of itself — and
+/// `relayerUrl` says what one relayer will do on it. Neither is derivable from
+/// the other, and the app cross-checks the two before trusting a chain, so a
+/// deployment that sets only one has no usable network rather than a degraded
+/// one; failing at boot says so where a silent fallback would not.
 export const Schema = z.object({
+  registryUrl: serviceUrl,
   relayerUrl: serviceUrl,
   fmdUrl: serviceUrl,
   /// Absent disables swaps rather than failing the boot.
@@ -67,7 +66,7 @@ export type Env = z.infer<typeof Schema>;
 
 /// Thrown when the deployment is misconfigured. Named so `main` can distinguish
 /// it from a crash and report accordingly.
-export class EnvConfigError extends Error {
+class EnvConfigError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "EnvConfigError";
@@ -76,6 +75,7 @@ export class EnvConfigError extends Error {
 
 function parseEnv(): Env {
   const raw = {
+    registryUrl: import.meta.env.VITE_REGISTRY_URL,
     relayerUrl: import.meta.env.VITE_RELAYER_URL,
     fmdUrl: import.meta.env.VITE_FMD_URL,
     metaquoterUrl: import.meta.env.VITE_METAQUOTER_URL,
