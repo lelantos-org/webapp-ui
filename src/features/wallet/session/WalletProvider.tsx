@@ -6,7 +6,6 @@
 // call sites.
 
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
-import { closeDepositStreams } from "@/features/tx";
 import { clearAllCachedNsk, clearCachedNsk, eip1193Store } from "@/features/wallet-kinds";
 import { toastInfo } from "@/shared/lib/toast";
 import { useBuildWallet } from "../build/use-build-wallet";
@@ -15,8 +14,8 @@ import { WalletPicker } from "../connect/WalletPicker";
 import { disposeProverWorker } from "../prover/prover-worker";
 import { releaseScanner } from "../sync/scanner";
 import { deriveCapabilities } from "./capabilities";
+import { WalletContext, type WalletContextValue, WalletInstanceContext } from "./context";
 import { useSession } from "./session";
-import { WalletContext, type WalletContextValue, WalletInstanceContext } from "./use-wallet";
 import { deriveWalletStatus } from "./wallet-status";
 
 export function WalletProvider({ children }: { children: ReactNode }) {
@@ -56,11 +55,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // Every entry, not only the connected address: `clearCachedNsk(address)`
     // would leave the keys of any account used earlier in the session in place.
     clearAllCachedNsk();
-    // The relayer stream is an open SSE connection held for the wallet's
-    // lifetime, so it is dropped rather than left running after a disconnect.
-    closeDepositStreams();
-    // Same for the two worker pools, which together hold the ~49 MB zkey, the
-    // circuit wasm, a rayon pool and one jubjub wasm instance per scanner worker.
+    // The two worker pools together hold the ~49 MB zkey, the circuit wasm, a
+    // rayon pool and one jubjub wasm instance per scanner worker.
     // None of it is reachable from a disconnected wallet, and any later proof
     // follows a fresh connect.
     disposeProverWorker();
@@ -68,10 +64,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     session.disconnect();
     toastInfo("disconnected");
   }, [session.disconnect, wallet]);
-
-  const refresh = useCallback(async () => {
-    if (wallet) await wallet.sync({ limit: 500 });
-  }, [wallet]);
 
   const value = useMemo<WalletContextValue>(
     () => ({
@@ -83,21 +75,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       capabilities,
       connect: flow.begin,
       disconnect,
-      switchChain: session.switchChain,
-      refresh,
     }),
-    [
-      status,
-      error,
-      wallet,
-      session.kind,
-      session.ethAddress,
-      capabilities,
-      flow.begin,
-      session.switchChain,
-      disconnect,
-      refresh,
-    ],
+    [status, error, wallet, session.kind, session.ethAddress, capabilities, flow.begin, disconnect],
   );
 
   const instance = useMemo(() => ({ wallet }), [wallet]);

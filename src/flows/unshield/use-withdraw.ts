@@ -3,23 +3,15 @@
 
 import type { WithdrawResult } from "@lelantos-org/sdk";
 import { type ActionMutation, useSpendMutation, type WithdrawCall } from "@/features/ops";
-import { stepsFor, type WithAsset } from "@/features/tx";
+import { stepsFor } from "@/features/tx";
 
-export function useWithdraw(): ActionMutation<WithdrawCall, WithAsset<WithdrawResult>> {
-  return useSpendMutation<WithdrawCall, WithAsset<WithdrawResult>>({
-    label: (i) => (i.asEth ? "withdraw eth" : "withdraw"),
+export function useWithdraw(): ActionMutation<WithdrawCall, WithdrawResult> {
+  return useSpendMutation<WithdrawCall, WithdrawResult>({
+    label: (i) => (i.native ? "withdraw eth" : "withdraw"),
     run: (a, i, progress) => {
       progress.start(stepsFor("withdraw"));
-      // Both entry points take the same request; they differ only in the unwrap.
-      const req = {
-        to: i.to,
-        amount: i.amount,
-        asset: i.asset,
-        feeAsset: i.feeAsset,
-        onPhase: progress.set,
-      };
-      return i.asEth ? a.withdrawEth(req) : a.withdraw(req);
+      return a.withdraw({ ...i, onPhase: progress.set });
     },
-    track: (i, result) => ({ kind: i.asEth ? "withdrawEth" : "withdraw", result }),
+    track: (i, result) => ({ kind: i.native ? "withdrawEth" : "withdraw", result }),
   });
 }

@@ -4,7 +4,7 @@
 // Not the shared `Stepper`, which is a vertical list of an op's phases. This one
 // is a wayfinding strip for a stranger, and its steps are fixed.
 
-import { CheckGlyph, CrossGlyph } from "@/shared/ui/glyphs";
+import { CheckGlyph, CrossGlyph } from "@/shared/ui/icons/glyphs";
 import type { StepState } from "@/shared/ui/Stepper";
 import { CLAIM_STEPS, claimStepStates, type StepperState } from "../phase-presenter";
 import "./ClaimStepper.css";

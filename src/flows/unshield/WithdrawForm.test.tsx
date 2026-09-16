@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
-// A fee asset chosen before switching Unshield to "ETH (native)".
+// A fee asset chosen around a switch of Unshield to "ETH (native)".
 //
-// `withdrawEth` takes no `feeAsset`: the relayer is paid from the WETH notes the
-// spend already moves. The picker is withheld on that path, but the choice made
-// before the switch used to stay live behind it — pricing the relayer row in
-// the other asset, saying so in the footnote, and reserving an input slot in
-// the max for a cover the spend never takes.
+// A native withdrawal takes a `feeAsset` like any other, so the choice stays
+// live across the switch: the panel prices the relayer in it, the footnote says
+// so, and the max is read for the native path with that fee asset — the SDK
+// reserves the input slot its cover takes.
 //
 // The form, its hooks and `ActionForm` are real; the feature boundaries around
 // them are stubbed, and the fee panel and max reads record what they were asked.
@@ -28,7 +27,7 @@ type PanelInputs = {
 
 const seen = vi.hoisted(() => ({
   panel: [] as PanelInputs[],
-  spendable: [] as { crossAssetFee?: boolean }[],
+  spendable: [] as { feeAsset?: bigint; native?: boolean }[],
 }));
 
 // The pure helpers (`findAsset`, `nativeEthView`, `useEthAssetField`) are the
@@ -71,7 +70,7 @@ vi.mock("@/features/fees", async (importOriginal) => ({
 }));
 vi.mock("@/features/wallet", () => ({
   SyncNotice: () => null,
-  useSpendableMax: (_asset: bigint | undefined, opts: { crossAssetFee?: boolean }) => {
+  useSpendableMax: (_asset: bigint | undefined, opts: { feeAsset?: bigint; native?: boolean }) => {
     seen.spendable.push(opts);
     return undefined;
   },
@@ -120,24 +119,19 @@ beforeEach(() => {
 });
 
 describe("WithdrawForm, native ETH", () => {
-  it("ignores a fee asset chosen before the switch, and restores it after", () => {
+  it("keeps a fee asset chosen before the switch in effect on the native path", () => {
     const { pick, chooseFeeAsset } = renderForm();
 
     pick("1");
     chooseFeeAsset(USDC.id);
     expect(last(seen.panel).feeAsset).toBe(USDC.id);
-    expect(last(seen.spendable).crossAssetFee).toBe(true);
+    expect(last(seen.spendable)).toMatchObject({ feeAsset: USDC.id, native: false });
     expect(screen.getByText(FOOTNOTE)).toBeInTheDocument();
 
     pick("eth:1");
-    expect(last(seen.panel).feeAsset).toBeUndefined();
-    expect(last(seen.panel).onFeeAsset).toBeUndefined();
-    expect(last(seen.spendable).crossAssetFee).toBe(false);
-    expect(screen.queryByText(FOOTNOTE)).toBeNull();
-
-    // The stored choice survives the native detour.
-    pick("1");
     expect(last(seen.panel).feeAsset).toBe(USDC.id);
-    expect(last(seen.spendable).crossAssetFee).toBe(true);
+    expect(last(seen.panel).onFeeAsset).toBeDefined();
+    expect(last(seen.spendable)).toMatchObject({ feeAsset: USDC.id, native: true });
+    expect(screen.getByText(FOOTNOTE)).toBeInTheDocument();
   });
 });

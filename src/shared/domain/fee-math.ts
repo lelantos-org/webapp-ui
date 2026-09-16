@@ -1,14 +1,8 @@
 // Protocol fee math, over the SDK's `applyFee`. Truncating integer division
 // mirrors `MASP._takeFee` on-chain.
 
-import {
-  applyFee,
-  BPS_DENOMINATOR,
-  circuitAmount,
-  RAY,
-  type TokenAmount,
-  toTokenUnits,
-} from "@lelantos-org/sdk/core";
+import { circuitAmount, type TokenAmount } from "@lelantos-org/sdk";
+import { applyFee, BPS_DENOMINATOR, RAY, toTokenUnits } from "@lelantos-org/sdk/protocol";
 import type { FeeLeg } from "@/shared/domain/op-kind";
 import { asBaseUnits } from "@/shared/domain/units";
 
@@ -16,7 +10,7 @@ import { asBaseUnits } from "@/shared/domain/units";
 ///
 /// Re-exported from the SDK rather than written as `10_000n` here: it is a
 /// property of the contract, so a local copy could silently diverge. Same
-/// reasoning as `PUBLIC_IN_MAX` in `units`.
+/// reasoning as the SDK's `PUBLIC_IN_MAX`.
 export { BPS_DENOMINATOR };
 
 export interface FeeBreakdown {

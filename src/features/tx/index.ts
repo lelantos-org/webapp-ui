@@ -1,12 +1,9 @@
-export {
-  closeDepositStreams,
-  closeDepositStreamsExcept,
-  preopenDepositStream,
-} from "./deposit-stream";
-export { trackTxLifecycle } from "./lifecycle";
-export type { PendingContext } from "./pending-policy";
-export { pendingShapesFor } from "./pending-policy";
-export type { PendingTotals } from "./pending-store";
+export { trackTxLifecycle } from "./lifecycle/lifecycle";
+export type { OperationResult } from "./pending/operation";
+export { operationOf, pendingOpOf } from "./pending/operation";
+export type { PendingContext } from "./pending/pending-policy";
+export { pendingShapesFor } from "./pending/pending-policy";
+export type { PendingTotals } from "./pending/pending-store";
 export {
   addPendingMany,
   clearPending,
@@ -14,12 +11,12 @@ export {
   pruneExpired,
   usePending,
   usePendingByAsset,
-} from "./pending-store";
-export type { TxStage } from "./tx-copy";
-export { failureReassurance, retrySafe, settledNote, walkAwayNote } from "./tx-copy";
-export type { Step, TxPhase } from "./tx-progress";
-export { stepsFor } from "./tx-progress";
-export type { TxResult, WithAsset } from "./types";
-export { useProveEta } from "./use-prove-eta";
-export type { ProgressView, TxProgressApi } from "./use-tx-progress";
-export { useTxProgress } from "./use-tx-progress";
+} from "./pending/pending-store";
+export type { TxStage } from "./progress/tx-copy";
+export { failureReassurance, retrySafe, settledNote, walkAwayNote } from "./progress/tx-copy";
+export type { Step, TxPhase } from "./progress/tx-progress";
+export { stepsFor } from "./progress/tx-progress";
+export { useProveEta } from "./progress/use-prove-eta";
+export type { ProgressView, TxProgressApi } from "./progress/use-tx-progress";
+export { useTxProgress } from "./progress/use-tx-progress";
+export type { TxResult } from "./types";

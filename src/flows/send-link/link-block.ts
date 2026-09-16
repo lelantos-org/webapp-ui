@@ -1,6 +1,6 @@
 // What stops "Create link" from being pressed.
 //
-// The spend-block questions (`op-form/spend-block.ts`) minus a recipient — the
+// The spend-block questions (`op-form/submit/spend-block.ts`) minus a recipient — the
 // link is the recipient — plus two of this form's own: a vault with no room for
 // the new record, and the private-channel acknowledgement.
 

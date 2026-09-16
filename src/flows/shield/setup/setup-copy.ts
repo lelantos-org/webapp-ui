@@ -1,12 +1,15 @@
-// The words and step rows of a Permit2 setup run, apart from the modal that
-// shows them, so they read — and test — without a wallet.
+// The words of Permit2 setup, apart from what shows them, so they read — and
+// test — without a wallet, the registry or the probe hooks: the step rows of a
+// setup run, and the multi-token setup card under the Shield form.
 
+import type { AllowanceSetupStep } from "@lelantos-org/sdk";
 import type { RegisteredAsset } from "@/config/chains";
-import { plural } from "@/shared/lib/text";
+import { plural } from "@/shared/lib/format/text";
 import type { StepperItem } from "@/shared/ui/Stepper";
-import type { SetupProgress, SetupStep } from "./permit2-setup";
+import { tokenKey } from "./by-token";
+import type { SetupProgress } from "./permit2-setup";
 
-const SHARED_STEPS: { id: SetupStep; label: string }[] = [
+const SHARED_STEPS: { id: AllowanceSetupStep; label: string }[] = [
   { id: "signing", label: "sign allowances" },
   { id: "permitting", label: "submit allowances on-chain" },
 ];
@@ -51,19 +54,100 @@ export function initialProgress(toApprove: readonly RegisteredAsset[]): SetupPro
 /// ids over three tokens drew six rows, and `SetupProgress.token` then resolved
 /// to whichever id came first — so the highlight jumped back to row 1 on the
 /// fourth prompt.
-const approvalStepId = (token: string) => `approving:${token.toLowerCase()}`;
+const approvalStepId = (t: { token: string }) => `approving:${tokenKey(t)}`;
 
 /// One approval row per token that needs one, then the shared steps. They are
 /// separate wallet prompts, so a single combined row would show a finished step
 /// while further prompts were still coming.
 export function setupSteps(toApprove: readonly RegisteredAsset[]): StepperItem[] {
   return [
-    ...toApprove.map((a) => ({ id: approvalStepId(a.token), label: `authorize ${a.symbol}` })),
+    ...toApprove.map((a) => ({ id: approvalStepId(a), label: `authorize ${a.symbol}` })),
     ...SHARED_STEPS,
   ];
 }
 
 /// The row the run is on.
 export function currentStepId(progress: SetupProgress): string {
-  return progress.step === "approving" ? approvalStepId(progress.token) : progress.step;
+  return progress.step === "approving" ? approvalStepId(progress) : progress.step;
+}
+
+// The multi-token setup card (`SetupAllNotice`).
+
+/// The asset the Shield form has selected, when its own deposit needs no setup.
+export interface SetupCurrentAsset {
+  symbol: string;
+  /// Native coin, which never goes through Permit2 — as opposed to a token
+  /// that is already approved.
+  native: boolean;
+}
+
+/// "USDC and WBTC", "USDC, DAI and WBTC".
+export function joinNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+// The setup card a deposit is blocked on (`SetupNotice`), and the submit reason
+// under it. More than one name for a deposit paying its relayer in another token.
+
+/// "Couldn't check USDC's approval", "Couldn't check approvals for USDC and DAI".
+export function uncheckedApprovalsLine(names: readonly string[]): string {
+  return names.length > 1
+    ? `Couldn't check approvals for ${joinNames(names)}`
+    : `Couldn't check ${joinNames(names)}'s approval`;
+}
+
+/// Title and body of the card for the tokens a deposit still needs set up.
+///
+/// `willApproveErc20`: the run sends an ERC-20 → Permit2 approval first, which
+/// the body owns up to. `unknown`: the allowances could not be read at all.
+export function depositSetupCopy(
+  names: readonly string[],
+  { unknown, willApproveErc20 }: { unknown: boolean; willApproveErc20: boolean },
+): { title: string; body: string } {
+  const list = joinNames(names);
+  const one = names.length <= 1;
+  if (unknown) {
+    return {
+      title: uncheckedApprovalsLine(names),
+      body: `The approval status for ${list} couldn't be read. Running setup authorizes ${one ? "it" : "them"} either way.`,
+    };
+  }
+  const title = `${list} ${one ? "needs" : "need"} one-time setup`;
+  if (willApproveErc20) {
+    return {
+      title,
+      body: one
+        ? `Approve ${list} once and authorize a spending window. Shielding ${list} then takes a single confirmation in your wallet.`
+        : `Approve ${list} once and authorize their spending windows. This deposit then takes a single confirmation in your wallet.`,
+    };
+  }
+  return {
+    title,
+    body: one
+      ? `Authorize a new spending window for ${list} that covers this amount.`
+      : `Authorize new spending windows for ${list} that cover this deposit and its relayer fee.`,
+  };
+}
+
+/// Title and body for `names` outstanding.
+export function setupAllCopy(
+  names: readonly string[],
+  current: SetupCurrentAsset | undefined,
+): { title: string; short: string; body: string } {
+  const n = names.length;
+  const title =
+    n <= 3
+      ? `${joinNames(names)} ${n === 1 ? "needs" : "need"} one-time setup`
+      : `${n} tokens need one-time setup`;
+  const short = `One-time setup for ${n === 1 ? names[0] : `${n} tokens`}`;
+  const lead = current
+    ? `Not needed for this deposit — ${current.symbol} ${current.native ? "never requires it" : "is already set up"}. `
+    : "";
+  const them = n === 1 ? "it" : n === 2 ? "those two" : `those ${n}`;
+  return {
+    title,
+    short,
+    body: `${lead}Do it whenever you like; shielding ${them} later then takes a single confirmation in your wallet.`,
+  };
 }

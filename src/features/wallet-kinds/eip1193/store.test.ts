@@ -4,7 +4,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CANCELED_IN_WALLET } from "@/shared/lib/errors";
-import { announce, detail } from "@/test/eip6963";
+import { announce, detail } from "@/test/fakes/eip6963";
 import { eip1193Store } from "./store";
 
 const RDNS = "io.metamask";

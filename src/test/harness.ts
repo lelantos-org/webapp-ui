@@ -1,5 +1,7 @@
-// Async scaffolding shared by hook and component tests. Provider wrappers live
-// in `render.tsx`.
+// Async scaffolding shared by hook and component tests, and the `Result`
+// helpers only tests need. Provider wrappers live in `render.tsx`.
+
+import type { Result } from "@/shared/lib/result";
 
 interface Deferred<T> {
   promise: Promise<T>;
@@ -19,4 +21,11 @@ export function deferred<T>(): Deferred<T> {
     reject = rej;
   });
   return { promise, resolve, reject };
+}
+
+/// The value of a result the test has already proven ok, or a throw naming the
+/// error — so a failed precondition reads as its cause, not as a later `undefined`.
+export function unwrap<T, E>(r: Result<T, E>): T {
+  if (!r.ok) throw new Error(`unwrap on error result: ${String(r.error)}`);
+  return r.value;
 }

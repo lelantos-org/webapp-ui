@@ -17,20 +17,6 @@ import {
   walletReadinessBlock,
 } from "@/features/op-form";
 
-/// Ordering is the substance here, not the strings.
-///
-/// The wallet's own state first, as in `op-form/spend-block.ts`: against balances
-/// that are stale or not yet counted, "enter an amount you hold" is a question
-/// nobody can answer. Then the user's own input, because it is the only
-/// condition they can act on directly. `quoting` precedes the missing-quote case
-/// because a fetch in flight *is* why there is no quote yet, and reporting the
-/// absence instead reads as a dead end. A stale quote likewise outranks absence:
-/// one expired in place is a different situation from one that never arrived,
-/// and it has a remedy the other lacks.
-///
-/// Fee problems come after the quote but do block (ux-findings #02): a
-/// swap whose relayer cannot be paid would otherwise spend a full proof to learn
-/// it.
 export interface SwapSubmitState extends WalletReadiness, AmountReadiness, FeeReadiness {
   /// The network lists two assets to trade between.
   hasPair: boolean;
@@ -43,6 +29,20 @@ export interface SwapSubmitState extends WalletReadiness, AmountReadiness, FeeRe
   quoteFailed: boolean;
 }
 
+/// Ordering is the substance here, not the strings.
+///
+/// The wallet's own state first, as in `op-form/submit/spend-block.ts`: against balances
+/// that are stale or not yet counted, "enter an amount you hold" is a question
+/// nobody can answer. Then the user's own input, because it is the only
+/// condition they can act on directly. `quoting` precedes the missing-quote case
+/// because a fetch in flight *is* why there is no quote yet, and reporting the
+/// absence instead reads as a dead end. A stale quote likewise outranks absence:
+/// one expired in place is a different situation from one that never arrived,
+/// and it has a remedy the other lacks.
+///
+/// Fee problems come after the quote but do block (ux-findings #02): a
+/// swap whose relayer cannot be paid would otherwise spend a full proof to learn
+/// it.
 export function swapSubmitBlock(s: SwapSubmitState): SubmitBlock {
   return (
     walletReadinessBlock("swapping", s) ??

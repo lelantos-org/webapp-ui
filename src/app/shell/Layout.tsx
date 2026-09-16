@@ -9,14 +9,14 @@
 
 import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
+import { Backdrop } from "@/app/shell/chrome/Backdrop";
+import { BetaBanner } from "@/app/shell/chrome/BetaBanner";
+import { ThemeToggle } from "@/app/shell/chrome/ThemeToggle";
+import { Wordmark } from "@/app/shell/chrome/Wordmark";
 import { ChainBadge } from "@/features/chain";
 import { ConnectButton, useWallet } from "@/features/wallet";
-import { Backdrop } from "@/shared/ui/Backdrop";
-import { BetaBanner } from "@/shared/ui/BetaBanner";
-import { GithubIcon } from "@/shared/ui/glyphs";
-import { ThemeToggle } from "@/shared/ui/ThemeToggle";
-import { Wordmark } from "@/shared/ui/Wordmark";
-import { HealthIndicator } from "./HealthIndicator";
+import { GithubIcon } from "@/shared/ui/icons/brand";
+import { HealthIndicator } from "./health/HealthIndicator";
 import "./Layout.css";
 
 export function Layout({ children }: { children: ReactNode }) {

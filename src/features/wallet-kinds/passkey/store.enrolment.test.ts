@@ -12,11 +12,12 @@
 // land under the same `accountKey` the snapshot publishes, or it silently
 // misses and the prompt comes back with nothing failing.
 
-import { LELANTOS_PRF_SALT } from "@lelantos-org/sdk/keys";
+import { LELANTOS_PRF_SALT } from "@lelantos-org/sdk/primitives";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { stubWebAuthn } from "@/test/dom";
 import { getCachedNsk } from "../key-cache/nsk-session-cache";
 import { isAttached, passkeyAccountKey, storedCredential } from "./credential-storage";
+import { prfKnownUnsupported } from "./prf";
 import { passkeyStore } from "./store";
 
 const RAW_ID = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
@@ -77,7 +78,7 @@ describe("passkey enrolment failure", () => {
     await passkeyStore.connect();
 
     const state = passkeyStore.getState();
-    expect(state.unsupported).toBe(true);
+    expect(prfKnownUnsupported()).toBe(true);
     expect(state.error).toMatch(/does not support the PRF extension/);
   });
 

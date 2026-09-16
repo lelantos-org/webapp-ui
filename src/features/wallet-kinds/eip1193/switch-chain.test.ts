@@ -4,7 +4,7 @@
 // in a generic `-32603` from every wallet built on `rpc-errors`.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { announce } from "@/test/eip6963";
+import { announce } from "@/test/fakes/eip6963";
 import { makeChain } from "@/test/fixtures/chains";
 import { eip1193Store } from "./store";
 

@@ -9,20 +9,16 @@ import { fakeWalletApi, fakeWalletContext } from "@/test/fakes/wallet";
 import { queryWrapper } from "@/test/render";
 
 const addPendingMany = vi.fn();
+const clearPending = vi.fn();
 const trackTxLifecycle = vi.fn();
 const invalidate = vi.fn();
-const fetchAssetEntry = vi.fn();
-const quoteFee = vi.fn();
+const state = vi.fn();
 
 vi.mock("@/features/tx", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/tx")>()),
   trackTxLifecycle: (...a: unknown[]) => trackTxLifecycle(...a),
   addPendingMany: (...a: unknown[]) => addPendingMany(...a),
-  clearPending: vi.fn(),
-}));
-vi.mock("@/features/assets", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/assets")>()),
-  fetchAssetEntry: (...a: unknown[]) => fetchAssetEntry(...a),
+  clearPending: (...a: unknown[]) => clearPending(...a),
 }));
 vi.mock("@/features/chain", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/chain")>()),
@@ -32,9 +28,8 @@ vi.mock("@/features/chain", async (importOriginal) => ({
 // would also blank the other symbols it re-exports.
 vi.mock("@/features/wallet", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/wallet")>()),
-  useWallet: () =>
-    fakeWalletContext({ wallet: fakeWalletApi({ chain: {}, balance: () => 0n, quoteFee }) }),
-  useWalletInstance: () => fakeWalletApi({ chain: {}, balance: () => 0n, quoteFee }),
+  useWallet: () => fakeWalletContext({ wallet: fakeWalletApi({ chain: {}, state }) }),
+  useWalletInstance: () => fakeWalletApi({ chain: {}, state }),
   useInvalidateWalletState: () => invalidate,
 }));
 
@@ -43,18 +38,21 @@ const { useTxTracker } = await import("./use-tx-tracker");
 const swapArgs = {
   label: "swap",
   kind: "swap" as const,
-  result: { kind: "swap", txHash: "0xdead", ownCommitments: [], depositId: 1n },
-  swap: { assetIn: 1n, assetOut: 2n, amount: 5n, quote: { minOut: 10n } },
+  result: {
+    kind: "swap",
+    txHash: "0xdead",
+    asset: { id: 1n },
+    commitments: ["0xcm0", "0xcm1"],
+    ownCommitments: [],
+    change: 0n,
+    gross: { amount: 5n },
+  },
+  swap: { quote: { assetOut: { id: 2n }, credit: { amount: 10n } } },
 };
 
 beforeEach(() => {
   invalidate.mockResolvedValue(undefined);
-  // `depositBps` rides on the entry since contracts 0.5.0 — leg 2 mints the
-  // B-note as a deposit, so it is the rate `sizeBNote` prices against. Omitting
-  // it makes the success path throw inside `sizeBNote` and degrade to the
-  // caught branch, which passes these assertions for the wrong reason.
-  fetchAssetEntry.mockResolvedValue({ scale: 1n, depositBps: 25n, withdrawBps: 30n });
-  quoteFee.mockResolvedValue({ options: [], charged: false });
+  state.mockReturnValue({ balances: new Map([[2n, 7n]]) });
 });
 
 describe("useTxTracker", () => {
@@ -67,13 +65,41 @@ describe("useTxTracker", () => {
     expect(trackTxLifecycle).toHaveBeenCalledOnce();
   });
 
-  it("still tracks the tx when the post-submit chain read fails", async () => {
-    // A failing registry read must not reject out of `onSuccess`, which
-    // react-query awaits inside its own `try`; that would flip an
-    // already-broadcast swap to `error` — red stepper, "swap failed" toast,
-    // `m.data` discarded so no explorer link, no pending overlay and no
-    // lifecycle watch.
-    fetchAssetEntry.mockRejectedValue(new Error("rpc rate limited"));
+  it("keys the overlay by operation and settles only that operation", async () => {
+    const { result } = renderHook(() => useTxTracker(), { wrapper: queryWrapper });
+
+    await result.current(swapArgs as never);
+
+    // A bundled tx can carry two of this wallet's operations, so the hash alone
+    // would clear both overlays when the first settles.
+    expect(addPendingMany).toHaveBeenCalledWith(
+      1n,
+      { txHash: "0xdead", opId: "0xcm0" },
+      expect.anything(),
+    );
+    trackTxLifecycle.mock.calls[0]?.[0].onSettled();
+    expect(clearPending).toHaveBeenCalledWith(1n, "0xcm0");
+  });
+
+  it("watermarks the leg-B note at the quote's credit over the confirmed baseline", async () => {
+    const { result } = renderHook(() => useTxTracker(), { wrapper: queryWrapper });
+
+    await result.current(swapArgs as never);
+
+    expect(addPendingMany).toHaveBeenLastCalledWith(1n, expect.anything(), [
+      { asset: 1n, pendingIn: 0n, outflow: 5n },
+      { asset: 2n, pendingIn: 10n, outflow: 0n, clearWhenBalanceAtLeast: 17n },
+    ]);
+  });
+
+  it("still tracks the tx when the baseline read fails", async () => {
+    // A throwing read must not reject out of `onSuccess`, which react-query
+    // awaits inside its own `try`; that would flip an already-broadcast swap to
+    // `error` — red stepper, "swap failed" toast, `m.data` discarded so no
+    // explorer link, no pending overlay and no lifecycle watch.
+    state.mockImplementation(() => {
+      throw new Error("disposed");
+    });
     const { result } = renderHook(() => useTxTracker(), { wrapper: queryWrapper });
 
     await expect(result.current(swapArgs as never)).resolves.toBeUndefined();
@@ -89,5 +115,26 @@ describe("useTxTracker", () => {
     await expect(result.current(swapArgs as never)).resolves.toBeUndefined();
 
     expect(trackTxLifecycle).toHaveBeenCalledOnce();
+  });
+
+  it("hands a deposit's escrow to the lifecycle", async () => {
+    const escrow = { commitment: "0xc0" };
+    const { result } = renderHook(() => useTxTracker(), { wrapper: queryWrapper });
+
+    await result.current({
+      label: "deposit",
+      kind: "deposit",
+      result: {
+        kind: "deposit",
+        txHash: "0xbeef",
+        asset: { id: 1n },
+        amount: { amount: 5n },
+        commitments: ["0xc0"],
+        ownCommitments: ["0xc0"],
+        escrow,
+      },
+    } as never);
+
+    expect(trackTxLifecycle.mock.lastCall?.[0]).toMatchObject({ escrow, txHash: "0xbeef" });
   });
 });

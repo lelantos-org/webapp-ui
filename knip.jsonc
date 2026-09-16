@@ -2,7 +2,7 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   // The app entry (`index.html` -> `src/app/main.tsx`), the vite/vitest configs
   // and every test file come from knip's Vite and Vitest plugins. The two
-  // workers are SDK modules (`@lelantos-org/sdk/{prover,scanner}-worker`), so
+  // workers are SDK modules (`@lelantos-org/sdk/workers/{prover,scanner}`), so
   // nothing in this repo is a worker entry.
   "entry": ["scripts/*.mjs"],
   "project": ["src/**/*.{ts,tsx}", "vite/**/*.ts", "scripts/**/*.mjs", "*.ts"],
@@ -13,7 +13,7 @@
     // Reached through the `assert` alias in `vite/shared.ts` (circomlibjs needs
     // it at runtime), never by an import knip can follow.
     "assert",
-    // The npm polyfills `src/app/polyfills.ts` installs. knip reads the bare
+    // The npm polyfills `src/app/boot/polyfills.ts` installs. knip reads the bare
     // specifiers as the Node builtins of the same name.
     "buffer",
     "process"

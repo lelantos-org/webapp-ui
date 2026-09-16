@@ -7,7 +7,7 @@
 // trip is exact, including across the incremental saves that a real sync does.
 
 import "fake-indexeddb/auto";
-import type { MerkleNode, TreeStoreState } from "@lelantos-org/sdk/wallet";
+import type { MerkleNode, TreeStoreState } from "@lelantos-org/sdk/advanced";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TREE_STORE, walletDb } from "./db";
 import { IdbTreePersistence } from "./tree-persistence";

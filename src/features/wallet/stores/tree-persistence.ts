@@ -1,4 +1,4 @@
-import type { MerkleNode, TreePersistence, TreeStoreState } from "@lelantos-org/sdk/wallet";
+import type { MerkleNode, TreePersistence, TreeStoreState } from "@lelantos-org/sdk/advanced";
 import type { IDBPDatabase, IDBPObjectStore } from "idb";
 import { TREE_STORE, type WalletSchema, walletDb } from "./db";
 

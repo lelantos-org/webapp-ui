@@ -11,11 +11,12 @@
 // has to live somewhere, and this is the only place that knows the session
 // exists.
 
-import { prfOutputToNsk } from "@lelantos-org/sdk/keys";
+import { prfOutputToNsk } from "@lelantos-org/sdk/primitives";
 import { userMessage } from "@/shared/lib/errors";
 import { createStore } from "@/shared/lib/external-store";
 import { createLogger } from "@/shared/lib/logger";
 import { cacheNsk } from "../key-cache/nsk-session-cache";
+import type { ConnectionStatus } from "../types";
 import {
   isAttached,
   markAttached,
@@ -30,18 +31,13 @@ import { createAndProvePasskey, PrfUnsupportedError, passkeysAvailable } from ".
 
 const log = createLogger("passkey");
 
-export type PasskeyStatus = "idle" | "connecting" | "connected" | "error";
-
 export interface PasskeyState {
-  status: PasskeyStatus;
+  status: ConnectionStatus;
   credentialId?: string | undefined;
   /// The chain this session selected. Undefined until one is chosen, which
   /// `ChainProvider` resolves to the first registry entry.
   chainId?: bigint | undefined;
   error?: string | undefined;
-  /// True when the authenticator has already been shown not to support PRF, so
-  /// the picker can stop offering a path that cannot work here.
-  unsupported?: boolean;
 }
 
 const initial: PasskeyState = { status: "idle" };
@@ -137,7 +133,6 @@ class PasskeyStore {
       this.set({
         status: "error",
         error: unsupported && e instanceof Error ? e.message : userMessage(e),
-        unsupported,
       });
     }
   };

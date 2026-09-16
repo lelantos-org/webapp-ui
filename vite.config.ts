@@ -69,7 +69,12 @@ export default defineConfig({
       // inlined into its pre-bundle and have to be optimized in their own
       // right — without this, `import { bech32m } from "bech32"` is served the
       // raw CJS file and throws "does not provide an export named 'bech32m'".
-      "bech32",
+      //
+      // Both are named through the SDK (`sdk > dep`): a linked SDK
+      // (`file:../sdk`) keeps its dependencies in its own `node_modules`, where
+      // a bare specifier resolved from here finds nothing. Hoisted under a
+      // published SDK, the nested form resolves all the same.
+      "@lelantos-org/sdk > bech32",
       // poseidon-lite ships CommonJS (`exports.poseidonN = ...`) with no ESM
       // build, and the SDK imports it by name. Pre-bundling it here is what
       // gives those files real named exports in dev; served raw,
@@ -79,7 +84,7 @@ export default defineConfig({
       // Arities 1-8, matching what the SDK's `crypto/poseidon.ts` imports. Listing them
       // individually because each is its own export subpath; the package root
       // is never imported.
-      ...Array.from({ length: 8 }, (_, i) => `poseidon-lite/poseidon${i + 1}`),
+      ...Array.from({ length: 8 }, (_, i) => `@lelantos-org/sdk > poseidon-lite/poseidon${i + 1}`),
     ],
     esbuildOptions: {
       define: { global: "globalThis" },

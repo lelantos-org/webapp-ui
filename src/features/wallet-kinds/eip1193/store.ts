@@ -12,6 +12,7 @@ import type { ChainEntry } from "@/config/chains";
 import { userMessage } from "@/shared/lib/errors";
 import { createStore } from "@/shared/lib/external-store";
 import { createLogger } from "@/shared/lib/logger";
+import type { ConnectionStatus } from "../types";
 import { type Eip6963ProviderDetail, ProviderRegistry } from "./discovery";
 import { attachProviderEvents, type Eip1193Provider, firstAccount, parseChainId } from "./provider";
 import { attachedRdns, forgetAttachedRdns, rememberRdns } from "./rdns-storage";
@@ -28,13 +29,10 @@ const log = createLogger("eip1193");
 /// rather than resolved by whichever provider announces first.
 const ANNOUNCE_WAIT_MS = 400;
 
-export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
-
 export interface Eip1193State {
   status: ConnectionStatus;
   provider?: Eip1193Provider | undefined;
   rdns?: string | undefined;
-  name?: string | undefined;
   address?: `0x${string}` | undefined;
   chainId?: number | undefined;
   error?: string | undefined;
@@ -192,7 +190,6 @@ class Eip1193Store {
       status: "idle",
       provider: undefined,
       rdns: undefined,
-      name: undefined,
       address: undefined,
       chainId: undefined,
       error: undefined,
@@ -234,7 +231,6 @@ class Eip1193Store {
       status: "connected",
       provider: detail.provider,
       rdns: detail.info.rdns,
-      name: detail.info.name,
       address,
       chainId,
       error: undefined,

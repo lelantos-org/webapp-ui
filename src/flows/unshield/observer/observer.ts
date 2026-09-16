@@ -70,17 +70,15 @@ export function observerFacts({
   asset,
   amount,
   symbol,
-  isValidAddress,
 }: {
   to: string;
   asset: AssetUnits | undefined;
   amount: bigint | undefined;
   symbol: string;
-  isValidAddress(value: string): boolean;
 }): ObserverFacts {
   const priced = asset && amount !== undefined && amount > 0n ? { asset, amount } : undefined;
   return {
-    destination: isValidAddress(to) ? shortAddr(to, 4) : undefined,
+    destination: isEvmAddress(to) ? shortAddr(to, 4) : undefined,
     amount: priced ? `${formatAssetFixed(priced.amount, priced.asset, 6)} ${symbol}` : undefined,
     figure: priced ? formatAmountForDisplay(priced.amount, priced.asset) : undefined,
   };

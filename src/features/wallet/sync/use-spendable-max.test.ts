@@ -15,6 +15,7 @@ import { queryWrapper } from "@/test/render";
 import { useSpendableMax } from "./use-spendable-max";
 
 const ASSET = 1n;
+const TRANSFER = { kind: "transfer" } as const;
 
 const state = vi.hoisted(() => ({
   balances: [{ asset: 1n, balance: 500n, notes: 2, pending: 0n, outflow: 0n }],
@@ -24,7 +25,7 @@ const state = vi.hoisted(() => ({
 }));
 const spendableMax = vi.hoisted(() => vi.fn(async () => ({ max: 500n })));
 
-vi.mock("../session/use-wallet", () => ({
+vi.mock("../session/context", () => ({
   useWallet: () => fakeWalletContext({ wallet: fakeWalletApi({ address: "0xabc", spendableMax }) }),
   useWalletInstance: () => fakeWalletApi({ address: "0xabc", spendableMax }),
 }));
@@ -35,7 +36,7 @@ vi.mock("@/features/chain", async () =>
 
 describe("useSpendableMax", () => {
   it("does not re-read when a sync lands with nothing moved", async () => {
-    const { result, rerender } = renderHook(() => useSpendableMax(ASSET), {
+    const { result, rerender } = renderHook(() => useSpendableMax(ASSET, TRANSFER), {
       wrapper: queryWrapper,
     });
     await waitFor(() => expect(result.current?.max).toBe(500n));
@@ -52,7 +53,7 @@ describe("useSpendableMax", () => {
   });
 
   it("re-reads when the holdings actually move", async () => {
-    const { result, rerender } = renderHook(() => useSpendableMax(ASSET), {
+    const { result, rerender } = renderHook(() => useSpendableMax(ASSET, TRANSFER), {
       wrapper: queryWrapper,
     });
     await waitFor(() => expect(result.current?.max).toBe(500n));
@@ -64,12 +65,25 @@ describe("useSpendableMax", () => {
     await waitFor(() => expect(result.current?.max).toBe(900n));
   });
 
+  it("asks the SDK for the spend's own fee reservation", async () => {
+    const { result } = renderHook(
+      () => useSpendableMax(ASSET, { kind: "withdraw", feeAsset: 2n, native: true }),
+      { wrapper: queryWrapper },
+    );
+    await waitFor(() => expect(result.current?.max).toBeDefined());
+    expect(spendableMax).toHaveBeenLastCalledWith(ASSET, {
+      kind: "withdraw",
+      feeAsset: 2n,
+      native: true,
+    });
+  });
+
   // The ceiling moving is not the ceiling being unknown. While the new read is
   // in flight the previous answer stands, so nothing downstream sees the
   // `undefined` that means "no ceiling at all".
   it("holds the previous ceiling while a changed key reloads", async () => {
     const { result, rerender } = renderHook(
-      ({ fee }: { fee: bigint }) => useSpendableMax(ASSET, { sameAssetFee: fee }),
+      ({ fee }: { fee: bigint }) => useSpendableMax(ASSET, { ...TRANSFER, quotedFee: fee }),
       { wrapper: queryWrapper, initialProps: { fee: 0n } },
     );
     await waitFor(() => expect(result.current?.max).toBe(500n));

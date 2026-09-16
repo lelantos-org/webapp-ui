@@ -1,19 +1,18 @@
 // The "You receive" leg of the swap: the quote and the asset it is in, as one
 // panel mirroring "You pay" above it.
 //
-// The figure is the credited amount (`swapCredit`), not the venue's
-// `expectedOut`. `executeSwap` encodes exactly this as the deposit
-// leg's `publicIn`, and both the leg-2 protocol fee and the relayer's flush note
-// come out of it, so `minOut / scale` overstates the credit by both. It is a
-// fixed amount rather than a floor: a better fill goes to the treasury as dust,
-// never to the wallet. Hence a sub-line that promises no upside — "exactly this,
-// or the trade reverts" — never "at least".
+// The figure is the quote's `credit`, not the venue's `expectedOut`. The swap
+// encodes exactly this as the deposit leg's `publicIn`, and both the leg-2
+// protocol fee and the relayer's flush note come out of it, so `minOut / scale`
+// overstates the credit by both. It is a fixed amount rather than a floor: a
+// better fill goes to the treasury as dust, never to the wallet. Hence a
+// sub-line that promises no upside — "exactly this, or the trade reverts" —
+// never "at least".
 
-import type { SwapQuote } from "@lelantos-org/sdk/quoter";
+import type { SwapQuote } from "@lelantos-org/sdk";
 import { type ReactNode, useId } from "react";
 import type { RegisteredAsset } from "@/config/chains";
 import { assetUsd, usePrices } from "@/features/assets";
-import { swapCredit } from "@/features/ops";
 import { cx } from "@/shared/lib/cx";
 import { formatAmountForAsset } from "@/shared/lib/format/asset";
 import { formatUsd } from "@/shared/lib/format/money";
@@ -25,14 +24,6 @@ export interface ReceiveLegProps {
   /// The out-asset trigger, beside the figure.
   picker: ReactNode;
   quote: SwapQuote | undefined;
-  /// Protocol fee on leg 2, needed to size the B-note. `undefined` until the
-  /// read lands, in which case the leg says so rather than showing a figure the
-  /// wallet will not honour.
-  feeBps: bigint | undefined;
-  /// What the relayer charges to flush the leg-2 deposit, in circuit units of the
-  /// out asset. Also part of the B-note's size, and treated like `feeBps` while
-  /// `undefined`.
-  outDepositFee: bigint | undefined;
   ageSecs: number | undefined;
   stale: boolean;
   onRefresh(): void;
@@ -46,8 +37,6 @@ export function ReceiveLeg({
   outAsset,
   picker,
   quote,
-  feeBps,
-  outDepositFee,
   ageSecs,
   stale,
   onRefresh,
@@ -58,15 +47,9 @@ export function ReceiveLeg({
   const labelId = useId();
   const prices = usePrices();
 
-  const received =
-    quote && outAsset && feeBps !== undefined && outDepositFee !== undefined
-      ? swapCredit({
-          minOut: quote.minOut,
-          scaleOut: outAsset.scale,
-          feeBps,
-          depositFee: outDepositFee,
-        })
-      : undefined;
+  // Only against the quote's own out asset: the pair may have moved on while a
+  // refetch for the new one is in flight.
+  const received = quote && outAsset?.id === quote.assetOut.id ? quote.credit.amount : undefined;
   const usd = received !== undefined && outAsset ? assetUsd(received, outAsset, prices) : undefined;
 
   const figure =

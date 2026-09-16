@@ -4,7 +4,7 @@
 // and the per-tab session cache encodes it too. In `claim-links/codec` it would
 // make the wallet layer import `features/claim-links`, which imports the wallet.
 
-import { type Field, fromLeBytes, toLeBytes } from "@lelantos-org/sdk/crypto";
+import { type Field, fromLeBytes, toLeBytes } from "@lelantos-org/sdk/primitives";
 import { err, ok, type Result } from "@/shared/lib/result";
 
 export const NSK_HEX_LEN = 64;

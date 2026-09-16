@@ -1,0 +1,6 @@
+@layer features {
+  @media (max-width: 480px) {
+    /* The line under the setup card steps down a size. */
+    .screen-note { font-size: var(--fs-13); }
+  }
+}

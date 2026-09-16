@@ -7,7 +7,7 @@ import type { EvmAddress } from "@lelantos-org/sdk";
 
 /// Display-friendly view of one asset registered on the MASP.
 ///
-/// Served whole by registry-webserver's `/v1/assets`, so no client needs
+/// Served whole by protocol-webserver's `/v1/assets`, so no client needs
 /// per-token `symbol()` and `decimals()` RPC reads. Their silent failure would
 /// leave the asset labelled `#<id>` with `isWeth` false, hiding the native-ETH
 /// option.
@@ -43,7 +43,7 @@ export interface RegisteredAsset {
   /// The deployment's estimate of what this asset earns in a year, net of the
   /// pool's cut, with the window it was measured over.
   ///
-  /// Measured and published by registry-webserver, not by a relayer: a venue's
+  /// Measured and published by protocol-webserver, not by a relayer: a venue's
   /// rate is the same for every relayer serving the chain, so a relayer stating
   /// one would be asserting a fact a wallet cannot check it against.
   ///
@@ -75,7 +75,7 @@ export interface VenueRate {
 
 /// Everything that varies per chain.
 ///
-/// Service URLs are excluded: one registry-webserver, relayer, fmd-webserver and
+/// Service URLs are excluded: one protocol-webserver, relayer, fmd-webserver and
 /// metaquoter serve every chain, selecting by chainId in the path or query, so
 /// those stay global on `env`. Only chain identity and the contracts deployed on
 /// it belong here.
@@ -97,7 +97,7 @@ export interface ChainEntry {
   /// SNARK-bound: must equal the relayer pipeline signer or the pool reverts.
   relayerAddress: EvmAddress;
   permit2Address?: EvmAddress | undefined;
-  /// Absent means native-ETH deposit and `withdrawEth` have no entry point on
+  /// Absent means native-ETH deposit and native withdrawal have no entry point on
   /// this chain; the "ETH (native)" option is then withheld rather than offered
   /// and rejected at submit.
   nativeAdapterAddress?: EvmAddress | undefined;

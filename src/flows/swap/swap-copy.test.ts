@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
-import type { FeeRow, FeeSummaryModel } from "@/features/fees";
+import type { FeeSummaryModel } from "@/features/fees";
 import {
   receiveLine,
   revertFootnote,
@@ -9,6 +9,8 @@ import {
   swapFeeSummary,
   venueLabel,
 } from "./swap-copy";
+
+type FeeRow = FeeSummaryModel["rows"][number];
 
 const USDC = { symbol: "USDC", decimals: 6 };
 
@@ -30,6 +32,7 @@ const model = (rows: FeeRow[]): FeeSummaryModel => ({
   rows: [amountRow, ...rows],
   total: undefined,
   headline: undefined,
+  headlineExtra: undefined,
   crossAsset: false,
 });
 

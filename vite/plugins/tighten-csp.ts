@@ -49,7 +49,7 @@ export function tightenCspHtml(html: string): string {
 /// `connect-src` drops `http:` and `ws:` for the same reason: the app requires
 /// a secure context anyway (`crossOriginIsolated` for the wasm prover), so
 /// plaintext destinations are only useful to an exfiltrator. `https:`/`wss:`
-/// stay broad because chain RPC URLs come from registry-webserver's
+/// stay broad because chain RPC URLs come from protocol-webserver's
 /// `/v1/chains` at runtime and cannot be enumerated at build time.
 ///
 /// Trusted Types is added here rather than in `index.html` because `vite dev`

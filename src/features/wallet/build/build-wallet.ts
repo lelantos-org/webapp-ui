@@ -1,19 +1,18 @@
-import { connect, TRANSACT_4X6 } from "@lelantos-org/sdk";
-import { requestPersistentStorage } from "@lelantos-org/sdk/core";
-import type { Field } from "@lelantos-org/sdk/crypto";
-import type { WalletApi } from "@lelantos-org/sdk/wallet";
-import { toast } from "sonner";
+import { connect, type WalletApi } from "@lelantos-org/sdk";
+import { requestPersistentStorage } from "@lelantos-org/sdk/advanced";
+import type { Field } from "@lelantos-org/sdk/primitives";
 import { type ChainEntry, chainKey } from "@/config/chains";
 import { env } from "@/config/env";
 import { type ChainLayerSpec, cacheNsk, getCachedNsk, kindAdapter } from "@/features/wallet-kinds";
 import { createLogger } from "@/shared/lib/logger";
-import { accountDigest } from "@/shared/lib/storage-digest";
-import { getProverWorker } from "../prover/prover-worker";
-import { IdbNoteStore } from "../stores/note-store";
+import { accountDigest } from "@/shared/lib/storage/digest";
+import { toast } from "@/shared/lib/toast";
+import { sharedProver } from "../prover/prover-worker";
+import { holdNoteStore, IdbNoteStore } from "../stores/note-store";
 import { IdbNullifierPersistence } from "../stores/nullifier-persistence";
 import { IdbTreePersistence } from "../stores/tree-persistence";
-import { createScanner } from "../sync/scanner";
-import { resolveSyncStrategy } from "./fmd-subscription";
+import { resolveSyncStrategy } from "../sync/fmd-subscription";
+import { createScanner, disposeScanner, holdScanner } from "../sync/scanner";
 import { networkPreset } from "./network-preset";
 import { instrumentWallet, timed } from "./perf";
 
@@ -45,14 +44,6 @@ async function resolveNsk(
   log.info("key derived");
   cacheNsk(accountKey, nsk);
   return nsk;
-}
-
-/// `NetworkPreset` types the deployment addresses as nullable, where `null` marks
-/// a network the pool is not deployed on. `connect` rejects those as well, but
-/// the adapter is built first, so the check happens here.
-function requireAddress(value: string | null, field: string): string {
-  if (!value) throw new Error(`network preset has no ${field}; pool is not deployed on this chain`);
-  return value;
 }
 
 /// Namespace persisted stores per (deployment, account) so switching either
@@ -110,12 +101,10 @@ export async function buildWallet(
 
   // Settled before `connect`, since the "matches" strategy addresses its
   // subscription by a token that must be registered first.
-  const [network, plan] = await Promise.all([
-    networkPreset(chain),
-    timed("fmd.resolveSyncStrategy", () =>
-      resolveSyncStrategy(env.fmdUrl, chain.chainId, nsk, accountKey),
-    ),
-  ]);
+  const network = networkPreset(chain);
+  const plan = await timed("fmd.resolveSyncStrategy", () =>
+    resolveSyncStrategy(env.fmdUrl, chain.chainId, nsk, accountKey),
+  );
   const syncStrategy = plan.strategy;
 
   // Only the `unavailable` fallback warrants a warning. The firehose
@@ -135,16 +124,14 @@ export async function buildWallet(
     });
   }
 
-  const maspAddress = requireAddress(network.maspAddress, "maspAddress");
+  const maspAddress = network.maspAddress;
   // The chain layer is named, not constructed: `connect` builds a
-  // `ViemChainAdapter` from a signer and a `ViemChainReader` from `noSigner`,
+  // `ViemChainAdapter` from a signer and a `ViemChainReader` from `readOnly`,
   // both off the preset above. Without a signer every read the spend path makes
   // is still on the reader half of the port, so a passkey wallet transfers,
   // withdraws and swaps against exactly that; only deposit needs more, and it
   // refuses at the call — see `session/capabilities.ts`.
-  const chainOption = signer
-    ? { signer, rpcUrl: chain.readRpcUrl }
-    : { noSigner: true as const, rpcUrl: chain.readRpcUrl };
+  const chainOption = signer ? { signer } : { readOnly: true as const };
 
   // Hoisted out of the `connect` argument list so it can be disposed if
   // `connect` throws. The pool spawns eagerly, so its workers exist before
@@ -152,18 +139,14 @@ export async function buildWallet(
   // 500, a tree-cache load that throws — would leave them unreferenced, leaking
   // a pool per `useBuildWallet` retry.
   const scanner = createScanner();
+  const notes = new IdbNoteStore(storeKey("notes", chain.chainId, maspAddress, accountKey));
   let wallet: WalletApi;
   try {
     wallet = await timed("connect", () =>
       connect({
         network,
+        rpcUrl: chain.readRpcUrl,
         nsk,
-        // Stated rather than inherited: the prover worker bundles the 4x6
-        // artifacts, and the two must agree or every proof is built at the wrong
-        // arity. Currently the only shape the circuits package publishes keys
-        // for, so the default would do — but naming it is what pins the artifact
-        // pair the worker loads.
-        shape: TRANSACT_4X6,
         // Every asset gets a ladder, derived by the SDK from its own `scale`
         // and `decimals`. Named rather than left to default because it is a
         // privacy setting: `wallet.asset().ladder` is what the spend path
@@ -171,25 +154,30 @@ export async function buildWallet(
         // publishes, not just what the form offers.
         denominations: true,
         ...chainOption,
-        prover: getProverWorker(),
-        noteStore: new IdbNoteStore(storeKey("notes", chain.chainId, maspAddress, accountKey)),
-        treePersistence: new IdbTreePersistence(
-          storeKey("tree", chain.chainId, maspAddress, accountKey),
-        ),
-        nullifierPersistence: new IdbNullifierPersistence(
-          storeKey("nullifiers", chain.chainId, maspAddress, accountKey),
-        ),
+        // The module-level worker, shared by every wallet in the tab and warmed
+        // on intent to transact (`preloadProverWorker`). It bundles the 4x6
+        // artifacts, which is also the SDK's default `shape`: the two must agree
+        // or every proof is built at the wrong arity, and `connect`'s default is
+        // the only shape the circuits package publishes keys for.
+        prover: sharedProver(),
+        storage: {
+          notes,
+          tree: new IdbTreePersistence(storeKey("tree", chain.chainId, maspAddress, accountKey)),
+          nullifiers: new IdbNullifierPersistence(
+            storeKey("nullifiers", chain.chainId, maspAddress, accountKey),
+          ),
+        },
         scanner,
         syncStrategy,
       }),
     );
   } catch (e) {
-    await Promise.resolve()
-      .then(() => scanner.dispose?.())
-      .catch((disposeErr: unknown) => log.warn("scanner dispose failed", disposeErr));
+    await disposeScanner(scanner);
     throw e;
   }
 
+  holdScanner(wallet, scanner);
+  holdNoteStore(wallet, notes);
   instrumentWallet(wallet);
   log.info("ready", wallet.address);
   // The prover is warmed on intent to transact rather than here. See

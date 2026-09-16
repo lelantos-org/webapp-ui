@@ -8,8 +8,10 @@
 
 import type { RegisteredAsset } from "@/config/chains";
 
-/// Key an asset by its token, for a `Set` or a `Map`.
-export function tokenKey(a: RegisteredAsset): string {
+/// Key anything naming a token — an asset, a progress event — by
+/// that token, for a `Set` or a `Map`. Lowercased, since an address arrives in
+/// either EIP-55 or lowercase form.
+export function tokenKey(a: { token: string }): string {
   return a.token.toLowerCase();
 }
 

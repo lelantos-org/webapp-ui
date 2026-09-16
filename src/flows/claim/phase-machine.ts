@@ -1,4 +1,4 @@
-import type { WalletApi } from "@lelantos-org/sdk/wallet";
+import type { WalletApi } from "@lelantos-org/sdk";
 import type { EphemeralBalance } from "@/features/claim-links";
 
 export type Phase =

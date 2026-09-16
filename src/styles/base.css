@@ -64,7 +64,7 @@
      Three stacked layers, all fixed and inert, all in the accent hue only —
      mixing hues at this opacity turns to mud behind the opaque cards.
      1. body::before  light: a wide wash under the header, a cool floor tint.
-     2. .backdrop     canvas: drifting node/link field (see shared/ui/Backdrop).
+     2. .backdrop     canvas: drifting node/link field (see app/shell/chrome/Backdrop).
      3. body::after   texture: fine lattice + grain, masked away behind content. */
   body::before {
     content: "";

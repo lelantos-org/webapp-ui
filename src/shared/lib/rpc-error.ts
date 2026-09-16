@@ -10,7 +10,7 @@
 
 /// One level of a wallet rejection. Every field is optional: this describes what
 /// wallets send in practice, not a guaranteed contract.
-export interface RpcErrorNode {
+interface RpcErrorNode {
   code?: number | string;
   message?: unknown;
   data?: unknown;

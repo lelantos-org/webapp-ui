@@ -1,0 +1,42 @@
+@layer features {
+  .claim-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-10);
+    text-align: center;
+  }
+  .claim-hero__mark {
+    display: inline-grid;
+    place-items: center;
+    width: 62px;
+    height: 62px;
+    border: 1px solid rgba(var(--accent-rgb), 0.34);
+    border-radius: var(--radius);
+    background: rgba(var(--accent-rgb), 0.12);
+    color: var(--accent);
+  }
+  .claim-hero__t {
+    margin: 0;
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+  .claim-hero__sub {
+    margin: 0;
+    max-width: 420px;
+    font-size: var(--fs-16);
+    line-height: 1.5;
+    color: var(--fg-dim);
+  }
+
+  @media (max-width: 480px) {
+    .claim-hero { gap: 9px; }
+    .claim-hero__mark { width: 54px; height: 54px; }
+    .claim-hero__mark svg { width: 26px; height: 26px; }
+    .claim-hero__t { font-size: 25px; }
+    .claim-hero__sub { font-size: var(--fs-14); }
+  }
+}

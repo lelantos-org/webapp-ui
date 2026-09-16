@@ -6,7 +6,7 @@
 // re-rendering every `eip1193Store` subscriber that many times.
 
 import { beforeEach, describe, expect, it } from "vitest";
-import { announce, detail } from "@/test/eip6963";
+import { announce, detail } from "@/test/fakes/eip6963";
 import { parseChainId } from "./provider";
 import { eip1193Store } from "./store";
 

@@ -1,8 +1,8 @@
 // The route chunks: one loader per flow.
 //
-// The single place a flow is imported, and only ever dynamically. `App` wraps
-// each loader in `lazy()`, and Home calls the same loaders to warm a chunk on
-// intent. Sharing the function rather than restating the path is what keeps the
+// The single place a flow is imported, and only ever dynamically.
+// `app/routes/routes.ts` wraps each loader in `lazy()`, and Home calls the same
+// loaders to warm a chunk on intent. Sharing the function rather than restating the path is what keeps the
 // prefetch and the route on one chunk: a second spelling of the path is a second
 // chance to warm a chunk the route never asks for.
 //

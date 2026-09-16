@@ -28,7 +28,7 @@ describe("chunkFileNames", () => {
     expect(
       chunkFileNames({
         name: "SetupFlow",
-        facadeModuleId: "/repo/src/flows/shield/setup/SetupFlow.tsx",
+        facadeModuleId: "/repo/src/flows/shield/setup/components/SetupFlow.tsx",
       }),
     ).toBe("assets/[name]-[hash].js");
     expect(chunkFileNames({ name: "vendor-react", facadeModuleId: null })).toBe(

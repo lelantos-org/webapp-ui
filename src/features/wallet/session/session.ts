@@ -7,7 +7,6 @@
 // a passkey holds no EVM account and cannot be asked to switch networks.
 
 import { useCallback, useMemo } from "react";
-import type { ChainEntry } from "@/config/chains";
 import { useActiveChainOrUndefined } from "@/features/chain";
 import { type ChainLayerSpec, useWalletKinds, type WalletKind } from "@/features/wallet-kinds";
 
@@ -28,7 +27,6 @@ export interface Session {
   isConnecting: boolean;
   connectError?: string | undefined;
   disconnect(): void;
-  switchChain(target: ChainEntry): void;
 }
 
 export function useSession(): Session {
@@ -37,10 +35,9 @@ export function useSession(): Session {
 
   // Keyed on the adapter, not `active`: `useWalletKinds` rebuilds its wrappers
   // every render, while the adapter is a module constant that changes only with
-  // the kind. Keying on `active` handed consumers two fresh callbacks a render.
+  // the kind. Keying on `active` handed consumers a fresh callback every render.
   const adapter = active?.adapter;
   const disconnect = useCallback(() => adapter?.disconnect(), [adapter]);
-  const switchChain = useCallback((target: ChainEntry) => adapter?.switchChain(target), [adapter]);
 
   // A fresh object on every render aborts `useBuildWallet`'s in-flight build,
   // leaving the UI on "resuming…". Each adapter memoises its own snapshot, so
@@ -69,6 +66,5 @@ export function useSession(): Session {
     isConnecting: !!pending,
     connectError: failed?.snapshot.error,
     disconnect,
-    switchChain,
   };
 }

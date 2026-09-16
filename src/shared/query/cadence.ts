@@ -82,7 +82,7 @@ export const BALANCE_POLL_MS = 30_000;
 ///
 /// Six times the rate of `BALANCE_POLL_MS` at a fraction of the cost: the
 /// endpoint is two indexed `MAX()`s and a few bytes, where a balance refresh is a
-/// full `syncNotes` plus a recompute over every unspent note. New value shows
+/// full notes sync plus a recompute over every unspent note. New value shows
 /// within about five seconds while the expensive work runs only when something
 /// moved.
 ///

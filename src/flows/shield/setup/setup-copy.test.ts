@@ -2,10 +2,14 @@ import { describe, expect, it } from "vitest";
 import { makeAsset } from "@/test/fixtures/assets";
 import {
   currentStepId,
+  depositSetupCopy,
   initialProgress,
+  joinNames,
   runningCopy,
+  setupAllCopy,
   setupCostLine,
   setupSteps,
+  uncheckedApprovalsLine,
 } from "./setup-copy";
 
 const AAA = makeAsset(1n, "AAA", { token: "0xAaAa000000000000000000000000000000000001" });
@@ -55,5 +59,76 @@ describe("runningCopy", () => {
         () => "AAA",
       ),
     ).toBe("Approving AAA for Permit2 (2/3) — confirm in your wallet.");
+  });
+});
+
+// The setup card on Shield is an invitation, not a gate, so its copy has to say
+// whether the deposit on screen needs it — and never promise more than the
+// AllowanceTransfer path delivers (one wallet confirmation, not zero).
+
+describe("joinNames", () => {
+  it("joins with commas and a final and", () => {
+    expect(joinNames(["USDC"])).toBe("USDC");
+    expect(joinNames(["USDC", "WBTC"])).toBe("USDC and WBTC");
+    expect(joinNames(["USDC", "DAI", "WBTC"])).toBe("USDC, DAI and WBTC");
+  });
+});
+
+describe("setupAllCopy", () => {
+  it("matches shield.dc for two tokens while ETH is selected", () => {
+    const c = setupAllCopy(["USDC", "WBTC"], { symbol: "ETH", native: true });
+    expect(c.title).toBe("USDC and WBTC need one-time setup");
+    expect(c.short).toBe("One-time setup for 2 tokens");
+    expect(c.body).toMatch(/^Not needed for this deposit — ETH never requires it\. /);
+    expect(c.body).toMatch(/shielding those two later/);
+  });
+
+  it("says an approved token is already set up, rather than that it never needs it", () => {
+    expect(setupAllCopy(["WBTC"], { symbol: "USDC", native: false }).body).toMatch(
+      /USDC is already set up/,
+    );
+  });
+
+  it("makes no claim about the current deposit when it is not known", () => {
+    const c = setupAllCopy(["USDC"], undefined);
+    expect(c.title).toBe("USDC needs one-time setup");
+    expect(c.body).not.toMatch(/this deposit/);
+  });
+
+  it("counts rather than lists past three", () => {
+    expect(setupAllCopy(["A", "B", "C", "D"], undefined).title).toBe(
+      "4 tokens need one-time setup",
+    );
+  });
+});
+
+// The card a deposit is blocked on names every token it pulls that still needs
+// setup: the deposited one, the one paying the relayer, or both.
+describe("depositSetupCopy", () => {
+  const known = { unknown: false, willApproveErc20: false };
+
+  it("keeps the single-token wording", () => {
+    expect(depositSetupCopy(["USDC"], { ...known, willApproveErc20: true })).toEqual({
+      title: "USDC needs one-time setup",
+      body: "Approve USDC once and authorize a spending window. Shielding USDC then takes a single confirmation in your wallet.",
+    });
+    expect(depositSetupCopy(["USDC"], { unknown: true, willApproveErc20: false }).title).toBe(
+      "Couldn't check USDC's approval",
+    );
+  });
+
+  it("names both tokens, and the relayer fee the second one covers", () => {
+    const c = depositSetupCopy(["USDC", "DAI"], known);
+    expect(c.title).toBe("USDC and DAI need one-time setup");
+    expect(c.body).toBe(
+      "Authorize new spending windows for USDC and DAI that cover this deposit and its relayer fee.",
+    );
+    expect(depositSetupCopy(["USDC", "DAI"], { unknown: true, willApproveErc20: false })).toEqual({
+      title: uncheckedApprovalsLine(["USDC", "DAI"]),
+      body: "The approval status for USDC and DAI couldn't be read. Running setup authorizes them either way.",
+    });
+    expect(uncheckedApprovalsLine(["USDC", "DAI"])).toBe(
+      "Couldn't check approvals for USDC and DAI",
+    );
   });
 });

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronLeftGlyph } from "./glyphs";
+import { ChevronLeftGlyph } from "./icons/glyphs";
 import "./ScreenHeader.css";
 
 export interface ScreenHeaderProps {

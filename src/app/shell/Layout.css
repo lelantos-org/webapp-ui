@@ -33,8 +33,8 @@
   /* The theme switch is not a pill — it holds a glyph and no label, so it has
      nothing to pad around — but it stands in the same row, and gets the row's
      height as a square. Set as a variable on the wrapper rather than as a
-     height on the button: the button's own rules are in a later layer and
-     would win, and `shared/ui` should not be reading a header's measurements. */
+     height on the button: the button's own rules would compete with it, and
+     `chrome/ThemeToggle` should not be reading a header's measurements. */
   .hdr__theme { --theme-toggle-size: var(--hdr-pill-h); }
   /* The health pill is a button: a fingertip needs 44px, and the other two
      grow with it rather than sit short beside it. */

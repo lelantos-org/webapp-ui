@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { unwrap } from "@/test/result";
+import { unwrap } from "@/test/harness";
 import { NSK_HEX_LEN, nskFieldFromHex, nskHexFromField } from "./nsk-codec";
 
 const SAMPLE = "1".repeat(NSK_HEX_LEN);

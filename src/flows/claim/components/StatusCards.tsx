@@ -6,35 +6,10 @@ import { useTxExplorerUrl } from "@/features/chain";
 import { shortAddr } from "@/shared/lib/address";
 import { cx } from "@/shared/lib/cx";
 import { formatAmountForAsset } from "@/shared/lib/format/asset";
-import { ShieldKeyholeGlyph } from "@/shared/ui/glyphs";
-import { TxFailedCard } from "@/shared/ui/TxFailedCard";
-import { TxSettledCard } from "@/shared/ui/TxSettledCard";
+import { TxFailedCard } from "@/shared/ui/tx-cards/TxFailedCard";
+import { TxSettledCard } from "@/shared/ui/tx-cards/TxSettledCard";
 import type { BadLinkReason } from "../phase-machine";
 import "./claim-cards.css";
-
-/// The page's title block. The title is fixed — whoever opens this page has been
-/// sent something — and the line under it follows the flow.
-export function ClaimHero({ subtitle }: { subtitle?: string | undefined }) {
-  return (
-    <div className="claim-hero">
-      <span className="claim-hero__mark">
-        <ShieldKeyholeGlyph size={30} />
-      </span>
-      <h1 className="claim-hero__t">Someone sent you funds</h1>
-      <p className="claim-hero__sub">
-        {subtitle ?? (
-          <>
-            <span className="only-wide">
-              Check what's here, then claim it. The funds land in your own shielded wallet — private
-              from the moment they arrive.
-            </span>
-            <span className="only-narrow">Claim them into your own shielded wallet.</span>
-          </>
-        )}
-      </p>
-    </div>
-  );
-}
 
 function WaitCard({ title, sub, children }: { title: string; sub: string; children?: ReactNode }) {
   return (
@@ -116,7 +91,7 @@ export function BadLinkCard({ error, reason }: { error: string; reason: BadLinkR
 /// failed scan moved nothing, and a failed sweep leaves whatever was not claimed
 /// at the link — which a retry rescans rather than assuming, and which the pool
 /// will not let anyone spend twice.
-export function ErrorCard({
+export function ClaimErrorCard({
   message,
   from,
   onRetry,

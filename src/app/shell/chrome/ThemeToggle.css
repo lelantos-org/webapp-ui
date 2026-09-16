@@ -1,0 +1,33 @@
+@layer components {
+  /* The header's theme switch.
+     Square, and sized by whoever places it: the header stands it in a row of
+     pills and hands it that row's height (`--theme-toggle-size` in
+     `Layout.css`), so it does not sit short beside them. The fallback is the
+     size it takes anywhere else. */
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--theme-toggle-size, 28px);
+    height: var(--theme-toggle-size, 28px);
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--fg-dim);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all var(--dur-120) var(--ease-soft);
+  }
+  .theme-toggle:hover {
+    color: var(--accent);
+    border-color: var(--accent-dim);
+    background: rgba(var(--accent-rgb), 0.06);
+  }
+  .theme-toggle:active { transform: scale(0.95); }
+  .theme-toggle:focus-visible { outline: var(--ring); outline-offset: 2px; }
+
+  /* Sized for a fingertip, not a viewport width — see the note in
+     `features/wallet/connect/ConnectButton.css`. */
+  @media (pointer: coarse) {
+    .theme-toggle { min-width: 44px; min-height: 44px; }
+  }
+}

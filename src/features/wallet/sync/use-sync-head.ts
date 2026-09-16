@@ -1,6 +1,6 @@
 // Cheap server-watermark poll that gates the expensive wallet sync.
 
-import { FmdClient } from "@lelantos-org/sdk/fmd-server";
+import { FmdClient } from "@lelantos-org/sdk/services";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { env } from "@/config/env";

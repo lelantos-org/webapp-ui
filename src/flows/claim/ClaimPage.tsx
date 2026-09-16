@@ -9,14 +9,14 @@ import type { WalletStatus } from "@/features/wallet";
 import { useWallet } from "@/features/wallet";
 import type { ChainMismatch } from "./chain-guard";
 import { BalancesCard } from "./components/BalancesCard";
+import { ClaimHero } from "./components/ClaimHero";
 import { ClaimStepper } from "./components/ClaimStepper";
 import { ConnectGate } from "./components/ConnectGate";
 import { NetworkGateCard } from "./components/NetworkGateCard";
 import {
   BadLinkCard,
-  ClaimHero,
+  ClaimErrorCard,
   DoneCard,
-  ErrorCard,
   ReadingFragmentCard,
   ScanningCard,
 } from "./components/StatusCards";
@@ -129,6 +129,6 @@ function PhaseCard({
       );
 
     case "error":
-      return <ErrorCard message={phase.message} from={phase.from} onRetry={onRetry} />;
+      return <ClaimErrorCard message={phase.message} from={phase.from} onRetry={onRetry} />;
   }
 }

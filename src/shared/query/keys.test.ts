@@ -28,15 +28,14 @@ describe("queryKeys", () => {
       null,
       "withdraw",
     ]);
-    expect(queryKeys.spendableMax(CHAIN, ME, 2n, "3:9", true, 4n)).toEqual([
-      "spendable-max",
-      "31337",
-      ME,
-      "2",
-      "3:9",
-      true,
-      "4",
-    ]);
+    expect(
+      queryKeys.spendableMax(CHAIN, ME, 2n, "3:9", {
+        kind: "withdraw",
+        feeAsset: 5n,
+        native: true,
+        quotedFee: 4n,
+      }),
+    ).toEqual(["spendable-max", "31337", ME, "2", "3:9", "withdraw", "5", true, "4"]);
     expect(queryKeys.yieldIndex(CHAIN)).toEqual(["yield-index", "31337"]);
     expect(queryKeys.swapQuote("none")).toEqual(["swap-quote", "none"]);
     expect(queryKeys.assetLadder(CHAIN, 1n)).toEqual(["asset-ladder", "31337", "1"]);

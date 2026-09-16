@@ -41,7 +41,7 @@ no rebuild.
 
 | Variable | Required | Default | Description |
 | --- | --- | --- | --- |
-| `VITE_REGISTRY_URL` | Yes | — | registry-webserver base URL: what each chain is, and what is registered on it |
+| `VITE_REGISTRY_URL` | Yes | — | protocol-webserver base URL: what each chain is, and what is registered on it |
 | `VITE_RELAYER_URL` | Yes | — | Relayer API base URL: what one relayer will do on each chain |
 | `VITE_FMD_URL` | Yes | — | Fuzzy message detection service URL |
 | `VITE_METAQUOTER_URL` | No | — | Metaquoter (swap quoting) service URL; absent leaves the swap tab inert |
@@ -49,7 +49,7 @@ no rebuild.
 ### Why two bootstraps
 
 `VITE_REGISTRY_URL` and `VITE_RELAYER_URL` are both required and neither is
-derivable from the other. registry-webserver publishes the deployment's own
+derivable from the other. protocol-webserver publishes the deployment's own
 account of a chain; the relayer publishes what that one relayer will do on it.
 The two overlap only on `maspAddress` and `treeDepth`, and the app compares them
 before using a chain — dropping any where they disagree. That check is what makes

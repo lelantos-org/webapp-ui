@@ -7,7 +7,7 @@
 // stale `WalletApi` stay visible — and reported `ready` — across an account
 // switch and across a disconnect that had already disposed its workers.
 
-import type { WalletApi } from "@lelantos-org/sdk/wallet";
+import type { WalletApi } from "@lelantos-org/sdk";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -24,10 +24,6 @@ vi.mock("./build-wallet", () => ({
 vi.mock("@/features/chain", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/chain")>()),
   useActiveChainOrUndefined: () => chain,
-}));
-vi.mock("@/features/tx", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/tx")>()),
-  closeDepositStreamsExcept: vi.fn(),
 }));
 vi.mock("@/features/wallet-kinds", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/wallet-kinds")>()),
@@ -58,7 +54,6 @@ const connection = (address: string, over: Partial<Session> = {}): Session =>
     chainSupported: true,
     layer: { kind: "eip1193", provider: {}, address },
     disconnect: () => {},
-    switchChain: () => {},
     ...over,
   }) as Session;
 

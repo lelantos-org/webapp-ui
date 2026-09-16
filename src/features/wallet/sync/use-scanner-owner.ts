@@ -10,7 +10,7 @@
 // the last reference. One rule applies: whatever is held is released when it is
 // replaced, released explicitly, or unmounted.
 
-import type { WalletApi } from "@lelantos-org/sdk/wallet";
+import type { WalletApi } from "@lelantos-org/sdk";
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { releaseScanner } from "./scanner";
 

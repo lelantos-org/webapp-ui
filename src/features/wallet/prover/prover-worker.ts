@@ -12,9 +12,9 @@
 // `/v1/spend`) even though the shape agrees.
 import circuitUrl from "@lelantos-org/circuits/4x6/4x6.wasm?url";
 import zkeyUrl from "@lelantos-org/circuits/4x6/4x6_final.zkey?url";
-import { type ProverArtifacts, WorkerProver } from "@lelantos-org/sdk/prover";
+import { type Prover, type ProverArtifacts, WorkerProver } from "@lelantos-org/sdk/prover";
 import { createLogger } from "@/shared/lib/logger";
-import { asSdkWorker } from "@/shared/lib/worker";
+import { timed } from "../build/perf";
 
 const log = createLogger("prover:worker");
 
@@ -59,10 +59,12 @@ export function getProverWorker(): WorkerProver {
   const threads = threadOverride();
   if (threads !== undefined) log.info(`thread override: ${threads}`);
   // The `new Worker(new URL(…))` literal must stay inline here rather than
-  // going through the SDK's `browserWorkerProver`; see `asSdkWorker`.
-  const worker = asSdkWorker(
-    new Worker(new URL("@lelantos-org/sdk/prover-worker", import.meta.url), { type: "module" }),
-  );
+  // going through the SDK's `browserWorkerProver`: Vite emits a worker chunk only
+  // for that exact form (see `scannerWorker` in `sync/scanner.ts`). A DOM
+  // `Worker` satisfies the SDK's `WorkerLike` as it is.
+  const worker = new Worker(new URL("@lelantos-org/sdk/workers/prover", import.meta.url), {
+    type: "module",
+  });
   // The SDK persists artifacts keyed by URL, trusting the URL to change with
   // the release. A production build hashes the file name, so it does; the dev
   // server serves `/node_modules/@lelantos-org/circuits/build/4x6_final.zkey`
@@ -71,11 +73,26 @@ export function getProverWorker(): WorkerProver {
   // localhost fetch is cheap, so dev skips the cache instead.
   cached = new WorkerProver({
     worker,
-    paths: proverArtifacts,
+    artifacts: proverArtifacts,
     threads,
     cacheArtifacts: !import.meta.env.DEV,
   });
   return cached;
+}
+
+/// The worker as a wallet's `prover`: proves through the shared worker, resolved
+/// per proof.
+///
+/// The SDK never disposes a `Prover` the app passes in, so ownership is not the
+/// reason for this view: the worker's lifetime is `disposeProverWorker`'s either
+/// way. Handing `connect` the worker itself would still be wrong on two counts.
+/// `getProverWorker()` spawns the worker, so every wallet build — including a
+/// session that only reads balances — would pay for it; and a wallet outliving a
+/// disconnect (e.g. a claim link's ephemeral wallet) would keep proving against the
+/// terminated instance. Resolving per proof defers the spawn to the first proof
+/// and follows the fresh worker after a disconnect.
+export function sharedProver(): Prover {
+  return { prove: (input) => timed("prover.prove", () => getProverWorker().prove(input)) };
 }
 
 /// Warm the worker: build `WasmProver`, fetch the zkey and circuit wasm, and init

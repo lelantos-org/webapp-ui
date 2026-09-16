@@ -1,6 +1,6 @@
 // Chain registry fixtures.
 
-import { type EvmAddress, evmAddress } from "@lelantos-org/sdk/core";
+import { type EvmAddress, evmAddress } from "@lelantos-org/sdk";
 import type { ChainEntry } from "@/config/chains";
 
 const PLACEHOLDER: EvmAddress = evmAddress("0x0000000000000000000000000000000000000001");

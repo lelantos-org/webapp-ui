@@ -1,7 +1,7 @@
 // Modal for the generate-claim-link flow: the transfer in flight, then the
 // success tick while the link is prepared.
 //
-// The exit is driven from outside: `useClaimLinkStage` holds the modal mounted
+// The exit is driven from outside: `useLinkStage` holds the modal mounted
 // in a `closing` stage for the length of the fade, so this only forwards it.
 //
 // A modal rather than `ActionForm`'s progress card, deliberately: the bearer key
@@ -12,9 +12,9 @@
 import type { Step, TxPhase } from "@/features/tx";
 import { Modal } from "@/shared/ui/Modal";
 import { Stepper } from "@/shared/ui/Stepper";
-import { SuccessCheck } from "@/shared/ui/SuccessCheck";
+import { SuccessCheck } from "./SuccessCheck";
 
-export type ModalScreen = "running" | "success";
+type ModalScreen = "running" | "success";
 
 const TITLES: Record<ModalScreen, string> = {
   running: "Creating your link",
@@ -75,7 +75,7 @@ export function RunningScreen({
 }
 
 /// Post-broadcast confirmation. Auto-advances after a short dwell — see
-/// `useClaimLinkStage`'s `runWith`.
+/// `useLinkStage`'s `runWith`.
 function SuccessScreen({ amountLabel }: { amountLabel: string }) {
   return (
     <SuccessCheck

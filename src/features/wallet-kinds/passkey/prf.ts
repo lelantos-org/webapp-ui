@@ -11,10 +11,12 @@
 // the credential. An authenticator without it cannot hold a Lelantos wallet,
 // and saying so is better than deriving a key the user cannot reproduce.
 
-import { LELANTOS_PRF_SALT, type PrfEvaluator } from "@lelantos-org/sdk/keys";
+import type { PrfEvaluator } from "@lelantos-org/sdk";
+import { LELANTOS_PRF_SALT } from "@lelantos-org/sdk/primitives";
+import { fromBase64Url, toBase64Url } from "@/shared/lib/base64url";
 import { createLogger } from "@/shared/lib/logger";
-import { localStore } from "@/shared/lib/storage";
-import { LOCAL_KEYS } from "@/shared/lib/storage-keys";
+import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
+import { localStore } from "@/shared/lib/storage/safe";
 
 const log = createLogger("passkey:prf");
 
@@ -80,18 +82,6 @@ function randomChallenge(): Uint8Array<ArrayBuffer> {
 /// rather than asserted.
 function buf(b: Uint8Array): Uint8Array<ArrayBuffer> {
   return new Uint8Array(b);
-}
-
-function toBase64Url(bytes: ArrayBuffer): string {
-  let s = "";
-  for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b);
-  return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function fromBase64Url(s: string): Uint8Array {
-  const padded = s.replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
 }
 
 /// The `prf` slice of `getClientExtensionResults()`, which the DOM lib does not

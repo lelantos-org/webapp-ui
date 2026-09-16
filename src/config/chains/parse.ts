@@ -5,7 +5,8 @@
 // decision about what a partially-described or disagreeing deployment may still
 // be used for is testable against literal rows.
 
-import { evmAddress, RAY } from "@lelantos-org/sdk";
+import { evmAddress } from "@lelantos-org/sdk";
+import { RAY } from "@lelantos-org/sdk/protocol";
 import { sameAddress } from "@/shared/lib/address";
 import { createLogger } from "@/shared/lib/logger";
 import {
@@ -84,7 +85,7 @@ function toYieldFields(
 
 /// Seconds in the shortest window the measurement will annualize over.
 ///
-/// A mirror of registry-webserver's `MIN_WINDOW_SECONDS`, and only a sanity
+/// A mirror of protocol-webserver's `MIN_WINDOW_SECONDS`, and only a sanity
 /// check: it refuses to annualize anything shorter, so a row carrying one is
 /// malformed rather than merely fresh. Kept equal to the number the backend
 /// actually uses, since a looser floor here would render a figure the backend
@@ -142,7 +143,7 @@ export type UnusableReason =
 /// Returned rather than logged in place, which keeps the merge pure: the caller
 /// reports every skipped chain once, and tests assert on the reason without
 /// reading log output.
-export interface UnusableChain {
+interface UnusableChain {
   chainId: bigint;
   reason: UnusableReason;
 }

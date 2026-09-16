@@ -6,29 +6,28 @@
 // selector must then honour, so anything computed independently of it can
 // produce an amount the selector refuses as `insufficient unspent value`.
 
-import { assetId, TRANSACT_4X6 } from "@lelantos-org/sdk";
-import type { SpendableMax } from "@lelantos-org/sdk/wallet";
+import type { SpendableMax } from "@lelantos-org/sdk";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { useActiveChain } from "@/features/chain";
+import type { FeeKind } from "@/shared/domain/op-kind";
 import { queryKeys } from "@/shared/query/keys";
-import { useWalletInstance } from "../session/use-wallet";
+import { useWalletInstance } from "../session/context";
 import { useWalletState } from "./use-wallet-state";
 
 export type { SpendableMax };
 
-/// The shape the prover worker is built against. `build-wallet.ts` passes the
-/// same constant to `connect`; the two must agree or the max is computed against
-/// an arity the circuit does not have.
-const N_IN = TRANSACT_4X6.nIn;
-
 export interface SpendableMaxOpts {
-  /// The relayer is being paid in an asset this spend is not moving, so
-  /// `prepareSpend` reserves one input slot for its cover and leaves `nIn - 1`
-  /// for the asset being sent.
-  crossAssetFee?: boolean;
-  /// Fee taken from this asset, in circuit units. Non-zero only for a same-asset
-  /// fee, which comes out of the spend's own target.
-  sameAssetFee?: bigint | undefined;
+  /// The spend the max is for. The SDK reserves its relayer fee by the rules the
+  /// spend applies: out of the maximum when paid in `asset`, one input slot when
+  /// paid in another.
+  kind: Exclude<FeeKind, "deposit">;
+  /// The asset paying the relayer; `undefined` for the asset being spent.
+  feeAsset?: bigint | undefined;
+  /// A native-coin withdrawal, priced on its own relayer estimate.
+  native?: boolean;
+  /// The relayer fee the form is showing, in circuit units. Not sent: it keys the
+  /// read, so a re-priced quote re-reads the max it comes out of.
+  quotedFee?: bigint | undefined;
 }
 
 /// The largest amount of `asset` a spend can cover right now, and what is
@@ -39,7 +38,7 @@ export interface SpendableMaxOpts {
 /// as zero.
 export function useSpendableMax(
   asset: bigint | undefined,
-  { crossAssetFee = false, sameAssetFee = 0n }: SpendableMaxOpts = {},
+  { kind, feeAsset, native = false, quotedFee = 0n }: SpendableMaxOpts,
 ): SpendableMax | undefined {
   const wallet = useWalletInstance();
   const { chainId } = useActiveChain();
@@ -60,30 +59,21 @@ export function useSpendableMax(
   const holdings = held ? `${held.notes}:${held.balance}` : "none";
 
   const { data } = useQuery<SpendableMax>({
-    queryKey: queryKeys.spendableMax(
-      chainId,
-      wallet?.address,
-      asset,
-      holdings,
-      crossAssetFee,
-      sameAssetFee,
-    ),
+    queryKey: queryKeys.spendableMax(chainId, wallet?.address, asset, holdings, {
+      kind,
+      feeAsset,
+      native,
+      quotedFee,
+    }),
     queryFn:
       wallet && asset !== undefined
-        ? () =>
-            wallet.spendableMax(assetId(asset), {
-              maxInputs: crossAssetFee ? N_IN - 1 : N_IN,
-              // `fee`, the same option a spend takes: `selectNotes` covers a
-              // same-asset fee by raising the threshold, so the most that can be
-              // sent is the ceiling less the fee.
-              fee: sameAssetFee,
-            })
+        ? () => wallet.spendableMax(asset, { kind, feeAsset, native })
         : skipToken,
     // The note file cannot move without the holdings moving, and those are in
     // the key.
     staleTime: Number.POSITIVE_INFINITY,
     // Belt and braces for the keys that legitimately do change under a running
-    // form — switching the fee asset moves `crossAssetFee` and `sameAssetFee`.
+    // form — switching the fee asset, or the relayer re-pricing its fee.
     // Without this the max blanks for the length of that read, and the ladder
     // below it offers rungs this balance cannot cover in the meantime.
     placeholderData: (prev) => prev,

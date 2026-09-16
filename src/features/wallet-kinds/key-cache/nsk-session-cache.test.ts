@@ -2,9 +2,9 @@
 // The cache holds raw shielded spending keys for the tab's lifetime, so what
 // clears it — and when — is the security boundary, not a housekeeping detail.
 
-import type { Field } from "@lelantos-org/sdk/crypto";
+import type { Field } from "@lelantos-org/sdk/primitives";
 import { beforeEach, describe, expect, it } from "vitest";
-import { accountDigest } from "@/shared/lib/storage-digest";
+import { accountDigest } from "@/shared/lib/storage/digest";
 import { cacheNsk, clearAllCachedNsk, clearCachedNsk, getCachedNsk } from "./nsk-session-cache";
 
 const ADDR_A = "0xAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaa1";
@@ -54,7 +54,7 @@ describe("nsk session cache", () => {
   });
 
   it("drops a malformed entry rather than returning it", () => {
-    const key = `lelantos:nsk:v3:${accountDigest(ADDR_A)}`;
+    const key = `lelantos:nsk:v1:${accountDigest(ADDR_A)}`;
     sessionStorage.setItem(key, "not-hex");
 
     expect(getCachedNsk(ADDR_A)).toBeUndefined();
@@ -82,13 +82,5 @@ describe("nsk session cache", () => {
 
     expect(getCachedNsk(ADDR_A)).toBeUndefined();
     expect(getCachedNsk(ADDR_B)).toBe(2n);
-  });
-
-  it("does not read a v2 entry under the v3 key", () => {
-    // v3 rekeyed from an EOA to an opaque account key so a passkey session can
-    // use the same cache. The bump is what stops an entry written under an
-    // address from being served to whatever now digests to the same string.
-    sessionStorage.setItem(`lelantos:nsk:v2:${accountDigest(ADDR_A)}`, "0x01");
-    expect(getCachedNsk(ADDR_A)).toBeUndefined();
   });
 });

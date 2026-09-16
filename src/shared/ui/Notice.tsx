@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cx } from "@/shared/lib/cx";
-import { InfoGlyph, WarnGlyph } from "./glyphs";
+import { InfoGlyph, WarnGlyph } from "./icons/glyphs";
 import "./Notice.css";
 
 /// What a box is telling you, which decides its colour.

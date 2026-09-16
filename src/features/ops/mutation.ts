@@ -4,7 +4,6 @@
 
 import { type UseMutationResult, useMutation } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { useActiveChain } from "@/features/chain";
 import { type ProgressView, type TxProgressApi, type TxResult, useTxProgress } from "@/features/tx";
 import { useInvalidateWalletState, useWalletInstance } from "@/features/wallet";
 import { isDuplicateSpend } from "@/shared/lib/errors";
@@ -19,12 +18,11 @@ const log = createLogger("actions:spend");
 /// isn't ready. Mutation hooks should fail loudly (`requireActions`) rather than
 /// silently no-op.
 ///
-/// Memoised on the wallet and chain, so the actions keep their identity across
-/// the renders in between rather than being rebuilt for each.
+/// Memoised on the wallet, so the actions keep their identity across the renders
+/// in between rather than being rebuilt for each.
 function useShieldedActions(): ShieldedActions | undefined {
   const wallet = useWalletInstance();
-  const chain = useActiveChain();
-  return useMemo(() => (wallet ? createSdkActions(wallet, chain) : undefined), [wallet, chain]);
+  return useMemo(() => (wallet ? createSdkActions(wallet) : undefined), [wallet]);
 }
 
 export function requireActions(a: ShieldedActions | undefined): ShieldedActions {
@@ -32,7 +30,8 @@ export function requireActions(a: ShieldedActions | undefined): ShieldedActions 
   return a;
 }
 
-/// One policy for post-submit bookkeeping across all four mutations.
+/// One policy for post-submit bookkeeping across every op's mutation, the claim
+/// link's included.
 ///
 /// Never returned to react-query: a returned promise is awaited inside
 /// react-query's own `try`, so a rejection would flip an already-broadcast tx to
@@ -66,14 +65,15 @@ function useSpendFailed(): (label: string, progress: TxProgressApi, e: unknown) 
   const invalidateWallet = useInvalidateWalletState();
   return useCallback(
     (label, progress, e) => {
-      progress.set("failed");
+      markFailed(label, progress, e);
       if (isDuplicateSpend(e)) {
-        log.warn(`${label}: notes already spent or in flight, resyncing`, e.body);
+        // The reason, not the body: the relayer's text can echo the submitted
+        // payload, and the reason already says which of the two it was.
+        log.warn(`${label}: notes already spent or in flight, resyncing`, { reason: e.reason });
         // Fire-and-forget: the toast carries the user-facing answer, and a
         // failing sync must not replace the error explaining the refusal.
         void invalidateWallet();
       }
-      toastError(`${label} failed`, e);
     },
     [invalidateWallet],
   );

@@ -1,18 +1,16 @@
-import type { Field } from "@lelantos-org/sdk/crypto";
+import type { Field } from "@lelantos-org/sdk/primitives";
 import { createLogger } from "@/shared/lib/logger";
-import { sessionStore } from "@/shared/lib/storage";
-import { accountDigest } from "@/shared/lib/storage-digest";
-import { SESSION_KEYS } from "@/shared/lib/storage-keys";
+import { accountDigest } from "@/shared/lib/storage/digest";
+import { SESSION_KEYS } from "@/shared/lib/storage/keys";
+import { sessionStore } from "@/shared/lib/storage/safe";
 import { nskFieldFromHex, nskHexFromField } from "./nsk-codec";
 
 const log = createLogger("nsk-cache");
 /// Versioned by key shape. Entries live in `sessionStorage`, so a bump leaves any
-/// older ones to expire with the tab and a miss costs one key-derivation prompt.
+/// other ones to expire with the tab and a miss costs one key-derivation prompt.
 ///
-/// v3 keys by an opaque account key rather than an EOA, since a passkey session
-/// has no EOA and identifies itself by credential id instead. The bump stops a
-/// v2 entry written under an address from being read back under a key that
-/// merely digests to the same string.
+/// Keyed by an opaque account key rather than an EOA, since a passkey session
+/// has no EOA and identifies itself by credential id instead.
 const PREFIX = SESSION_KEYS.nskPrefix;
 
 /// Not chain-scoped.

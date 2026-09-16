@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
-import { RAY } from "@lelantos-org/sdk";
-import { renderHook } from "@testing-library/react";
+import { RAY } from "@lelantos-org/sdk/protocol";
+import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { RegisteredAsset } from "@/config/chains";
-import { USDC_ASSET } from "@/test/fixtures/assets";
+import { makeAsset, USDC_ASSET } from "@/test/fixtures/assets";
 import { useDepositAmount } from "./use-deposit-amount";
 
 /// `scale: 1n` keeps circuit units and base units the same, so the max
@@ -42,10 +42,13 @@ const YIELD_USDC: RegisteredAsset = {
   yieldEnabled: true,
 };
 
+/// A plain asset at `scale` 1000 in another token, for a relayer paid elsewhere.
+const DAI: RegisteredAsset = makeAsset(3n, "DAI", { scale: 1_000n });
+
 vi.mock("@/features/assets", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/assets")>()),
   useDepositSourceBalance: () => stubs.sourceBalance,
-  useRegisteredAssets: () => [USDC, YIELD_USDC],
+  useRegisteredAssets: () => [USDC, YIELD_USDC, DAI],
 }));
 
 interface Options {
@@ -115,7 +118,7 @@ describe("useDepositAmount", () => {
     const d = deposit({ balance: 10_000n, preview: { stale: true } });
 
     expect(d.fee).toBeUndefined();
-    expect(d.total).toBeUndefined();
+    expect(d.pulls[0]?.amount).toBeUndefined();
     expect(d.validation.feeUnknown).toBe(true);
     expect(d.validation.valid).toBe(false);
   });
@@ -144,19 +147,24 @@ describe("useDepositAmount", () => {
       preview: { data: { inAmt: 100n, fee: 3n, total: 103n, feeBps: FEE_BPS, leg: "deposit" } },
     });
 
-    expect(d.total).toBe(103n);
+    expect(d.principalTotal).toBe(103n);
+    expect(pulled(d)).toEqual([["USDC", 103n]]);
     expect(d.validation.valid).toBe(true);
   });
 });
 
 // The relayer's note is funded by the same Permit2 pull as the amount and the
-// protocol fee (`resolveDepositFee`), so both the allowance and the "max"
+// protocol fee, so both the allowance and the "max"
 // button have to reserve it. Under-reserving either is a deposit that fails at
 // submit rather than in the form.
 describe("relayer fee", () => {
-  it("adds it to the total the Permit2 allowance is sized against", () => {
-    expect(deposit({ balance: 1_000n, feeBps: 0n, relayerFee: 7n }).total).toBe(107n);
-    expect(deposit({ balance: 1_000n, feeBps: 0n, relayerFee: 0n }).total).toBe(100n);
+  it("adds it to the pull the Permit2 allowance is sized against", () => {
+    expect(pulled(deposit({ balance: 1_000n, feeBps: 0n, relayerFee: 7n }))).toEqual([
+      ["USDC", 107n],
+    ]);
+    expect(pulled(deposit({ balance: 1_000n, feeBps: 0n, relayerFee: 0n }))).toEqual([
+      ["USDC", 100n],
+    ]);
   });
 
   it("reserves it out of the max", () => {
@@ -168,7 +176,8 @@ describe("relayer fee", () => {
   it("withholds the total until the quote lands, rather than under-sizing it", () => {
     const r = deposit({ balance: 1_000n, feeBps: 0n, quote: { data: undefined, isPending: true } });
     expect(r.relayerFee).toBeUndefined();
-    expect(r.total).toBeUndefined();
+    expect(r.pulls[0]?.amount).toBeUndefined();
+    expect(r.validation.feeUnknown).toBe(true);
   });
 });
 
@@ -182,7 +191,7 @@ describe("relayer fee on a yield asset", () => {
   it("converts the charge through the index, as the fee panel does", () => {
     // 7 units at 1.5 base units each, floored.
     expect(yieldDeposit(1_000n).relayerFee).toBe(10n);
-    expect(yieldDeposit(1_000n).total).toBe(110n);
+    expect(pulled(yieldDeposit(1_000n))).toEqual([["yUSDC", 110n]]);
   });
 
   it("reserves the indexed charge out of the max", () => {
@@ -201,7 +210,7 @@ describe("relayer fee that cannot be known", () => {
   it("is unknown, not zero, when the quote failed", () => {
     const r = withQuote({ data: undefined, isPending: false, isError: true, refetch: vi.fn() });
     expect(r.relayerFee).toBeUndefined();
-    expect(r.total).toBeUndefined();
+    expect(r.pulls[0]?.amount).toBeUndefined();
     expect(r.relayerProblem).toBe("quote-failed");
     expect(r.validation.valid).toBe(false);
   });
@@ -237,3 +246,116 @@ describe("relayer fee that cannot be known", () => {
     expect(refetch).toHaveBeenCalledOnce();
   });
 });
+
+// The relayer may be paid in another token: a second pull from the public wallet,
+// in that token's own units, which neither the deposit token's pull nor its max
+// may absorb. The per-token rules are the SDK's `depositPulls`; these cases pin how the
+// hook feeds them.
+describe("relayer fee in another token", () => {
+  /// USDC deposit of 100 plus a 1 protocol fee, relayer quoting 7 USDC units or
+  /// 42 DAI units.
+  function cross({
+    balance = 1_000n,
+    feeAsset = DAI.id,
+    asEth = false,
+    charged = true,
+    options,
+  }: {
+    balance?: bigint;
+    feeAsset?: bigint;
+    asEth?: boolean;
+    charged?: boolean;
+    options?: unknown[];
+  } = {}) {
+    stubs.sourceBalance = balance;
+    stubs.feeBps = 0n;
+    stubs.feeQuote = {
+      data: {
+        charged,
+        options: options ?? [
+          { asset: USDC, amount: 7n, balance: 0n, affordable: true },
+          { asset: DAI, amount: 42n, balance: 0n, affordable: true },
+        ],
+      },
+      isPending: false,
+    };
+    stubs.preview = {
+      data: { inAmt: 100n, fee: 1n, total: 101n, feeBps: 100n, leg: "deposit" },
+      stale: false,
+      isError: false,
+      refetch: vi.fn(),
+    };
+    const hook = renderHook(() => useDepositAmount(USDC, { asEth, input: "100" }));
+    act(() => hook.result.current.onFeeAsset(feeAsset));
+    return hook.result.current;
+  }
+
+  it("states the principal and the relayer fee per token", () => {
+    const d = cross();
+    expect(d.feeAsset).toBe(DAI.id);
+    expect(d.separateFee).toBe(DAI);
+    expect(d.principalTotal).toBe(101n);
+    // 42 units at DAI's scale of 1000.
+    expect(d.relayerFee).toBe(42_000n);
+    expect(pulled(d)).toEqual([
+      ["USDC", 101n],
+      ["DAI", 42_000n],
+    ]);
+  });
+
+  it("validates the deposit token against the principal alone, and reserves no fee from its max", () => {
+    // 101 fits a 101 balance only because the fee is not in USDC.
+    expect(cross({ balance: 101n }).validation.valid).toBe(true);
+    expect(cross({ balance: 1_000n }).maxAmount).toBe(1_000n);
+  });
+
+  it("names the fee asset the relayer does not take, and holds the deposit", () => {
+    const d = cross({ options: [{ asset: USDC, amount: 7n, balance: 0n, affordable: true }] });
+    expect(d.relayerProblem).toBe("not-accepted");
+    expect(d.separateFee).toBe(DAI);
+    expect(d.validation.valid).toBe(false);
+  });
+
+  it("is one pull when the relayer charges nothing", () => {
+    // A zero fee note rides with the principal whatever asset was picked.
+    const d = cross({ charged: false, options: [] });
+    expect(d.separateFee).toBeUndefined();
+    expect(pulled(d)).toEqual([["USDC", 101n]]);
+  });
+
+  it("locks the fee asset on the native-ETH path", () => {
+    const d = cross({ asEth: true });
+    expect(d.feeAsset).toBeUndefined();
+    expect(d.separateFee).toBeUndefined();
+    expect(d.relayerFee).toBe(7n);
+  });
+
+  it("ignores a yield fee asset other than the deposit asset", () => {
+    // The pool takes a yield fee asset only for its own deposit.
+    const d = cross({ feeAsset: YIELD_USDC.id });
+    expect(d.feeAsset).toBeUndefined();
+    expect(d.separateFee).toBeUndefined();
+  });
+
+  it("stores picking the deposit asset itself as no choice", () => {
+    expect(cross({ feeAsset: USDC.id }).feeAsset).toBeUndefined();
+  });
+
+  it("falls back to the deposit asset once that is the asset chosen to pay", () => {
+    stubs.sourceBalance = 1_000n;
+    const hook = renderHook(
+      ({ asset }: { asset: RegisteredAsset }) =>
+        useDepositAmount(asset, { asEth: false, input: "1" }),
+      { initialProps: { asset: USDC } },
+    );
+    act(() => hook.result.current.onFeeAsset(DAI.id));
+    expect(hook.result.current.feeAsset).toBe(DAI.id);
+    hook.rerender({ asset: DAI });
+    expect(hook.result.current.feeAsset).toBeUndefined();
+  });
+});
+
+/// Each pull as `[symbol, amount]`, for a readable `toEqual`.
+function pulled(d: ReturnType<typeof useDepositAmount>) {
+  return d.pulls.map((p) => [p.asset.symbol, p.amount]);
+}

@@ -4,16 +4,11 @@
 import { useCallback, useMemo, useState } from "react";
 import type { RegisteredAsset } from "@/config/chains";
 import { useWalletInstance } from "@/features/wallet";
+import { useIsMounted } from "@/shared/hooks/use-is-mounted";
 import { type ReportedError, reportError } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
-import { useIsMounted } from "@/shared/lib/use-is-mounted";
 import { byDistinctToken } from "./by-token";
-import {
-  ALLOWANCE_CAP,
-  defaultAllowanceExpirationSecs,
-  ensurePermit2AuthorizedSetupBatch,
-  type SetupProgress,
-} from "./permit2-setup";
+import { ALLOWANCE_CAP, defaultAllowanceExpirationSecs, type SetupProgress } from "./permit2-setup";
 import { initialProgress } from "./setup-copy";
 import { useInvalidateSetupStatus } from "./use-setup-status";
 
@@ -42,7 +37,7 @@ export function useSetupRun(
   const [screen, setScreen] = useState<SetupScreen>("intro");
   // Memoised so `run` below keeps a stable identity across renders. Per
   // distinct token: two ids over one token are one approval, and
-  // `ensurePermit2AuthorizedSetupBatch` collapses them the same way.
+  // `setupDepositAllowance` collapses them the same way.
   const toApprove = useMemo(
     () => byDistinctToken(assets).filter((a) => willApproveErc20(a)),
     [assets, willApproveErc20],
@@ -60,16 +55,18 @@ export function useSetupRun(
     // Read when the run starts rather than at render: the clock moves under a
     // modal left open, and an expiry read at render would grant a window counted
     // from whenever the intro last re-rendered.
-    const cap = ALLOWANCE_CAP;
-    const expiration = defaultAllowanceExpirationSecs();
+    //
+    // Both terms passed explicitly, though they are the SDK's defaults too: the
+    // intro states the expiry, and the setup check compares against the cap.
     try {
-      await ensurePermit2AuthorizedSetupBatch(
-        wallet,
-        assets.map((a) => ({ token: a.token, cap, expirationUnixSecs: expiration })),
-        (p) => {
+      await wallet.setupDepositAllowance({
+        assets: assets.map((a) => a.id),
+        cap: ALLOWANCE_CAP,
+        expiration: defaultAllowanceExpirationSecs(),
+        onProgress: (p) => {
           if (isMounted()) setProgress(p);
         },
-      );
+      });
       if (!isMounted()) return;
     } catch (e) {
       if (!isMounted()) return;

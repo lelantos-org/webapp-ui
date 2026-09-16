@@ -158,7 +158,6 @@
     .swap-leg__sub { font-size: var(--fs-13); }
     .swap-flip-row { margin: -16px 0; }
     .swap-flip { width: 34px; height: 34px; }
-    .swap-flip::after { inset: -5px; }
   }
 
   @media (prefers-reduced-motion: reduce) {

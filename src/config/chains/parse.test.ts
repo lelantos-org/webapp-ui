@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { RAY } from "@lelantos-org/sdk/core";
+import { RAY } from "@lelantos-org/sdk/protocol";
 import { describe, expect, it } from "vitest";
 import { makeChain } from "@/test/fixtures/chains";
 import { deployment, MASP, RELAYER, relayer } from "@/test/fixtures/registry";
@@ -125,7 +125,7 @@ describe("toChainEntry", () => {
     });
   });
 
-  // These four moved off the relayer and onto registry-webserver. Reading them
+  // These four moved off the relayer and onto protocol-webserver. Reading them
   // from the deployment is the whole point of the split: a self-hosted relayer
   // has no authority over any of them.
   it("takes the deployment's contracts and explorer", () => {

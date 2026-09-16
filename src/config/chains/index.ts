@@ -1,6 +1,6 @@
 // The set of chains the app can operate on, and the shape of one of them.
 //
-// Merged from two services. registry-webserver enumerates the chains the
+// Merged from two services. protocol-webserver enumerates the chains the
 // deployment serves and the assets registered on them; the relayer says what it
 // will do on each. A chain survives only where both describe it and their two
 // accounts of the pool and tree shape agree — the check that makes a

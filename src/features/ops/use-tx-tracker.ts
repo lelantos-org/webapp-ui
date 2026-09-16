@@ -2,15 +2,14 @@
 // wallet-state, splice pending-tx overlay entries, drive the toast lifecycle,
 // and clear lifecycle-bound entries on settle.
 
-import type { TransactionResult, WalletApi } from "@lelantos-org/sdk/wallet";
+import type { DepositEscrow, TransactionResult, WalletApi } from "@lelantos-org/sdk";
 import { useCallback } from "react";
-import { fetchAssetEntry } from "@/features/assets";
 import { useActiveChain } from "@/features/chain";
-import { type FeeQuoteResult, feeOptionFor } from "@/features/fees";
 import {
   addPendingMany,
   clearPending,
   type PendingContext,
+  pendingOpOf,
   pendingShapesFor,
   type TxPhase,
   trackTxLifecycle,
@@ -19,12 +18,11 @@ import { useInvalidateWalletState, useWalletInstance } from "@/features/wallet";
 import type { OpKind } from "@/shared/domain/op-kind";
 import { createLogger } from "@/shared/lib/logger";
 import type { SwapCall } from "./sdk-adapter";
-import { swapCredit } from "./swap-credit";
 
 const log = createLogger("tx:tracker");
 
 /// Caller request, without the per-kind enrichment the tracker derives itself:
-/// the swap leg-B watermark anchor and its chain reads.
+/// the swap leg-B watermark anchor.
 export type TrackTxRequest =
   | Extract<PendingContext, { kind: Exclude<OpKind, "swap"> }>
   | {
@@ -45,28 +43,28 @@ export type TrackTxArgs = TrackTxRequest & {
 /// Never rejects. This runs from a mutation's `onSuccess`, after the tx is
 /// already on its way, so a failure here says nothing about the transaction —
 /// yet react-query awaits whatever `onSuccess` returns inside its own `try` and
-/// routes a rejection to `onError`. A single failed `fetchAssetEntry` would then
-/// turn a successful swap into a red stepper, a "swap failed" toast, no pending
-/// overlay, no explorer link and no lifecycle watch. Every step here degrades
-/// instead.
+/// routes a rejection to `onError`, turning a successful swap into a red stepper,
+/// a "swap failed" toast, no pending overlay, no explorer link and no lifecycle
+/// watch. Every step here degrades instead.
 export function useTxTracker(): (args: TrackTxArgs) => Promise<void> {
   const invalidate = useInvalidateWalletState();
   const wallet = useWalletInstance();
   const chain = useActiveChain();
   return useCallback(
     async (args) => {
-      // Per-kind pre-tx capture. Only swap needs it: the B-note's size and the
-      // `assetOut` baseline it is measured from. Snapshotted before the
-      // invalidate, so a post-tx sync landing the B-note cannot inflate the
-      // anchor.
-      const ctx = await prepareCtx(args, wallet);
+      // Per-kind pre-tx capture. Only swap needs it: the `assetOut` baseline the
+      // B-note is measured from. Snapshotted before the invalidate, so a post-tx
+      // sync landing the B-note cannot inflate the anchor.
+      const ctx = prepareCtx(args, wallet);
 
-      // Refetch so the balance reflects the local `markSpent` before the pending
+      // Refetch so the balance reflects the spent notes before the pending
       // overlay is spliced, avoiding a one-frame flicker. A failed refetch is
       // cosmetic — the poll picks it up — and must not skip the steps below.
       await invalidate().catch((e: unknown) => log.warn("post-submit invalidate failed", e));
 
-      addPendingMany(chain.chainId, args.result.txHash, pendingShapesFor(ctx));
+      // Keyed by operation: a bundled tx can carry two of this wallet's own.
+      const op = pendingOpOf(args.result);
+      addPendingMany(chain.chainId, op, pendingShapesFor(ctx));
 
       if (!wallet) return;
       void trackTxLifecycle({
@@ -74,10 +72,10 @@ export function useTxTracker(): (args: TrackTxArgs) => Promise<void> {
         chain,
         label: args.label,
         txHash: args.result.txHash,
-        depositId: extractDepositId(args.result),
+        escrow: escrowOf(args.result),
         ownCommitments: args.result.ownCommitments,
         onProgress: () => void invalidate(),
-        onSettled: () => clearPending(chain.chainId, args.result.txHash),
+        onSettled: () => clearPending(chain.chainId, op.opId),
         onPhase: args.onPhase,
       });
     },
@@ -85,41 +83,27 @@ export function useTxTracker(): (args: TrackTxArgs) => Promise<void> {
   );
 }
 
-/// Enrich the pending context with what only a chain read can supply.
+/// Enrich the pending context with the leg-B watermark.
 ///
-/// Degrades to the `legB`-less shape, the same one used when there is no wallet,
-/// rather than propagating. Losing `legB` costs the swap its leg-2 settling
-/// overlay; propagating would report a successful tx as failed.
-async function prepareCtx(
-  args: TrackTxRequest,
-  wallet: WalletApi | undefined,
-): Promise<PendingContext> {
+/// The B-note's value is the quote's `credit`, which the proof binds, so no read
+/// is needed to size it; only the baseline comes from the wallet. Degrades to the
+/// `legB`-less shape without a wallet, costing the swap its leg-2 settling
+/// overlay rather than reporting a successful tx as failed.
+function prepareCtx(args: TrackTxRequest, wallet: WalletApi | undefined): PendingContext {
   if (args.kind !== "swap") return args;
   if (!wallet) return { kind: "swap", result: args.result };
   try {
-    const { assetOut, quote } = args.swap;
-    const [entryOut, depositFees] = await Promise.all([
-      fetchAssetEntry(wallet, assetOut),
-      // Priced as a deposit, because leg 2 is one: the relayer's flush note is
-      // minted in the deposited asset, so this is the same quote
-      // `resolveDepositFee` read when `executeSwap` sized the B-note.
-      wallet.quoteFee({ kind: "deposit" }),
-    ]);
+    const { quote } = args.swap;
+    const assetOut = quote.assetOut.id;
     return {
       kind: "swap",
       result: args.result,
       legB: {
         assetOut,
-        bNoteValue: swapCredit({
-          minOut: quote.minOut,
-          scaleOut: entryOut.scale,
-          // Same leg, same reason: the B-note is a deposit of the out asset, so
-          // that asset's deposit rate is what the watermark is computed at.
-          // Carried on the entry, so it costs no extra round trip.
-          feeBps: entryOut.depositBps,
-          depositFee: depositFeeFor(depositFees, assetOut),
-        }),
-        assetOutBaseline: wallet.balance(assetOut),
+        bNoteValue: quote.credit.amount,
+        // The same figure the overlay is later pruned against: the confirmed
+        // unspent total the wallet's state reports.
+        assetOutBaseline: wallet.state().balances.get(assetOut) ?? 0n,
       },
     };
   } catch (e) {
@@ -128,19 +112,8 @@ async function prepareCtx(
   }
 }
 
-/// What the relayer takes to flush a deposit of `asset`, in circuit units.
-///
-/// Zero when the relayer quoted nothing for this asset: either the chain
-/// subsidises deposits or it takes no fee, both of which `executeSwap` resolves
-/// to a zero-value note. A quoted but unpayable fee cannot reach here, since
-/// `resolveDepositFee` throws on it before the swap is submitted.
-function depositFeeFor(quote: FeeQuoteResult, asset: bigint): bigint {
-  return feeOptionFor(quote, asset)?.amount ?? 0n;
-}
-
-/// Only deposit and swap carry an on-chain deposit id, the same value the relayer
-/// publishes as `deposit_id`. The lifecycle uses it to wait for the SSE flush
-/// event before declaring the tx settled.
-function extractDepositId(r: TransactionResult): bigint | undefined {
-  return r.kind === "deposit" || r.kind === "swap" ? r.depositId : undefined;
+/// Only a deposit escrows. The lifecycle awaits the escrowed note's commitment,
+/// which lands once the relayer has flushed it and this wallet has scanned it.
+function escrowOf(r: TransactionResult): DepositEscrow | undefined {
+  return r.kind === "deposit" ? r.escrow : undefined;
 }

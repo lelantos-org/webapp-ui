@@ -1,4 +1,4 @@
-import { supportsDeposit, type WalletApi } from "@lelantos-org/sdk/wallet";
+import type { WalletApi } from "@lelantos-org/sdk";
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("perf");
@@ -19,12 +19,15 @@ export async function timed<T>(label: string, fn: () => Promise<T>): Promise<T> 
 /// Marks a wrapper this module installed, so re-instrumenting is a no-op.
 const WRAPPED = Symbol.for("lelantos.perf.wrapped");
 
-/// Monkey-patch SDK collaborators on `wallet` to log per-call timings.
+/// Monkey-patch the chain layer on `wallet` to log per-call timings.
 ///
-/// Idempotent per method. Not every collaborator is per-wallet — `wallet.prover`
-/// is the module-level worker singleton — so without the guard each chain switch
-/// and each claim-link build would add another wrapper layer, duplicating every
-/// timing line and retaining the scope of every wallet built.
+/// Only the chain layer is reachable: the wallet object is frozen and its other
+/// collaborators (submitter, note source) are internal to the SDK. Proofs are
+/// timed where the app hands the prover over (`sharedProver`).
+///
+/// Idempotent per method. The chain layer can outlive one wallet object, so
+/// without the guard each chain switch and each claim-link build would add
+/// another wrapper layer, duplicating every timing line.
 export function instrumentWallet(wallet: WalletApi): void {
   const wrapMethod = <T extends object, K extends keyof T>(obj: T, key: K, label: string) => {
     const orig = obj[key] as unknown as (...a: unknown[]) => Promise<unknown>;
@@ -36,18 +39,15 @@ export function instrumentWallet(wallet: WalletApi): void {
     (obj as Record<string, unknown>)[key as string] = wrapped;
   };
 
-  wrapMethod(wallet.prover, "prove", "prover.prove");
-  wrapMethod(wallet.submitter, "submit", "submitter.submit");
-  wrapMethod(wallet.noteSource, "listNotes", "noteSource.listNotes");
   for (const k of ["fetchAsset", "maspAddress", "chainId"] as const) {
     wrapMethod(wallet.chain, k, `chain.${k}`);
   }
   // The signing half exists only on a wallet whose chain layer holds an EVM
   // key. Wrapping it unconditionally would reach for `payerAddress` on a
   // passkey wallet, which has none.
-  if (supportsDeposit(wallet)) {
+  if (wallet.capabilities.deposit) {
     for (const k of ["signPermit2", "payerAddress"] as const) {
-      wrapMethod(wallet.chain, k, `chain.${k}`);
+      wrapMethod(wallet.chain as unknown as Record<typeof k, unknown>, k, `chain.${k}`);
     }
   }
 }

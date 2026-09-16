@@ -14,7 +14,7 @@ function strip(prefix: string, target: string): ProxyOptions {
 /// prefix, so the browser never makes a cross-origin call in development.
 export function devProxy(env: NodeJS.ProcessEnv = process.env): Record<string, ProxyOptions> {
   return {
-    // registry-webserver. Same story as the relayer below: point
+    // protocol-webserver. Same story as the relayer below: point
     // REGISTRY_PROXY_TARGET at a deployed one to develop against it.
     "/registry": strip("registry", env.REGISTRY_PROXY_TARGET ?? "http://localhost:3005"),
     "/relayer": {

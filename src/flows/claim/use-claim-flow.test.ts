@@ -38,7 +38,7 @@ vi.mock("@/features/claim-links", async (importOriginal) => ({
   buildEphemeralWallet: eph.build,
   sweepEphemeral: eph.sweep,
   clearEphemeralStore: vi.fn(async () => {}),
-  summarizeEphemeralNotes: () => [{ asset: 1n, amount: 5n, notes: 1 }],
+  summarizeEphemeralNotes: async () => [{ asset: 1n, amount: 5n, notes: 1 }],
 }));
 
 beforeEach(() => {

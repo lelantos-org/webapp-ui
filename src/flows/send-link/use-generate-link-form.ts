@@ -22,8 +22,8 @@ import type { Step, TxPhase } from "@/features/tx";
 import { userMessage } from "@/shared/lib/errors";
 import { formatAssetAmount } from "@/shared/lib/format/asset";
 import { linkSubmitBlock } from "./link-block";
-import { useClaimLinkStage } from "./use-claim-link-stage";
 import { useGenerateLink } from "./use-generate-link";
+import { useLinkStage } from "./use-link-stage";
 
 const generateLinkSchema = z.object({ asset: defaultAssetField, amount: amountField });
 type GenerateLinkInput = z.infer<typeof generateLinkSchema>;
@@ -40,7 +40,7 @@ const VISIBLE_RUNNING_PHASES: ReadonlySet<TxPhase> = new Set([
 export function useGenerateLinkForm() {
   const action = useGenerateLink();
   const { mutation, progress } = action;
-  const stage = useClaimLinkStage();
+  const stage = useLinkStage();
   const { pressure } = useLinkVault();
   const assetsFor = useLinkAssetsFor();
   const form = useActionForm({
@@ -103,7 +103,7 @@ export function useGenerateLinkForm() {
     {
       ready: !block.disabled,
       // Not covered by zod: `generateLinkSchema`'s `amount` runs only
-      // `isDecimalString`, while `parseAmountForAsset` also rejects a value finer
+      // `isDecimalString`, while `parseAmountInput` also rejects a value finer
       // than the asset's granularity. Swallowing it would leave a `scale > 1`
       // asset with no response at all to an over-precise amount.
       onParseError: (e) => form.form.setError("amount", { message: userMessage(e) }),
@@ -115,7 +115,7 @@ export function useGenerateLinkForm() {
     // recipient has the link, and the URL is masked by default, so dropping the
     // record here would leave the bearer key nowhere for funds already sent. The
     // vault screen is the only path that drops a record, behind its own
-    // confirmation. See `link-vault`.
+    // confirmation. See `vault/store`.
     mutation.reset();
     setPending(null);
     stage.toForm();

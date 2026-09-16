@@ -2,12 +2,12 @@
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeWalletApi, fakeWalletContext } from "@/test/fakes/wallet";
-import type { WalletContextValue } from "../session/use-wallet";
+import type { WalletContextValue } from "../session/context";
 import { ConnectedGate } from "./ConnectedGate";
 
 const session = vi.hoisted(() => ({ value: undefined as unknown }));
 
-vi.mock("../session/use-wallet", () => ({ useWallet: () => session.value }));
+vi.mock("../session/context", () => ({ useWallet: () => session.value }));
 vi.mock("./Welcome", () => ({ Welcome: () => <p>welcome</p> }));
 
 beforeEach(() => {

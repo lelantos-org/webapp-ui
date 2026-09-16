@@ -11,18 +11,17 @@
 //
 // Amounts are formatted with the webapp's `formatAmountForAsset` rather than the
 // SDK's `denominationChoices`. A chip writes a decimal string into the amount
-// field and `parseAmountForAsset` turns it back into the circuit units the
+// field and `parseAmountInput` turns it back into the circuit units the
 // withdrawal publishes, so the two must be exact inverses: labelling with one
 // formatter and parsing with another round-trips a denomination into a number
 // that is not on the ladder, the failure this module exists to prevent.
 //
-// On a yield asset that inverse is why `parseAmountForAsset` rounds up: the
+// On a yield asset that inverse is why `parseAmountInput` rounds up: the
 // formatter floors circuit units into base units, so anything else reads a chip
 // back one unit short of the rung it names. See the note there.
 
-import { isDenomination, type Ladder, nearest } from "@lelantos-org/sdk/core";
+import { isDenomination, type Ladder, nearest, PUBLIC_IN_MAX } from "@lelantos-org/sdk/protocol";
 import type { AssetMeta } from "@/features/op-form";
-import { exceedsPublicInLimit } from "@/shared/domain/units";
 import {
   formatAmountForAsset,
   formatAmountForDisplay,
@@ -30,7 +29,7 @@ import {
 } from "@/shared/lib/format/asset";
 
 /// How one chip reads against the amount field.
-export type DenominationState =
+type DenominationState =
   /// Offered, and neither entered nor recommended.
   | "plain"
   /// Exactly what the amount field holds.
@@ -41,7 +40,7 @@ export type DenominationState =
 export interface DenominationOption {
   /// Circuit units — exactly the gross a withdrawal for this chip publishes.
   value: bigint;
-  /// What the amount field is written with. `parseAmountForAsset` maps it back
+  /// What the amount field is written with. `parseAmountInput` maps it back
   /// to `value` exactly; see the note at the top of this file.
   ///
   /// Full precision: this is an amount, not a caption. Capping it would write a
@@ -76,7 +75,7 @@ const NOUN = "shared denomination";
 const INTRO = "Withdrawing one of these amounts publishes a figure many others publish too.";
 
 /// The line under the chips, and the badge beside their label.
-export interface LadderNotice {
+interface LadderNotice {
   tone: "ok" | "warn";
   /// Verdict on the entered amount. Absent while nothing is entered: there is a
   /// standing explanation to give, but nothing yet to judge.
@@ -164,7 +163,7 @@ export function ladderModel({ ladder, meta, amount, max }: LadderInputs): Ladder
 /// Denominations past the `uint48` publicOut cap are dropped regardless —
 /// `validateAmount` rejects them, so offering one is offering a dead button.
 function offerableDenominations(ladder: Ladder, max: bigint | undefined): bigint[] {
-  return ladder.filter((d) => !exceedsPublicInLimit(d) && (max === undefined || d <= max));
+  return ladder.filter((d) => d <= PUBLIC_IN_MAX && (max === undefined || d <= max));
 }
 
 function stateOf(

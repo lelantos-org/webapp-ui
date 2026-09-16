@@ -7,7 +7,7 @@
 // query string is stripped from the address bar immediately afterwards. The
 // explicit `window.__lelantosDebug(true)` toggle does persist.
 
-import { LOCAL_KEYS } from "@/shared/lib/storage-keys";
+import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
 
 type Level = "debug" | "info" | "warn" | "error";
 

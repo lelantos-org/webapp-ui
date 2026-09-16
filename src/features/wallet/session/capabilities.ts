@@ -1,18 +1,15 @@
 // What this wallet may do, as the UI needs to ask it.
 //
-// The SDK owns the truth: `supportsDeposit` and its siblings are type guards
-// over the chain layer, so a caller that narrows gets the signing members
-// typed and one that does not cannot reach them. This module turns those
-// guards into something React can render — a boolean plus a sentence to show
-// the user — because a type guard cannot be threaded through JSX without
-// losing its narrowing, and every component re-deriving
-// `supportsSigning(wallet.chain)` would drift.
+// The SDK owns the truth: `wallet.capabilities` is fixed at `connect()` from the
+// chain layer it was built with. This module turns those flags into something
+// React can render — a boolean plus a sentence to show the user — so no
+// component re-derives or rewords them.
 //
 // Gating happens *before* the action, not at submit. A disabled tab with an
 // explanation is a different thing from a form that throws once the user has
 // filled it in, and only a predicate can express the former.
 
-import { supportsDeposit, supportsNativeDeposit, type WalletApi } from "@lelantos-org/sdk/wallet";
+import type { WalletApi } from "@lelantos-org/sdk";
 import { kindAdapter, type WalletKind } from "@/features/wallet-kinds";
 
 /// The actions that are not available to every wallet.
@@ -25,9 +22,7 @@ import { kindAdapter, type WalletKind } from "@/features/wallet-kinds";
 ///
 /// Two, not four. The Permit2 setup flow and cancelling an escrow are gated by
 /// the same signing key as `deposit` and can never disagree with it — naming
-/// them separately would only imply an independence they do not have. Both
-/// surfaces already ask `wallet.chain` directly (`SetupAllNotice`,
-/// `use-setup-status`), which is the same answer arrived at one layer down.
+/// them separately would only imply an independence they do not have.
 export type Capability = "deposit" | "depositEth";
 
 export interface CapabilityVerdict {
@@ -60,14 +55,14 @@ export function deriveCapabilities(
 ): WalletCapabilities {
   if (!wallet) return all(denied(DISCONNECTED_REASON));
 
-  // The guard decides, on its own. Depositing needs a chain layer that signs,
+  // The flag decides, on its own. Depositing needs a chain layer that signs,
   // and that is a property of the wallet rather than of its kind — so a future
   // passkey paired with a signer is allowed here without this file changing.
   // The kind only selects the wording.
   // The wording travels with the kind (`KindCopy.noDepositReason`), so a third
   // wallet kind writes its own sentence in its own adapter and this file does
   // not change.
-  if (!supportsDeposit(wallet)) {
+  if (!wallet.capabilities.deposit) {
     return all(denied(kind ? kindAdapter(kind).copy.noDepositReason : DISCONNECTED_REASON));
   }
 
@@ -77,7 +72,7 @@ export function deriveCapabilities(
     // chain. Unlike the rest, this is a property of the deployment rather than
     // of the wallet, and the asset picker already withholds the option — so the
     // reason names the chain, not the wallet.
-    depositEth: supportsNativeDeposit(wallet)
+    depositEth: wallet.capabilities.nativeDeposit
       ? ALLOWED
       : denied("This network has no native-ETH entry point, so ETH must be wrapped first."),
   };

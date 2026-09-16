@@ -5,39 +5,21 @@
 // regression that let a passkey render the deposit form would surface here
 // rather than as a failed transaction with a filled-in amount.
 
-import type { WalletApi } from "@lelantos-org/sdk/wallet";
+import type { WalletApi } from "@lelantos-org/sdk";
 import { describe, expect, it } from "vitest";
 import { fakeWalletApi } from "@/test/fakes/wallet";
 import { deriveCapabilities } from "./capabilities";
 
-/// A wallet whose chain layer signs, which is what `supportsDeposit` reads.
-const signing = (over: Record<string, unknown> = {}): WalletApi =>
-  fakeWalletApi({
-    chain: {
-      chainId: async () => 1n,
-      maspAddress: async () => "0x2",
-      fetchAsset: async () => ({}),
-      payerAddress: async () => "0x1",
-      signPermit2: async () => ({}),
-      ...over,
-    },
-  });
+/// A wallet whose chain layer signs as an EOA: what `connect` reports for a
+/// signer or provider.
+const signing = (over: Partial<WalletApi["capabilities"]> = {}): WalletApi =>
+  fakeWalletApi({ capabilities: { deposit: true, nativeDeposit: false, ...over } });
 
-/// A wallet built on a `ViemChainReader` — what a passkey session gets.
+/// A wallet built on a read-only chain layer — what a passkey session gets.
 const readOnly = (): WalletApi =>
-  fakeWalletApi({
-    chain: {
-      chainId: async () => 1n,
-      maspAddress: async () => "0x2",
-      fetchAsset: async () => ({}),
-    },
-  });
+  fakeWalletApi({ capabilities: { deposit: false, nativeDeposit: false } });
 
-const nativeCapable = () =>
-  signing({
-    submitDepositNative: async () => ({}),
-    nativeAdapterAddress: () => "0xada",
-  });
+const nativeCapable = () => signing({ nativeDeposit: true });
 
 describe("deriveCapabilities", () => {
   it("denies everything with no wallet", () => {
@@ -75,7 +57,7 @@ describe("deriveCapabilities", () => {
   });
 
   it("denies a read-only chain layer even when the kind is not passkey", () => {
-    // The guard, not the kind, is the load-bearing check: a future wallet kind
+    // The flag, not the kind, is the load-bearing check: a future wallet kind
     // with no signer is denied without this file being touched.
     const caps = deriveCapabilities(readOnly(), "eip1193");
     expect(caps.deposit.allowed).toBe(false);

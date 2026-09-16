@@ -1,11 +1,11 @@
 // URL shape checks shared by the two places untrusted URLs enter the app.
 //
 // There are two such places and they warrant the same rule: build-time settings (`VITE_*`), and the per-chain
-// URLs registry-webserver publishes at runtime. The second is the one that
+// URLs protocol-webserver publishes at runtime. The second is the one that
 // matters — those arrive over the network and reach `href`, `window.open` and
 // `wallet_addEthereumChain`.
 
-import { toAbsoluteUrl } from "@lelantos-org/sdk/core";
+import { toAbsoluteUrl } from "@lelantos-org/sdk/primitives";
 import { z } from "zod";
 
 /// True for `http:` and `https:` only.

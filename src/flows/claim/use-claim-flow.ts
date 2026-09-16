@@ -11,20 +11,21 @@ import {
 } from "@/features/claim-links";
 import { useScannerOwner, useSession, useWallet } from "@/features/wallet";
 import { type ChainLayerSpec, currentWalletChainId, eip1193Store } from "@/features/wallet-kinds";
+import { useIsMounted } from "@/shared/hooks/use-is-mounted";
 import { reportError } from "@/shared/lib/errors";
 import { useStore } from "@/shared/lib/external-store";
 import { createLogger } from "@/shared/lib/logger";
 import { toastError } from "@/shared/lib/toast";
-import { useIsMounted } from "@/shared/lib/use-is-mounted";
 import { type ChainMismatch, chainMismatch, describeChainMismatch } from "./chain-guard";
 import { type Event, initial, type Phase, reduce } from "./phase-machine";
 import { linkChainIdOf } from "./phase-presenter";
 
 const log = createLogger("claim:flow");
 
-/// How deep to trial-decrypt when looking for the link's note. A claim link is a
-/// fresh key with one deposit against it, so the note is near the tip; this
-/// bounds a cold scan rather than sizing a wallet's history.
+/// Feed page size when looking for the link's note. A claim link is a fresh key
+/// with one transfer against it, so the scan is short; a page this size keeps
+/// each request small rather than sizing it for a wallet's history. Not a cap:
+/// the sync pages the feed to its tip.
 const SCAN_LIMIT = 500;
 
 export interface ClaimFlow {
@@ -54,8 +55,8 @@ async function scanForNotes(
 ): Promise<Event> {
   try {
     const eph = await buildEphemeralWallet(nskHex, layer, chain);
-    await eph.sync({ limit: SCAN_LIMIT });
-    return { t: "load-success", eph, balances: summarizeEphemeralNotes(eph) };
+    await eph.sync({ scope: "notes", pageSize: SCAN_LIMIT });
+    return { t: "load-success", eph, balances: await summarizeEphemeralNotes(eph) };
   } catch (err) {
     // Logged with its cause and shown as the user's line: the error card renders
     // `message` verbatim, and a raw RPC or prover message there is unreadable.

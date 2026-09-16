@@ -1,17 +1,30 @@
-export { AssetsCard } from "./AssetsCard";
-export type { AssetSelectOption } from "./asset-option";
-export { useAssetSelectOptions } from "./asset-option";
-export { nativeEthView, useEthAssetField } from "./eth-option";
-export { PortfolioHero } from "./PortfolioHero";
-export { assetUsd, priceOf } from "./prices";
+// Public surface of the `assets` feature.
+//
+// Laid out by concern:
+//
+//   `registry/`   the active chain's registered assets.
+//   `balances/`   shielded balances with the in-flight overlay; transparent ones.
+//   `prices/`     USD prices.
+//   `yield/`      venue rates and what the wallet's notes have earned.
+//   `portfolio/`  Home's hero and asset list.
+//   `pickers/`    the asset pickers and their native-coin entries.
+
 export {
-  DEFAULT_ASSET,
+  useDepositSourceBalance,
+  useInvalidateTransparentBalances,
+  usePublicBalances,
+} from "./balances/transparent-balances";
+export { useAssetBalance, useBalances } from "./balances/use-balances";
+export type { AssetSelectOption } from "./pickers/asset-option";
+export { useAssetSelectOptions } from "./pickers/asset-option";
+export { nativeEthView, useEthAssetField } from "./pickers/eth-option";
+export { ShieldAssetPicker } from "./pickers/ShieldAssetPicker";
+export { AssetsCard } from "./portfolio/AssetsCard";
+export { PortfolioHero } from "./portfolio/PortfolioHero";
+export { assetUsd, priceOf } from "./prices/prices";
+export { usePrices } from "./prices/use-prices";
+export {
   DEFAULT_ASSET_ID,
-  fetchAssetEntry,
   findAsset,
   useRegisteredAssets,
-} from "./registered-assets";
-export { ShieldAssetPicker } from "./ShieldAssetPicker";
-export { useDepositSourceBalance, useInvalidateTransparentBalances } from "./transparent-balances";
-export { useAssetBalance, useBalances } from "./use-balances";
-export { usePrices } from "./use-prices";
+} from "./registry/registered-assets";

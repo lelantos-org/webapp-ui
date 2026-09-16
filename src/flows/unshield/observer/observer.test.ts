@@ -41,7 +41,6 @@ describe("observerOutro", () => {
 
 describe("observerFacts", () => {
   const WETH = { decimals: 18, scale: 1n, index: 10n ** 27n };
-  const valid = (v: string) => v.startsWith("0x") && v.length === 42;
   const to = `0x${"ab".repeat(20)}`;
 
   it("states the destination and the gross the event carries, in what arrives", () => {
@@ -51,15 +50,16 @@ describe("observerFacts", () => {
         asset: WETH,
         amount: 5n * 10n ** 17n,
         symbol: "ETH",
-        isValidAddress: valid,
       }),
     ).toEqual({ destination: "0xabab…abab", amount: "0.50 ETH", figure: "0.5" });
   });
 
   it("says nothing it cannot yet vouch for", () => {
-    expect(
-      observerFacts({ to: "0x12", asset: WETH, amount: 0n, symbol: "ETH", isValidAddress: valid }),
-    ).toEqual({ destination: undefined, amount: undefined, figure: undefined });
+    expect(observerFacts({ to: "0x12", asset: WETH, amount: 0n, symbol: "ETH" })).toEqual({
+      destination: undefined,
+      amount: undefined,
+      figure: undefined,
+    });
   });
 });
 

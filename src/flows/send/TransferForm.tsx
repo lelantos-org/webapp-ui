@@ -1,7 +1,7 @@
 // Send privately: a shielded transfer to another shielded address. Two presses:
 // the first reviews, the second sends.
 
-import { ADDRESS_HRP } from "@lelantos-org/sdk";
+import { ADDRESS_HRP } from "@lelantos-org/sdk/primitives";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { DEFAULT_ASSET_ID, useAssetSelectOptions } from "@/features/assets";
@@ -46,7 +46,7 @@ export function TransferForm() {
   const options = useAssetSelectOptions();
   // A transfer has no transparent leg, so `MASP._takeFee` never runs and the
   // panel states the relayer's fee alone.
-  const { spend, to, review, frame, hero, reviewPanel } = useSpendForm(form, action, {
+  const { spend, to, review, onPasteTo, frame, hero, reviewPanel } = useSpendForm(form, action, {
     kind: "transfer",
     recipient: { recipientValid: isShieldedAddress, recipientKind: "shielded" },
     titles: { progressTitle: "Sending privately", settledTitle: "Sent privately" },
@@ -54,7 +54,7 @@ export function TransferForm() {
       action.mutation.mutateAsync({
         amount: ctx.amount,
         asset: ctx.asset,
-        to: values.to,
+        recipient: values.to,
         feeAsset: ctx.feeAsset,
       }),
   });
@@ -131,7 +131,7 @@ export function TransferForm() {
         value={to}
         isValid={isShieldedAddress}
         invalidMessage="That is not a shielded address"
-        onPaste={(next) => setValue("to", next, { shouldDirty: true, shouldValidate: true })}
+        onPaste={onPasteTo}
         formError={errors.to?.message}
         helper="A shielded address. Ask the recipient for theirs — it never appears on-chain."
         extra={

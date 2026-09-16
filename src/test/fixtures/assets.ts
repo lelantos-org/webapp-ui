@@ -4,7 +4,8 @@
 // rather than to every file that needs an asset, and so fixtures stop being cast
 // into shape.
 
-import { type EvmAddress, RAY } from "@lelantos-org/sdk/core";
+import type { EvmAddress } from "@lelantos-org/sdk";
+import { RAY } from "@lelantos-org/sdk/protocol";
 import type { RegisteredAsset } from "@/config/chains";
 
 /// A distinct, well-formed token address per asset id: `0x000…0<id>`.

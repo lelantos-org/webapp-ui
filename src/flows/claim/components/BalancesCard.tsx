@@ -64,7 +64,7 @@ export function BalancesCard({
 
   return (
     <section className="surface surface--card claim-card">
-      <div className="claim-card__hdr">
+      <div className="claim-card__title-row">
         <h2 className="claim-card__t">Waiting for you</h2>
         <span className="claim-card__meta">
           {balances.length} asset{balances.length === 1 ? "" : "s"}

@@ -5,7 +5,7 @@
 // copy and the chip states are decided by the pure `ladderModel`, and
 // `useLadder` joins them so a form states its inputs once.
 
-import type { Ladder } from "@lelantos-org/sdk/core";
+import type { Ladder } from "@lelantos-org/sdk/protocol";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import type { RegisteredAsset } from "@/config/chains";

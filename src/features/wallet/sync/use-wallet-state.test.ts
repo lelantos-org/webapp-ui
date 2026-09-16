@@ -18,7 +18,7 @@ import { useInvalidateWalletState } from "./use-wallet-state";
 const CHAIN = 31337n;
 const ADDRESS = "lelantos1me";
 
-vi.mock("../session/use-wallet", () => ({
+vi.mock("../session/context", () => ({
   useWallet: () => fakeWalletContext({ wallet: fakeWalletApi({ address: ADDRESS }) }),
   useWalletInstance: () => fakeWalletApi({ address: ADDRESS }),
 }));

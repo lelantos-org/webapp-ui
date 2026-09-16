@@ -7,7 +7,7 @@
 // re-render the whole swap form subtree once a second for the life of the
 // route, including while the tab sits unused on a stale quote.
 
-import { quoteAgeSecs, type SwapQuote } from "@lelantos-org/sdk/quoter";
+import type { SwapQuote } from "@lelantos-org/sdk";
 import { useEffect, useState } from "react";
 import { QUOTE_STALE_SECS } from "./use-swap-quote";
 
@@ -22,7 +22,9 @@ const nowSecs = () => Math.floor(Date.now() / 1000);
 
 export function useQuoteAge(quote: SwapQuote | undefined): QuoteAge {
   const [now, setNow] = useState(nowSecs);
-  const ageSecs = quote ? quoteAgeSecs(quote, now) : undefined;
+  // `quotedAt` is when the venue was asked, in unix seconds; a clock behind it
+  // reads as fresh rather than as a negative age.
+  const ageSecs = quote ? Math.max(0, now - quote.quotedAt) : undefined;
   const stale = ageSecs !== undefined && ageSecs > QUOTE_STALE_SECS;
 
   // Resynced on entry, so a quote arriving after a pause is not measured

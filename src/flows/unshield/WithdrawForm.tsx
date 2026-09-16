@@ -55,7 +55,7 @@ export function WithdrawForm() {
     defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID, asEth: false },
     action,
   });
-  const { register, setValue, errors, selected, setAmount, clearFinished } = form;
+  const { register, errors, selected, setAmount, clearFinished } = form;
   const eth = useEthAssetField(form);
   const options = useAssetSelectOptions({ showEth: true });
 
@@ -64,27 +64,30 @@ export function WithdrawForm() {
   // Same two-stage submit as Send. Unshielding adds a second thing worth a
   // second look: the destination is public from here on, and reusing the account
   // the user is connected with links the two sides of the pool together.
-  const { spend, to, symbol, review, frame, hero, reviewPanel } = useSpendForm(form, action, {
-    kind: "withdraw",
-    // A withdraw's protocol fee comes off `publicOut` rather than the cover, so
-    // it is stated but reserves nothing in the max.
-    protocolFee: true,
-    spendSymbol: nativeEthView(selected, eth.asEth).spendSymbol,
-    // `withdrawEth` takes no `feeAsset`; see `SpendAmountInputs.feeAssetLocked`.
-    feeAssetLocked: eth.asEth,
-    recipient: { recipientValid: isEvmAddress, recipientKind: "public" },
-    titles: { progressTitle: "Unshielding", settledTitle: "Unshielded" },
-    send: (values, ctx) =>
-      m.mutateAsync({
-        amount: ctx.amount,
-        asset: ctx.asset,
-        to: values.to,
-        asEth: values.asEth,
-        // Withheld on the native path, which has no `feeAsset`; see
-        // `withdrawEth` in `ops/sdk-adapter.ts`.
-        feeAsset: ctx.feeAsset,
-      }),
-  });
+  const { spend, to, symbol, review, onPasteTo, frame, hero, reviewPanel } = useSpendForm(
+    form,
+    action,
+    {
+      kind: "withdraw",
+      // A withdraw's protocol fee comes off `publicOut` rather than the cover, so
+      // it is stated but reserves nothing in the max.
+      protocolFee: true,
+      spendSymbol: nativeEthView(selected, eth.asEth).spendSymbol,
+      native: eth.asEth,
+      recipient: { recipientValid: isEvmAddress, recipientKind: "public" },
+      titles: { progressTitle: "Unshielding", settledTitle: "Unshielded" },
+      send: (values, ctx) =>
+        m.mutateAsync({
+          // The amount field is what leaves the pool: the review states what
+          // arrives after the protocol fee ("They receive").
+          gross: ctx.amount,
+          asset: ctx.asset,
+          recipient: values.to,
+          native: values.asEth,
+          feeAsset: ctx.feeAsset,
+        }),
+    },
+  );
   const { parsed, display, spendable } = spend;
 
   // Bounded by the same ceiling as the max button: a denomination the selector
@@ -97,7 +100,6 @@ export function WithdrawForm() {
     asset: selected,
     amount: parsed,
     symbol,
-    isValidAddress: isEvmAddress,
   });
   const observerPanel = (variant: "full" | "compact") => (
     <ObserverPanel
@@ -200,7 +202,7 @@ export function WithdrawForm() {
         value={to}
         isValid={isEvmAddress}
         invalidMessage="That is not a valid public address"
-        onPaste={(next) => setValue("to", next, { shouldDirty: true, shouldValidate: true })}
+        onPaste={onPasteTo}
         formError={errors.to?.message}
       />
       {/* Non-blocking by design: the submit stays enabled. Withdrawing to your

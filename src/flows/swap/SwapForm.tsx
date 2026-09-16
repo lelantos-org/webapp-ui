@@ -3,45 +3,48 @@
 // Swap button with the revert threshold under it. No review step, on any width:
 // the quote expires in seconds, and a summary screen would spend them.
 
+import { isWalletError } from "@lelantos-org/sdk";
+import { useEffect } from "react";
 import {
   DEFAULT_ASSET_ID,
   findAsset,
   useAssetSelectOptions,
   useRegisteredAssets,
 } from "@/features/assets";
-import { useActiveChain } from "@/features/chain";
-import { FeeDetails, useAssetFeeBps, useDepositFee } from "@/features/fees";
 import {
   ActionForm,
-  AmountHero,
   AssetSelectPill,
   BoundaryLine,
+  spendHeroProps,
   useActionForm,
   useActionSubmit,
   useSpendAmount,
 } from "@/features/op-form";
+import { operationOf } from "@/features/tx";
 import { SyncNotice } from "@/features/wallet";
 import { formatAssetAmount } from "@/shared/lib/format/asset";
-import { ArrowDownGlyph } from "@/shared/ui/glyphs";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
+import { FlipButton } from "./components/FlipButton";
+import { PayLeg } from "./components/PayLeg";
 import { ReceiveLeg } from "./components/ReceiveLeg";
-import { SlippageField } from "./components/SlippageField";
-import { quoteRequest } from "./quote-request";
-import { defaultSwapOut, flipPair, type SwapInput, swapSchema } from "./schema";
+import { SwapDetails } from "./components/SwapDetails";
 import { swapSubmitBlock } from "./swap-block";
-import { revertFootnote, swapDetailsLine } from "./swap-copy";
-import { useQuoteAge } from "./use-quote-age";
+import { revertFootnote } from "./swap-copy";
+import {
+  DEFAULT_SLIPPAGE_BPS,
+  defaultSwapOut,
+  flipPair,
+  type SwapInput,
+  swapSchema,
+} from "./swap-schema";
 import { useSwap } from "./use-swap";
-import { useSwapQuote } from "./use-swap-quote";
+import { useSwapQuoteState } from "./use-swap-quote-state";
 import "./swap.css";
-
-const DEFAULT_SLIPPAGE_BPS = 50;
 
 export function SwapForm() {
   const action = useSwap();
   const { mutation: m, progress } = action;
   const assets = useRegisteredAssets();
-  const activeChain = useActiveChain();
 
   const form = useActionForm({
     schema: swapSchema,
@@ -70,7 +73,7 @@ export function SwapForm() {
   const inAsset = form.selected;
   const outAsset = findAsset(assets, wAssetOut);
   // Relayer fee only: the protocol fee on leg 2 is already inside the credited
-  // figure `ReceiveLeg` shows (`sizeBNote`), so repeating it here would
+  // figure `ReceiveLeg` shows (`quote.credit`), so repeating it here would
   // double-count it.
   const spend = useSpendAmount({
     kind: "swap",
@@ -78,46 +81,33 @@ export function SwapForm() {
     amountText: wAmount,
     setAmount: form.setAmount,
   });
-  const { balance: inBalance, parsed, validation: v, fees, spendable } = spend;
+  const { parsed, validation: v, fees } = spend;
 
-  // The quote binds a route into the proof, so it is fetched for one exact
-  // (pair, amount, slippage); see `quote-request.ts` for why `undefined` is the
-  // load-bearing case.
-  const request = quoteRequest({
-    chainId: activeChain.chainId,
+  const q = useSwapQuoteState({
     inAsset,
     outAsset,
     amount: parsed,
     amountValid: v.valid,
     slippageBps: wSlippage,
   });
-  const quoteQ = useSwapQuote(request);
-  // Suppressed while the debounce catches up, since `data` then describes an
-  // earlier amount and submitting against it would prove the wrong route.
-  const quote = quoteQ.stale ? undefined : quoteQ.data;
-
-  const { ageSecs: quoteAge, stale: quoteStale } = useQuoteAge(quote);
-  // The **out** asset's **deposit** rate, because that is what it prices: leg 2
-  // mints the B-note as a deposit of `outAsset`, and `sizeBNote` solves for the
-  // value whose Permit2 pull clears `minOut`. The in-asset's rate, or the
-  // withdraw leg's, sizes the note against the wrong percentage and the pull
-  // lands under `minOut` — which the wrapper reverts as `MaspPullBelowMinOut`.
-  const feeBps = useAssetFeeBps(outAsset?.id, "deposit");
-  // Leg 2 is a deposit, and the relayer's charge for flushing it comes out of the
-  // B-note rather than being billed separately, so it belongs to the credited
-  // figure `ReceiveLeg` computes rather than to the Details row.
-  const outDepositFee = useDepositFee(outAsset?.id);
-
-  const refreshQuote = () => void quoteQ.refetch();
-  const quoting = quoteQ.isFetching || (request !== undefined && quoteQ.stale);
+  const { quote } = q;
+  // A swap refused because the quote's figures moved — a yield index, the
+  // relayer's flush fee — is retryable by re-quoting, so the form fetches a fresh
+  // quote at once rather than leaving the user to press refresh; the failure's
+  // message says the quote was refreshed.
+  const staleQuote = isWalletError(m.error, "QUOTE_STALE");
+  const { refresh } = q;
+  useEffect(() => {
+    if (staleQuote) refresh();
+  }, [staleQuote, refresh]);
 
   const block = swapSubmitBlock({
     ...spend.readiness,
     hasPair: !!inAsset && !!outAsset && assets.length > 1,
     hasQuote: !!quote,
-    quoteStale,
-    quoting,
-    quoteFailed: !!quoteQ.error && !quoting,
+    quoteStale: q.stale,
+    quoting: q.quoting,
+    quoteFailed: q.failed,
   });
 
   // Swapping the pair drops the amount. It is denominated in the *in* asset, so
@@ -136,14 +126,10 @@ export function SwapForm() {
   // retires it: the request becomes `undefined` and the query goes idle, while
   // the pair and slippage are preserved.
   const onSubmit = useActionSubmit<SwapInput>(form, async (_values, ctx) => {
-    if (!outAsset || !quote) return false;
-    return m.mutateAsync({
-      assetIn: ctx.asset.id,
-      assetOut: outAsset.id,
-      amount: ctx.amount,
-      quote,
-      feeAsset: spend.feeAsset,
-    });
+    // The quote carries the pair and the gross it was priced for; it describes
+    // the form's current trade by construction (`useSwapQuoteState`).
+    if (!outAsset || !quote || quote.gross.amount !== ctx.amount) return false;
+    return m.mutateAsync({ quote, feeAsset: spend.feeAsset });
   });
 
   // Either leg's pick revalidates both: the schema rejects a pair of one asset.
@@ -179,6 +165,7 @@ export function SwapForm() {
       footnote={revertFootnote(wSlippage)}
       progress={progress}
       txHash={m.data?.txHash}
+      operation={operationOf(m.data)}
       onReset={clearFinished}
       tx={{
         progressTitle: "Swapping",
@@ -186,70 +173,32 @@ export function SwapForm() {
         amount: inAsset && parsed !== undefined ? formatAssetAmount(parsed, inAsset) : undefined,
       }}
       details={
-        <FeeDetails
+        <SwapDetails
           fees={fees}
-          summary={
-            <>
-              <span className="only-wide">{swapDetailsLine(wSlippage, fees.model)}</span>
-              <span className="only-narrow">
-                {swapDetailsLine(wSlippage, fees.model, { short: true })}
-              </span>
-            </>
-          }
-        >
-          <SlippageField
-            bps={wSlippage}
-            onChange={(b) => setValue("slippageBps", b, { shouldValidate: true })}
-            error={errors.slippageBps?.message}
-          />
-        </FeeDetails>
+          slippageBps={wSlippage}
+          onSlippageChange={(b) => setValue("slippageBps", b, { shouldValidate: true })}
+          slippageError={errors.slippageBps?.message}
+        />
       }
     >
       <SyncNotice />
       <div className="swap-pair">
-        <div className="swap-leg swap-leg--pay">
-          <AmountHero
-            size="md"
-            label="You pay"
-            inputProps={register("amount")}
-            selected={inAsset}
-            value={wAmount}
-            amount={parsed}
-            asset={
-              <AssetSelectPill
-                label="Asset to pay with"
-                options={options}
-                value={wAssetIn}
-                invalid={!!pairError}
-                disabled={m.isPending}
-                onChange={pick("assetIn")}
-              />
-            }
-            balanceLabel="Shielded"
-            balance={
-              inBalance !== undefined && inAsset ? formatAssetAmount(inBalance, inAsset) : undefined
-            }
-            maxAmount={spendable?.max}
-            onSetMax={spend.onSetMax}
-            validation={v}
-            formError={errors.amount?.message}
-            hint={pairError ? <span className="swap-pair__err">{pairError}</span> : undefined}
-          />
-        </div>
+        <PayLeg
+          hero={spendHeroProps(form, spend, wAmount)}
+          picker={
+            <AssetSelectPill
+              label="Asset to pay with"
+              options={options}
+              value={wAssetIn}
+              invalid={!!pairError}
+              disabled={m.isPending}
+              onChange={pick("assetIn")}
+            />
+          }
+          pairError={pairError}
+        />
 
-        {/* Overlaps the seam between the two leg panels. */}
-        <div className="swap-flip-row">
-          <button
-            type="button"
-            className="swap-flip"
-            onClick={flip}
-            disabled={m.isPending}
-            aria-label="Reverse the pair"
-            title="Reverse the pair"
-          >
-            <ArrowDownGlyph size={17} />
-          </button>
-        </div>
+        <FlipButton onFlip={flip} disabled={m.isPending} />
 
         <ReceiveLeg
           outAsset={outAsset}
@@ -264,14 +213,12 @@ export function SwapForm() {
             />
           }
           quote={quote}
-          feeBps={feeBps}
-          outDepositFee={outDepositFee}
-          ageSecs={quoteAge}
-          stale={quoteStale}
-          onRefresh={refreshQuote}
-          refreshing={quoteQ.isFetching}
-          quoting={quoting}
-          error={quoteQ.error}
+          ageSecs={q.ageSecs}
+          stale={q.stale}
+          onRefresh={q.refresh}
+          refreshing={q.refreshing}
+          quoting={q.quoting}
+          error={q.error}
         />
       </div>
       <input type="hidden" {...register("assetIn")} />

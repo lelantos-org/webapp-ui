@@ -10,7 +10,6 @@ const connection = (over: Partial<Session> = {}): Session =>
     isConnecting: false,
     chainSupported: true,
     disconnect: () => {},
-    switchChain: () => {},
     ...over,
   }) as Session;
 

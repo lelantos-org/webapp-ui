@@ -5,7 +5,7 @@
 // `fakes/chain.ts` for why. Types only from the app, so importing this never
 // pulls in a module a test is mocking.
 
-import type { WalletApi } from "@lelantos-org/sdk/wallet";
+import type { WalletApi } from "@lelantos-org/sdk";
 import type { WalletCapabilities, WalletContextValue } from "@/features/wallet";
 
 const DISCONNECTED = { allowed: false, reason: "Connect a wallet first." } as const;
@@ -38,8 +38,6 @@ export function fakeWalletContext(over: Partial<WalletContextValue> = {}): Walle
     capabilities: NO_CAPABILITIES,
     connect: () => {},
     disconnect: () => {},
-    switchChain: () => {},
-    refresh: async () => {},
     ...over,
   };
 }

@@ -1,85 +1,124 @@
 // @vitest-environment jsdom
-import { DEFAULT_ASSET as SDK_DEFAULT_ASSET } from "@lelantos-org/sdk/wallet";
+import { circuitAmount, evmAddress } from "@lelantos-org/sdk";
 import { describe, expect, it, vi } from "vitest";
-import { asCircuitUnits } from "@/shared/domain/units";
+import type { TxPhase } from "@/features/tx";
 import { fakeWalletApi } from "@/test/fakes/wallet";
-import { makeChain } from "@/test/fixtures/chains";
-import { createSdkActions } from "./sdk-adapter";
+import { createSdkActions, depositStep, spendStep } from "./sdk-adapter";
 
-// The adapter brands L1 recipients via `evmAddress`, which requires a
-// 20-byte 0x-prefixed address.
 const RECIPIENT = "0x000000000000000000000000000000000000dead";
-
-/// `makeChain` sets no `swapWrapperAddress`, matching a chain with no wrapper
-/// deployed.
-const CHAIN = makeChain({ chainName: "local" });
 
 function fakeWallet() {
   const deposit = vi.fn().mockResolvedValue({ txHash: "0xdep" });
   const transfer = vi.fn().mockResolvedValue({ txHash: "0xtx" });
   const withdraw = vi.fn().mockResolvedValue({ txHash: "0xwd" });
-  const withdrawEth = vi.fn().mockResolvedValue({ txHash: "0xwdeth" });
-  return fakeWalletApi({ deposit, transfer, withdraw, withdrawEth });
+  const swap = vi.fn().mockResolvedValue({ txHash: "0xsw" });
+  return fakeWalletApi({ deposit, transfer, withdraw, swap });
+}
+
+/// The options object the SDK method received on its last call.
+function lastArgs(fn: unknown): Record<string, unknown> {
+  return (fn as ReturnType<typeof vi.fn>).mock.lastCall?.[0];
 }
 
 describe("createSdkActions", () => {
-  it("deposit forwards amount + optional asset to wallet.deposit", async () => {
+  it("deposit names the asset and forwards a fee asset only off the native path", async () => {
     const w = fakeWallet();
-    const a = createSdkActions(w, CHAIN);
-    const r = await a.deposit({ amount: asCircuitUnits(100n) });
-    expect(r.txHash).toBe("0xdep");
-    expect(w.deposit).toHaveBeenCalledWith({ amount: asCircuitUnits(100n), asset: undefined });
+    const a = createSdkActions(w);
+    const amount = circuitAmount(100n);
 
-    await a.deposit({ amount: asCircuitUnits(100n), asset: 2n });
-    expect(w.deposit).toHaveBeenLastCalledWith({ amount: asCircuitUnits(100n), asset: 2n });
+    await expect(a.deposit({ amount, asset: 2n, native: false })).resolves.toEqual({
+      txHash: "0xdep",
+    });
+    expect(lastArgs(w.deposit)).toEqual({ amount, asset: 2n, native: false });
+
+    await a.deposit({ amount, asset: 2n, native: false, feeAsset: 3n });
+    expect(lastArgs(w.deposit)).toEqual({ amount, asset: 2n, native: false, feeAsset: 3n });
+
+    await a.deposit({ amount, asset: 2n, native: true, feeAsset: 3n });
+    expect(lastArgs(w.deposit)).toEqual({ amount, asset: 2n, native: true });
   });
 
-  it.each([
-    ["transfer", "lel1abc"],
-    ["withdraw", RECIPIENT],
-  ] as const)("%s forwards to + amount + optional asset with autoConsolidate", async (op, to) => {
+  it("transfer forwards recipient, amount and asset with autoConsolidate", async () => {
     const w = fakeWallet();
-    const a = createSdkActions(w, CHAIN);
-    const amount = asCircuitUnits(50n);
-
-    await a[op]({ to, amount });
-    expect(w[op]).toHaveBeenCalledWith({ to, amount, asset: undefined, autoConsolidate: true });
-
-    await a[op]({ to, amount, asset: 7n });
-    expect(w[op]).toHaveBeenLastCalledWith({ to, amount, asset: 7n, autoConsolidate: true });
-  });
-
-  it("withdrawEth forwards to + amount + asset to wallet.withdrawEth with autoConsolidate", async () => {
-    const w = fakeWallet();
-    const a = createSdkActions(w, CHAIN);
-    await a.withdrawEth({ to: RECIPIENT, amount: asCircuitUnits(1n), asset: 2n });
-    expect(w.withdrawEth).toHaveBeenCalledWith({
-      to: RECIPIENT,
-      amount: asCircuitUnits(1n),
-      asset: 2n,
+    const amount = circuitAmount(50n);
+    await createSdkActions(w).transfer({ recipient: "lel1abc", amount, asset: 7n });
+    expect(lastArgs(w.transfer)).toEqual({
+      recipient: "lel1abc",
+      amount,
+      asset: 7n,
+      feeAsset: undefined,
       autoConsolidate: true,
     });
   });
 
-  // The tag names the asset the pending overlay credits. It has to be the one
-  // the SDK moved when none was named, which is the SDK's own default.
-  it("tags an op submitted without an asset with the SDK's default asset", async () => {
-    const a = createSdkActions(fakeWallet(), CHAIN);
-    expect((await a.deposit({ amount: asCircuitUnits(1n) })).asset).toBe(SDK_DEFAULT_ASSET);
-    expect((await a.transfer({ to: "lel1abc", amount: asCircuitUnits(1n) })).asset).toBe(
-      SDK_DEFAULT_ASSET,
-    );
-    expect((await a.withdraw({ to: RECIPIENT, amount: asCircuitUnits(1n) })).asset).toBe(
-      SDK_DEFAULT_ASSET,
-    );
-    expect((await a.transfer({ to: "lel1abc", amount: asCircuitUnits(1n), asset: 7n })).asset).toBe(
-      7n,
-    );
+  it("withdraw sends the form's amount as gross and carries the native flag", async () => {
+    const w = fakeWallet();
+    const gross = circuitAmount(1n);
+    await createSdkActions(w).withdraw({
+      recipient: RECIPIENT,
+      gross,
+      asset: 2n,
+      native: true,
+      feeAsset: 3n,
+    });
+    expect(lastArgs(w.withdraw)).toEqual({
+      recipient: evmAddress(RECIPIENT),
+      gross,
+      asset: 2n,
+      native: true,
+      feeAsset: 3n,
+      autoConsolidate: true,
+    });
   });
 
-  it("propagates rejections from underlying wallet", async () => {
+  it("swap passes the quote through", async () => {
+    const w = fakeWallet();
+    const quote = { kind: "swapQuote" } as never;
+    await createSdkActions(w).swap({ quote });
+    expect(lastArgs(w.swap)).toMatchObject({ quote, autoConsolidate: true });
+  });
+
+  it("translates SDK phases into stepper phases, dropping the ones not shown", async () => {
+    const w = fakeWallet();
+    const seen: TxPhase[] = [];
+    await createSdkActions(w).transfer({
+      recipient: "lel1abc",
+      amount: circuitAmount(1n),
+      asset: 1n,
+      onPhase: (p) => seen.push(p),
+    });
+    const onPhase = lastArgs(w.transfer).onPhase as (p: string) => void;
+    for (const p of [
+      "preparing",
+      "consolidating",
+      "preparing",
+      "proving",
+      "submitting",
+      "confirmed",
+    ])
+      onPhase(p);
+    expect(seen).toEqual(["preparing", "preparing", "preparing", "proving", "submitting"]);
+  });
+
+  it("propagates rejections from the underlying wallet", async () => {
     const deposit = vi.fn().mockRejectedValue(new Error("boom"));
-    const a = createSdkActions(fakeWalletApi({ deposit }), CHAIN);
-    await expect(a.deposit({ amount: asCircuitUnits(1n) })).rejects.toThrow("boom");
+    const a = createSdkActions(fakeWalletApi({ deposit }));
+    await expect(
+      a.deposit({ amount: circuitAmount(1n), asset: 1n, native: false }),
+    ).rejects.toThrow("boom");
+  });
+});
+
+describe("phase mapping", () => {
+  it("maps a deposit's confirmation to inclusion, before the flush", () => {
+    expect(depositStep("preparing")).toBeUndefined();
+    expect(depositStep("signing")).toBe("signing");
+    expect(depositStep("broadcast")).toBe("broadcast");
+    expect(depositStep("confirmed")).toBe("mined");
+  });
+
+  it("leaves a spend's confirmation to the lifecycle", () => {
+    expect(spendStep("consolidating")).toBe("preparing");
+    expect(spendStep("confirmed")).toBeUndefined();
   });
 });

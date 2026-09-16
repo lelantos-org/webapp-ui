@@ -5,9 +5,9 @@
 // until then `Welcome` holds the column. The two share one grid cell
 // (`.home-wrap`) and cross-fade on connect rather than swapping hard.
 
-import type { WalletApi } from "@lelantos-org/sdk/wallet";
+import type { WalletApi } from "@lelantos-org/sdk";
 import { type ReactNode, useEffect, useState } from "react";
-import { useWallet } from "../session/use-wallet";
+import { useWallet } from "../session/context";
 import { Welcome } from "./Welcome";
 import "./ConnectedGate.css";
 

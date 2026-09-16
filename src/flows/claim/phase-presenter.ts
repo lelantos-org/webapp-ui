@@ -18,7 +18,7 @@ export interface ClaimStep {
   doneLabel: string;
 }
 
-export type ClaimStepId = "link" | "connect" | "claim";
+type ClaimStepId = "link" | "connect" | "claim";
 
 export const CLAIM_STEPS: readonly ClaimStep[] = [
   { id: "link", label: "Read link", doneLabel: "Link read" },

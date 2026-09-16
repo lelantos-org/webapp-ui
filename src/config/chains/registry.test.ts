@@ -6,7 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { loadChainRegistry, readCachedChainRegistry } from "@/config/chains";
 import { env } from "@/config/env";
-import { localStore } from "@/shared/lib/storage";
+import { localStore } from "@/shared/lib/storage/safe";
 import { deployment, relayer } from "@/test/fixtures/registry";
 
 // Mirrors REGISTRY_CACHE_KEY in config/chains/registry.ts, which is not
@@ -15,7 +15,7 @@ import { deployment, relayer } from "@/test/fixtures/registry";
 // so differ between jsdom and a real deployment; a hardcoded literal here
 // silently addressed a key nothing else used, and the corruption tests passed
 // against a cache they had never touched.
-const KEY = `lelantos.chain-registry.v2.${env.registryUrl}|${env.relayerUrl}`;
+const KEY = `lelantos.chain-registry.v1.${env.registryUrl}|${env.relayerUrl}`;
 
 /// The three bodies a boot reads, for the given chains.
 const bodies = (...ids: number[]) => ({

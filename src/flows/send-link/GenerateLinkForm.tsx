@@ -13,22 +13,21 @@ import { useRef } from "react";
 import { useAssetSelectOptions } from "@/features/assets";
 import { daysLabel, EvictionBlock, VaultSummary } from "@/features/claim-links";
 import { FeeDetails } from "@/features/fees";
-import { ActionForm, AmountHero, AssetSelectPill } from "@/features/op-form";
+import { ActionForm, AmountHero, AssetSelectPill, spendHeroProps } from "@/features/op-form";
 import { SyncNotice } from "@/features/wallet";
-import { formatAssetAmount } from "@/shared/lib/format/asset";
-import { CheckGlyph } from "@/shared/ui/glyphs";
+import { CheckGlyph } from "@/shared/ui/icons/glyphs";
 import { Notice } from "@/shared/ui/Notice";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
-import { useInert } from "@/shared/ui/use-inert";
-import { ClaimLinkResult } from "./components/ClaimLinkResult";
 import { GenerateModal } from "./components/GenerateModal";
+import { LinkResult } from "./components/LinkResult";
 import { useGenerateLinkForm } from "./use-generate-link-form";
+import { useInert } from "./use-inert";
 import "./GenerateLinkForm.css";
 
 export function GenerateLinkForm() {
   const c = useGenerateLinkForm();
   const { form, mutation, spend } = c;
-  const { register, watch, setValue, errors, selected } = form;
+  const { register, watch, setValue, errors } = form;
   const options = useAssetSelectOptions({ rateTag: false });
   const formRef = useRef<HTMLDivElement>(null);
   useInert(formRef, c.stage.modalOpen);
@@ -66,12 +65,9 @@ export function GenerateLinkForm() {
             >
               <SyncNotice />
               <AmountHero
+                {...spendHeroProps(form, spend, c.amountText)}
                 size="md"
                 label="Amount to send"
-                inputProps={register("amount")}
-                selected={selected}
-                value={c.amountText}
-                amount={spend.parsed}
                 asset={
                   <AssetSelectPill
                     label="Asset to send"
@@ -81,16 +77,6 @@ export function GenerateLinkForm() {
                     onChange={(next) => setValue("asset", next, { shouldValidate: true })}
                   />
                 }
-                balanceLabel="Shielded"
-                balance={
-                  spend.balance !== undefined && selected
-                    ? formatAssetAmount(spend.balance, selected)
-                    : undefined
-                }
-                maxAmount={spend.spendable?.max}
-                onSetMax={spend.onSetMax}
-                validation={spend.validation}
-                formError={errors.amount?.message}
               />
               <input type="hidden" {...register("asset")} />
               <hr className="rule" />
@@ -115,7 +101,7 @@ export function GenerateLinkForm() {
             2 · Share
           </span>
           {c.result ? (
-            <ClaimLinkResult
+            <LinkResult
               url={c.result.url}
               recordId={c.result.recordId}
               amountLabel={c.amountLabel}
@@ -155,7 +141,7 @@ function LinkAckCheckbox({
     <label className="linkack">
       <input
         type="checkbox"
-        className="linkack__input"
+        className="linkack__input input-hidden"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
       />

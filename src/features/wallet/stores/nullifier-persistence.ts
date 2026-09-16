@@ -1,4 +1,4 @@
-import type { NullifierPersistence, NullifierStoreState } from "@lelantos-org/sdk/wallet";
+import type { NullifierPersistence, NullifierStoreState } from "@lelantos-org/sdk/advanced";
 import { NULLIFIER_STORE, walletDb } from "./db";
 
 interface StoredState {

@@ -18,17 +18,11 @@
 // and is surfaced as the `unsupported-chain` wallet status rather than defaulted
 // away.
 
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from "react";
-import {
-  type ChainEntry,
-  findChain,
-  loadChainRegistry,
-  readCachedChainRegistry,
-  txExplorerUrl,
-} from "@/config/chains";
+import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
+import { type ChainEntry, findChain, txExplorerUrl } from "@/config/chains";
 import { useWalletKinds } from "@/features/wallet-kinds";
-import { queryKeys } from "@/shared/query/keys";
+import { ChainRegistryGate } from "./ChainRegistryGate";
+import { useChainRegistryQuery } from "./use-chain-registry-query";
 
 interface ChainContextValue {
   registry: ChainEntry[];
@@ -106,105 +100,4 @@ export function useActiveChain(): ChainEntry {
 export function useTxExplorerUrl(): (txHash: string) => string | undefined {
   const explorerUrl = useActiveChainOrUndefined()?.explorerUrl;
   return useCallback((txHash: string) => txExplorerUrl(explorerUrl, txHash), [explorerUrl]);
-}
-
-/// The chain registry as a query: fetched once per tab, painted from the cached
-/// copy meanwhile.
-function useChainRegistryQuery(): UseQueryResult<ChainEntry[]> {
-  // Read once per mount rather than per render: this touches localStorage and
-  // runs a zod parse, and its result cannot change while the tab is open.
-  const [cached] = useState(readCachedChainRegistry);
-
-  return useQuery({
-    queryKey: queryKeys.chainRegistry(),
-    queryFn: loadChainRegistry,
-    // `placeholderData` rather than `initialData`. Placeholder data is never
-    // treated as cached, so the fetch still runs once on mount and the infinite
-    // `staleTime` applies only to the relayer's response; `initialData` would
-    // combine with that staleTime to pin a potentially months-old registry for
-    // the life of the tab.
-    //
-    // With anything cached, `isPending` is false from the first render, so the
-    // app paints immediately rather than holding a spinner for a full round-trip.
-    // Nothing cached means no placeholder at all, so the key is left out.
-    ...(cached ? { placeholderData: cached } : {}),
-    // The set of deployed chains does not change under a running tab, but the
-    // payload is more than identity: each yield asset carries `index` and the
-    // relayer's rate estimate, which it re-measures on its own schedule. An
-    // infinite `staleTime` would pin both at whatever they were when the tab
-    // opened, so a rate labelled "over the last 7 days" could be a week old
-    // itself. Long enough that a herd of tabs does not poll the registry, short
-    // enough that a figure on screen is one the relayer still stands behind.
-    staleTime: 10 * 60 * 1000,
-    // The whole app is gated on this, so a single failed attempt should not
-    // require a page reload; the retry button below covers the remaining cases.
-    retry: 2,
-  });
-}
-
-/// What the app shows in place of itself while there is no chain registry to
-/// run on.
-function ChainRegistryGate({
-  query,
-  registry,
-  children,
-}: {
-  query: UseQueryResult<ChainEntry[]>;
-  /// The registry as the provider reads it: the query's data, or empty.
-  registry: ChainEntry[];
-  children: ReactNode;
-}) {
-  // Gated on the registry rather than the wallet: without it nothing can
-  // distinguish a supported chain from an unsupported one. With a cached
-  // registry `isPending` is already false, so this spinner appears only on a
-  // browser that has never reached the relayer.
-  if (query.isPending) return <ChainNotice>loading chains…</ChainNotice>;
-
-  // The two failure notices are gated on having no registry at all rather than
-  // on the query's status. A revalidation failing behind a cached registry must
-  // not replace a working app with an error screen: the cached chains remain
-  // correct, and a relayer that is down surfaces in `HealthIndicator` and again
-  // at the first action needing it.
-  if (registry.length === 0) {
-    // Unreachable and empty are distinct: `loadChainRegistry` throws for the
-    // former and resolves `[]` for the latter, so a 502 is not reported as an
-    // empty registry and the retry below has something to act on.
-    if (query.error) {
-      return (
-        <ChainNotice tone="err" onRetry={() => void query.refetch()}>
-          Could not reach the relayer to find out which networks are available.{" "}
-          {query.error.message}
-        </ChainNotice>
-      );
-    }
-    return (
-      <ChainNotice tone="err" onRetry={() => void query.refetch()}>
-        The relayer is not serving any network this app can use.
-      </ChainNotice>
-    );
-  }
-  return <>{children}</>;
-}
-
-/// Stands in for the entire app while the registry is unavailable, with enough
-/// layout not to read as a rendering failure.
-function ChainNotice({
-  children,
-  tone,
-  onRetry,
-}: {
-  children: ReactNode;
-  tone?: "err";
-  onRetry?: () => void;
-}) {
-  return (
-    <div className="main">
-      <div className={tone === "err" ? "err" : "muted txt-sm"}>{children}</div>
-      {onRetry ? (
-        <button type="button" className="btn mt-8" onClick={onRetry}>
-          try again
-        </button>
-      ) : null}
-    </div>
-  );
 }

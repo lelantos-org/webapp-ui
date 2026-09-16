@@ -1,8 +1,8 @@
 // Pure derivation: connection + build state → user-facing wallet status.
 
-import type { WalletApi } from "@lelantos-org/sdk/wallet";
+import type { WalletApi } from "@lelantos-org/sdk";
+import type { WalletStatus } from "./context";
 import type { Session } from "./session";
-import type { WalletStatus } from "./use-wallet";
 
 export interface WalletStatusInputs {
   session: Session;

@@ -11,10 +11,10 @@
 // behind a chevron is a dead submit button with no visible cause.
 
 import { type ReactNode, useEffect, useId, useState } from "react";
+import { useCollapseTransition } from "@/shared/hooks/use-collapse-transition";
 import { cx } from "@/shared/lib/cx";
 import { PANEL_COLLAPSE_MS } from "@/shared/lib/motion";
-import { ChevronDownGlyph } from "./glyphs";
-import { useCollapseTransition } from "./use-collapse-transition";
+import { ChevronDownGlyph } from "./icons/glyphs";
 import "./DetailsDisclosure.css";
 
 export interface DetailsDisclosureProps {

@@ -43,6 +43,7 @@ vi.mock("@/features/fees", () => ({
   shownFee: () => undefined,
   useFeePreview: () => ({}),
   useFeePanel: () => ({ block: undefined, pending: false, relayerAmount: 0n }),
+  withSymbol: (asset: unknown) => asset,
 }));
 vi.mock("@/features/wallet", () => ({
   SyncNotice: () => null,
@@ -71,7 +72,7 @@ vi.mock("@/features/claim-links", async (importOriginal) => ({
   VaultSummary: () => null,
 }));
 vi.mock("./components/GenerateModal", () => ({ GenerateModal: () => null }));
-vi.mock("./components/ClaimLinkResult", () => ({ ClaimLinkResult: () => null }));
+vi.mock("./components/LinkResult", () => ({ LinkResult: () => null }));
 
 function renderForm() {
   render(<GenerateLinkForm />, { wrapper: routerWrapper });

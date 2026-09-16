@@ -7,7 +7,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { ROUTER_FUTURE } from "@/app/router-future";
+import { ROUTER_FUTURE } from "@/app/providers/router-future";
 
 type WrapperProps = { children: ReactNode };
 

@@ -7,8 +7,8 @@
 
 import { env } from "@/config/env";
 import { createLogger } from "@/shared/lib/logger";
-import { localStore, writeJson } from "@/shared/lib/storage";
-import { LOCAL_KEYS } from "@/shared/lib/storage-keys";
+import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
+import { localStore, writeJson } from "@/shared/lib/storage/safe";
 import { entriesFromResponse } from "./parse";
 import type { ChainEntry } from "./types";
 
@@ -28,7 +28,8 @@ const REGISTRY_TIMEOUT_MS = 10_000;
 /// namespace is per-origin as well as per-path. Both appear because the bundle
 /// is a merge of the two: keyed on the relayer alone, repointing only the
 /// registry would read back chains described by a registry no longer in use.
-/// Bump `v2` when the expected shape changes.
+/// Bump its version in `shared/lib/storage/keys.ts` when the expected shape
+/// changes.
 const REGISTRY_CACHE_KEY = LOCAL_KEYS.chainRegistry(env.registryUrl, env.relayerUrl);
 
 /// The last registry this browser saw, if any.
@@ -68,7 +69,7 @@ async function getJson(label: string, url: string): Promise<unknown> {
 
 /// The chains this deployment can talk to.
 ///
-/// Reads both services: registry-webserver for what each chain is and what is
+/// Reads both services: protocol-webserver for what each chain is and what is
 /// registered on it, the relayer for what it will do on each. `parse.ts` keeps
 /// only the chains both describe, and only where their two accounts agree.
 ///

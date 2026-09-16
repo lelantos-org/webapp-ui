@@ -1,4 +1,6 @@
-// The MetaQuoter route behind the swap form.
+// The priced swap behind the form: `wallet.quoteSwap`, which asks MetaQuoter for
+// the route and sizes every figure — what reaches the venue, the credited note,
+// the fees — the way the swap will.
 //
 // A query rather than a click-driven mutation, so a quote never expires into a
 // disabled submit button and a card asking for a manual refresh.
@@ -8,15 +10,14 @@
 // key, and the refresh runs on `pollInterval`, widening while the user is idle
 // and stopping on a hidden tab.
 
-import { fetchSwapQuote, type SwapQuote, type SwapQuoteRequest } from "@lelantos-org/sdk/quoter";
+import type { QuoteSwapOptions, SwapQuote } from "@lelantos-org/sdk";
 import { skipToken, type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import { env } from "@/config/env";
-import { useDebouncedValue } from "@/shared/lib/use-debounced-value";
+import { useActiveChain } from "@/features/chain";
+import { useWalletInstance } from "@/features/wallet";
+import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { usePolling } from "@/shared/query/cadence";
 import { queryKeys } from "@/shared/query/keys";
-
-export type QuoteRequest = SwapQuoteRequest;
 
 /// How long a quote is honoured before the form refuses to submit against it.
 /// Exported so the form's age counter and this module's refresh cadence stay in
@@ -38,27 +39,30 @@ const DEBOUNCE_MS = 300;
 /// While `stale` is set, `data` describes an earlier amount or pair, and the
 /// submit must treat it as absent: a quote binds a route into the proof, so one
 /// fetched for a different amount is the wrong route.
+///
+/// `swap` itself refuses a quote whose figures have moved (`QUOTE_STALE`); the
+/// form re-quotes on that refusal (`useSwap`), as it does on this age limit.
 export type QuoteResult = UseQueryResult<SwapQuote> & { stale: boolean };
 
 /// Quote for `request`, or nothing when there is not yet a complete one.
 ///
 /// `undefined` disables the query outright, which is how the form says the
 /// pair is incomplete, the assets match, or the amount does not validate.
-export function useSwapQuote(request: QuoteRequest | undefined): QuoteResult {
+export function useSwapQuote(request: QuoteSwapOptions | undefined): QuoteResult {
+  const wallet = useWalletInstance();
+  const { chainId } = useActiveChain();
   const pinned = usePinnedRequest(request);
   const settled = useDebouncedValue(pinned, DEBOUNCE_MS);
   const stale = settled !== pinned;
 
   const query = useQuery<SwapQuote>({
-    queryKey: queryKeys.swapQuote(requestKey(settled)),
+    // Per chain and wallet as well as per trade: asset ids name different tokens
+    // on another chain, and the quote is sized against this wallet's relayer.
+    queryKey: swapQuoteKey(chainId, wallet?.address, settled),
     queryFn:
-      settled === undefined
+      settled === undefined || !wallet
         ? skipToken
-        : () => {
-            const baseUrl = env.metaquoterUrl;
-            if (!baseUrl) throw new Error("VITE_METAQUOTER_URL not configured");
-            return fetchSwapQuote(baseUrl, settled);
-          },
+        : ({ signal }) => wallet.quoteSwap({ ...settled, signal }),
     ...usePolling(REFRESH_MS),
     // Under the refresh interval, so returning to the tab does not buy a quote
     // the running refresh was about to fetch.
@@ -81,7 +85,7 @@ export function useSwapQuote(request: QuoteRequest | undefined): QuoteResult {
 /// state it sets causes the next one: the value never settles, the component
 /// re-renders on a 300ms loop, and each pass buys a quote. Pinning the object to
 /// its value gives the debounce the identity it assumes.
-function usePinnedRequest(request: QuoteRequest | undefined): QuoteRequest | undefined {
+function usePinnedRequest(request: QuoteSwapOptions | undefined): QuoteSwapOptions | undefined {
   const key = requestKey(request);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `key` is `request` flattened; depending on the object reintroduces the loop described above
   return useMemo(() => request, [key]);
@@ -91,9 +95,21 @@ function usePinnedRequest(request: QuoteRequest | undefined): QuoteRequest | und
 /// identity.
 ///
 /// A string rather than an array of parts, because react-query hashes keys with
-/// `JSON.stringify`, which throws on the two `bigint` fields, and because the
-/// memo above needs a value a dependency array can compare with `Object.is`.
-function requestKey(r: QuoteRequest | undefined): string {
+/// `JSON.stringify`, which throws on the `bigint` fields, and because the memo
+/// above needs a value a dependency array can compare with `Object.is`.
+function requestKey(r: QuoteSwapOptions | undefined): string {
   if (!r) return "none";
-  return [r.chainId, r.tokenIn, r.tokenOut, r.amountIn, r.slippageBps].join("|");
+  const side = r.gross === undefined ? "net" : "gross";
+  const amount = r.gross ?? r.net;
+  const figure = typeof amount === "object" ? `base:${amount.baseUnits}` : String(amount);
+  return [String(r.assetIn), String(r.assetOut), side, figure, String(r.slippageBps)].join("|");
+}
+
+/// The quote's cache key: the trade, on this chain, for this wallet.
+export function swapQuoteKey(
+  chainId: bigint,
+  account: string | undefined,
+  request: QuoteSwapOptions | undefined,
+) {
+  return queryKeys.swapQuote(`${chainId}|${account ?? "none"}|${requestKey(request)}`);
 }

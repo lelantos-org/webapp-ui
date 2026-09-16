@@ -5,7 +5,7 @@
 // no PRF output" must be a clear refusal rather than a retry or, worse, a key
 // derived from something else. These pin that down.
 
-import { LELANTOS_PRF_SALT } from "@lelantos-org/sdk/keys";
+import { LELANTOS_PRF_SALT } from "@lelantos-org/sdk/primitives";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubWebAuthn } from "@/test/dom";
 

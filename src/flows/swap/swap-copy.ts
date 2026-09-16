@@ -4,12 +4,12 @@
 // Pure, so the Details row, the footnote and the venue badge are testable
 // without a quote query or a fee panel.
 
-import type { SwapQuote } from "@lelantos-org/sdk/quoter";
+import type { SwapVenue } from "@lelantos-org/sdk/services";
 import { type FeeSummaryModel, feeRowsOf, sumByAsset } from "@/features/fees";
 import { formatBaseFixed } from "@/shared/lib/format/asset";
 import { formatBps } from "@/shared/lib/format/money";
 
-const VENUES: Record<SwapQuote["venue"], string> = {
+const VENUES: Record<SwapVenue, string> = {
   univ3: "Uniswap v3",
   univ4: "Uniswap v4",
 };

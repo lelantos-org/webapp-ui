@@ -7,9 +7,9 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { eip1193Store } from "@/features/wallet-kinds";
 import { stubWebAuthn } from "@/test/dom";
-import { announce, detail } from "@/test/eip6963";
-import type { WalletChoice } from "./use-connect-flow";
+import { announce, detail } from "@/test/fakes/eip6963";
 import { useConnectFlow } from "./use-connect-flow";
+import type { WalletChoice } from "./wallet-offerings";
 
 /// Two extensions, so the flow has a choice to put to the user.
 function announceBoth() {

@@ -60,6 +60,17 @@
   }
   .brk { overflow-wrap: anywhere; }
 
+  /* A native input kept in the tab order and the accessibility tree while a
+     drawn control beside it paints the state: a 1px transparent box, taken out
+     of flow. The drawn control carries the focus ring. */
+  .input-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+  }
+
   /* The same string at two lengths: the full one wherever there is room, the
      short one on a phone. Each pair is written side by side in the markup. */
   .only-narrow { display: none; }

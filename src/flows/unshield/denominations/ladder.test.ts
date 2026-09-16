@@ -1,7 +1,7 @@
-import { RAY, universalLadder } from "@lelantos-org/sdk/core";
+import { PUBLIC_IN_MAX, RAY, universalLadder } from "@lelantos-org/sdk/protocol";
 import { describe, expect, it } from "vitest";
 import type { AssetMeta } from "@/features/op-form";
-import { PUBLIC_IN_MAX, parseAmountForAsset } from "@/shared/domain/units";
+import { parseAmountInput } from "@/shared/lib/format/asset";
 import { type LadderInputs, ladderModel } from "./ladder";
 
 // Mainnet USDC: 6 decimals, unit scale, so a circuit unit is a base unit and the
@@ -57,7 +57,7 @@ describe("ladderModel options", () => {
   // The property the whole module rests on: a chip writes text, the form parses
   // that text, and the parsed value is what `withdraw` publishes. A formatter
   // that did not invert would put the user off the ladder while telling them
-  // they were on it. `ladder.ts` writes the text and `parseAmountForAsset` reads
+  // they were on it. `ladder.ts` writes the text and `parseAmountInput` reads
   // it back, so if only one side learns about the index — or about a capped
   // label — the chip silently stops meaning what it says.
   it.each<[string, AssetMeta, readonly bigint[]]>([
@@ -69,7 +69,7 @@ describe("ladderModel options", () => {
     const { options } = model({ ladder, meta });
     expect(options.length).toBeGreaterThan(0);
     for (const { value, text } of options) {
-      expect(parseAmountForAsset(text, meta.decimals, meta.scale, meta.index)).toBe(value);
+      expect(parseAmountInput(text, meta)).toBe(value);
     }
   });
 
@@ -215,10 +215,8 @@ describe("ladderModel source", () => {
     ladderModel({ ladder: DERIVED, meta: MDAI, amount: undefined, max: undefined, ...over });
 
   /**
-   * The behaviour change this migration is about. An asset outside the old
-   * table used to get "round amounts" wording and no claim of a crowd; the SDK
-   * now derives the same rungs for every wallet holding the asset, so there is
-   * nothing left that is round-but-not-shared.
+   * The SDK derives the same rungs for every wallet holding an asset, so every
+   * rung is shared: there is no round-but-not-shared case.
    */
   it("reads every asset's rungs as shared, table or not", () => {
     expect(model({ amount: TWENTY }).notice?.text).toContain("is a shared denomination");

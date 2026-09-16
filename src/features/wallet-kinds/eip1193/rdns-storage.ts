@@ -7,8 +7,8 @@
 //   - the *preferred* rdns is a lasting choice that must outlive a session, so
 //     the picker can order by it on the connect following a disconnect.
 
-import { localStore } from "@/shared/lib/storage";
-import { LOCAL_KEYS } from "@/shared/lib/storage-keys";
+import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
+import { localStore } from "@/shared/lib/storage/safe";
 
 /// The wallet currently attached. Cleared on disconnect.
 const ATTACHED_KEY = LOCAL_KEYS.walletRdns;

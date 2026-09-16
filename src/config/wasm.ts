@@ -1,6 +1,7 @@
-import { configureJubjubWasm } from "@lelantos-org/sdk/crypto";
+import { configureJubjubWasm } from "@lelantos-org/sdk/primitives";
 import jubjubWasmUrl from "@lelantos-org/sdk/wasm/jubjub/wasm?url";
 import { createLogger } from "@/shared/lib/logger";
+import { whenIdle } from "@/shared/lib/when-idle";
 
 const log = createLogger("wasm");
 
@@ -30,6 +31,5 @@ export function prefetchWasm(): void {
       /* The network may be offline; the first real call retries. */
     });
   };
-  if (typeof requestIdleCallback === "function") requestIdleCallback(start);
-  else setTimeout(start, 0);
+  whenIdle(start);
 }

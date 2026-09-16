@@ -5,13 +5,10 @@ import { env } from "@/config/env";
 /// The `NetworkPreset` a wallet connects with, covering both the main wallet
 /// and the ephemeral claim-link wallet.
 ///
-/// `relayerUrl` and `fmdUrl` come from `env` rather than the entry: one
-/// deployment of each serves every chain, selecting by chainId in the path or
-/// query. Only per-chain values ride on `ChainEntry`.
-///
-/// Async because `ChainEntry.maspAddress` is resolved from the relayer when the
-/// registry loads, and callers already await this.
-export async function networkPreset(chain: ChainEntry): Promise<NetworkPreset> {
+/// `relayerUrl`, `fmdUrl` and `quoterUrl` come from `env` rather than the entry:
+/// one deployment of each serves every chain, selecting by chainId in the path
+/// or query. Only per-chain values ride on `ChainEntry`.
+export function networkPreset(chain: ChainEntry): NetworkPreset {
   return {
     chainId: chain.chainId,
     treeDepth: chain.treeDepth,
@@ -23,9 +20,13 @@ export async function networkPreset(chain: ChainEntry): Promise<NetworkPreset> {
     // optional keys mean "absent".
     ...(chain.permit2Address ? { permit2Address: chain.permit2Address } : {}),
     // Carried on the preset so `connect()` can build the chain layer itself.
-    // Without it the adapter it builds reports native-ETH deposits and
-    // `withdrawEth` as unsupported, and every caller would have to construct a
-    // `ViemChainAdapter` by hand.
+    // Without it the adapter it builds reports native deposits and withdrawals
+    // as unsupported (`capabilities.nativeDeposit` / `nativeWithdraw`).
     ...(chain.nativeAdapterAddress ? { nativeAdapterAddress: chain.nativeAdapterAddress } : {}),
+    // What `quoteSwap` prices against and `swap` binds. Without a quoter the
+    // wallet reports `capabilities.swap` false; without a wrapper here the SDK
+    // falls back to the relayer's advertised one.
+    ...(env.metaquoterUrl ? { quoterUrl: env.metaquoterUrl } : {}),
+    ...(chain.swapWrapperAddress ? { swapWrapperAddress: chain.swapWrapperAddress } : {}),
   };
 }

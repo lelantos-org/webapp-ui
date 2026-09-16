@@ -1,4 +1,4 @@
-// The two services' accounts of a chain, as `/v1/chains` (registry-webserver)
+// The two services' accounts of a chain, as `/v1/chains` (protocol-webserver)
 // and the relayer's `/chains` serve them.
 
 export const MASP = "0x0165878A594ca255338adfa4d48449f69242Eb8F";

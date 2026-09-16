@@ -6,22 +6,28 @@
 // anything needs it — deposit, transfer, withdraw and swap — and none of it
 // depends on how the op is then performed: nothing here imports `ops` or a flow.
 
-export { FeeDetails } from "./FeeDetails";
-export { FeeSummary } from "./FeeSummary";
-export type { FeeBlock } from "./fee-block";
-export { feeBlockReason } from "./fee-block";
-export { crossAssetNote, feeLine, feeTotalUsd } from "./fee-copy";
-export type { FeeRow, FeeSummaryModel, RowAsset } from "./fee-summary";
-export { allPriced, feeLegFor, feeRowsOf, feeSummary, sumByAsset } from "./fee-summary";
-export type { FeePanel } from "./use-fee-panel";
-export { useFeePanel } from "./use-fee-panel";
+export type { FeeBlock } from "./model/fee-block";
+export { feeBlockReason } from "./model/fee-block";
+export { crossAssetNote, REVIEW_FRAC } from "./model/fee-copy";
+export type { FeeSummaryModel, RowAsset } from "./model/fee-summary";
+export {
+  allPriced,
+  feeLegFor,
+  feeRowsOf,
+  feeSummary,
+  feeTotalUsd,
+  sumByAsset,
+} from "./model/fee-summary";
+export { FeeDetails } from "./panel/FeeDetails";
+export { FeeLineSummary } from "./panel/FeeLineSummary";
+export { FeeSummary } from "./panel/FeeSummary";
+export type { FeePanel } from "./panel/use-fee-panel";
+export { useFeePanel, withSymbol } from "./panel/use-fee-panel";
 export {
   feeIncoming,
-  fetchAssetFeeInputs,
   settledFee,
   shownFee,
   useAssetFeeBps,
   useFeePreview,
-} from "./use-fee-preview";
-export type { FeeQuoteResult } from "./use-fee-quote";
-export { feeOptionFor, resolveFeeOption, useDepositFee, useFeeQuote } from "./use-fee-quote";
+} from "./quote/use-fee-preview";
+export { feeOptionFor, resolveFeeOption, useFeeQuote } from "./quote/use-fee-quote";

@@ -1,33 +1,29 @@
 // @vitest-environment jsdom
+
+import { circuitAmount, type QuoteSwapOptions } from "@lelantos-org/sdk";
 import { renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { queryWrapper } from "@/test/render";
-import { type QuoteRequest, useSwapQuote } from "./use-swap-quote";
+import { useSwapQuote } from "./use-swap-quote";
 
-const fetchSwapQuote = vi.hoisted(() => vi.fn());
+const quoteSwap = vi.hoisted(() => vi.fn());
 
-vi.mock("@lelantos-org/sdk/quoter", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@lelantos-org/sdk/quoter")>()),
-  fetchSwapQuote,
+vi.mock("@/features/wallet", () => ({
+  useWalletInstance: () => ({ address: "lelantos1me", quoteSwap }),
 }));
-
-vi.mock("@/config/env", () => ({ env: { metaquoterUrl: "https://quoter.test" } }));
+vi.mock("@/features/chain", async () =>
+  (await import("@/test/fakes/chain")).activeChainHooks({ chainId: 31337n }),
+);
 
 /// A fresh object every call, as the form builds it — the identity trap this
 /// hook has to absorb.
-function request(amountIn: bigint): QuoteRequest {
-  return {
-    chainId: 31337n,
-    tokenIn: "0x1111111111111111111111111111111111111111",
-    tokenOut: "0x2222222222222222222222222222222222222222",
-    amountIn,
-    slippageBps: 50,
-  } as QuoteRequest;
+function request(gross: bigint): QuoteSwapOptions {
+  return { assetIn: 1n, assetOut: 2n, gross: circuitAmount(gross), slippageBps: 50 };
 }
 
 describe("useSwapQuote", () => {
   beforeEach(() => {
-    fetchSwapQuote.mockImplementation(async () => ({ venue: "test", minOut: 1n, expectedOut: 2n }));
+    quoteSwap.mockImplementation(async () => ({ venue: "test", minOut: 1n, expectedOut: 2n }));
   });
 
   it("settles on a request the caller rebuilds every render", async () => {
@@ -46,7 +42,7 @@ describe("useSwapQuote", () => {
 
     rerender();
     expect(result.current.stale).toBe(false);
-    expect(fetchSwapQuote).toHaveBeenCalledTimes(1);
+    expect(quoteSwap).toHaveBeenCalledTimes(1);
   });
 
   it("goes stale the moment the request changes, before the new quote lands", async () => {
@@ -69,6 +65,6 @@ describe("useSwapQuote", () => {
     const { result } = renderHook(() => useSwapQuote(undefined), { wrapper: queryWrapper });
 
     expect(result.current.data).toBeUndefined();
-    expect(fetchSwapQuote).not.toHaveBeenCalled();
+    expect(quoteSwap).not.toHaveBeenCalled();
   });
 });

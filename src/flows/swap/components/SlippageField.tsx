@@ -5,10 +5,9 @@
 // figure *means* is said once, under the Swap button (`revertFootnote`), rather
 // than repeated here.
 
+import { cx } from "@/shared/lib/cx";
 import { slippagePct } from "../swap-copy";
 import "./SlippageField.css";
-
-const SLIPPAGE_PRESETS_BPS = [10, 50, 100] as const;
 
 interface SlippageFieldProps {
   bps: number;
@@ -16,19 +15,19 @@ interface SlippageFieldProps {
   error?: string | undefined;
 }
 
-const SLIP_META: Record<number, { tag: string; tone: "ok" | "warn" }> = {
-  10: { tag: "Tight", tone: "ok" },
-  50: { tag: "Default", tone: "ok" },
-  100: { tag: "Loose", tone: "warn" },
-};
+/// The presets, in order, and the word for what each one risks.
+const SLIPPAGE_PRESETS: readonly { bps: number; tag: string; tone: "ok" | "warn" }[] = [
+  { bps: 10, tag: "Tight", tone: "ok" },
+  { bps: 50, tag: "Default", tone: "ok" },
+  { bps: 100, tag: "Loose", tone: "warn" },
+];
 
 export function SlippageField({ bps, onChange, error }: SlippageFieldProps) {
   return (
     <fieldset className="slip">
       <legend className="slip__lbl">Max slippage</legend>
       <div className="slip__opts">
-        {SLIPPAGE_PRESETS_BPS.map((b) => {
-          const m = SLIP_META[b];
+        {SLIPPAGE_PRESETS.map(({ bps: b, tag, tone }) => {
           const on = bps === b;
           return (
             // Native radios: the browser supplies the arrow-key navigation and
@@ -36,18 +35,22 @@ export function SlippageField({ bps, onChange, error }: SlippageFieldProps) {
             // The input is visually hidden and the label carries the styling.
             <label
               key={b}
-              className={`slip__opt ${on ? "slip__opt--on" : ""} ${m?.tone === "warn" ? "slip__opt--warn" : ""}`}
+              className={cx(
+                "slip__opt",
+                on && "slip__opt--on",
+                tone === "warn" && "slip__opt--warn",
+              )}
             >
               <input
                 type="radio"
                 name="slippage-preset"
-                className="slip__radio"
+                className="slip__radio input-hidden"
                 value={b}
                 checked={on}
                 onChange={() => onChange(b)}
               />
               <span className="slip__pct">{slippagePct(b)}</span>
-              <span className="slip__sub">{m?.tag}</span>
+              <span className="slip__sub">{tag}</span>
             </label>
           );
         })}

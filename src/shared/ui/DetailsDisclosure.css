@@ -60,7 +60,6 @@
   }
 
   @media (max-width: 480px) {
-    .details__lbl { font-size: var(--fs-15); }
     .details__sum { font-size: var(--fs-14); }
   }
 }

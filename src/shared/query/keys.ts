@@ -31,7 +31,7 @@ function setupStatusOf(chainId?: bigint, payer?: string) {
 }
 
 export const queryKeys = {
-  /// The chains this deployment serves, from registry-webserver and the relayer.
+  /// The chains this deployment serves, from protocol-webserver and the relayer.
   chainRegistry: () => ["chain-registry"] as const,
 
   /// USD prices. Not chain-scoped: the body covers every chain the deployment
@@ -80,8 +80,7 @@ export const queryKeys = {
     account: string | undefined,
     asset: bigint | undefined,
     holdings: string,
-    crossAssetFee: boolean,
-    sameAssetFee: bigint,
+    spend: { kind: string; feeAsset: bigint | undefined; native: boolean; quotedFee: bigint },
   ) =>
     [
       "spendable-max",
@@ -89,8 +88,10 @@ export const queryKeys = {
       account ?? null,
       big(asset),
       holdings,
-      crossAssetFee,
-      sameAssetFee.toString(),
+      spend.kind,
+      big(spend.feeAsset),
+      spend.native,
+      big(spend.quotedFee),
     ] as const,
 
   /// The yield index series for every earning asset on one chain.

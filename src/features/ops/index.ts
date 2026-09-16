@@ -15,5 +15,5 @@ export type {
   TransferCall,
   WithdrawCall,
 } from "./sdk-adapter";
-export { swapCredit } from "./swap-credit";
+export { spendStep } from "./sdk-adapter";
 export { useTxTracker } from "./use-tx-tracker";

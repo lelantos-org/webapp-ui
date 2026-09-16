@@ -4,13 +4,12 @@
 // predicate the whole submit path rests on: `undefined` keeps the query off,
 // and since the request *is* the cache key, changing any part of it invalidates
 // the previous quote by construction. Getting it wrong does not misrender
-// anything — it quotes a route the proof will not match.
+// anything — it quotes a trade the form is not holding.
 
+import { circuitAmount, type QuoteSwapOptions } from "@lelantos-org/sdk";
 import type { RegisteredAsset } from "@/config/chains";
-import type { QuoteRequest } from "./use-swap-quote";
 
 export interface QuoteRequestInput {
-  chainId: bigint;
   /// Resolved registry entries, or `undefined` while the pair is incomplete.
   inAsset: RegisteredAsset | undefined;
   outAsset: RegisteredAsset | undefined;
@@ -23,38 +22,29 @@ export interface QuoteRequestInput {
   slippageBps: number;
 }
 
-/// The quote to fetch, or `undefined` when the form is not holding a complete,
-/// valid, non-degenerate trade.
+/// The `quoteSwap` arguments, or `undefined` when the form is not holding a
+/// complete, valid, non-degenerate trade.
 ///
-/// MetaQuoter quotes against token base units, hence `amount * scale`. MASP
-/// skims its fee off the gross publicOut before the wrapper sees the input, so
-/// the adapter-side input is slightly lower; the user's `slippageBps` floor
-/// absorbs the difference.
-///
-/// Deliberately `amount * scale` without the yield index, unlike the display
-/// conversions (`toBaseUnits`). The quote has to describe the swap the SDK will
-/// submit, and `executeSwap` sends the wrapper `amountIn = publicOut * scale`
-/// less the fee — no index — and sizes the B-note with the same plain scale
-/// (`sizeBNote`). Quoting an indexed figure would ask the venue about an input
-/// the relayer never forwards.
+/// The typed amount is the swap's `gross`: the `publicOut` leaving the pool, the
+/// figure the balance is checked against. The SDK derives what reaches the venue
+/// from it (less the withdraw fee, through the yield index) exactly as the swap
+/// will, so the form prices nothing itself.
 export function quoteRequest({
-  chainId,
   inAsset,
   outAsset,
   amount,
   amountValid,
   slippageBps,
-}: QuoteRequestInput): QuoteRequest | undefined {
+}: QuoteRequestInput): QuoteSwapOptions | undefined {
   if (!inAsset || !outAsset) return undefined;
   // A pair of the same asset is not a trade, and MetaQuoter has no route for
   // it. Compared by id rather than by address, matching `swapSchema`'s refine.
   if (inAsset.id === outAsset.id) return undefined;
   if (!amountValid || amount === undefined) return undefined;
   return {
-    chainId,
-    tokenIn: inAsset.token,
-    tokenOut: outAsset.token,
-    amountIn: amount * inAsset.scale,
+    assetIn: inAsset.id,
+    assetOut: outAsset.id,
+    gross: circuitAmount(amount),
     slippageBps,
   };
 }

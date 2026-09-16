@@ -15,7 +15,7 @@ permissions:
 
 env:
   # The service URLs `config/env.ts` requires, matching `.env.example` and the
-  # values vitest pins. Per-chain values come from registry-webserver's
+  # values vitest pins. Per-chain values come from protocol-webserver's
   # /v1/chains at runtime, so a build no longer needs a chain described to it —
   # which is what the zero-address placeholders here used to fake.
   VITE_REGISTRY_URL: "/registry"

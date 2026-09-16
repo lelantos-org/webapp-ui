@@ -1,6 +1,6 @@
 import { useSwitchChain } from "@/features/wallet-kinds";
-import { ArrowRightGlyph } from "@/shared/ui/glyphs";
 import { ChainIcon } from "@/shared/ui/icons/ChainIcon";
+import { ArrowRightGlyph } from "@/shared/ui/icons/glyphs";
 import type { ChainMismatch } from "../chain-guard";
 import "./claim-cards.css";
 

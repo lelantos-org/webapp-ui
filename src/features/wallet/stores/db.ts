@@ -1,7 +1,7 @@
 import { type IDBPDatabase, openDB } from "idb";
-import { IDB_NAME } from "@/shared/lib/storage-keys";
+import { IDB_NAME } from "@/shared/lib/storage/keys";
 
-/// Single `lelantos-wallet` database shared by the note, tree and nullifier
+/// Single `lelantos` database shared by the note, tree and nullifier
 /// stores.
 ///
 /// Centralised because `openDB` calls that disagree on the version deadlock: the
@@ -15,16 +15,8 @@ import { IDB_NAME } from "@/shared/lib/storage-keys";
 /// `deriving` with nothing logged.
 const DB_NAME = IDB_NAME;
 
-/// Bump on any schema change. History:
-///   2 — notes + tree
-///   3 — added nullifiers; tree moved to chunked records
-///   4 — multichain: records dropped, not migrated
-///   5 — nullifiers truncated to 10 bytes; records dropped, not migrated
-///   6 — record keys digest the EOA instead of spelling it out; records
-///       dropped, not migrated
-///   7 — record keys carry the pool deployment as well as the chain; records
-///       dropped, not migrated
-const VERSION = 7;
+/// Bump on any schema change.
+const VERSION = 1;
 
 export const NOTE_STORE = "notes";
 export const TREE_STORE = "tree";
@@ -76,41 +68,7 @@ export function walletDb(): Promise<IDBPDatabase<WalletSchema>> {
     terminated() {
       dbp = undefined;
     },
-    upgrade(db, oldVersion) {
-      // Reaching the current version from any earlier one discards the stores
-      // rather than migrating them.
-      //
-      // Pre-v4 records were written by a single-chain build. Their keys carry a
-      // chainId, but it came from a build-time constant, so nothing in the data
-      // proves which deployment it describes. Re-keying on that assumption risks
-      // presenting one chain's notes and Merkle tree as another's, surfacing as
-      // a wrong root and a rejected spend rather than an error.
-      //
-      // v4 records hold full-width nullifiers, which the server no longer sends;
-      // the SDK compares against the low 10 bytes, so a kept record would match
-      // nothing, the wallet would believe no note was spent, and it would build
-      // a double-spend that reverts on chain.
-      //
-      // v5 records are keyed by a full-length address. Re-keying them would
-      // require holding both spellings to find each record, and keeping them
-      // would leave plaintext key names on disk for the life of the wallet.
-      //
-      // v6 records name a chain but not a deployment, so a pool redeployed
-      // under the same chain id — the ordinary state of a local devnet — reads
-      // back the previous deployment's notes and Merkle tree. That surfaces as
-      // a local root the chain has never held and a spend that cannot be
-      // prepared, and no amount of syncing repairs it: the feed is append-only.
-      // The v7 key carries the deployment, so a redeploy lands in a fresh
-      // namespace; the records under the old one are dropped here because
-      // nothing can tell which deployment they came from.
-      //
-      // Everything here is a cache of chain state, so dropping it costs one
-      // resync.
-      if (oldVersion > 0 && oldVersion < VERSION) {
-        for (const name of STORES) {
-          if (db.objectStoreNames.contains(name)) db.deleteObjectStore(name);
-        }
-      }
+    upgrade(db) {
       for (const name of STORES) {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name);
       }

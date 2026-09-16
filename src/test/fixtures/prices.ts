@@ -1,7 +1,7 @@
 // Price and yield fixtures for the portfolio's arithmetic.
 
-import { type PriceMap, priceKey } from "@/features/assets/prices";
-import type { YieldGain } from "@/features/assets/yield-gains";
+import { type PriceMap, priceKey } from "@/features/assets/prices/prices";
+import type { YieldGain } from "@/features/assets/yield/yield-gains";
 
 /// A price map from `token → USD`.
 ///

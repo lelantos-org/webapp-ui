@@ -15,7 +15,6 @@ describe("requireActions", () => {
       deposit: async () => ({ txHash: "x" }),
       transfer: async () => ({ txHash: "x" }),
       withdraw: async () => ({ txHash: "x" }),
-      withdrawEth: async () => ({ txHash: "x" }),
       swap: async () => ({ txHash: "x" }),
     } as unknown as ShieldedActions;
     expect(requireActions(a)).toBe(a);

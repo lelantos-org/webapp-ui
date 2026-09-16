@@ -38,16 +38,9 @@
   }
   .slip__opt:hover { border-color: var(--fg-mute); color: var(--fg); }
 
-  /* The radio stays focusable and screen-reader visible; the label is the
-     rendered control, so it carries the focus ring. */
-  .slip__radio {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: 0;
-    opacity: 0;
-    pointer-events: none;
-  }
+  /* The radio is `.input-hidden`: focusable and screen-reader visible, while
+     the label is the rendered control and carries the focus ring. */
+  .slip__radio { pointer-events: none; }
   .slip__opt:has(.slip__radio:focus-visible) {
     outline: var(--ring);
     outline-offset: 2px;

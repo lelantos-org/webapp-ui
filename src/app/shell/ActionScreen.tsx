@@ -4,6 +4,7 @@ import { useActiveChainOrUndefined } from "@/features/chain";
 import { ConnectedGate } from "@/features/wallet";
 import { cx } from "@/shared/lib/cx";
 import { Notice } from "@/shared/ui/Notice";
+import { LoadingFallback } from "./LoadingFallback";
 import { useChainChangeNotice } from "./use-chain-change-notice";
 import "./ActionScreen.css";
 
@@ -12,14 +13,6 @@ export interface ActionScreenProps {
   /// Column width: `narrow` 560 (every single-card action), `wide` 1120 (Send by
   /// link's two columns), `vault` 900 (the claim-link vault).
   width?: "narrow" | "wide" | "vault";
-}
-
-function FormFallback() {
-  return (
-    <div role="status" aria-busy="true" aria-label="loading">
-      <div className="skel skel--card" />
-    </div>
-  );
 }
 
 /// The shell every action route renders in: the connection gate, the chain-keyed
@@ -53,7 +46,7 @@ export function ActionScreen({ children, width = "narrow" }: ActionScreenProps) 
               You were on {leftChain}.
             </Notice>
           ) : null}
-          <Suspense fallback={<FormFallback />}>
+          <Suspense fallback={<LoadingFallback />}>
             {/* Keyed on the chain so a network switch recreates the form's
                 react-hook-form state instead of carrying it across.
                 Asset ids are only unique *within* a chain, so a retained `asset`

@@ -10,8 +10,8 @@
 // The id is not a secret: it rides in `allowCredentials` on every assertion and
 // authorises nothing alone.
 
-import { localStore, readJson, writeJson } from "@/shared/lib/storage";
-import { LOCAL_KEYS } from "@/shared/lib/storage-keys";
+import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
+import { localStore, readJson, writeJson } from "@/shared/lib/storage/safe";
 
 /// The credential this device knows. Survives a disconnect.
 const CREDENTIAL_KEY = LOCAL_KEYS.passkeyCredential;
@@ -43,11 +43,7 @@ export function rememberCredential(cred: StoredCredential): void {
 
 /// Whether a boot should restore the passkey session.
 export function isAttached(): boolean {
-  if (localStore.get(ATTACHED_KEY) === "1") return true;
-  // Migration: older builds deleted the credential on disconnect, so one present
-  // with no attachment recorded predates this key rather than having been
-  // signed out of.
-  return storedCredential() !== undefined && localStore.get(ATTACHED_KEY) === undefined;
+  return localStore.get(ATTACHED_KEY) === "1";
 }
 
 export function markAttached(): void {

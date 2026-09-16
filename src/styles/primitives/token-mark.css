@@ -43,7 +43,6 @@
   .tok__mark--lg {
     width: 44px;
     height: 44px;
-    border-radius: var(--radius);
     font-family: var(--mono);
     letter-spacing: 0.04em;
   }

@@ -5,17 +5,17 @@
 // transfer runs from an ephemeral wallet built for the link, not through the
 // connected wallet's SDK actions.
 
-import type { TransferResult } from "@lelantos-org/sdk";
 import { useMutation } from "@tanstack/react-query";
 import { useActiveChain } from "@/features/chain";
 import { type GenerateClaimLinkResult, generateClaimLink } from "@/features/claim-links";
 import {
   type ActionMutation,
   type GenerateLinkCall,
+  spendStep,
   trackPostSubmit,
   useTxTracker,
 } from "@/features/ops";
-import { stepsFor, useTxProgress, type WithAsset } from "@/features/tx";
+import { stepsFor, useTxProgress } from "@/features/tx";
 import { useInvalidateWalletState, useWalletInstance } from "@/features/wallet";
 import { currentWalletChainId } from "@/features/wallet-kinds";
 import { toastError } from "@/shared/lib/toast";
@@ -45,20 +45,20 @@ export function useGenerateLink(): ActionMutation<GenerateLinkRequest, GenerateC
         ...(i.feeAsset === undefined ? {} : { feeAsset: i.feeAsset }),
         chainId: chain.chainId,
         currentChainId: currentWalletChainId,
-        onPhase: progress.set,
+        onPhase: (p) => {
+          const step = spendStep(p);
+          if (step !== undefined) progress.set(step);
+        },
       });
     },
-    onSuccess: (r, i) => {
-      // `r.tx` is the SDK `TransferResult`; tagging it with the asset id lets the
-      // tracker drive the pending-tx overlay and the lifecycle.
-      const tagged: WithAsset<TransferResult> = Object.assign(r.tx, { asset: i.asset });
+    onSuccess: (r) => {
       // Through the shared boundary rather than a bare `void track(...)`; see
       // `trackPostSubmit`. Floating it would turn any rejection into an unhandled
       // one on the path that has just produced a bearer key.
       trackPostSubmit(track, {
         label: "claim link",
         kind: "transfer",
-        result: tagged,
+        result: r.tx,
         isSelfTransfer: false,
         onPhase: progress.set,
       });

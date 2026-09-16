@@ -1,6 +1,7 @@
 @layer features {
-  /* The private-channel acknowledgement. A real checkbox, visually hidden, with
-     the drawn box beside it carrying the state and the focus ring. */
+  /* The private-channel acknowledgement. A real checkbox, visually hidden
+     (`.input-hidden`), with the drawn box beside it carrying the state and the
+     focus ring. */
   .linkack {
     position: relative;
     display: flex;
@@ -12,13 +13,6 @@
     border-radius: var(--radius);
     background: var(--bg-2);
     cursor: pointer;
-  }
-  .linkack__input {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: 0;
-    opacity: 0;
   }
   .linkack__box {
     flex: none;

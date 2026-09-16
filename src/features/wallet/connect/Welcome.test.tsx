@@ -7,27 +7,30 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WalletKind } from "@/features/wallet-kinds";
 import { fakeWalletContext } from "@/test/fakes/wallet";
-import type { WalletStatus } from "../session/use-wallet";
-import type { WalletChoice } from "./use-connect-flow";
+import type { WalletStatus } from "../session/context";
 import { Welcome } from "./Welcome";
+import type { WalletChoice } from "./wallet-offerings";
 
 const h = vi.hoisted(() => ({
   status: "disconnected" as WalletStatus,
   kind: undefined as WalletKind | undefined,
   choices: [] as WalletChoice[],
   connect: vi.fn(),
-  attach: vi.fn(),
+  selectKind: vi.fn(),
 }));
 
 vi.mock("@/features/chain", () => ({
   ChainSwitchButtons: () => null,
   SupportedNetworks: () => null,
 }));
+vi.mock("@/features/wallet-kinds", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/wallet-kinds")>()),
+  selectKind: h.selectKind,
+}));
 vi.mock("./use-connect-flow", () => ({
-  attach: h.attach,
   useWalletChoices: () => h.choices,
 }));
-vi.mock("../session/use-wallet", () => ({
+vi.mock("../session/context", () => ({
   useWallet: () =>
     fakeWalletContext({ status: h.status, kind: h.kind, error: "rejected", connect: h.connect }),
 }));
@@ -51,7 +54,7 @@ describe("Welcome", () => {
   it("offers the wallets as the card itself, and attaches the one chosen", () => {
     h.choices = [PASSKEY, METAMASK];
     fireEvent.click(within(card("Choose a wallet")).getByRole("button", { name: /MetaMask/ }));
-    expect(h.attach).toHaveBeenCalledWith(METAMASK);
+    expect(h.selectKind).toHaveBeenCalledWith(METAMASK.kind, METAMASK.id);
   });
 
   it("points Connect wallet at the first row when there are several", () => {

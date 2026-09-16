@@ -1,10 +1,10 @@
-import { useEffect, useId, useRef, useState } from "react";
 import { kindAdapter } from "@/features/wallet-kinds";
+import { copyWithToast } from "@/shared/hooks/use-copy";
 import { shortAddr } from "@/shared/lib/address";
-import { copyWithToast } from "@/shared/lib/use-copy";
-import { useTheme } from "@/shared/lib/use-theme";
-import { PowerGlyph } from "@/shared/ui/glyphs";
-import { useWallet } from "../session/use-wallet";
+import { PowerGlyph } from "@/shared/ui/icons/glyphs";
+import { useWallet } from "../session/context";
+import { AccountMenu } from "./AccountMenu";
+import { accountInitials } from "./account-initials";
 import "./ConnectButton.css";
 
 /// The account control, in whichever state the connection is in.
@@ -76,112 +76,4 @@ export function ConnectButton() {
       />
     </>
   );
-}
-
-/// The phone header's avatar and its menu: copy address, theme, disconnect.
-///
-/// A disclosure of plain buttons rather than an ARIA `menu`: three actions do
-/// not need roving focus, and a `menu` role promises arrow-key behaviour a
-/// screen-reader user would then expect. Escape and a press outside close it,
-/// and Escape returns focus to the avatar so the keyboard is not stranded.
-function AccountMenu({
-  initials,
-  shown,
-  onCopy,
-  onDisconnect,
-}: {
-  initials: string;
-  shown: string;
-  onCopy(): void;
-  onDisconnect(): void;
-}) {
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLSpanElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelId = useId();
-
-  useEffect(() => {
-    if (!open) return;
-    wrapRef.current?.querySelector<HTMLButtonElement>(".account-menu__item")?.focus();
-    const onPointer = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", onPointer);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onPointer);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
-  const run = (action: () => void) => () => {
-    setOpen(false);
-    action();
-  };
-
-  return (
-    <span className="account-menu" ref={wrapRef}>
-      <button
-        ref={triggerRef}
-        type="button"
-        className="account-menu__avatar mono"
-        aria-expanded={open}
-        aria-controls={open ? panelId : undefined}
-        aria-label={`Account ${shown}`}
-        onClick={() => setOpen((o) => !o)}
-      >
-        {initials}
-      </button>
-      {open ? (
-        <div className="account-menu__panel" id={panelId}>
-          <span className="account-menu__addr mono">{shown}</span>
-          <button type="button" className="link-btn account-menu__item" onClick={run(onCopy)}>
-            Copy address
-          </button>
-          {/* Mounted only while open, so it reads the theme in force now rather
-              than the one the header's own toggle last set. It leaves the menu
-              open: the new theme is the confirmation, and unmounting the item
-              in the same commit would drop the effect that stamps it. */}
-          <ThemeItem />
-          <button
-            type="button"
-            className="link-btn account-menu__item account-menu__item--danger"
-            onClick={run(onDisconnect)}
-          >
-            Disconnect
-          </button>
-        </div>
-      ) : null}
-    </span>
-  );
-}
-
-function ThemeItem() {
-  const { theme, toggle } = useTheme();
-  return (
-    <button type="button" className="link-btn account-menu__item" onClick={toggle}>
-      {theme === "dark" ? "Light theme" : "Dark theme"}
-    </button>
-  );
-}
-
-/// Two characters that identify the connected account at a glance.
-///
-/// The Ethereum address when there is one, since that is the account the user's
-/// wallet shows them: the two hex digits after `0x`, lower-cased so the avatar
-/// does not change with checksum casing. A passkey session has no public
-/// account, so the shielded address stands in — the first two characters of its
-/// bech32 data part, after the `lelantos1` prefix every address shares and that
-/// would make every avatar read the same.
-export function accountInitials(eth: string | undefined, shielded: string | undefined): string {
-  if (eth && /^0x[0-9a-f]{2}/i.test(eth)) return eth.slice(2, 4).toLowerCase();
-  if (!shielded) return "";
-  const sep = shielded.lastIndexOf("1");
-  const data = sep > 0 ? shielded.slice(sep + 1) : shielded;
-  return data.slice(0, 2).toLowerCase();
 }

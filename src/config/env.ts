@@ -35,10 +35,8 @@ function opt<T extends z.ZodTypeAny>(schema: T) {
 // requests with `new URL(base + path)`, which throws on a page-relative base.
 // Resolving against the page origin makes both spellings work — see `httpUrl`,
 // which the per-chain URLs in `config/chains/schema.ts` are checked with too.
-const absoluteServiceUrl = httpUrl;
-
-const serviceUrl = url.pipe(absoluteServiceUrl);
-const optServiceUrl = opt(absoluteServiceUrl);
+const serviceUrl = url.pipe(httpUrl);
+const optServiceUrl = opt(httpUrl);
 
 /// Settings global to the deployment. Exported for tests; `env` below is the
 /// parsed singleton.
@@ -62,10 +60,9 @@ export const Schema = z.object({
   metaquoterUrl: optServiceUrl,
 });
 
-export type Env = z.infer<typeof Schema>;
+type Env = z.infer<typeof Schema>;
 
-/// Thrown when the deployment is misconfigured. Named so `main` can distinguish
-/// it from a crash and report accordingly.
+/// Thrown when the deployment is misconfigured.
 class EnvConfigError extends Error {
   constructor(message: string) {
     super(message);

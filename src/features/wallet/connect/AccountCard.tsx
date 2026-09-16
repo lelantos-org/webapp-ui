@@ -1,7 +1,7 @@
 import { QRCodeSVG } from "qrcode.react";
 import { useState } from "react";
-import { copyWithToast } from "@/shared/lib/use-copy";
-import { CopyGlyph, QrGlyph } from "@/shared/ui/glyphs";
+import { copyWithToast } from "@/shared/hooks/use-copy";
+import { CopyGlyph, QrGlyph } from "@/shared/ui/icons/glyphs";
 import "./AccountCard.css";
 
 export interface AccountCardProps {

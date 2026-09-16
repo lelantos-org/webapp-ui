@@ -10,7 +10,7 @@
 
 import { useWallet } from "@/features/wallet";
 import { kindAdapter } from "@/features/wallet-kinds";
-import "../shield.css";
+import "./DepositUnavailable.css";
 
 export function DepositUnavailable({ reason }: { reason?: string | undefined }) {
   const { connect, kind } = useWallet();

@@ -11,11 +11,14 @@
 // `kind === "passkey"` branch belongs on this interface instead.
 
 import type { EthSigner } from "@lelantos-org/sdk";
-import type { Field } from "@lelantos-org/sdk/crypto";
+import type { Field } from "@lelantos-org/sdk/primitives";
 import type { ChainEntry } from "@/config/chains";
 import type { Eip1193Provider } from "./eip1193/provider";
 
 export type WalletKind = "eip1193" | "passkey";
+
+/// Where a kind's store is in its connect lifecycle.
+export type ConnectionStatus = "idle" | "connecting" | "connected" | "error";
 
 /// What `buildWallet` needs to construct the chain layer.
 ///

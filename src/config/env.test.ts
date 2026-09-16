@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { Schema } from "./env";
 
 /// The whole surface now: four service URLs, three of them mandatory. Every
-/// per-chain value comes from registry-webserver's `/v1/chains` and the
+/// per-chain value comes from protocol-webserver's `/v1/chains` and the
 /// relayer's `/chains` at runtime.
 const required = {
   registryUrl: "/registry",

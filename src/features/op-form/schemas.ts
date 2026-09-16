@@ -1,4 +1,5 @@
-import { ADDRESS_HRP, shieldedAddress as brandShieldedAddress } from "@lelantos-org/sdk";
+import { shieldedAddress as brandShieldedAddress } from "@lelantos-org/sdk";
+import { ADDRESS_HRP } from "@lelantos-org/sdk/primitives";
 import { z } from "zod";
 import { DEFAULT_ASSET_ID } from "@/features/assets";
 import { isDecimalString, isPositiveIntegerString } from "@/shared/lib/format/number";
@@ -43,7 +44,7 @@ export function isEvmAddress(value: string): boolean {
 
 /// Field schemas shared across every action form, including the swap form's own
 /// object, so there is one definition of which strings the submit accepts. Each
-/// flow assembles its object from these in its own `schema.ts`.
+/// flow assembles its own form schema from these.
 export const amountField = z.string().refine(isDecimalString, "Enter a positive number");
 export const assetField = z.string().refine(isPositiveIntegerString, "Choose an asset");
 

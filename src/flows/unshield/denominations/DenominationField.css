@@ -1,4 +1,4 @@
-@layer components {
+@layer features {
   /* The withdrawal denomination picker, "Private amounts".
    *
    * Chips rather than a `<select>`: the whole point is that the set is small,

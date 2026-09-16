@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { ADDRESS_HRP } from "@lelantos-org/sdk";
+import { ADDRESS_HRP } from "@lelantos-org/sdk/primitives";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeAsset } from "@/test/fixtures/assets";
@@ -147,7 +147,9 @@ describe("TransferForm", () => {
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Confirm and send" }));
     });
-    expect(sent.calls).toEqual([{ amount: 500_000n, asset: 1n, to: ADDRESS, feeAsset: undefined }]);
+    expect(sent.calls).toEqual([
+      { amount: 500_000n, asset: 1n, recipient: ADDRESS, feeAsset: undefined },
+    ]);
     expect(screen.getByLabelText("You send")).toHaveValue("");
     expect(screen.getByLabelText("To")).toHaveValue(ADDRESS);
   });

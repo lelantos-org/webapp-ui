@@ -11,21 +11,30 @@
 // review closes on any edit to what would be sent (`useReview`), and the send
 // waits on a review that has something to show.
 
-import type { CircuitAmount } from "@lelantos-org/sdk/core";
-import { useCallback, useState } from "react";
-import type { Path } from "react-hook-form";
-import { allPriced, crossAssetNote, FeeDetails } from "@/features/fees";
+import type { CircuitAmount } from "@lelantos-org/sdk";
+import type { Path, PathValue } from "react-hook-form";
+import { allPriced, crossAssetNote, FeeDetails, FeeLineSummary } from "@/features/fees";
 import type { ActionMutation } from "@/features/ops";
-import { formatAssetAmount } from "@/shared/lib/format/asset";
-import type { ActionFormProps } from "./ActionForm";
-import type { AmountHeroProps } from "./AmountHero";
-import type { ReviewPanelProps } from "./ReviewPanel";
-import { reviewFigure } from "./review";
-import { SpendBalance, SpendFeeSummary } from "./SpendParts";
-import { type SpendBlockInput, spendSubmitBlock } from "./spend-block";
-import type { TxCopy } from "./TxOutcome";
-import { type ActionFormApi, type ActionFormValues, useActionSubmit } from "./use-action-form";
-import { type SpendAmount, type SpendAmountInputs, useSpendAmount } from "./use-spend-amount";
+import { type OperationResult, operationOf } from "@/features/tx";
+import { formatAssetAmount, formatAssetFixed } from "@/shared/lib/format/asset";
+import type { AmountHeroProps } from "./amount/AmountHero";
+import type { AssetMeta } from "./amount/amount-validation";
+import {
+  type SpendAmount,
+  type SpendAmountInputs,
+  useSpendAmount,
+} from "./amount/use-spend-amount";
+import type { ActionFormProps } from "./frame/ActionForm";
+import {
+  type ActionFormApi,
+  type ActionFormValues,
+  useActionSubmit,
+} from "./frame/use-action-form";
+import type { TxCopy } from "./frame/use-tx-view";
+import type { ReviewPanelProps } from "./review/ReviewPanel";
+import { reviewFigure } from "./review/review";
+import { type Review, useReview } from "./review/use-review";
+import { type SpendBlockInput, spendSubmitBlock } from "./submit/spend-block";
 
 /// A spend's fields: an amount of an asset, to a recipient.
 export type SpendFormValues = ActionFormValues & { to: string; asset: string };
@@ -51,6 +60,9 @@ export interface SpendForm {
   /// The asset as the screen names it: "ETH" on the native path.
   symbol: string;
   review: Review;
+  /// The recipient field's paste: written dirty and validated at once, since a
+  /// pasted address is a finished one.
+  onPasteTo(next: string): void;
   frame: Omit<ActionFormProps, "header" | "review" | "children">;
   hero: Omit<AmountHeroProps, "label" | "asset">;
   /// `ReviewPanel`'s share of props while the review is open with something to
@@ -60,7 +72,7 @@ export interface SpendForm {
     | undefined;
 }
 
-export function useSpendForm<T extends SpendFormValues, I, R extends { txHash: string }>(
+export function useSpendForm<T extends SpendFormValues, I, R extends OperationResult>(
   form: ActionFormApi<T>,
   { mutation: m, progress }: ActionMutation<I, R>,
   { recipient, titles, send, ...amountInputs }: SpendFormOptions<T>,
@@ -115,6 +127,11 @@ export function useSpendForm<T extends SpendFormValues, I, R extends { txHash: s
     to,
     symbol,
     review,
+    onPasteTo: (next) =>
+      form.setValue("to" as Path<T>, next as PathValue<T, Path<T>>, {
+        shouldDirty: true,
+        shouldValidate: true,
+      }),
     frame: {
       submitLabel: "Review",
       busy: m.isPending,
@@ -122,10 +139,11 @@ export function useSpendForm<T extends SpendFormValues, I, R extends { txHash: s
       onSubmit: onFormSubmit,
       submitDisabled: block.disabled,
       blockedReason: block.reason,
-      details: <FeeDetails fees={fees} summary={<SpendFeeSummary model={fees.model} />} />,
+      details: <FeeDetails fees={fees} summary={<FeeLineSummary model={fees.model} />} />,
       footnote: crossAssetNote(fees.model),
       progress,
       txHash: m.data?.txHash,
+      operation: operationOf(m.data),
       onReset: form.clearFinished,
       tx: {
         ...titles,
@@ -167,45 +185,50 @@ export function useSpendForm<T extends SpendFormValues, I, R extends { txHash: s
   };
 }
 
-export interface Review {
-  /// Showing the summary rather than the fields.
-  open: boolean;
-  /// Move to the summary. Call from the form's submit handler.
-  enter(): void;
-  /// Back to the fields, unchanged.
-  cancel(): void;
+/// `AmountHero`'s props for an amount against the shielded balance, for the
+/// forms that assemble their own spend rather than `useSpendForm`'s: Swap's pay
+/// leg and Send by link. The balance is the plain asset figure, where
+/// `useSpendForm`'s hero pins six decimals and drops the symbol on phones.
+export function spendHeroProps<T extends ActionFormValues>(
+  form: ActionFormApi<T>,
+  spend: SpendAmount,
+  amountText: string,
+): Omit<AmountHeroProps, "label" | "asset"> {
+  const { selected } = form;
+  return {
+    inputProps: form.register("amount" as Path<T>),
+    selected,
+    value: amountText,
+    amount: spend.parsed,
+    balanceLabel: "Shielded",
+    balance:
+      spend.balance !== undefined && selected
+        ? formatAssetAmount(spend.balance, selected)
+        : undefined,
+    maxAmount: spend.spendable?.max,
+    onSetMax: spend.onSetMax,
+    validation: spend.validation,
+    formError: form.errors.amount?.message as string | undefined,
+  };
 }
 
-/// The pause between filling a spend in and committing it.
-///
-/// A shielded transfer cannot be reversed, cannot be cancelled, and has no
-/// recipient-side confirmation — a wrong address is simply gone. Every other
-/// irreversible thing in this app gates itself too: the claim-link generator
-/// behind a checkbox, the hard refresh behind an acknowledgement.
-///
-/// Kept as a hook rather than form state so the reset rules live in one place:
-/// any edit to the form must drop the user back out of review, or they could
-/// confirm figures they are no longer looking at.
-///
-/// `fingerprint` is whatever identifies the spend being reviewed — amount,
-/// recipient, asset, fee asset. When it changes, review closes: the summary on
-/// screen is no longer the thing that would be sent.
-///
-/// Closed during the render that sees the change, rather than in an effect
-/// after it: an effect would let one commit paint the summary over figures it
-/// was not opened for. Keyed on the change itself rather than on the fingerprint the
-/// review was opened with, so an edit that returns to the reviewed values
-/// (A → B → A, as `useFollowMax` can write) still leaves it closed.
-export function useReview(fingerprint: string): Review {
-  const [open, setOpen] = useState(false);
-  const [seen, setSeen] = useState(fingerprint);
-  if (seen !== fingerprint) {
-    setSeen(fingerprint);
-    if (open) setOpen(false);
-  }
-
-  const enter = useCallback(() => setOpen(true), []);
-  const cancel = useCallback(() => setOpen(false), []);
-
-  return { open: open && seen === fingerprint, enter, cancel };
+/// The balance on `AmountHero`'s right: "8,420.00 USDC", and "8,420.00" on
+/// phones, where the pill beside it already states the symbol.
+function SpendBalance({
+  value,
+  meta,
+  symbol,
+}: {
+  /// Circuit units, as the shielded balance is held.
+  value: bigint;
+  meta: AssetMeta;
+  symbol: string;
+}) {
+  const figure = formatAssetFixed(value, meta, 6);
+  return (
+    <>
+      {figure}
+      {symbol ? <span className="only-wide"> {symbol}</span> : null}
+    </>
+  );
 }

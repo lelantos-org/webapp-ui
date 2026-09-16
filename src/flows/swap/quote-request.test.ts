@@ -1,6 +1,6 @@
 // `quoteRequest` decides whether the form is holding a quotable trade. Every
 // case below is one where returning a request instead of `undefined` would
-// quote a route the proof cannot match, or quote nothing at all.
+// quote a trade the form is not holding, or quote nothing at all.
 
 import { describe, expect, it } from "vitest";
 import { makeAsset } from "@/test/fixtures/assets";
@@ -13,7 +13,6 @@ const A = asset(1n, "0x1111111111111111111111111111111111111111");
 const B = asset(2n, "0x2222222222222222222222222222222222222222");
 
 const input = (over: Partial<Parameters<typeof quoteRequest>[0]> = {}) => ({
-  chainId: 31337n,
   inAsset: A,
   outAsset: B,
   amount: 5n,
@@ -23,21 +22,13 @@ const input = (over: Partial<Parameters<typeof quoteRequest>[0]> = {}) => ({
 });
 
 describe("quoteRequest", () => {
-  it("scales the amount into token base units", () => {
+  it("names the pair by id and the typed amount as the gross", () => {
     expect(quoteRequest(input())).toEqual({
-      chainId: 31337n,
-      tokenIn: A.token,
-      tokenOut: B.token,
-      amountIn: 5n * A.scale,
+      assetIn: 1n,
+      assetOut: 2n,
+      gross: 5n,
       slippageBps: 50,
     });
-  });
-
-  it("leaves the yield index out, matching the amountIn the SDK submits", () => {
-    // `executeSwap` forwards `publicOut * scale` to the wrapper with no index, so
-    // a quote through the index would price an input the venue never receives.
-    const grown = { ...A, index: 2n * 10n ** 27n };
-    expect(quoteRequest(input({ inAsset: grown }))?.amountIn).toBe(5n * A.scale);
   });
 
   it("withholds a request while either side of the pair is unresolved", () => {
@@ -64,6 +55,6 @@ describe("quoteRequest", () => {
     // `quoteRequest` does not re-derive validity; `validateAmount` owns that,
     // and duplicating the rule here is how the two drift apart.
     expect(quoteRequest(input({ amount: 0n, amountValid: false }))).toBeUndefined();
-    expect(quoteRequest(input({ amount: 0n }))?.amountIn).toBe(0n);
+    expect(quoteRequest(input({ amount: 0n }))?.gross).toBe(0n);
   });
 });

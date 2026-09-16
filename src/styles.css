@@ -21,7 +21,7 @@
  * the layers: a stylesheet that loads late cannot outrank an earlier layer, and
  * no two files in one layer set the same property on the same element.
  *
- * `app/toast.css` stays unlayered: sonner injects its own unlayered stylesheet
+ * `app/providers/toast.css` stays unlayered: sonner injects its own unlayered stylesheet
  * at runtime, and only an unlayered rule can argue with it on specificity.
  *
  * Breakpoints live beside the rules they retune, at the end of each file.

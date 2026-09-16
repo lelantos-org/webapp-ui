@@ -1,6 +1,6 @@
 // The wire shapes the registry is assembled from, as zod.
 //
-// Three responses, from two services. registry-webserver answers what each chain
+// Three responses, from two services. protocol-webserver answers what each chain
 // *is* (`/v1/chains`) and what is registered on it (`/v1/assets`); the relayer
 // answers what one relayer will do on it (`/chains`). Neither service is the
 // authority on the other's half, which is the whole point of the split: a person
@@ -14,7 +14,7 @@
 import { z } from "zod";
 import { httpUrl } from "@/config/url";
 
-// ── registry-webserver: /v1/chains ──────────────────────────────────────────
+// ── protocol-webserver: /v1/chains ──────────────────────────────────────────
 
 /// An http(s) URL, or absent — including when the value was present but not one.
 ///
@@ -75,7 +75,7 @@ const registryChainRow = z.object({
 const registryChainsResponse = z.object({ chains: z.array(registryChainRow) });
 export type RegistryChainRow = z.infer<typeof registryChainRow>;
 
-// ── registry-webserver: /v1/assets ──────────────────────────────────────────
+// ── protocol-webserver: /v1/assets ──────────────────────────────────────────
 
 /// Present iff the pool routes this asset to a yield venue.
 ///

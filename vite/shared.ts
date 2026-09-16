@@ -49,6 +49,6 @@ export function appDefine(): Record<string, string> {
 ///
 /// SDK is linked from `../sdk` (file:../sdk). Vite's default fs.allow
 /// is the project root only; widen to the monorepo so worker URLs that
-/// resolve to `../sdk/dist/...` (e.g. `@lelantos-org/sdk/prover-worker`)
+/// resolve to `../sdk/dist/...` (e.g. `@lelantos-org/sdk/workers/prover`)
 /// are servable in dev, and so the SDK's `?url` wasm imports resolve in tests.
 export const fsAllow: string[] = [".."];

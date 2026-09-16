@@ -5,18 +5,25 @@
 //
 // Both are pure functions of their props; the ordering, the stored preference
 // and whether a passkey row appears at all are selection policy and live in
-// `use-connect-flow`. The list is shared: the modal opens it from the header,
+// `wallet-offerings`. The list is shared: the modal opens it from the header,
 // and the Welcome screen draws the same rows inline in its wallet card, so the
 // two can never offer different wallets or name them differently.
 
 import { forwardRef, useCallback } from "react";
+import { useExitTransition } from "@/shared/hooks/use-exit-transition";
 import { cx } from "@/shared/lib/cx";
 import { MODAL_EXIT_MS } from "@/shared/lib/motion";
-import { ChevronRightGlyph, LockGlyph } from "@/shared/ui/glyphs";
+import { ChevronRightGlyph, LockGlyph } from "@/shared/ui/icons/glyphs";
 import { Modal } from "@/shared/ui/Modal";
-import { useExitTransition } from "@/shared/ui/use-exit-transition";
-import type { WalletChoice } from "./use-connect-flow";
+import type { WalletChoice } from "./wallet-offerings";
 import "./WalletPicker.css";
+
+/// The picker's copy, shared by the modal and Welcome's inline card so the two
+/// read the same.
+export const PICKER_COPY = {
+  subtitle: "Used only to derive your shielded key.",
+  notListed: "Don't see yours? Unlock the extension, then reopen this.",
+} as const;
 
 export interface WalletChoiceListProps {
   /// In display order.
@@ -79,9 +86,9 @@ export function WalletPicker({ wallets, onChoose, onCancel }: WalletPickerProps)
 
   return (
     <Modal title="Choose a wallet" onDismiss={dismiss} exiting={exiting}>
-      <p className="modal-copy">Used only to derive your shielded key.</p>
+      <p className="modal-copy">{PICKER_COPY.subtitle}</p>
       <WalletChoiceList wallets={wallets} onChoose={pick} />
-      <p className="modal-meta">Don't see yours? Unlock the extension, then reopen this.</p>
+      <p className="modal-meta">{PICKER_COPY.notListed}</p>
       <div className="modal-actions">
         <button type="button" className="btn btn--ghost" onClick={dismiss}>
           Cancel

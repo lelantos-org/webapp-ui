@@ -3,27 +3,21 @@
 
 import type { TransferResult } from "@lelantos-org/sdk";
 import { type ActionMutation, type TransferCall, useSpendMutation } from "@/features/ops";
-import { stepsFor, type WithAsset } from "@/features/tx";
+import { stepsFor } from "@/features/tx";
 import { useWalletInstance } from "@/features/wallet";
 
-export function useTransfer(): ActionMutation<TransferCall, WithAsset<TransferResult>> {
+export function useTransfer(): ActionMutation<TransferCall, TransferResult> {
   const wallet = useWalletInstance();
-  return useSpendMutation<TransferCall, WithAsset<TransferResult>>({
+  return useSpendMutation<TransferCall, TransferResult>({
     label: () => "transfer",
     run: (a, i, progress) => {
       progress.start(stepsFor("transfer"));
-      return a.transfer({
-        to: i.to,
-        amount: i.amount,
-        asset: i.asset,
-        feeAsset: i.feeAsset,
-        onPhase: progress.set,
-      });
+      return a.transfer({ ...i, onPhase: progress.set });
     },
     track: (i, result) => ({
       kind: "transfer",
       result,
-      isSelfTransfer: !!wallet && i.to === wallet.address,
+      isSelfTransfer: !!wallet && i.recipient === wallet.address,
     }),
   });
 }

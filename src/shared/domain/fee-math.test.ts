@@ -1,4 +1,4 @@
-import { RAY } from "@lelantos-org/sdk/core";
+import { RAY } from "@lelantos-org/sdk/protocol";
 import { describe, expect, it } from "vitest";
 import { feeBreakdown } from "./fee-math";
 
