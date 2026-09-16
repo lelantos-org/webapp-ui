@@ -6,6 +6,10 @@ import type { WalletCapabilities } from "./capabilities";
 export type WalletStatus =
   | "disconnected"
   | "connecting"
+  /// Connected, fetching the chain registry. Nothing is fetched before a
+  /// connection, so every session passes through this unless a cached registry
+  /// is on hand.
+  | "loading-networks"
   /// Connected, but the wallet's network is not one this deployment serves.
   /// Blocking: no balance or form would be meaningful on an unknown pool.
   | "unsupported-chain"

@@ -29,7 +29,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     deriveError,
     hasCachedKey,
   });
-  const error = deriveError ?? session.connectError;
+  const registryFailure = session.registry.status === "failed" ? session.registry : undefined;
+  const error = registryFailure?.message ?? deriveError ?? session.connectError;
+  // Every "try again" is wired to `connect`. After a registry failure the wallet
+  // is connected already, and what needs repeating is the fetch.
+  const connect = registryFailure?.retry ?? flow.begin;
 
   // Derived once here rather than in each consumer, so no component
   // re-implements the rule and drifts from it.
@@ -73,10 +77,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       kind: session.kind,
       ethAddress: session.ethAddress,
       capabilities,
-      connect: flow.begin,
+      connect,
       disconnect,
     }),
-    [status, error, wallet, session.kind, session.ethAddress, capabilities, flow.begin, disconnect],
+    [status, error, wallet, session.kind, session.ethAddress, capabilities, connect, disconnect],
   );
 
   const instance = useMemo(() => ({ wallet }), [wallet]);

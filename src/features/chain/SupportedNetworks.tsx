@@ -5,9 +5,10 @@ import "./SupportedNetworks.css";
 
 /// The networks this deployment serves, named before a wallet is connected.
 ///
-/// The registry is already loaded by `ChainProvider` before anything renders,
-/// so the first screen can answer "will my network work here?" without the
-/// user connecting first and discovering `unsupported-chain` instead.
+/// Painted from the registry an earlier session cached, so a returning browser
+/// can answer "will my network work here?" before connecting. Nothing is fetched
+/// for it: the backend is not contacted until a wallet connects, so a first
+/// visit shows no list here.
 ///
 /// Names only, and not buttons: with no wallet connected there is nothing to
 /// switch, and `ChainSwitchButtons` covers the case where there is.

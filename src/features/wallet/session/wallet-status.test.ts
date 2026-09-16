@@ -9,6 +9,7 @@ const connection = (over: Partial<Session> = {}): Session =>
     isConnected: true,
     isConnecting: false,
     chainSupported: true,
+    registry: { status: "ready" },
     disconnect: () => {},
     ...over,
   }) as Session;
@@ -51,6 +52,28 @@ describe("deriveWalletStatus", () => {
       "disconnected over an unsupported network",
       { session: connection({ isConnected: false, chainSupported: false }) },
       "disconnected",
+    ],
+    // Nothing is fetched before a connection, so a fresh session waits on the
+    // registry; judging the chain without it would report every one unsupported.
+    [
+      "loading-networks over an unsupported network while the registry loads",
+      { session: connection({ registry: { status: "loading" }, chainSupported: false }) },
+      "loading-networks",
+    ],
+    [
+      "disconnected while the registry is idle",
+      { session: connection({ isConnected: false, registry: { status: "idle" } }) },
+      "disconnected",
+    ],
+    [
+      "error when the registry failed",
+      {
+        session: connection({
+          registry: { status: "failed", message: "down", retry: () => {} },
+          chainSupported: false,
+        }),
+      },
+      "error",
     ],
     ["error over a resolved wallet", { deriveError: "rejected", wallet: WALLET }, "error"],
     ["ready once the wallet is built", { wallet: WALLET }, "ready"],

@@ -1,6 +1,7 @@
 import "./BetaBanner.css";
 
-/// Standing risk disclosure, pinned above the header on every route.
+/// Standing risk disclosure, pinned above the header once a wallet is connected
+/// (and always on `/claim`); see `Layout`.
 ///
 /// Not dismissible: the warning concerns funds at risk, and a dismissed banner
 /// stays dismissed for the visit where it matters. One line tall, so leaving it

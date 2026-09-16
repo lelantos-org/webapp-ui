@@ -42,15 +42,30 @@ export function Welcome() {
         <SupportedNetworks />
         <ul className="welcome__points">
           <li>
-            <strong>No accounts</strong>
+            <strong>
+              <span className="welcome__point-mark" aria-hidden>
+                👤
+              </span>
+              No accounts
+            </strong>
             <span>Nothing to sign up for</span>
           </li>
           <li>
-            <strong>No tracking</strong>
+            <strong>
+              <span className="welcome__point-mark" aria-hidden>
+                👁️
+              </span>
+              No tracking
+            </strong>
             <span>No cookies, no analytics</span>
           </li>
           <li>
-            <strong>No gas account</strong>
+            <strong>
+              <span className="welcome__point-mark" aria-hidden>
+                ⛽
+              </span>
+              No gas account
+            </strong>
             <span>A relayer pays for spends</span>
           </li>
         </ul>

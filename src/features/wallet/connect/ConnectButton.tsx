@@ -28,6 +28,7 @@ export function ConnectButton() {
     );
   }
   if (status === "connecting") return <span className="muted">Connecting…</span>;
+  if (status === "loading-networks") return <span className="muted">Loading networks…</span>;
   if (status === "deriving") {
     // The same copy the `Welcome` card shows, from the same place.
     const deriving = kind ? kindAdapter(kind).copy.deriving : undefined;

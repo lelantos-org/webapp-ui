@@ -81,6 +81,7 @@
     text-decoration: none;
     transition: color 0.15s ease;
   }
+  .ftr__note { color: var(--fg-mute); }
   .ftr__link:hover { color: var(--accent); }
   .ftr__link:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
@@ -92,6 +93,16 @@
       padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px));
     }
     .ftr__sep { display: none; }
+    /* Its own centred line: mid-row it pushes the links onto a ragged second
+       line anyway. Same treatment as the docs footer. */
+    .ftr__note {
+      order: 2;
+      flex: 1 1 100%;
+      text-align: center;
+      text-wrap: balance;
+      line-height: 1.6;
+      font-size: var(--fs-12);
+    }
   }
 
   /* Present but recessive: wanted when reporting a bug, noise the rest of the

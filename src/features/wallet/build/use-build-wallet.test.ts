@@ -52,6 +52,7 @@ const connection = (address: string, over: Partial<Session> = {}): Session =>
     isConnected: true,
     isConnecting: false,
     chainSupported: true,
+    registry: { status: "ready" },
     layer: { kind: "eip1193", provider: {}, address },
     disconnect: () => {},
     ...over,

@@ -17,12 +17,28 @@
 // distinct state — the wallet is on a network this deployment cannot serve —
 // and is surfaced as the `unsupported-chain` wallet status rather than defaulted
 // away.
+//
+// The registry itself is fetched only once a kind is connected: nothing talks to
+// the backend before the user connects a wallet or a passkey. Its loading and
+// failure are not a screen of their own either, since that would replace the
+// Welcome card the connection happens on; they reach the user as wallet
+// statuses (`loading-networks`, `error`) through `useChainRegistryState`.
 
 import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
 import { type ChainEntry, findChain, txExplorerUrl } from "@/config/chains";
 import { useWalletKinds } from "@/features/wallet-kinds";
-import { ChainRegistryGate } from "./ChainRegistryGate";
 import { useChainRegistryQuery } from "./use-chain-registry-query";
+
+/// Where the registry stands for the session.
+///
+/// `idle` before a wallet connects (nothing is fetched, though a cached registry
+/// may still be on hand). `failed` only when there is no registry at all: a
+/// revalidation failing behind a cached one leaves the cached chains, which
+/// remain correct, and a service that is down surfaces in `HealthIndicator` and
+/// again at the first action needing it.
+export type ChainRegistryState =
+  | { status: "idle" | "loading" | "ready" }
+  | { status: "failed"; message: string; retry(): void };
 
 interface ChainContextValue {
   registry: ChainEntry[];
@@ -30,13 +46,14 @@ interface ChainContextValue {
   /// the passkey session's selection. `undefined` when nothing is connected, or
   /// when an injected wallet is on a chain outside the registry.
   active: ChainEntry | undefined;
+  registryState: ChainRegistryState;
 }
 
 const ChainContext = createContext<ChainContextValue | undefined>(undefined);
 
 export function ChainProvider({ children }: { children: ReactNode }) {
-  const registryQuery = useChainRegistryQuery();
   const { active: activeKind } = useWalletKinds();
+  const registryQuery = useChainRegistryQuery(activeKind !== undefined);
   const chainSource = activeKind?.adapter.chainSource;
   const reportedChainId = activeKind?.snapshot.chainId;
 
@@ -51,13 +68,36 @@ export function ChainProvider({ children }: { children: ReactNode }) {
     return chainSource === "wallet" ? named : (named ?? registry[0]);
   }, [registry, chainSource, reportedChainId]);
 
-  const value = useMemo(() => ({ registry, active }), [registry, active]);
+  const connected = activeKind !== undefined;
+  const { isPending, isFetching, error, refetch } = registryQuery;
+  const registryState = useMemo<ChainRegistryState>(() => {
+    if (!connected) return { status: "idle" };
+    if (registry.length > 0) return { status: "ready" };
+    // `isPending` too: the render that enables the query can precede its fetch.
+    if (isFetching || (isPending && !error)) return { status: "loading" };
+    const retry = () => void refetch();
+    // Unreachable and empty are distinct: `loadChainRegistry` throws for the
+    // former and resolves `[]` for the latter, so a 502 is not reported as an
+    // empty registry and the retry has something to act on.
+    return error
+      ? {
+          status: "failed",
+          message: `Could not reach the relayer to find out which networks are available. ${error.message}`,
+          retry,
+        }
+      : {
+          status: "failed",
+          message: "The relayer is not serving any network this app can use.",
+          retry,
+        };
+  }, [connected, registry.length, isPending, isFetching, error, refetch]);
 
-  return (
-    <ChainRegistryGate query={registryQuery} registry={registry}>
-      <ChainContext.Provider value={value}>{children}</ChainContext.Provider>
-    </ChainRegistryGate>
+  const value = useMemo(
+    () => ({ registry, active, registryState }),
+    [registry, active, registryState],
   );
+
+  return <ChainContext.Provider value={value}>{children}</ChainContext.Provider>;
 }
 
 function useChainContext(): ChainContextValue {
@@ -66,10 +106,16 @@ function useChainContext(): ChainContextValue {
   return ctx;
 }
 
-/// The chains this deployment serves. Always available below the provider,
-/// including before a wallet connects.
+/// The chains this deployment serves. Before a wallet connects this is only the
+/// copy cached by an earlier session, possibly empty: the registry is not
+/// fetched until then.
 export function useChainRegistry(): ChainEntry[] {
   return useChainContext().registry;
+}
+
+/// Where the registry fetch stands; see `ChainRegistryState`.
+export function useChainRegistryState(): ChainRegistryState {
+  return useChainContext().registryState;
 }
 
 /// The active chain where one is not guaranteed: the wallet layer, which renders

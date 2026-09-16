@@ -9,6 +9,7 @@ export interface ConnectGateProps {
 /// The button's word while a connection is under way or has failed.
 const BUTTON_LABEL: Partial<Record<WalletStatus, string>> = {
   connecting: "Connecting…",
+  "loading-networks": "Loading networks…",
   deriving: "Waiting for your signature…",
   resuming: "Resuming your session…",
   error: "Try again",
@@ -24,7 +25,11 @@ const BUTTON_LABEL: Partial<Record<WalletStatus, string>> = {
 /// signature but no particular network. `ClaimPage` offers the switch separately,
 /// since only the sweep signs against the link's chain.
 export function ConnectGate({ status, onConnect }: ConnectGateProps) {
-  const waiting = status === "connecting" || status === "deriving" || status === "resuming";
+  const waiting =
+    status === "connecting" ||
+    status === "loading-networks" ||
+    status === "deriving" ||
+    status === "resuming";
   return (
     <section className="surface surface--card claim-card">
       <div className="claim-card__head">

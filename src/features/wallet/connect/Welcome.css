@@ -83,7 +83,8 @@
     gap: 2px;
   }
   .welcome__points strong { font-size: var(--fs-15); font-weight: 600; color: var(--fg); }
-  .welcome__points span { font-size: var(--fs-14); color: var(--fg-mute); }
+  .welcome__points li > span { font-size: var(--fs-14); color: var(--fg-mute); }
+  .welcome__point-mark { margin-right: 6px; }
 
   /* THE WALLET CARD — the picker itself, or whatever the connection is doing. */
   .welcome__card {

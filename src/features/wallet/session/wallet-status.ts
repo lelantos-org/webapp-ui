@@ -11,6 +11,9 @@ export interface WalletStatusInputs {
   hasCachedKey: boolean;
 }
 
+/// Registry state ranks directly below the connection: until it is loaded no
+/// chain is known to be served, so `unsupported-chain` would be a false alarm.
+///
 /// The wallet's network is the app's chain, so an unsupported one is a hard stop
 /// rather than a mismatch to reconcile later.
 ///
@@ -29,6 +32,12 @@ export function deriveWalletStatus({
   hasCachedKey,
 }: WalletStatusInputs): WalletStatus {
   if (!session.isConnected) return session.isConnecting ? "connecting" : "disconnected";
+  // The registry is fetched only once connected, and whether the chain is
+  // supported cannot be judged without it.
+  if (session.registry.status === "loading" || session.registry.status === "idle") {
+    return "loading-networks";
+  }
+  if (session.registry.status === "failed") return "error";
   if (!session.chainSupported) return "unsupported-chain";
   if (deriveError) return "error";
   if (wallet) return "ready";

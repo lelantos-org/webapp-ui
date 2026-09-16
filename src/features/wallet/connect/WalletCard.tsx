@@ -75,6 +75,14 @@ export function WalletCard({
         />
       ) : null}
 
+      {status === "loading-networks" ? (
+        <Busy
+          id={titleId}
+          title="Loading networks…"
+          body="Asking the relayer which networks it serves."
+        />
+      ) : null}
+
       {status === "deriving" ? (
         <>
           <Busy

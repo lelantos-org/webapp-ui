@@ -41,9 +41,11 @@ export function Layout({ children }: { children: ReactNode }) {
         <a className="skip" href="#main">
           Skip to content
         </a>
-        {/* Above the header, and on `/claim` too: that route is where someone
-            who has never seen the app arrives holding a link to real funds. */}
-        <BetaBanner />
+        {/* Above the header once a session exists, and on `/claim` regardless:
+            that route is where someone who has never seen the app arrives
+            holding a link to real funds. Left off the Welcome screen, where
+            nothing can be put in yet. */}
+        {minimal || connected ? <BetaBanner /> : null}
         <header className="hdr">
           <div className="hdr__left">
             <Wordmark sub={minimal ? "claim" : undefined} />
@@ -85,6 +87,15 @@ export function Layout({ children }: { children: ReactNode }) {
         </main>
         <footer className="ftr">
           <span className="ftr__brand">Lelantos</span>
+          <span className="ftr__sep" aria-hidden="true" />
+          {/* The same line the docs and explorer footers carry. The glyphs repeat
+              the words beside them, so they are ornament; left audible they read
+              as "no cookies cookie no tracking eye no accounts bust in
+              silhouette". */}
+          <span className="ftr__note">
+            no cookies <span aria-hidden="true">🍪</span> · no tracking{" "}
+            <span aria-hidden="true">👁️</span> · no accounts <span aria-hidden="true">👤</span>
+          </span>
           <span className="ftr__sep" aria-hidden="true" />
           {/* Hard-coded like the GitHub link beside it: this is the project's
               own explorer, not a per-deployment service. The `explorerUrl` a

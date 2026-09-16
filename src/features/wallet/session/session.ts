@@ -7,7 +7,11 @@
 // a passkey holds no EVM account and cannot be asked to switch networks.
 
 import { useCallback, useMemo } from "react";
-import { useActiveChainOrUndefined } from "@/features/chain";
+import {
+  type ChainRegistryState,
+  useActiveChainOrUndefined,
+  useChainRegistryState,
+} from "@/features/chain";
 import { type ChainLayerSpec, useWalletKinds, type WalletKind } from "@/features/wallet-kinds";
 
 export interface Session {
@@ -19,8 +23,11 @@ export interface Session {
   /// Stable identity for this account, whatever the kind. Keys the nsk cache,
   /// the note/tree/nullifier stores and the build pool.
   accountKey?: string | undefined;
-  /// The active chain is one this deployment serves.
+  /// The active chain is one this deployment serves. Meaningless until
+  /// `registry` is `ready`: with no registry, no chain is known to be served.
   chainSupported: boolean;
+  /// The chain registry, fetched only once connected.
+  registry: ChainRegistryState;
   /// Present only when fully ready: connected, with an account and a chain.
   layer?: ChainLayerSpec | undefined;
   isConnected: boolean;
@@ -31,6 +38,7 @@ export interface Session {
 
 export function useSession(): Session {
   const activeChain = useActiveChainOrUndefined();
+  const registry = useChainRegistryState();
   const { active, snapshots } = useWalletKinds();
 
   // Keyed on the adapter, not `active`: `useWalletKinds` rebuilds its wrappers
@@ -61,6 +69,7 @@ export function useSession(): Session {
     // A kind that selects its own chain from the registry can never be on a
     // network this deployment does not serve.
     chainSupported: active?.adapter.chainSource === "app" || activeChain !== undefined,
+    registry,
     layer,
     isConnected: !!active,
     isConnecting: !!pending,
