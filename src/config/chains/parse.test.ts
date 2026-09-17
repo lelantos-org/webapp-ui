@@ -142,6 +142,40 @@ describe("toChainEntry", () => {
     expect(e.explorerUrl).toBe("https://basescan.org");
   });
 
+  it("takes the governance contracts where the deployment declares them", () => {
+    const e = usable({
+      ...deployment(8453),
+      governorAddress: "0x5555555555555555555555555555555555555555",
+      govTokenAddress: "0x6666666666666666666666666666666666666666",
+      timelockAddress: "0x7777777777777777777777777777777777777777",
+    });
+    expect(e.governorAddress).toBe("0x5555555555555555555555555555555555555555");
+    expect(e.govTokenAddress).toBe("0x6666666666666666666666666666666666666666");
+    expect(e.timelockAddress).toBe("0x7777777777777777777777777777777777777777");
+  });
+
+  it("leaves governance absent when the deployment runs none", () => {
+    const e = usable(deployment(8453));
+    expect(e.governorAddress).toBeUndefined();
+    expect(e.govTokenAddress).toBeUndefined();
+    expect(e.timelockAddress).toBeUndefined();
+  });
+
+  // The stack's config carries zero-address placeholders, because its env
+  // overlay only rewrites keys that exist. A governor at 0x0 is no governor.
+  it("reads a zero-address governance contract as absent", () => {
+    const zero = "0x0000000000000000000000000000000000000000";
+    const e = usable({
+      ...deployment(8453),
+      governorAddress: zero,
+      govTokenAddress: zero,
+      timelockAddress: "",
+    });
+    expect(e.governorAddress).toBeUndefined();
+    expect(e.govTokenAddress).toBeUndefined();
+    expect(e.timelockAddress).toBeUndefined();
+  });
+
   it("names an undescribed chain after its id rather than leaving it blank", () => {
     const { chainName: _drop, ...rest } = deployment(8453);
     expect(usable(rest).chainName).toBe("chain 8453");

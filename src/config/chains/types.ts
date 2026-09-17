@@ -102,6 +102,13 @@ export interface ChainEntry {
   /// and rejected at submit.
   nativeAdapterAddress?: EvmAddress | undefined;
   swapWrapperAddress?: EvmAddress | undefined;
+  /// On-chain governance: the `LelantosGovernor`, its voting token (LNT) and
+  /// the timelock that executes passed proposals. Each is optional per chain and
+  /// absent where the deployment runs no governance; the governance screens are
+  /// withheld without `governorAddress`.
+  governorAddress?: EvmAddress | undefined;
+  govTokenAddress?: EvmAddress | undefined;
+  timelockAddress?: EvmAddress | undefined;
   treeDepth: number;
   /// Block-explorer base, for tx links.
   explorerUrl?: string | undefined;

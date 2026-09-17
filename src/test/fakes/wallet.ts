@@ -14,6 +14,7 @@ const DISCONNECTED = { allowed: false, reason: "Connect a wallet first." } as co
 const NO_CAPABILITIES: WalletCapabilities = {
   deposit: DISCONNECTED,
   depositEth: DISCONNECTED,
+  govern: DISCONNECTED,
 };
 
 /// A `WalletApi` carrying only the members a test gives it.

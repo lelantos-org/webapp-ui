@@ -27,7 +27,7 @@ export function ActionIcon({ name }: { name: ActionIconName }) {
   );
 }
 
-export type ActionIconName = "shield" | "send" | "swap" | "unshield" | "link";
+export type ActionIconName = "shield" | "send" | "swap" | "unshield" | "link" | "govern";
 
 const POOL = "M12 3 20 6.2v6.1c0 4.3-3.4 7.3-8 8.7-4.6-1.4-8-4.4-8-8.7V6.2Z";
 
@@ -61,6 +61,14 @@ const PATHS: Record<ActionIconName, React.ReactNode> = {
       <path d="m21 12-4 4-4-4" />
       <path d="M7 21V8" />
       <path d="m3 12 4-4 4 4" />
+    </>
+  ),
+  // A ballot going into its box.
+  govern: (
+    <>
+      <path d="M4 13h16v7H4Z" />
+      <path d="M8 13V4h8v9" />
+      <path d="m10 8.5 1.5 1.5 3-3" />
     </>
   ),
   link: (

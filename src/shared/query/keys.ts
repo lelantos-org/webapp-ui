@@ -30,6 +30,10 @@ function setupStatusOf(chainId?: bigint, payer?: string) {
   return ["permit2-setup-status", chain(chainId), payer ?? null] as const;
 }
 
+function governance(chainId: bigint | undefined) {
+  return ["governance", chain(chainId)] as const;
+}
+
 export const queryKeys = {
   /// The chains this deployment serves, from protocol-webserver and the relayer.
   chainRegistry: () => ["chain-registry"] as const,
@@ -139,4 +143,40 @@ export const queryKeys = {
   /// One asset's denomination ladder.
   assetLadder: (chainId: bigint, asset: bigint | undefined) =>
     ["asset-ladder", chain(chainId), big(asset)] as const,
+
+  /// Everything governance reads on one chain: the prefix of every key below, so
+  /// one invalidation after a vote, a delegation or a proposal refreshes them all.
+  /// The indexer lags the chain by a block or two, and a partial invalidation
+  /// would leave one figure on the screen disagreeing with the one beside it.
+  governance,
+
+  /// The indexed proposal list, with each proposal's on-chain state.
+  governanceProposals: (chainId: bigint | undefined) =>
+    [...governance(chainId), "proposals"] as const,
+
+  /// The on-chain state and quorum of the listed proposals, keyed by their ids.
+  governanceProposalStates: (chainId: bigint | undefined, ids: string) =>
+    [...governance(chainId), "proposals", "chain", ids] as const,
+
+  /// One proposal as the indexer describes it.
+  governanceProposal: (chainId: bigint | undefined, proposalId: string) =>
+    [...governance(chainId), "proposal", proposalId] as const,
+
+  /// One proposal's live on-chain figures, as seen by `account` (`null` read-only).
+  governanceProposalChain: (
+    chainId: bigint | undefined,
+    proposalId: string,
+    account: string | undefined,
+  ) => [...governance(chainId), "proposal-chain", proposalId, account ?? null] as const,
+
+  /// The indexed votes on one proposal, paginated.
+  governanceVotes: (chainId: bigint | undefined, proposalId: string) =>
+    [...governance(chainId), "votes", proposalId] as const,
+
+  /// How far the governor's clock is from this browser's, in seconds.
+  governanceClock: (chainId: bigint | undefined) => [...governance(chainId), "clock"] as const,
+
+  /// One account's LNT balance, delegate and voting power.
+  governanceVotingPower: (chainId: bigint | undefined, account: string | undefined) =>
+    [...governance(chainId), "voting-power", account ?? null] as const,
 };

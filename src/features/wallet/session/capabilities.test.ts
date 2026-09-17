@@ -5,7 +5,7 @@
 // regression that let a passkey render the deposit form would surface here
 // rather than as a failed transaction with a filled-in amount.
 
-import type { WalletApi } from "@lelantos-org/sdk";
+import { evmAddress, type WalletApi } from "@lelantos-org/sdk";
 import { describe, expect, it } from "vitest";
 import { fakeWalletApi } from "@/test/fakes/wallet";
 import { deriveCapabilities } from "./capabilities";
@@ -24,7 +24,7 @@ const nativeCapable = () => signing({ nativeDeposit: true });
 describe("deriveCapabilities", () => {
   it("denies everything with no wallet", () => {
     const caps = deriveCapabilities(undefined, undefined);
-    for (const c of ["deposit", "depositEth"] as const) {
+    for (const c of ["deposit", "depositEth", "govern"] as const) {
       expect(caps[c].allowed).toBe(false);
       expect(caps[c].reason).toBeTruthy();
     }
@@ -69,6 +69,36 @@ describe("deriveCapabilities", () => {
     // swap and claim links are relayed, so no capability gates them and none
     // should ever be added here without a reason as concrete as deposit's.
     const caps = deriveCapabilities(readOnly(), "passkey");
-    expect(Object.keys(caps).sort()).toEqual(["deposit", "depositEth"]);
+    expect(Object.keys(caps).sort()).toEqual(["deposit", "depositEth", "govern"]);
+  });
+});
+
+describe("deriveCapabilities: govern", () => {
+  const GOVERNED = { governorAddress: evmAddress("0x5555555555555555555555555555555555555555") };
+  const ME = "0x1111111111111111111111111111111111111111";
+
+  it("allows an injected wallet on a governed chain", () => {
+    const caps = deriveCapabilities(signing(), "eip1193", { ethAddress: ME, chain: GOVERNED });
+    expect(caps.govern.allowed).toBe(true);
+  });
+
+  it("names the network when the chain runs no governance", () => {
+    const caps = deriveCapabilities(signing(), "eip1193", { ethAddress: ME, chain: {} });
+    expect(caps.govern.allowed).toBe(false);
+    expect(caps.govern.reason).toMatch(/governance/i);
+  });
+
+  // A passkey reads proposals but cannot send the transaction a vote is, and has
+  // no public account whose LNT would carry the votes.
+  it("denies a passkey, and says proposals stay readable", () => {
+    const caps = deriveCapabilities(readOnly(), "passkey", { chain: GOVERNED });
+    expect(caps.govern.allowed).toBe(false);
+    expect(caps.govern.reason).toMatch(/browser wallet/i);
+    expect(caps.govern.reason).toMatch(/readable/i);
+  });
+
+  it("denies a signer with no public account", () => {
+    const caps = deriveCapabilities(signing(), "eip1193", { chain: GOVERNED });
+    expect(caps.govern.allowed).toBe(false);
   });
 });

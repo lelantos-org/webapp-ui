@@ -71,5 +71,26 @@ describe("queryKeys", () => {
     ]);
     expect(queryKeys.setupStatus(CHAIN, ME)).toEqual(["permit2-setup-status", "31337", ME, null]);
     expect(queryKeys.setupStatusOf(CHAIN, ME)).toEqual(["permit2-setup-status", "31337", ME]);
+
+    const gov = queryKeys.governance(CHAIN);
+    expect(gov).toEqual(["governance", "31337"]);
+    for (const member of [
+      queryKeys.governanceProposals(CHAIN),
+      queryKeys.governanceProposalStates(CHAIN, "7,8"),
+      queryKeys.governanceProposal(CHAIN, "7"),
+      queryKeys.governanceProposalChain(CHAIN, "7", ME),
+      queryKeys.governanceVotes(CHAIN, "7"),
+      queryKeys.governanceClock(CHAIN),
+      queryKeys.governanceVotingPower(CHAIN, ME),
+    ]) {
+      expect(member.slice(0, gov.length)).toEqual(gov);
+    }
+    expect(queryKeys.governanceProposalChain(CHAIN, "7", undefined)).toEqual([
+      "governance",
+      "31337",
+      "proposal-chain",
+      "7",
+      null,
+    ]);
   });
 });

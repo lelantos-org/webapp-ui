@@ -1,5 +1,42 @@
 @layer components {
-  /* `MaxNotice`: the ceiling sentence, then the reassurance a shade quieter. */
+  /* `MaxNotice`: an "i" beside Max, opening the ceiling sentence and then the
+     reassurance a shade quieter. */
+  .maxnote__btn {
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--fg-mute);
+    cursor: pointer;
+    transition: color var(--dur-120) var(--ease-soft), background var(--dur-120) var(--ease-soft);
+  }
+  .maxnote__btn:hover,
+  .maxnote__btn--open {
+    color: var(--fg-dim);
+    background: rgba(var(--accent-rgb), 0.08);
+  }
+  .maxnote__btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
+
+  /* Portalled and placed in viewport coordinates, as `.feepick__pop`. */
+  .maxnote__pop {
+    position: fixed;
+    z-index: var(--z-popover);
+    width: max-content;
+    max-width: min(300px, calc(100vw - 16px));
+    padding: var(--sp-12) var(--sp-14);
+    background: var(--bg-1);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-glow);
+    font-size: var(--fs-13);
+    line-height: 1.55;
+    animation: drop-in var(--dur-140) var(--ease);
+  }
   .maxnote__lead,
   .maxnote__follow { display: block; }
   .maxnote__lead { color: var(--fg-dim); }

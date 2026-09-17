@@ -70,6 +70,11 @@ const registryChainRow = z.object({
   treeDepth: z.number().optional(),
   nativeAdapterAddress: z.string().optional(),
   swapWrapperAddress: z.string().optional(),
+  /// Governance contracts. Omitted by the registry where the deployment runs
+  /// none; a zero address is read as absent too — see `parse.ts`.
+  governorAddress: z.string().optional(),
+  govTokenAddress: z.string().optional(),
+  timelockAddress: z.string().optional(),
 });
 
 const registryChainsResponse = z.object({ chains: z.array(registryChainRow) });

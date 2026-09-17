@@ -101,7 +101,11 @@ function EmptyAssets({ assets }: { assets: readonly RegisteredAsset[] }) {
           {assets.map((a) => (
             <li key={a.id.toString()} className="pf-empty__row">
               <TokenIcon symbol={a.symbol} address={a.token} className="pf-empty__mark" />
-              <span className="pf-empty__sym">{a.symbol}</span>
+              <span className="pf-empty__sym">
+                {a.symbol}
+                {/* The vault is what tells a plain asset from its earning twin. */}
+                {a.vaultName ? <span className="pf-empty__vault"> · {a.vaultName}</span> : null}
+              </span>
               <RateLabelView asset={a} variant="compact" />
             </li>
           ))}

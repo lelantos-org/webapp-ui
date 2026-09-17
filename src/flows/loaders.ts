@@ -24,3 +24,5 @@ export const loadSendLink = () => import("./send-link/GenerateLinkForm");
 export const loadClaim = () => import("./claim/ClaimPage");
 /// The claim-link vault (`/links`).
 export const loadLinks = () => import("./links/LinksPage");
+/// Governance: proposals, voting, delegation and new proposals (`/governance`).
+export const loadGovernance = () => import("./governance/GovernanceRoutes");

@@ -20,6 +20,10 @@
     /* The hero sits 22 below the section above, not the 28 of the column gap. */
     margin-top: -6px;
   }
+  /* A fifth tile — Governance, where the chain runs a governor — joins the row
+     on wide screens and takes a row of its own on phones, where five across
+     leaves no room for its label. */
+  .tiles--five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .tile {
     display: flex;
     flex-direction: column;
@@ -104,6 +108,11 @@
     .tiles { gap: var(--sp-8); margin-top: 0; }
     .tile { gap: 7px; padding: var(--sp-14) var(--sp-4); font-size: var(--fs-13); }
     .tile .action__icon { width: 19px; height: 19px; }
+    .tiles--five { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .tiles--five > .tile:nth-child(5) {
+      grid-column: 1 / -1;
+      flex-direction: row;
+    }
     .provenance { padding: var(--sp-14) var(--sp-16); margin-top: -8px; }
     .provenance__facts,
     .provenance__note { font-size: var(--fs-13); }

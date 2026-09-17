@@ -80,7 +80,11 @@ vi.mock("@/features/fees", async (importOriginal) => ({
 vi.mock("@/features/wallet", () => ({
   useWallet: () =>
     fakeWalletContext({
-      capabilities: { deposit: { allowed: true }, depositEth: { allowed: true } },
+      capabilities: {
+        deposit: { allowed: true },
+        depositEth: { allowed: true },
+        govern: { allowed: false, reason: "n/a" },
+      },
     }),
   useWalletInstance: () => undefined,
 }));

@@ -29,6 +29,7 @@ vi.mock("@/features/wallet", () => ({
 const denied = (reason: string): WalletCapabilities => ({
   deposit: { allowed: false, reason },
   depositEth: { allowed: false, reason },
+  govern: { allowed: false, reason },
 });
 
 describe("DepositForm", () => {

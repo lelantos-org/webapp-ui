@@ -6,6 +6,7 @@
 // call sites.
 
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
+import { useActiveChainOrUndefined } from "@/features/chain";
 import { clearAllCachedNsk, clearCachedNsk, eip1193Store } from "@/features/wallet-kinds";
 import { toastInfo } from "@/shared/lib/toast";
 import { useBuildWallet } from "../build/use-build-wallet";
@@ -37,9 +38,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   // Derived once here rather than in each consumer, so no component
   // re-implements the rule and drifts from it.
+  const activeChain = useActiveChainOrUndefined();
   const capabilities = useMemo(
-    () => deriveCapabilities(wallet, session.kind),
-    [wallet, session.kind],
+    () =>
+      deriveCapabilities(wallet, session.kind, {
+        ethAddress: session.ethAddress,
+        chain: activeChain,
+      }),
+    [wallet, session.kind, session.ethAddress, activeChain],
   );
 
   // Drop the outgoing account's nsk when the session rotates accounts.

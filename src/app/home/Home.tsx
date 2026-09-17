@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ACTION_PREFETCH } from "@/app/routes/routes";
 import { AssetsCard, PortfolioHero } from "@/features/assets";
+import { useActiveChainOrUndefined } from "@/features/chain";
 import {
   AccountCard,
   type Capability,
@@ -31,12 +32,17 @@ const TILES = [
   { to: "/send", label: "Send", icon: "send" },
   { to: "/swap", label: "Swap", icon: "swap" },
   { to: "/unshield", label: "Unshield", icon: "unshield" },
+  // Shown only where the chain runs a governor; see `Home`. Not gated on
+  // `govern`: a passkey session still reads proposals, and the screens say why
+  // it cannot vote.
+  { to: "/governance", label: "Governance", icon: "govern", needsGovernor: true },
 ] as const satisfies readonly {
   to: string;
   label: string;
   icon: ActionIconName;
   capability?: Capability;
   primary?: boolean;
+  needsGovernor?: boolean;
 }[];
 
 /// Warms the route chunk and the prover together: reaching for a tile is the
@@ -51,6 +57,8 @@ function warmTile(to: string): void {
 export function Home() {
   const { wallet, status, capabilities } = useWallet();
   const ready = status === "ready" && !!wallet;
+  const governed = !!useActiveChainOrUndefined()?.governorAddress;
+  const tiles = TILES.filter((t) => !("needsGovernor" in t) || governed);
 
   // Pre-warm the action chunks during idle time, avoiding a Suspense fallback on
   // the first tile click.
@@ -82,8 +90,8 @@ export function Home() {
           {/* Tiles, each a link to its own screen. Shield is always the filled
               one — it is the first thing a new wallet can do and the only way
               anything gets in — not whichever route happens to be active. */}
-          <nav className="tiles" aria-label="What to do">
-            {TILES.map((t) => {
+          <nav className={cx("tiles", tiles.length > 4 && "tiles--five")} aria-label="What to do">
+            {tiles.map((t) => {
               // Disabled rather than hidden, and the route still renders: a
               // deep link to `/shield` reaches `DepositUnavailable`, which says
               // why. A missing tile would leave the same user nothing to read.

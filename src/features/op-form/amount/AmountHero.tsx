@@ -49,6 +49,8 @@ export interface AmountHeroProps {
   /// `undefined`. Not necessarily the balance — see `useSpendableMax`.
   maxAmount: bigint | undefined;
   onSetMax(formatted: string): void;
+  /// Beside Max: why it is lower than the balance, when that needs saying.
+  maxInfo?: ReactNode;
   validation: AmountValidation;
   formError?: string | undefined;
   /// A quiet line under the balance row, for anything else the amount needs.
@@ -74,6 +76,7 @@ export function AmountHero({
   balance,
   maxAmount,
   onSetMax,
+  maxInfo,
   validation,
   formError,
   hint,
@@ -134,6 +137,7 @@ export function AmountHero({
             {balance !== undefined ? (
               <BalanceFigure label={balanceLabel} short={balanceLabelShort} balance={balance} />
             ) : null}
+            {canMax ? maxInfo : null}
             {canMax ? (
               <button
                 type="button"

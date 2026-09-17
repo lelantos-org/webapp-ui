@@ -82,8 +82,9 @@
     height: 30px;
     font-size: var(--fs-10);
   }
-  .pf-empty__sym { font-size: var(--fs-15); font-weight: 600; color: var(--fg); }
-  .pf-empty__rate { margin-left: auto; text-align: right; }
+  .pf-empty__sym { min-width: 0; font-size: var(--fs-15); font-weight: 600; color: var(--fg); }
+  .pf-empty__vault { font-weight: 400; color: var(--fg-mute); }
+  .pf-empty__rate { flex-shrink: 0; margin-left: auto; text-align: right; }
   .pf-empty__rate-fig {
     font-size: var(--fs-14);
     font-weight: 600;

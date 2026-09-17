@@ -5,7 +5,7 @@
 // decision about what a partially-described or disagreeing deployment may still
 // be used for is testable against literal rows.
 
-import { evmAddress } from "@lelantos-org/sdk";
+import { type EvmAddress, evmAddress } from "@lelantos-org/sdk";
 import { RAY } from "@lelantos-org/sdk/protocol";
 import { sameAddress } from "@/shared/lib/address";
 import { createLogger } from "@/shared/lib/logger";
@@ -246,6 +246,19 @@ function safeChainId(raw: number): bigint {
   return Number.isInteger(raw) ? BigInt(raw) : 0n;
 }
 
+const ZERO_ADDRESS = /^0x0{40}$/i;
+
+/// An optional contract address where the zero address means "not deployed".
+///
+/// The stack's config files carry zero-address placeholders for the governance
+/// contracts, because its env overlay only rewrites keys already present. A
+/// governor at `0x0` is therefore a deployment that has none, not one whose
+/// every call would silently succeed against an empty account.
+function optionalContract(v: string | undefined): EvmAddress | undefined {
+  if (!v || ZERO_ADDRESS.test(v)) return undefined;
+  return evmAddress(v);
+}
+
 function parseChain(
   registry: RegistryChainRow,
   relayer: RelayerChainRow,
@@ -300,6 +313,9 @@ function parseChain(
       permit2Address: optional(registry.permit2Address),
       nativeAdapterAddress: optional(registry.nativeAdapterAddress),
       swapWrapperAddress: optional(registry.swapWrapperAddress),
+      governorAddress: optionalContract(registry.governorAddress),
+      govTokenAddress: optionalContract(registry.govTokenAddress),
+      timelockAddress: optionalContract(registry.timelockAddress),
       treeDepth,
       explorerUrl: registry.explorerUrl,
       tokens: assets.map(toRegisteredAsset),

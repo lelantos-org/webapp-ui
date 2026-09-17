@@ -1,6 +1,7 @@
 import { type ComponentType, type LazyExoticComponent, lazy } from "react";
 import type { ActionScreenProps } from "@/app/shell/ActionScreen";
 import {
+  loadGovernance,
   loadLinks,
   loadSend,
   loadSendLink,
@@ -48,6 +49,11 @@ export const ACTIONS: readonly ActionRoute[] = [
   action("/unshield", "narrow", loadUnshield, "WithdrawForm", true),
   action("/swap", "narrow", loadSwap, "SwapForm", true),
   action("/links", "vault", loadLinks, "LinksPage", false),
+  action("/governance", "vault", loadGovernance, "ProposalsPage", true),
+  // Static before dynamic is react-router's own ranking; listed in that order
+  // anyway so the table reads the way it matches.
+  action("/governance/new", "wide", loadGovernance, "CreateProposalPage", false),
+  action("/governance/:id", "vault", loadGovernance, "ProposalDetailPage", false),
 ];
 
 /// Route chunks behind each Home tile, keyed by path.

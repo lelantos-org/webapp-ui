@@ -107,6 +107,9 @@ export function TransferForm() {
       <SyncNotice />
       <AmountHero
         {...hero}
+        maxInfo={
+          <MaxNotice spendable={spend.spendable} meta={spend.display ?? NO_META} verb="Sending" />
+        }
         label="You send"
         asset={
           <AssetSelectPill
@@ -122,7 +125,6 @@ export function TransferForm() {
         }
       />
       <input type="hidden" {...register("asset")} />
-      <MaxNotice spendable={spend.spendable} meta={spend.display ?? NO_META} verb="Sending" />
       <hr className="rule" />
       <RecipientField
         inputProps={register("to")}

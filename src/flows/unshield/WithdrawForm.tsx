@@ -177,6 +177,7 @@ export function WithdrawForm() {
       <input type="hidden" {...register("asEth")} />
       <AmountHero
         {...hero}
+        maxInfo={<MaxNotice spendable={spendable} meta={display ?? NO_META} verb="Unshielding" />}
         label="You unshield"
         asset={
           // The "ETH (native)" entries carry their WETH id inside the value; see
@@ -193,7 +194,6 @@ export function WithdrawForm() {
           />
         }
       />
-      <MaxNotice spendable={spendable} meta={display ?? NO_META} verb="Unshielding" />
       <hr className="rule" />
       <RecipientField
         inputProps={register("to")}
