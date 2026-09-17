@@ -85,6 +85,12 @@ describe("pickProvider", () => {
 
     expect(eip1193Store.pickProvider()?.info.rdns).toBe("io.metamask");
   });
+
+  it("falls back to the first announced wallet when MetaMask is absent", () => {
+    announce(detail("uuid-ph", "app.phantom", "Phantom"));
+
+    expect(eip1193Store.pickProvider()?.info.rdns).toBe("app.phantom");
+  });
 });
 
 describe("parseChainId", () => {

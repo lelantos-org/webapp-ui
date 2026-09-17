@@ -45,12 +45,13 @@ function unknownChainProvider(add: () => unknown = () => null) {
   });
 }
 
-async function connectWith(provider: { request: ReturnType<typeof vi.fn> }) {
-  announce({
-    info: { uuid: "uuid-rb", name: "Rabby", icon: "", rdns: "io.rabby" },
-    provider,
-  });
-  await eip1193Store.connect("io.rabby");
+const RABBY = { uuid: "uuid-rb", name: "Rabby", icon: "", rdns: "io.rabby" };
+const PHANTOM = { uuid: "uuid-ph", name: "Phantom", icon: "", rdns: "app.phantom" };
+const PHANTOM_REFUSAL = "Phantom does not support Anvil. Pick another network or wallet.";
+
+async function connectWith(provider: { request: ReturnType<typeof vi.fn> }, info = RABBY) {
+  announce({ info, provider });
+  await eip1193Store.connect(info.rdns);
 }
 
 describe("switchChain", () => {
@@ -135,6 +136,39 @@ describe("switchChain", () => {
     await connectWith(provider);
 
     await expect(eip1193Store.switchChain(CHAIN)).rejects.toBe(rejected);
+    expect(calls.filter((c) => c.method === "wallet_addEthereumChain")).toHaveLength(0);
+  });
+
+  it("names the wallet and chain when the wallet refuses to add a chain it cannot use", async () => {
+    const refused = { code: 4200, message: "Unsupported method: wallet_addEthereumChain" };
+    const { calls, provider } = fakeProvider({
+      ...CONNECTS,
+      wallet_switchEthereumChain: () => {
+        throw unrecognized;
+      },
+      wallet_addEthereumChain: () => {
+        throw refused;
+      },
+    });
+    await connectWith(provider, PHANTOM);
+
+    await expect(eip1193Store.switchChain(CHAIN)).rejects.toMatchObject({
+      message: PHANTOM_REFUSAL,
+      cause: refused,
+    });
+    expect(calls.filter((c) => c.method === "wallet_addEthereumChain")).toHaveLength(1);
+  });
+
+  it("names the wallet when the switch itself is refused as unsupported", async () => {
+    const { calls, provider } = fakeProvider({
+      ...CONNECTS,
+      wallet_switchEthereumChain: () => {
+        throw { code: -32603, message: "Unsupported chainId: 0x7a69" };
+      },
+    });
+    await connectWith(provider, PHANTOM);
+
+    await expect(eip1193Store.switchChain(CHAIN)).rejects.toThrow(PHANTOM_REFUSAL);
     expect(calls.filter((c) => c.method === "wallet_addEthereumChain")).toHaveLength(0);
   });
 

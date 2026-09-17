@@ -131,9 +131,10 @@ class Eip1193Store {
 
   /// Move the wallet to `chain`; see `switchWalletChain`.
   switchChain = async (chain: ChainEntry): Promise<void> => {
-    const provider = this.getState().provider;
+    const { provider, rdns } = this.getState();
     if (!provider) throw new Error("Wallet not connected.");
-    return switchWalletChain(provider, chain);
+    const name = rdns ? this.registry.find(rdns)?.info.name : undefined;
+    return switchWalletChain(provider, chain, name);
   };
 
   disconnect = (): void => {
