@@ -1,11 +1,3 @@
-// The relayer's half of a deposit's cost: which asset pays it, and what it
-// charges in that asset. Split from `use-deposit-amount`, which folds it into the
-// figures the form validates.
-//
-// The fee asset is the user's to choose, as on the spends, within what the pool
-// takes for a deposit (the SDK's `depositFeeAssetRefusal`). The charge is amount-independent, so
-// it is known before anything is typed and can size the "max" button.
-
 import { type TokenAmount, toBaseUnits } from "@lelantos-org/sdk";
 import { depositFeeAssetRefusal } from "@lelantos-org/sdk/protocol";
 import { useState } from "react";
@@ -15,36 +7,25 @@ import { feeOptionFor, resolveFeeOption, useFeeQuote } from "@/features/fees";
 import { ZERO_BASE } from "@/shared/domain/units";
 
 export interface DepositRelayerFee {
-  /// The chosen fee asset as it applies to this deposit, or `undefined` for the
-  /// deposited asset — the SDK's default — including on a locked path.
+  /// The chosen fee asset, or `undefined` for the deposited asset.
   feeAsset: bigint | undefined;
-  /// Choose the asset paying the relayer.
   onFeeAsset(asset: bigint): void;
-  /// The asset paying: the one chosen, or the deposited one. `undefined` only
-  /// without a deposited asset.
+  /// The asset paying: the one chosen, or the deposited one.
   paying: RegisteredAsset | undefined;
-  /// The charge in base units of `paying`. `undefined` while the quote is
-  /// loading, when it failed, or when the relayer charges but quotes nothing for
-  /// that asset; `0n` only on a chain that subsidises.
+  /// The charge in base units of `paying`; `undefined` unless known, `0n` only when subsidised.
   amount: TokenAmount | undefined;
-  /// Why the charge cannot be known, as opposed to not known yet.
-  ///
-  /// Neither may read as `0n`: a failed quote, or a quote with no option for the
-  /// asset, would then size a Permit2 window short of what the pool pulls,
-  /// passing every check in the form and failing at submit.
+  /// Why the charge cannot be known. Never read as `0n`: that would under-size the Permit2 window.
   problem: "quote-failed" | "not-accepted" | undefined;
-  /// Re-run a failed quote.
   retry(): void;
 }
 
+/// Which asset pays a deposit's relayer, and what it charges in that asset.
 export function useDepositRelayerFee(
   selected: RegisteredAsset | undefined,
   asEth: boolean,
 ): DepositRelayerFee {
   const registry = useRegisteredAssets();
 
-  // Left unset until the user picks. `undefined` means the deposited asset,
-  // which is the SDK's default and stays correct across asset changes.
   const [chosen, setChosen] = useState<bigint | undefined>(undefined);
   const chosenEntry = resolveChoice(chosen, selected, registry, asEth);
   const paying = chosenEntry ?? selected;
@@ -62,14 +43,11 @@ export function useDepositRelayerFee(
     onFeeAsset: (asset) => setChosen(asset === selected?.id ? undefined : asset),
     paying,
     amount:
-      // A placeholder is the previous chain's or account's quote, kept on screen
-      // while this one loads; it prices nothing here.
+      // Placeholder data is another chain's or account's quote: never price with it.
       quote.data === undefined || quote.isPlaceholderData || problem
         ? undefined
         : quote.data.charged && relayer
-          ? // Through the yield index, as the fee panel's rows are: a unit of a
-            // yield asset is worth `scale * index / RAY`, so `amount * scale`
-            // under-reserves the fee in both the total and the max.
+          ? // Through the yield index: `amount * scale` would under-reserve a yield asset's fee.
             toBaseUnits(relayer.amount, relayer.asset)
           : ZERO_BASE,
     problem,
@@ -77,13 +55,6 @@ export function useDepositRelayerFee(
   };
 }
 
-/// The chosen fee asset's entry, where it applies to a deposit of `selected`;
-/// otherwise `undefined`, for the deposited asset.
-///
-/// Derived rather than cleared on change, like a spend's locked fee asset: a
-/// choice valid for one deposit asset can be refused for the next — native ETH
-/// takes no other fee asset, and a yield asset pays only its own deposit — and
-/// falls back to the SDK's default rather than being forgotten.
 function resolveChoice(
   chosen: bigint | undefined,
   selected: RegisteredAsset | undefined,

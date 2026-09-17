@@ -3,10 +3,6 @@ import type { EphemeralBalance } from "@/features/claim-links";
 
 export type Phase =
   | { kind: "reading-fragment" }
-  /// `reason` separates a URL that never carried a secret from one whose secret
-  /// is unreadable. The machine treats them alike, but the first is what a reload
-  /// produces, since the fragment is scrubbed on mount, and reporting it as a
-  /// spent link would be incorrect.
   | { kind: "bad-link"; error: string; reason: BadLinkReason }
   | { kind: "need-wallet"; nskHex: string; chainId: bigint }
   | { kind: "loading"; nskHex: string; chainId: bigint }
@@ -21,10 +17,7 @@ export type Phase =
       amount: bigint;
     }
   | { kind: "done"; txHash: string; chainId: bigint; asset: bigint; amount: bigint }
-  /// `nskHex` and `chainId` are retained so `retry` can make another attempt. The
-  /// URL fragment is scrubbed before anything can fail, so without them a
-  /// transient RPC failure during the scan would be terminal and a reload would
-  /// destroy the secret.
+  /// Keeps `nskHex`: the URL fragment is already scrubbed, so `retry` is the only way back.
   | { kind: "error"; message: string; nskHex: string; chainId: bigint; from: "scan" | "sweep" };
 
 export type BadLinkReason = "missing" | "malformed";
@@ -73,9 +66,6 @@ export function reduce(s: Phase, e: Event): Phase {
         ? {
             kind: "done",
             txHash: e.txHash,
-            // Retained: the asset labels are chain-scoped, so dropping the id
-            // would leave the success card showing raw circuit units and an
-            // `asset#<id>` label.
             chainId: s.chainId,
             asset: s.asset,
             amount: s.amount,
@@ -86,8 +76,6 @@ export function reduce(s: Phase, e: Event): Phase {
         ? { kind: "error", message: e.message, nskHex: s.nskHex, chainId: s.chainId, from: "sweep" }
         : s;
     case "retry":
-      // The only exit from `error`. Without it the phase is terminal and a
-      // transient failure during the scan ends the claim.
       return s.kind === "error" ? { kind: "need-wallet", nskHex: s.nskHex, chainId: s.chainId } : s;
   }
 }

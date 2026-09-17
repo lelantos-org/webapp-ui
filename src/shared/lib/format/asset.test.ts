@@ -5,7 +5,6 @@ import { formatAmountForAsset, parseAmountInput } from "./asset";
 const plain = (decimals: number, scale: bigint) => ({ decimals, scale, index: RAY });
 
 describe("parseAmountInput", () => {
-  // scale is the circuit→base multiplier: base = circuit * scale.
   it("divides base units down to circuit units", () => {
     expect(parseAmountInput("1", plain(18, 10n ** 12n))).toBe(1_000_000n);
   });
@@ -19,7 +18,6 @@ describe("parseAmountInput", () => {
   });
 
   it("rejects precision the asset cannot represent", () => {
-    // 1 wei at scale 10^12 is not a whole circuit unit.
     expect(() => parseAmountInput("0.000000000000000001", plain(18, 10n ** 12n))).toThrow(
       /precision exceeds asset granularity/,
     );
@@ -42,11 +40,7 @@ describe("parseAmountInput", () => {
   });
 });
 
-// A yield asset's unit count never moves; what it is worth does. These pin the
-// user-visible consequence — the same balance reads larger once the venue has
-// earned — and the round trip that keeps an amount field honest.
 describe("yield index conversions", () => {
-  // 1.1 × RAY: the venue has earned 10%.
   const INDEX = (RAY * 11n) / 10n;
 
   it("renders the same circuit balance larger once the index has moved", () => {
@@ -54,10 +48,7 @@ describe("yield index conversions", () => {
     expect(formatAmountForAsset(1_000_000n, { decimals: 6, scale: 1n, index: INDEX })).toBe("1.1");
   });
 
-  // An exact round trip, and it has to be: the "max" button and the
-  // denomination chips both write a formatted amount into the field and have it
-  // read straight back. Losing a unit there means max means `max - 1` and a
-  // chip's amount is not on the ladder it was drawn from.
+  // The max button and denomination chips write formatted text back into the field.
   it("reads a formatted amount back as exactly what it was", () => {
     for (const scale of [1n, 100n]) {
       const asset = { decimals: 6, scale, index: INDEX };
@@ -67,17 +58,11 @@ describe("yield index conversions", () => {
     }
   });
 
-  // The whole balance is the case that has to survive, since it is what the max
-  // button writes. One unit is the one that used to round to zero, leaving the
-  // field full and the submit button dead with nothing said about why.
   it("keeps a one-unit balance spendable", () => {
     const asset = { decimals: 6, scale: 1n, index: INDEX };
     expect(parseAmountInput(formatAmountForAsset(1n, asset), asset)).toBe(1n);
   });
 
-  // Rounding up recovers the unit count, but it must not conjure one the
-  // balance cannot cover: an amount at or below the formatted balance always
-  // reads back within it.
   it("never reads back more than the balance it was formatted from", () => {
     const asset = { decimals: 6, scale: 1n, index: INDEX };
     const balance = 123_456_789n;
@@ -86,8 +71,6 @@ describe("yield index conversions", () => {
     );
   });
 
-  // A plain asset's granularity is fixed, so anything finer was never
-  // representable and silently truncating it would short the user.
   it("still rejects an unrepresentable amount on a plain asset", () => {
     expect(() => parseAmountInput("0.00001", plain(6, 100n))).toThrow();
   });

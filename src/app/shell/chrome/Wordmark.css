@@ -1,10 +1,8 @@
 @layer components {
-  /* The mark is ember and the name is ink: one accent in the bar, not two. */
   .brand {
     display: inline-flex;
     align-items: center;
     gap: var(--sp-10);
-    /* A link: no global anchor reset, so the browser's underline would show. */
     text-decoration: none;
     border-radius: var(--radius-sm);
   }
@@ -26,7 +24,6 @@
     color: var(--fg);
   }
 
-  /* Names a route that is not the wallet — `/claim` only. */
   .brand__sub {
     font-size: var(--fs-10);
     letter-spacing: 0.18em;
@@ -34,7 +31,7 @@
     color: var(--fg-mute);
   }
 
-  /* Phones: see `Layout.css`. */
+  /* Phones */
   @media (max-width: 480px) {
     .brand__mark { width: 21px; height: 21px; }
     .brand__name { font-size: var(--fs-12); }

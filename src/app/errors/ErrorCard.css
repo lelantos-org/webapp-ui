@@ -1,8 +1,5 @@
 @layer components {
-  /* No `backdrop-filter`: the ambient canvas is masked fully transparent under
-     the centre column (see `.backdrop`), so a blur would cost a gaussian pass
-     per canvas frame for a static gradient. Background alpha is raised in its
-     place. */
+  /* Card */
   .card {
     border: 1px solid var(--line);
     background: var(--bg-1);
@@ -19,9 +16,6 @@
     gap: var(--sp-12);
   }
 
-  /* Written in sentence case at the call site, never transformed here: a
-     `::first-letter` uppercase would make the painted string and the string in
-     the accessibility tree disagree. */
   .card__t {
     font-family: var(--display);
     margin: 0;

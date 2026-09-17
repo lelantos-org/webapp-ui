@@ -1,8 +1,3 @@
-// The three cards an op can end the card in: `TxProgressCard` while it is in
-// flight, `TxSettledCard` once it has landed, `TxFailedCard` if it did not.
-//
-// `useTxView` (`use-tx-view.ts`) decides which; `TxOutcome` draws it.
-
 import { Link } from "react-router-dom";
 import { useTxExplorerUrl } from "@/features/chain";
 import {
@@ -25,13 +20,12 @@ export interface TxOutcomeProps {
   error: unknown;
   progress: ProgressView | undefined;
   txHash: string | undefined;
-  /// The operation's place in a bundled tx; see `operationOf` in `features/tx`.
   operation?: TxOperation | undefined;
   tx: TxCopy | undefined;
-  /// Re-run the form's own submit, for "Try again".
   onRetry(): void;
 }
 
+/// The progress, settled or failed card an op's state calls for.
 export function TxOutcome({
   state,
   busy,
@@ -107,8 +101,6 @@ function ProgressOutcome({
   tx,
   subtitle,
 }: Pick<TxOutcomeProps, "state" | "busy" | "progress" | "tx"> & { subtitle: string | undefined }) {
-  // The last step is forced current once `done`, so every step reads complete
-  // even when the terminal phase is not itself in the list.
   const lastStepId = progress?.steps[progress.steps.length - 1]?.id;
   const stepCurrent = progress?.done && lastStepId ? lastStepId : progress?.phase;
   return (
@@ -119,8 +111,6 @@ function ProgressOutcome({
       current={stepCurrent}
       done={!!progress?.done}
       note={state.hasSteps ? walkAwayNote(state.stage) : undefined}
-      // Once the mutation has resolved the op is out of this tab's hands —
-      // broadcast, and tracked by the lifecycle toasts — so leaving is safe.
       action={
         busy ? undefined : (
           <Link to="/" className="link-btn txcard__link">

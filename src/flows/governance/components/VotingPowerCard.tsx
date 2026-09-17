@@ -6,8 +6,7 @@ import { formatVotes } from "../governance-copy";
 import { useGovTx } from "../use-gov-tx";
 import { DelegatePanel, delegateLabel } from "./DelegatePanel";
 
-/// The header card: this account's transparent LNT, its voting power now and
-/// who it delegates to, with delegation one click away.
+/// This account's transparent LNT, voting power and delegate.
 export function VotingPowerCard() {
   const titleId = useId();
   const { account } = useGovernance();

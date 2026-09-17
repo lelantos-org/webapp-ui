@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import { attachProviderEvents, type Eip1193Provider, firstAccount } from "./provider";
 
 describe("firstAccount", () => {
-  // Wallets report checksummed addresses; the store compares lowercase.
   it("takes the first account, lowercased", () => {
     expect(firstAccount(["0xAbCd", "0xEeEe"])).toBe("0xabcd");
   });
@@ -39,7 +38,6 @@ describe("attachProviderEvents", () => {
     expect(events.onAccount).toHaveBeenCalledWith("0xabcd");
     expect(events.onChain).toHaveBeenCalledWith(8453);
 
-    // Losing every account is a disconnect, not an account change.
     handlers.get("accountsChanged")?.([]);
     handlers.get("disconnect")?.();
     expect(events.onDisconnect).toHaveBeenCalledTimes(2);

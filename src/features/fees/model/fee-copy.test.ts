@@ -5,12 +5,10 @@ import { asBaseUnits } from "@/shared/domain/units";
 import { crossAssetNote, feeLine } from "./fee-copy";
 import { feeSummary } from "./fee-summary";
 
-// 6-decimal tokens at scale 100 — so circuit units and base units differ, and a
-// figure that forgot to scale shows up.
+// Scale 100, so a figure that skips circuit-to-base scaling shows.
 const USDC = { symbol: "USDC", decimals: 6, scale: 100n, index: RAY };
 const USDT = { symbol: "USDT", decimals: 6, scale: 100n, index: RAY };
 
-/// 100 USDC in circuit units.
 const AMOUNT = 1_000_000n;
 const AMOUNT_BASE = AMOUNT * USDC.scale;
 
@@ -22,13 +20,11 @@ const protocol = (fee: bigint): FeeBreakdown => ({
   leg: "deposit",
 });
 
-/// A relayer charge, already joined to a registry entry.
 const relayerIn = (asset: typeof USDC, amount: bigint) => ({ amount, asset });
 type Relayer = ReturnType<typeof relayerIn>;
 
 type SummaryInputs = Parameters<typeof feeSummary>[0];
 
-/// `feeSummary` on 100 USDC, with nothing priced unless the case says so.
 const summary = (over: Partial<SummaryInputs> & Pick<SummaryInputs, "kind">) =>
   feeSummary({
     amount: AMOUNT,

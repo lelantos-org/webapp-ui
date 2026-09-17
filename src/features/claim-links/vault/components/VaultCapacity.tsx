@@ -15,8 +15,7 @@ export interface VaultCapacityProps {
   links: readonly StoredClaimLink[];
 }
 
-/// The ceiling, made visible before it bites: an always-on meter that turns into
-/// a warning as the room runs out, with the two ways to make room.
+/// The vault's capacity meter, turning into a warning as room runs out, with the ways to make room.
 export function VaultCapacity({ pressure, links }: VaultCapacityProps) {
   const tone = vaultTone(pressure);
   const titleId = useId();
@@ -36,7 +35,6 @@ export function VaultCapacity({ pressure, links }: VaultCapacityProps) {
           {capacityHeadline(pressure)}
         </h2>
       </div>
-      {/* The figures are in the headline; the bar only draws them. */}
       <VaultMeter pressure={pressure} />
       <p className="vault-cap__body">{capacityBody(pressure)}</p>
       <div className="vault-cap__actions">

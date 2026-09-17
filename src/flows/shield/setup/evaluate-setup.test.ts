@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import { evaluateDepositSetup, evaluateSetup, NO_SETUP_NEEDS } from "./evaluate-setup";
 import { ALLOWANCE_CAP, type Permit2AllowanceState } from "./permit2-setup";
@@ -19,8 +18,6 @@ describe("evaluateSetup", () => {
   it("needs nothing when both allowances cover the total exactly", () => {
     expect(evaluateSetup(state(1_000n, 1_000n), 1_000n, NOW)).toEqual({
       needsErc20Approve: false,
-      // The allowance covers this deposit but sits below the cap a run grants,
-      // so a run launched for another reason still approves it.
       willApproveErc20: true,
       needsAllowancePermit: false,
       needsSetup: false,
@@ -33,8 +30,6 @@ describe("evaluateSetup", () => {
     expect(needs.needsSetup).toBe(true);
   });
 
-  // The SDK compares both allowances against the full total, so a window that
-  // merely exists is not enough — it would fall back to the witness path.
   it("flags a window that exists but cannot cover the total", () => {
     const needs = evaluateSetup(state(10_000n, 999n), 1_000n, NOW);
     expect(needs.needsErc20Approve).toBe(false);
@@ -42,7 +37,6 @@ describe("evaluateSetup", () => {
     expect(needs.needsSetup).toBe(true);
   });
 
-  // A signed window is worthless if Permit2 cannot pull the ERC-20.
   it("flags an ERC-20 allowance that cannot cover the total", () => {
     const needs = evaluateSetup(state(999n, 10_000n), 1_000n, NOW);
     expect(needs.needsErc20Approve).toBe(true);
@@ -59,9 +53,6 @@ describe("evaluateSetup", () => {
     ).toBe(false);
   });
 
-  // Before an amount is typed there is no total to compare against, but a
-  // token with nothing approved needs setup regardless of the eventual amount.
-  // Without this the form shows no prompt until the fee preview resolves.
   it("flags an entirely unapproved token before an amount is entered", () => {
     const needs = evaluateSetup(state(0n, 0n), undefined, NOW);
     expect(needs).toMatchObject({ needsErc20Approve: true, needsAllowancePermit: true });
@@ -75,11 +66,6 @@ describe("evaluateSetup", () => {
 
 describe("evaluateSetup on a chain that cannot answer", () => {
   it("asks for no setup when the probe returned nothing", () => {
-    // `readPermit2AllowanceState` returns `undefined` when the chain has no
-    // AllowanceTransfer support or the registry row omits `permit2Address`. It
-    // Returning all-zero allowances instead would read as nothing approved, so
-    // the form would demand a setup flow that cannot succeed, fail, and demand
-    // it again, leaving ERC-20 deposits unusable on that chain.
     expect(evaluateSetup(undefined, 1_000n)).toEqual(NO_SETUP_NEEDS);
   });
 
@@ -89,11 +75,6 @@ describe("evaluateSetup on a chain that cannot answer", () => {
   });
 });
 
-// A window sized as `depositTotal * 10n` at the moment setup ran would drain
-// after roughly ten same-sized deposits, and a single larger deposit would outrun
-// it, both re-opening the setup modal on an already-authorized token.
-// `ALLOWANCE_CAP` is `type(uint160).max`,
-// which Permit2 reads as unlimited and never decrements.
 describe("evaluateSetup with an unlimited window", () => {
   const unlimited = (expiration = FAR): Permit2AllowanceState => ({
     erc20Allowance: ALLOWANCE_CAP,
@@ -113,9 +94,6 @@ describe("evaluateSetup with an unlimited window", () => {
   });
 });
 
-// A relayer fee paid in another token is a second pull, through that token's own
-// approval and window. The SDK takes the AllowanceTransfer path only when every
-// pulled token is covered.
 describe("evaluateDepositSetup", () => {
   const covered = state(ALLOWANCE_CAP, ALLOWANCE_CAP);
 

@@ -111,7 +111,7 @@
     color: var(--fg-dim);
   }
 
-  /* "Your wallet is here → the funds are there", in the network card. */
+  /* Network hop */
   .claim-hop {
     display: flex;
     flex-wrap: wrap;
@@ -130,12 +130,10 @@
 
   @media (max-width: 480px) {
     .claim-card { padding: var(--sp-16); gap: 13px; }
-    /* A long figure pushes the button under it rather than squeezing either. */
     .claim-asset { flex-wrap: wrap; gap: var(--sp-12); padding: var(--sp-12) var(--sp-14); }
     .claim-asset__mark { width: 40px; height: 40px; }
     .claim-asset__amt { font-size: 19px; }
     .claim-asset__cta { padding: 11px var(--sp-18); }
-    /* The connect CTA rides the bottom of the viewport, as on the action screens. */
     .claim-cta {
       margin: 0 calc(var(--sp-16) * -1) calc(var(--sp-16) * -1);
       padding: var(--sp-12) var(--sp-16) calc(var(--sp-16) + env(safe-area-inset-bottom, 0px));

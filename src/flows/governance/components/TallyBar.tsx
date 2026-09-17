@@ -13,9 +13,6 @@ export interface TallyBarProps {
 }
 
 /// For, Abstain and Against on one bar, with the quorum marked.
-///
-/// For and Abstain come first because they are what quorum counts; the marker
-/// sits where their run has to reach.
 export function TallyBar({ tallies, quorum, decimals, symbol, compact = false }: TallyBarProps) {
   const bar = tallyBar(tallies, quorum);
   const quorumText =

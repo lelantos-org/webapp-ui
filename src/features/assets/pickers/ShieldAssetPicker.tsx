@@ -1,15 +1,3 @@
-// "Choose an asset" — the Shield screen's asset picker.
-//
-// A screen of its own rather than a `<select>`, because this is the decision
-// moment the registry's rates are for: every asset the pool accepts, what the
-// user already holds of each in their public wallet, and what each venue pays.
-// A native option can carry none of that, which is why the spends keep
-// `AssetSelectPill` and this serves Shield alone. The rules the rows keep are in
-// `shield-asset-options.ts` and `rate-label.ts`.
-//
-// It takes the form's place — the caller hides the form and renders this —
-// so the fields keep their state, and back returns to exactly what was entered.
-
 import { useEffect, useMemo, useRef } from "react";
 import { useActiveChain } from "@/features/chain";
 import { useEscapeKey } from "@/shared/hooks/use-escape-key";
@@ -27,12 +15,12 @@ import "./ShieldAssetPicker.css";
 export interface ShieldAssetPickerProps {
   /// The current picker value: `ethOption(id)` or an asset id string.
   value: string;
-  /// Called with the chosen value. The picker does not close itself; the caller
-  /// closes it, so it can return focus to the control that opened it.
+  /// Called with the chosen value. The caller closes the picker, so it can restore focus.
   onChange(value: string): void;
   onClose(): void;
 }
 
+/// "Choose an asset": Shield's full-screen picker, rendered in place of the form.
 export function ShieldAssetPicker({ value, onChange, onClose }: ShieldAssetPickerProps) {
   const assets = useRegisteredAssets();
   const chain = useActiveChain();
@@ -44,13 +32,10 @@ export function ShieldAssetPicker({ value, onChange, onClose }: ShieldAssetPicke
     () => options.map((o) => ({ assetId: o.asset.id, asEth: o.asEth })),
     [options],
   );
-  // Mounted only while choosing, so the per-token reads happen only then.
   const balances = useDepositSourceBalances(refs);
   const balanceByValue = new Map(options.map((o, i) => [o.value, balances[i]]));
   const rows = heldFirst(options, (o) => balanceByValue.get(o.value));
 
-  // Focus the chosen row on open, so a keyboard user starts where they are and
-  // Escape is one key from leaving.
   const listRef = useRef<HTMLUListElement>(null);
   useEffect(() => {
     const list = listRef.current;

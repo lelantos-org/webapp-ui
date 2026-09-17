@@ -1,24 +1,9 @@
-// The light palette, written once.
-//
-// A light theme has two ways in: an explicit choice (`<html data-theme="light">`,
-// stamped by `public/theme-init.js` and the theme toggle) and the system
-// preference when no choice has been made. CSS cannot join a media query and an
-// attribute selector in one rule, and two hand-kept copies of the palette drift.
-// `tokens.css` holds only the explicit block; this PostCSS plugin repeats it
-// under `@media (prefers-color-scheme: light)` for any root that has not chosen
-// dark.
-//
-// PostCSS, not a Vite `transform`: Vite runs the configured PostCSS plugins on
-// every stylesheet in dev and build alike, after its own `@import` inlining, so
-// the dev server and the shipped CSS cannot disagree.
-
 /// The selector the palette is authored under, and the one it is repeated as.
 export const LIGHT_SELECTOR = ':root[data-theme="light"]';
 export const SYSTEM_LIGHT_SELECTOR = ':root:not([data-theme="dark"])';
 export const SYSTEM_LIGHT_MEDIA = "(prefers-color-scheme: light)";
 
-// The slice of the PostCSS API this uses, typed structurally so the tooling does
-// not import `postcss` (a dependency of Vite's, not of this package).
+// Structural slice of the PostCSS API, so tooling need not depend on `postcss`.
 interface CssNode {
   parent?: unknown;
   after(node: CssNode): unknown;
@@ -42,18 +27,10 @@ interface PostcssHelpers {
 
 export interface LightThemePlugin {
   postcssPlugin: string;
-  /// `unknown` in, narrowed inside: PostCSS's own `Root` has overloads the
-  /// structural types above do not model, and this keeps the plugin assignable
-  /// to Vite's `css.postcss.plugins` without importing PostCSS's types.
   Once(root: unknown, helpers: unknown): void;
 }
 
-/// Repeats every `:root[data-theme="light"]` rule as the system-preference
-/// fallback, directly after it.
-///
-/// Fails the build if a stylesheet already carries a hand-written fallback: two
-/// copies are the thing this exists to prevent, and a stale one would silently
-/// win for every visitor who never touched the toggle.
+/// Repeats the light palette under `prefers-color-scheme: light`; fails on a hand-written copy.
 export function lightTheme(): LightThemePlugin {
   return {
     postcssPlugin: "lelantos-light-theme",

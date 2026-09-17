@@ -5,16 +5,7 @@ import { useWalletChoices } from "./use-connect-flow";
 import { WalletCard } from "./WalletCard";
 import "./Welcome.css";
 
-/// The first screen, before a wallet is connected.
-///
-/// Two columns: the pitch on the left, and on the right the wallet card that
-/// the whole screen is for. The card is the picker itself rather than a button
-/// that opens one, so the first thing a new user sees is the choice they are
-/// about to make — including the passkey, which needs no extension at all.
-///
-/// The card also carries every other connection state (approving, deriving,
-/// resuming, failed, wrong network), so the pitch stays put while the right
-/// column says what is happening.
+/// The first screen before connecting: the pitch, and the wallet card with the picker inline.
 export function Welcome() {
   const { status } = useWallet();
   const choices = useWalletChoices();
@@ -75,13 +66,6 @@ export function Welcome() {
   );
 }
 
-/// "Connect wallet", with the line under it.
-///
-/// With several wallets on offer the card beside it already is the picker, so
-/// the button moves focus to its first row instead of opening a second copy in
-/// a modal. With one or none, `connect` goes straight to that wallet — the
-/// same shortcut the header's flow takes — and a single-row card would add a
-/// click without adding information.
 function ConnectCta({
   several,
   firstRef,

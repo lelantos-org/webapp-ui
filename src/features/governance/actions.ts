@@ -1,11 +1,3 @@
-// A proposal's actions — (target, value, calldata) triples — read back into the
-// contract calls they make, and built from a function and its arguments.
-//
-// Decoding is a courtesy, never a verdict. A selector is four bytes, so a match
-// against a known ABI says what the calldata *would* mean on that contract; the
-// target address says whether it is that contract. Both are shown, and anything
-// that does not decode is shown as raw bytes rather than hidden.
-
 import { type EvmAddress, evmAddress } from "@lelantos-org/sdk";
 import {
   type Abi,
@@ -28,15 +20,16 @@ import {
   protocolAdminActionAbi,
 } from "./abi";
 
+/// Contracts a proposal action can target by name.
 export type KnownContractId = "governor" | "token" | "protocolAdmin" | "feeBurner";
 
+/// A contract whose calls this app can decode and build.
 export interface KnownContract {
   id: KnownContractId;
   label: string;
   /// The functions a proposal may call on it.
   functions: readonly AbiFunction[];
-  /// Where the registry says this contract is on the chain. ProtocolAdmin and
-  /// FeeBurner are not published there, so their target is typed by hand.
+  /// Registry address; absent for ProtocolAdmin and FeeBurner, whose target is typed by hand.
   address?: EvmAddress | undefined;
 }
 
@@ -72,18 +65,16 @@ export function functionSignature(fn: AbiFunction): string {
   return toFunctionSignature(fn);
 }
 
-// ── decoding ────────────────────────────────────────────────────────────────
-
+/// One decoded argument, as text.
 export interface DecodedArg {
   name: string;
   type: string;
   value: string;
 }
 
+/// A proposal action read back as a known call, a plain transfer, or raw bytes.
 export type DecodedAction =
-  /// Calldata matching a known function. `contractMatches` is whether the target
-  /// is the address the registry gives that contract; `undefined` when the
-  /// registry gives none to compare.
+  /// `contractMatches`: target is the registry's address for it; `undefined` when unknown.
   | {
       kind: "call";
       contract: KnownContract;
@@ -113,14 +104,13 @@ function tryDecode(fn: AbiFunction, data: `0x${string}`): readonly unknown[] | u
   }
 }
 
+/// Decode an action's calldata against known ABIs. A selector match is not proof: check `contractMatches`.
 export function decodeAction(
   action: { target: string; calldata: `0x${string}` },
   contracts: readonly KnownContract[],
 ): DecodedAction {
   const data = action.calldata;
   if (data === "0x") return { kind: "transfer" };
-  // The contract at the target first, so a selector two known ABIs share is
-  // named after the one actually being called.
   const ordered = [...contracts].sort((a, b) => rank(b, action.target) - rank(a, action.target));
   for (const contract of ordered) {
     for (const fn of contract.functions) {
@@ -147,12 +137,7 @@ function rank(c: KnownContract, target: string): number {
   return c.address !== undefined && sameAddress(c.address, target) ? 1 : 0;
 }
 
-// ── building ────────────────────────────────────────────────────────────────
-
-/// One argument from its typed text.
-///
-/// Arrays take comma- or newline-separated items. Throws with a message fit to
-/// show under the field.
+/// Parse one argument from typed text (arrays comma- or newline-separated); throws a field-ready message.
 export function parseArg(type: string, raw: string): unknown {
   const text = raw.trim();
   const array = /^(.*)\[\d*\]$/.exec(type);
@@ -214,16 +199,17 @@ export interface ActionDraft {
   calldata: string;
 }
 
+/// The `(target, value, calldata)` triple `propose` takes.
 export interface BuiltAction {
   target: EvmAddress;
   value: bigint;
   calldata: `0x${string}`;
 }
 
-/// Where a draft is wrong, keyed like the form's fields: `target`, `value`,
-/// `fn`, `calldata`, or `args.<i>`.
+/// Draft errors keyed like the form's fields: `target`, `value`, `fn`, `calldata`, `args.<i>`.
 export type DraftErrors = Partial<Record<string, string>>;
 
+/// The function with `signature` on the contract `contractId`, if known.
 export function findFunction(
   contracts: readonly KnownContract[],
   contractId: string,

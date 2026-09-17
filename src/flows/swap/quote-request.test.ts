@@ -1,7 +1,3 @@
-// `quoteRequest` decides whether the form is holding a quotable trade. Every
-// case below is one where returning a request instead of `undefined` would
-// quote a trade the form is not holding, or quote nothing at all.
-
 import { describe, expect, it } from "vitest";
 import { makeAsset } from "@/test/fixtures/assets";
 import { quoteRequest } from "./quote-request";
@@ -37,13 +33,10 @@ describe("quoteRequest", () => {
   });
 
   it("withholds a request for a pair of the same asset", () => {
-    // Not a trade, and MetaQuoter has no route for it.
     expect(quoteRequest(input({ outAsset: A }))).toBeUndefined();
   });
 
   it("withholds a request when the amount does not validate", () => {
-    // Covers an amount over the balance: quoting it would bind a route the
-    // spend cannot fund.
     expect(quoteRequest(input({ amountValid: false }))).toBeUndefined();
   });
 
@@ -52,8 +45,6 @@ describe("quoteRequest", () => {
   });
 
   it("treats a zero amount as quotable only if validation says so", () => {
-    // `quoteRequest` does not re-derive validity; `validateAmount` owns that,
-    // and duplicating the rule here is how the two drift apart.
     expect(quoteRequest(input({ amount: 0n, amountValid: false }))).toBeUndefined();
     expect(quoteRequest(input({ amount: 0n }))?.gross).toBe(0n);
   });

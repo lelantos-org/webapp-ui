@@ -1,10 +1,5 @@
 @layer components {
-  /* Notice: every tinted box — the review's warning, the linkability warning,
-     the setup card, the consolidation note, the vault's eviction box and the
-     state cards. One shape — glyph, title, body, action — in four tones.
-
-     Text in a warn or err box uses the -ink tokens rather than the signal colour:
-     --warn at 14px over its own wash is a highlighter, not a sentence. */
+  /* Notice */
   .notice {
     display: flex;
     align-items: flex-start;
@@ -41,7 +36,6 @@
     color: var(--warn-ink);
   }
 
-  /* Under a title the body steps down a shade. */
   .notice__t + .notice__txt { color: var(--warn-ink-2); }
   .notice__action {
     flex: none;
@@ -60,7 +54,7 @@
     white-space: nowrap;
   }
 
-  /* accent — an invitation, not a problem. */
+  /* accent */
   .notice--accent {
     padding: var(--sp-18) var(--sp-20);
     gap: var(--sp-14);
@@ -73,7 +67,6 @@
   .notice--accent .notice__txt,
   .notice--accent .notice__t + .notice__txt { color: var(--fg-dim); }
 
-  /* The tinted square the setup card's glyph sits in. */
   .notice__tile {
     display: inline-grid;
     place-items: center;
@@ -84,7 +77,7 @@
     color: var(--accent);
   }
 
-  /* err — something already wrong, or about to be lost. */
+  /* err */
   .notice--err {
     border-color: rgba(var(--err-rgb), 0.45);
     background: rgba(var(--err-rgb), 0.07);
@@ -95,7 +88,7 @@
   .notice--err .notice__txt,
   .notice--err .notice__t + .notice__txt { color: var(--err-strong); }
 
-  /* neutral — a fact worth knowing. No tint, the card's own inset ground. */
+  /* neutral */
   .notice--neutral {
     padding: 13px 15px;
     gap: 11px;
@@ -110,7 +103,6 @@
   .notice--neutral .notice__t + .notice__txt { color: var(--fg-mute); }
 
   @media (max-width: 480px) {
-    /* An action on the trailing edge squeezes the text to a column of words. */
     .notice--action-end { flex-wrap: wrap; align-items: flex-start; }
     .notice--action-end > .notice__action { flex-basis: 100%; }
     .notice--accent { padding: 15px var(--sp-16); gap: var(--sp-12); }

@@ -23,9 +23,7 @@ export interface TxSettledCardProps {
   hash?: string | undefined;
   /// Explorer link for `hash`. Omitted when the chain has none; copy still works.
   explorerUrl?: string | undefined;
-  /// Which of the transaction's operations was this one, when the relayer
-  /// bundled several into it. `index` is 1-based. Withheld for a lone operation,
-  /// where the transaction row already says everything.
+  /// Which operation this was, when the relayer bundled several. Withheld for a lone one.
   operation?: TxOperation | undefined;
   /// Anything worth saying after the fact, under the transaction row.
   note?: ReactNode;
@@ -34,9 +32,6 @@ export interface TxSettledCardProps {
 }
 
 /// The card an action ends on: a tick, what happened, and the transaction.
-///
-/// The hash is truncated for reading and copied whole; the full value stays in
-/// `title` for hover.
 export function TxSettledCard({
   title,
   amount,

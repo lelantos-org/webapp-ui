@@ -6,13 +6,7 @@ import { toastError, toastInfo } from "@/shared/lib/toast";
 import { Modal } from "@/shared/ui/Modal";
 import "./WalletDataModal.css";
 
-/// The two local-storage maintenance actions, behind a surface with room to
-/// explain them.
-///
-/// A modal rather than inline micro-copy: hard refresh deletes every note this
-/// browser has decrypted and rescans the chain from scratch — minutes of work
-/// with no balance on screen — which needs a confirmation that states what is
-/// lost and slows the second click down, not a label swap.
+/// Modal for the two local wallet-data actions: clear spent notes, and a confirmed wipe and resync.
 export function WalletDataModal({ onClose, syncing }: { onClose(): void; syncing: boolean }) {
   const hard = useHardRefresh();
   const compact = useCompactNotes();
@@ -63,9 +57,6 @@ export function WalletDataModal({ onClose, syncing }: { onClose(): void; syncing
       </p>
 
       <section className="wdm__act">
-        {/* Named for what it does, not "Compact": that word reads as the remedy
-            for "Max is less than your balance", which only spending performs.
-            This touches storage and nothing on-chain. */}
         <strong className="wdm__t">Clear spent notes</strong>
         <p className="modal-copy">
           Removes notes you have already spent from this browser's storage, so a sync has less to

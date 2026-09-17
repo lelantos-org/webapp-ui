@@ -1,5 +1,5 @@
 @layer components {
-  /* The drawn success check `SuccessCheck` renders in the running modal. */
+  /* Success check */
   .success-check {
     display: flex;
     flex-direction: column;

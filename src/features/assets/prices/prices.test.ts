@@ -38,16 +38,11 @@ const row = (chainId: number, token: string, priceUsd: number) => ({
 
 describe("toPriceMap", () => {
   it("keeps only the active chain's rows", () => {
-    // The same address on another chain is a different asset; pricing a
-    // balance off it would be wrong, not merely imprecise.
     const m = toPriceMap([row(1, "0xaaaa", 5), row(8453, "0xaaaa", 9)], 8453n);
     expect(m.get(priceKey("0xaaaa"))?.priceUsd).toBe(9);
     expect(m.size).toBe(1);
   });
 
-  /// The row arrives checksummed and the lookup may use either spelling: both
-  /// sides go through `priceKey`, so the map is reachable from whichever the
-  /// caller holds.
   it("normalises the key so a checksummed address matches", () => {
     const m = toPriceMap([row(1, "0xAbCdEf", 3)], 1n);
     expect(m.get(priceKey("0xabcdef"))?.priceUsd).toBe(3);
@@ -81,7 +76,6 @@ describe("pricesResponse", () => {
   });
 
   it("rejects a price sent as a string", () => {
-    // Would otherwise reach `usdValue` and produce NaN dollars on screen.
     expect(() =>
       pricesResponse.parse({
         prices: [{ chainId: 1, token: "0xaaaa", priceUsd: "1.5", priceAt: 42 }],

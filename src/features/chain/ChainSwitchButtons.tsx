@@ -4,27 +4,16 @@ import { ChainIcon } from "@/shared/ui/icons/ChainIcon";
 import { useActiveChainOrUndefined, useChainRegistry } from "./ChainProvider";
 
 export interface ChainSwitchButtonsProps {
-  /// Restrict the offer to one chain, as when a claim link names the chain it
-  /// belongs to. Omitted, every chain the deployment serves is offered.
+  /// Offer only this chain; omitted, every served chain is offered.
   only?: bigint;
-  /// Centred for the full-screen Welcome panel; `"start"` aligns the buttons with
-  /// the text of a card body. Taken as a prop rather than overridden externally,
-  /// so this component keeps ownership of its layout.
+  /// `"start"` aligns the buttons with a card body's text.
   align?: "center" | "start";
 }
 
-/// Buttons that move the wallet to a supported chain.
-///
-/// Not a chain picker: there is no app-level chain to pick. Each button calls
-/// `wallet_switchEthereumChain`, keeping the wallet the single source of truth.
-///
-/// The chain the wallet is already on is omitted rather than disabled, since an
-/// inert button invites a click that does nothing.
+/// Buttons that switch the wallet to another supported chain (the current one is omitted).
 export function ChainSwitchButtons({ only, align = "center" }: ChainSwitchButtonsProps) {
   const registry = useChainRegistry();
   const switchChain = useSwitchChain();
-  // `undefined` on an unsupported network, which is when every chain should be
-  // offered.
   const active = useActiveChainOrUndefined();
 
   const offered = registry.filter(

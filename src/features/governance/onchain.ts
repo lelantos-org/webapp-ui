@@ -1,11 +1,3 @@
-// Live governance reads, straight from the chain.
-//
-// Everything that depends on the clock or on a snapshot is read here rather than
-// trusted to the index: a proposal's state, its quorum, whether this account has
-// voted and with what weight. The reads go through the chain's `readRpcUrl` as
-// plain `eth_call`s fanned out with `Promise.all` — not Multicall3, which a local
-// anvil does not have.
-
 import type { EvmAddress } from "@lelantos-org/sdk";
 import { createPublicClient, http, type PublicClient } from "viem";
 import type { ChainEntry } from "@/config/chains";
@@ -28,8 +20,6 @@ export function governanceClient(chain: Pick<ChainEntry, "readRpcUrl">): PublicC
 /// The subset of a public client these reads use, so tests can hand in a fake.
 export type GovReader = Pick<PublicClient, "readContract">;
 
-/// A read that may revert for a reason that just means "not known yet" —
-/// `quorum` at a future timepoint, `state` of a proposal the index is ahead of.
 async function maybe<T>(read: Promise<T>): Promise<T | undefined> {
   try {
     return await read;
@@ -38,7 +28,6 @@ async function maybe<T>(read: Promise<T>): Promise<T | undefined> {
   }
 }
 
-/// A proposal id as the contract takes it.
 function pid(id: string): bigint {
   return BigInt(id);
 }
@@ -53,25 +42,20 @@ export async function readChainClock(client: GovReader, governor: EvmAddress): P
   return Number(clock);
 }
 
+/// A listed proposal's live state and quorum.
 export interface ListProposalChain {
   state: ProposalState | undefined;
   /// Undefined while the snapshot is still in the future.
   quorum: bigint | undefined;
 }
 
-/// The state and quorum of each listed proposal.
-///
-/// `snapshot` is the proposal's `voteStart`, which is what OZ's
-/// `proposalSnapshot` returns. The quorum read is skipped until the snapshot has
-/// passed: the token refuses a lookup at a timepoint it has not reached.
+/// The state and quorum of each listed proposal; quorum is skipped until the snapshot has passed.
 export async function readListChain(
   client: GovReader,
   governor: EvmAddress,
   proposals: readonly { id: string; voteStart: number }[],
 ): Promise<Map<string, ListProposalChain>> {
-  // The governor's clock, not the browser's: they can disagree by minutes (a
-  // skewed laptop, an anvil moved with `evm_increaseTime`), and the token
-  // refuses a quorum lookup at a timepoint the chain has not reached.
+  // Chain clock, not the browser's: the token reverts a quorum lookup at a timepoint the chain has not reached.
   const nowSec = await readChainClock(client, governor);
   const rows = await Promise.all(
     proposals.map(async (p): Promise<[string, ListProposalChain]> => {
@@ -101,6 +85,7 @@ export async function readListChain(
   return new Map(rows);
 }
 
+/// One proposal's live figures, and `account`'s vote status when given.
 export interface ProposalChain {
   state: ProposalState | undefined;
   tallies: Tallies;
@@ -155,8 +140,6 @@ export async function readProposalChain(
     tallies: { for: forVotes, against, abstain },
     snapshot,
     deadline,
-    // A governor predating the quorum-vote window has no such function; zero is
-    // what an unknown proposal reports, and neither is a real deadline.
     quorumVoteDeadline: quorumVoteDeadline ? quorumVoteDeadline : undefined,
     quorum,
     clock: BigInt(clock),
@@ -164,16 +147,15 @@ export async function readProposalChain(
   };
 }
 
+/// An account's LNT holdings, delegate and voting power against the proposal threshold.
 export interface VotingPower {
   token: EvmAddress;
   symbol: string;
   decimals: number;
-  /// Transparent LNT held by the account. Shielded LNT is not here and carries
-  /// no votes.
+  /// Transparent LNT only; shielded LNT carries no votes.
   balance: bigint;
   /// The zero address until the account first delegates.
   delegate: EvmAddress;
-  /// Votes now.
   votes: bigint;
   /// Votes one second ago: what `propose` checks against the threshold.
   proposeVotes: bigint;
@@ -194,6 +176,7 @@ export async function resolveToken(
   })) as EvmAddress;
 }
 
+/// Read `account`'s voting power on `token` and the governor's proposal threshold.
 export async function readVotingPower(
   client: GovReader,
   governor: EvmAddress,

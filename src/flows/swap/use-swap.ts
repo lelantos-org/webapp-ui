@@ -1,9 +1,8 @@
-// The swap mutation, on the note-spending policy in `features/ops`.
-
 import type { SwapResult } from "@lelantos-org/sdk";
 import { type ActionMutation, type SwapCall, useSpendMutation } from "@/features/ops";
 import { stepsFor } from "@/features/tx";
 
+/// The swap mutation.
 export function useSwap(): ActionMutation<SwapCall, SwapResult> {
   return useSpendMutation<SwapCall, SwapResult>({
     label: () => "swap",

@@ -4,10 +4,6 @@ import type { AssetMeta } from "@/features/op-form";
 import { parseAmountInput } from "@/shared/lib/format/asset";
 import { type LadderInputs, ladderModel } from "./ladder";
 
-// Mainnet USDC: 6 decimals, unit scale, so a circuit unit is a base unit and the
-// ladder integers below read as the on-chain figures they are. The `token` is
-// load-bearing — it is what `ladderModel` looks up to decide whether these rungs
-// are the shared ones other wallets publish.
 const USDC: AssetMeta = {
   symbol: "USDC",
   decimals: 6,
@@ -16,16 +12,11 @@ const USDC: AssetMeta = {
   token: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
 };
 
-// The shape of the built-in table — {1,2,5} × powers of ten — at three rungs.
 const TEN = 10_000_000n;
 const TWENTY = 20_000_000n;
 const FIFTY = 50_000_000n;
 const LADDER = [TEN, TWENTY, FIFTY];
 
-// The dev stack's mock DAI: 18 decimals against a 1e10 scale, so one token is
-// 1e8 circuit units. It used to be absent from the SDK's six-entry table and
-// therefore had no shared ladder; since 0.32.0 the ladder is derived from the
-// asset itself, so this asset is no longer a special case.
 const MDAI: AssetMeta = {
   symbol: "mDAI",
   decimals: 18,
@@ -34,8 +25,6 @@ const MDAI: AssetMeta = {
   token: "0xdev1",
 };
 
-// A yield index that makes every rung a non-round number of token units — the
-// case where a capped label and the written amount visibly diverge.
 const YIELDING: AssetMeta = {
   symbol: "yWETH",
   decimals: 18,
@@ -54,12 +43,7 @@ const suggested = (m: ReturnType<typeof ladderModel>) =>
   m.options.find((o) => o.state === "suggested")?.value;
 
 describe("ladderModel options", () => {
-  // The property the whole module rests on: a chip writes text, the form parses
-  // that text, and the parsed value is what `withdraw` publishes. A formatter
-  // that did not invert would put the user off the ladder while telling them
-  // they were on it. `ladder.ts` writes the text and `parseAmountInput` reads
-  // it back, so if only one side learns about the index — or about a capped
-  // label — the chip silently stops meaning what it says.
+  // A chip's text must parse back to its amount, or the chip claims a denomination it does not write.
   it.each<[string, AssetMeta, readonly bigint[]]>([
     ["a plain asset", USDC, LADDER],
     ["an asset whose index has moved 10%", { ...USDC, index: (RAY * 11n) / 10n }, LADDER],
@@ -82,7 +66,6 @@ describe("ladderModel options", () => {
   });
 
   it("drops denominations past the publicOut cap", () => {
-    // `validateAmount` rejects these, so a chip for one is a dead button.
     expect(values(model({ ladder: [...LADDER, PUBLIC_IN_MAX + 1n] }))).toEqual(LADDER);
   });
 
@@ -99,9 +82,6 @@ describe("ladderModel suggestion", () => {
   });
 
   it("only ever points at a denomination that is offered", () => {
-    // `nearest` rounds to whichever side is closer, so over the whole ladder it
-    // would pick 50 here — an amount the selector then refuses. Drawing the
-    // suggestion from the offered set is what keeps the advice actionable.
     const m = model({ amount: 49_000_000n, max: 30_000_000n });
     expect(suggested(m)).toBe(TWENTY);
     expect(values(m)).toContain(TWENTY);
@@ -118,8 +98,6 @@ describe("ladderModel suggestion", () => {
   });
 
   it("does not suggest against an on-ladder amount the balance cannot cover", () => {
-    // Unaffordable is `validateAmount`'s complaint and the selector's, not this
-    // control's: 50 is a shared denomination however little the wallet holds.
     const m = model({ amount: FIFTY, max: TWENTY });
     expect(m.notice?.tone).toBe("ok");
     expect(suggested(m)).toBeUndefined();
@@ -128,18 +106,12 @@ describe("ladderModel suggestion", () => {
 
 describe("ladderModel notice", () => {
   it("says nothing at all for an asset with no ladder", () => {
-    // Falsy notice is what tells the field to render nothing; see
-    // `DenominationField`. This is also the in-flight state: the ladder query is
-    // unresolved, and the control stays absent rather than asserting "no shared
-    // ladder covers this asset" about an asset that may well have one.
     const m = model({ ladder: [], amount: TWENTY });
     expect(m.notice).toBeUndefined();
     expect(m.options).toEqual([]);
   });
 
   it("explains the control before anything is entered, without a verdict", () => {
-    // Standing rather than appearing on the first keystroke: a line that grows
-    // in moves the submit button under the pointer.
     const m = model();
     expect(m.notice?.tag).toBeUndefined();
     expect(m.notice?.tone).toBe("ok");
@@ -158,7 +130,6 @@ describe("ladderModel notice", () => {
   });
 
   it("keeps the intro ahead of the verdict, as unshield.dc reads", () => {
-    // The verdict alone is a claim with no reason attached.
     expect(model({ amount: TWENTY }).notice?.text).toBe(
       "Withdrawing one of these amounts publishes a figure many others publish too. " +
         "20 USDC is a shared denomination, so this withdrawal looks like every other one for it.",
@@ -173,7 +144,6 @@ describe("ladderModel notice", () => {
     expect(model({ amount: 0n }).verdict).toBeUndefined();
     expect(model({ amount: TWENTY }).verdict).toBe("on");
     expect(model({ amount: 21_000_000n }).verdict).toBe("off");
-    // No ladder: nothing to be on or off.
     expect(model({ ladder: [], amount: TWENTY }).verdict).toBeUndefined();
   });
 
@@ -181,7 +151,6 @@ describe("ladderModel notice", () => {
     const n = model({ amount: 21_000_000n }).notice;
     expect(n?.tone).toBe("warn");
     expect(n?.tag).toBe("stands out");
-    // Both figures: what is being published, and what to publish instead.
     expect(n?.text).toContain("21 USDC");
     expect(n?.text).toContain("20 USDC");
   });
@@ -193,8 +162,6 @@ describe("ladderModel notice", () => {
   });
 
   it("omits the symbol for an asset that has none", () => {
-    // Token kept: this asserts the symbol is omitted, not that the source
-    // changed — dropping it would silently reword the whole notice.
     const n = model({
       amount: TWENTY,
       meta: { decimals: 6, scale: 1n, index: RAY, token: USDC.token },
@@ -203,10 +170,6 @@ describe("ladderModel notice", () => {
   });
 });
 
-// Every ladder reaches the model the same way — through `wallet.asset().ladder`
-// — and since SDK 0.32.0 they all have the same provenance: derived from the
-// asset's own `scale` and `decimals`, identically in every wallet. These cover
-// what the wording may therefore claim.
 describe("ladderModel source", () => {
   const ONE = 10n ** 8n;
   const DERIVED = universalLadder(MDAI);
@@ -214,10 +177,6 @@ describe("ladderModel source", () => {
   const fb = (over: Partial<LadderInputs> = {}) =>
     ladderModel({ ladder: DERIVED, meta: MDAI, amount: undefined, max: undefined, ...over });
 
-  /**
-   * The SDK derives the same rungs for every wallet holding an asset, so every
-   * rung is shared: there is no round-but-not-shared case.
-   */
   it("reads every asset's rungs as shared, table or not", () => {
     expect(model({ amount: TWENTY }).notice?.text).toContain("is a shared denomination");
     expect(fb({ amount: ONE }).notice?.text).toContain("is a shared denomination");
@@ -251,16 +210,12 @@ describe("chip label vs written text", () => {
     expect(options.length).toBeGreaterThan(0);
     for (const o of options) {
       const frac = o.label.split(".")[1] ?? "";
-      // Dust below the cap is allowed to run longer rather than read as "0";
-      // every chip with a whole part must obey the cap.
       if (!o.label.startsWith("0.")) {
         expect(frac.length).toBeLessThanOrEqual(5);
       }
     }
   });
 
-  // `label` is a caption; `text` is the amount (round-tripped above). Unless the
-  // two differ here, that round trip proves nothing about the cap.
   it("actually differs — otherwise the capped case proves nothing", () => {
     expect(options.some((o) => o.label !== o.text)).toBe(true);
   });

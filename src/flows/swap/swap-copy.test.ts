@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import type { FeeSummaryModel } from "@/features/fees";
 import {
@@ -105,7 +104,6 @@ describe("receiveLine", () => {
     ["a failed request with nothing to show", { error: new Error("x") }, "quote-failed"],
     ["a quote still being sized", { quoted: true }, "pricing"],
     ["the credited figure", { quoted: true, credited: true }, "credited"],
-    // A quote on screen outranks the failure of its refresh.
     [
       "a failed refresh over a quote",
       { quoted: true, credited: true, error: new Error("x") },

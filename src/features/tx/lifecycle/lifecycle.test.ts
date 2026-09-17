@@ -1,10 +1,4 @@
-// @vitest-environment jsdom
-// Every exit from the lifecycle has to leave the form in a terminal state.
-//
-// It is not enough that the promise settles: `useTxProgress.done` only flips on
-// a terminal phase, and `useClearFinishedOp` is gated on `done`. A path that
-// settles silently leaves a spinner mid-stepper that the user cannot clear
-// without reloading the page.
+// Every exit must emit a terminal phase, or the stepper spins with no way to clear it.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeChain } from "@/test/fixtures/chains";
@@ -86,8 +80,6 @@ describe("trackTxLifecycle", () => {
   });
 
   it("does not report a mined deposit as failed when the flush is never observed", async () => {
-    // The tx is on chain. Painting the stepper red under a toast that calls it
-    // a warning told the user two different things about the same deposit.
     awaitDeposit.mockResolvedValue({ status: "timeout", missing: ["0xc0"], attempts: 3 });
     const { opts, phases } = harness({ escrow: { commitment: "0xc0" } });
 
@@ -131,7 +123,6 @@ describe("trackTxLifecycle", () => {
   });
 
   it("settles with a terminal phase when the hard timeout fires", async () => {
-    // Nothing resolves, so only the hard timer ends the lifecycle.
     const { opts, phases, onSettled } = harness({
       wallet: {
         chain: { waitTxReceipt: vi.fn().mockReturnValue(new Promise(() => {})) },

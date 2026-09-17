@@ -1,16 +1,3 @@
-// Authoritative passkey session state.
-//
-// The counterpart of `eip1193/store.ts`, and deliberately the same shape: a
-// `createStore` behind `subscribe` / `getState`, read through `useStore`. It is
-// much the smaller of the two, because a passkey emits no events — there is no
-// `accountsChanged` to follow, no chain to be moved out from under the app, and
-// no extension to disappear mid-session.
-//
-// What it does own that the EIP-1193 store does not is the selected chain. An
-// injected wallet carries its own network; a passkey has none, so the choice
-// has to live somewhere, and this is the only place that knows the session
-// exists.
-
 import { prfOutputToNsk } from "@lelantos-org/sdk/primitives";
 import { userMessage } from "@/shared/lib/errors";
 import { createStore } from "@/shared/lib/external-store";
@@ -34,25 +21,16 @@ const log = createLogger("passkey");
 export interface PasskeyState {
   status: ConnectionStatus;
   credentialId?: string | undefined;
-  /// The chain this session selected. Undefined until one is chosen, which
-  /// `ChainProvider` resolves to the first registry entry.
+  /// The chain this session selected; undefined until one is chosen.
   chainId?: bigint | undefined;
   error?: string | undefined;
 }
 
 const initial: PasskeyState = { status: "idle" };
 
-/// The session implied by what is already in storage.
-///
-/// Seeded at construction rather than from a mount effect: unlike
-/// `eth_accounts`, this is pure synchronous storage, so there is nothing to
-/// await — and reading it during the first render avoids a second pass over
-/// the whole tree for every returning passkey user (`ChainProvider` subscribes
-/// to this store, and it wraps the app).
+/// The session implied by storage, read synchronously at construction.
 function restored(): PasskeyState {
   if (!passkeysAvailable()) return initial;
-  // Both, not just the credential: one that is known but detached is a wallet
-  // this device can return to, not a session to resume.
   if (!isAttached()) return initial;
   const cred = storedCredential();
   if (!cred) return initial;
@@ -71,13 +49,7 @@ class PasskeyStore {
     this.store.setState({ ...this.store.getState(), ...patch });
   }
 
-  /// Attach to a credential without prompting.
-  ///
-  /// Deliberately *not* an assertion: unlike `eth_accounts`, WebAuthn has no
-  /// silent read, and running one here would put a Touch ID prompt on page
-  /// load. The session is marked connected on the strength of the stored
-  /// credential id, and the first unlock happens when the wallet is built —
-  /// where the "deriving" panel already explains what is being asked for.
+  /// Attach without an assertion: WebAuthn has no silent read, so the first unlock happens at build.
   private attach(credentialId: string): void {
     this.set({
       status: "connected",
@@ -88,14 +60,10 @@ class PasskeyStore {
   }
 
   /// Attach to the credential already on this device, or enrol a new one.
-  ///
-  /// One entry point, because the caller's intent is the same either way and
-  /// the difference — two prompts or none — is not theirs to decide.
   attachOrEnrol = async (): Promise<void> => {
     const cred = storedCredential();
     if (cred) {
-      // Reattach, never re-enrol: a second credential would derive a second nsk
-      // and leave whatever the first one holds unreachable.
+      // Never re-enrol: a second credential derives a second nsk and strands the first.
       markAttached();
       this.attach(cred.id);
       return;
@@ -113,23 +81,12 @@ class PasskeyStore {
     try {
       const { credentialId, prf } = await createAndProvePasskey(label);
       rememberCredential({ id: credentialId, createdAt: Date.now() });
-      // The probe already evaluated the pair the build is about to; spending its
-      // answer here is the difference between two prompts at enrolment and
-      // three. Best-effort: a storage failure costs the prompt back, not the
-      // enrolment.
       cacheNsk(passkeyAccountKey(credentialId), prfOutputToNsk(prf));
       this.attach(credentialId);
     } catch (e) {
-      // A missing PRF extension is not a retryable failure, so it is latched:
-      // the picker stops offering passkeys on this device rather than inviting
-      // the user to try the same authenticator again.
       const unsupported = e instanceof PrfUnsupportedError;
       if (unsupported) log.warn("authenticator has no PRF; passkeys unusable here");
       else log.warn("passkey enrolment failed", e);
-      // Rendered verbatim by the wallet picker. The PRF message is written for
-      // the user and is kept whole: it is longer than `userMessage` passes
-      // through, and the generic line it would become says nothing about what
-      // to try instead.
       this.set({
         status: "error",
         error: unsupported && e instanceof Error ? e.message : userMessage(e),
@@ -143,8 +100,6 @@ class PasskeyStore {
   };
 
   disconnect = (): void => {
-    // Releases the latch only. The credential stays recorded so the next connect
-    // returns to the same wallet; see `credential-storage`.
     releaseAttachment();
     this.set({ status: "idle", credentialId: undefined, error: undefined });
   };

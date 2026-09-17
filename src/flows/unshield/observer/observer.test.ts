@@ -1,5 +1,5 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
+import { hexAddress } from "@/test/fixtures/addresses";
 import { isSelfWithdraw, observerFacts, observerOutro } from "./observer";
 
 describe("observerOutro", () => {
@@ -41,7 +41,7 @@ describe("observerOutro", () => {
 
 describe("observerFacts", () => {
   const WETH = { decimals: 18, scale: 1n, index: 10n ** 27n };
-  const to = `0x${"ab".repeat(20)}`;
+  const to = hexAddress("ab");
 
   it("states the destination and the gross the event carries, in what arrives", () => {
     expect(
@@ -63,8 +63,6 @@ describe("observerFacts", () => {
   });
 });
 
-// A checksummed address and its lowercase form. The pair is the point: wallets
-// return either, so both directions of the comparison must match.
 const CHECKSUMMED = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed";
 const LOWER = CHECKSUMMED.toLowerCase();
 const OTHER = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045";
@@ -83,8 +81,6 @@ describe("isSelfWithdraw", () => {
     expect(isSelfWithdraw(LOWER, undefined)).toBe(false);
   });
 
-  // One gate, so one case: the field is watched on every keystroke and must stay
-  // quiet until what is in it is a complete address.
   it("does not match anything that is not a complete address", () => {
     expect(isSelfWithdraw("", LOWER)).toBe(false);
     expect(isSelfWithdraw(LOWER.slice(0, 20), LOWER)).toBe(false);

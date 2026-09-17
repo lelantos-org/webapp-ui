@@ -6,15 +6,12 @@ import "./DepositAfter.css";
 
 interface DepositAfterProps {
   selected: RegisteredAsset | undefined;
-  /// The symbol the screen shows: "ETH" on the native path.
   symbol: string | undefined;
   asEth: boolean;
   setup: DepositSetup;
 }
 
-/// Under Shield's card: the one-time setup the chosen asset — or the token paying
-/// its relayer fee — still needs, or the offer to set up the rest, and the page's
-/// closing line.
+/// Under Shield's card: the setup prompt or offer, and the page's closing line.
 export function DepositAfter({ selected, symbol, asEth, setup }: DepositAfterProps) {
   const needsSetup = setup.applicable && (setup.needs.needsSetup || setup.unknown);
   return (
@@ -22,8 +19,6 @@ export function DepositAfter({ selected, symbol, asEth, setup }: DepositAfterPro
       {needsSetup && selected ? (
         <SetupNotice
           assets={setup.assets}
-          // Of the tokens named, not of every token pulled: one already set up
-          // may still sit below the cap the run grants.
           willApproveErc20={setup.assets.some(setup.willApproveErc20)}
           unknown={setup.unknown}
           onRun={setup.show}

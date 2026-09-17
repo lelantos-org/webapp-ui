@@ -1,7 +1,5 @@
 @layer features {
-  /* The private-channel acknowledgement. A real checkbox, visually hidden
-     (`.input-hidden`), with the drawn box beside it carrying the state and the
-     focus ring. */
+  /* Private-channel acknowledgement */
   .linkack {
     position: relative;
     display: flex;
@@ -44,7 +42,7 @@
 }
 
 @layer features {
-  /* Send by link: two columns, "1 · Compose" and "2 · Share". */
+  /* Layout */
   .sendlink {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

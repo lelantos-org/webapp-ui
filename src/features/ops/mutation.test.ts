@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import { requireActions } from "./mutation";
 import type { ShieldedActions } from "./sdk-adapter";
@@ -9,8 +8,6 @@ describe("requireActions", () => {
   });
 
   it("returns the actions when present", () => {
-    // Sentinel implementation: only object identity is asserted, so the cast
-    // through `unknown` stands in for full per-kind SDK result fixtures.
     const a = {
       deposit: async () => ({ txHash: "x" }),
       transfer: async () => ({ txHash: "x" }),

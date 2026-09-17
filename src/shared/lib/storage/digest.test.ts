@@ -1,14 +1,9 @@
-// These digests exist to keep an EOA and a bearer key out of storage *key
-// names*. What matters is that they are stable, non-reversible, and agree with
-// the WebCrypto spelling the ephemeral note store used before.
-
 import { describe, expect, it } from "vitest";
 import { accountDigest, storageDigest } from "./digest";
 
 const ADDR = "0xAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaaaAAAAaaa1";
 const OTHER = "0xBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbbbBBBBbbb1";
 
-/// `sha256("abc")`, the standard test vector.
 const SHA256_ABC = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
 
 describe("storageDigest", () => {
@@ -16,9 +11,7 @@ describe("storageDigest", () => {
     expect(storageDigest("abc")).toBe(SHA256_ABC.slice(0, 16));
   });
 
-  /// Records may also have been written using `crypto.subtle.digest` over
-  /// `TextEncoder`-encoded bytes. Both spellings must land in the same namespace,
-  /// or a link's notes become unreachable.
+  // Records written via `crypto.subtle` must land in the same namespace, or notes become unreachable.
   it("matches the WebCrypto spelling", async () => {
     const value = "deadbeef".repeat(8);
     const bytes = new TextEncoder().encode(value);
@@ -51,9 +44,6 @@ describe("accountDigest", () => {
     expect(d).not.toContain(ADDR.slice(2).toLowerCase());
   });
 
-  /// Providers disagree on casing — EIP-55 checksummed from one, lowercase from
-  /// another. A digest that disagreed across those would strand a cached nsk
-  /// behind a silent re-prompt for a signature.
   it("is case-insensitive", () => {
     expect(accountDigest(ADDR)).toBe(accountDigest(ADDR.toLowerCase()));
     expect(accountDigest(ADDR)).toBe(accountDigest(`0x${ADDR.slice(2).toUpperCase()}`));

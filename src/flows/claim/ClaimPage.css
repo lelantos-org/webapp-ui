@@ -1,11 +1,9 @@
 @layer features {
-  /* Claim: the recipient's page. The sender's side is `flows/send-link` and the
-     vault. */
+  /* Claim page */
   .claim-page {
     width: 100%;
     max-width: 620px;
     margin: 0 auto;
-    /* On top of `.main`'s own 28px. */
     padding-top: var(--sp-16);
     display: flex;
     flex-direction: column;

@@ -2,15 +2,11 @@ import type { NullifierPersistence, NullifierStoreState } from "@lelantos-org/sd
 import { NULLIFIER_STORE, walletDb } from "./db";
 
 interface StoredState {
-  nullifiers: string[]; // bigint as hex; see `tree-persistence.ts` for why not decimal
+  nullifiers: string[]; // bigint as 0x hex
   syncedCount: number;
 }
 
-/// IndexedDB-backed spent-set persistence for the `nullifierPersistence`
-/// option of `connect`.
-///
-/// Without it the SDK keeps the set in memory only, so every page load re-walks
-/// the entire nullifier chunk feed from chunk 0.
+/// IndexedDB spent-set persistence for `connect`'s `nullifierPersistence` option.
 export class IdbNullifierPersistence implements NullifierPersistence {
   constructor(private readonly key: string) {}
 

@@ -1,0 +1,406 @@
+import { RAY } from "@lelantos-org/sdk/protocol";
+import { describe, expect, it } from "vitest";
+import { makeChain } from "@/test/fixtures/chains";
+import { deployment, MASP, RELAYER, relayer } from "@/test/fixtures/registry";
+import { describeUnusable, entriesFromResponse, toChainEntry } from "./parse";
+import type { AssetRow, RegistryChainRow, RelayerChainRow } from "./schema";
+import { chainKey, findChain } from "./types";
+
+const entry = (chainId: bigint, chainName: string) => makeChain({ chainId, chainName });
+
+describe("chainKey", () => {
+  it("is hex, without a 0x prefix", () => {
+    expect(chainKey(31337n)).toBe("7a69");
+    expect(chainKey(1n)).toBe("1");
+    expect(chainKey(8453n)).toBe("2105");
+  });
+
+  it("separates chains that share a decimal prefix", () => {
+    expect(chainKey(1n)).not.toBe(chainKey(17n));
+  });
+});
+
+describe("findChain", () => {
+  const registry = [entry(1n, "mainnet"), entry(31337n, "local")];
+
+  it("matches on chainId", () => {
+    expect(findChain(registry, 31337n)?.chainName).toBe("local");
+  });
+
+  it("returns undefined for a chain the deployment does not serve", () => {
+    expect(findChain(registry, 8453n)).toBeUndefined();
+  });
+
+  it("returns undefined against an empty registry", () => {
+    expect(findChain([], 1n)).toBeUndefined();
+  });
+});
+
+const usable = (
+  registry: RegistryChainRow,
+  relayerRow: RelayerChainRow = relayer(registry.chainId),
+  assets: AssetRow[] = [],
+) => {
+  const r = toChainEntry(registry, relayerRow, assets);
+  if (!r.ok) throw new Error(`expected a usable chain: ${describeUnusable(r.reason.reason)}`);
+  return r.entry;
+};
+
+const unusable = (
+  registry: RegistryChainRow,
+  relayerRow: RelayerChainRow,
+  assets: AssetRow[] = [],
+) => {
+  const r = toChainEntry(registry, relayerRow, assets);
+  if (r.ok) throw new Error(`expected chain ${registry.chainId} to be unusable`);
+  return r.reason.reason;
+};
+
+describe("toChainEntry", () => {
+  it("takes a chain both services fully describe, with no optional parts", () => {
+    const e = usable(deployment(8453));
+    expect(e).toMatchObject({
+      chainId: 8453n,
+      chainName: "base",
+      rpcUrl: "https://rpc.example",
+      readRpcUrl: "https://rpc.example",
+      treeDepth: 10,
+      relayerAddress: RELAYER,
+    });
+    expect(e.nativeAdapterAddress).toBeUndefined();
+    expect(e.swapWrapperAddress).toBeUndefined();
+    expect(e.permit2Address).toBeUndefined();
+    expect(e.explorerUrl).toBeUndefined();
+  });
+
+  it("keeps the read endpoint separate from the one the wallet is given", () => {
+    const e = usable({ ...deployment(8453), readRpcUrl: "https://app.example/rpc/v1/8453" });
+    expect(e.readRpcUrl).toBe("https://app.example/rpc/v1/8453");
+    expect(e.rpcUrl).toBe("https://rpc.example");
+  });
+
+  it("has no build-time fallback: an undescribed chain is unusable", () => {
+    expect(
+      unusable({ chainId: 31337 }, { chainId: 31337, maspAddress: MASP, treeDepth: 10 }),
+    ).toEqual({
+      kind: "incomplete",
+      fields: ["rpcUrl", "maspAddress", "relayerAddress", "treeDepth"],
+    });
+  });
+
+  it.each([
+    ["rpcUrl"],
+    ["maspAddress"],
+    ["treeDepth"],
+  ])("drops a chain the deployment does not describe %s on, rather than half-building it", (field) => {
+    const row: Record<string, unknown> = deployment(8453);
+    delete row[field];
+    expect(unusable(row as RegistryChainRow, relayer(8453))).toEqual({
+      kind: "incomplete",
+      fields: [field],
+    });
+  });
+
+  it("drops a chain whose relayer will not name its signer", () => {
+    const { relayerAddress: _drop, ...rest } = relayer(8453);
+    expect(unusable(deployment(8453), rest)).toEqual({
+      kind: "incomplete",
+      fields: ["relayerAddress"],
+    });
+  });
+
+  it("takes the deployment's contracts and explorer", () => {
+    const e = usable({
+      ...deployment(8453),
+      permit2Address: "0x000000000022D473030F116dDEE9F6B43aC78BA3",
+      nativeAdapterAddress: "0x3333333333333333333333333333333333333333",
+      swapWrapperAddress: "0x4444444444444444444444444444444444444444",
+      explorerUrl: "https://basescan.org",
+    });
+    expect(e.permit2Address).toBe("0x000000000022D473030F116dDEE9F6B43aC78BA3");
+    expect(e.nativeAdapterAddress).toBe("0x3333333333333333333333333333333333333333");
+    expect(e.swapWrapperAddress).toBe("0x4444444444444444444444444444444444444444");
+    expect(e.explorerUrl).toBe("https://basescan.org");
+  });
+
+  it("takes the governance contracts where the deployment declares them", () => {
+    const e = usable({
+      ...deployment(8453),
+      governorAddress: "0x5555555555555555555555555555555555555555",
+      govTokenAddress: "0x6666666666666666666666666666666666666666",
+      timelockAddress: "0x7777777777777777777777777777777777777777",
+    });
+    expect(e.governorAddress).toBe("0x5555555555555555555555555555555555555555");
+    expect(e.govTokenAddress).toBe("0x6666666666666666666666666666666666666666");
+    expect(e.timelockAddress).toBe("0x7777777777777777777777777777777777777777");
+  });
+
+  it("leaves governance absent when the deployment runs none", () => {
+    const e = usable(deployment(8453));
+    expect(e.governorAddress).toBeUndefined();
+    expect(e.govTokenAddress).toBeUndefined();
+    expect(e.timelockAddress).toBeUndefined();
+  });
+
+  it("reads a zero-address governance contract as absent", () => {
+    const zero = "0x0000000000000000000000000000000000000000";
+    const e = usable({
+      ...deployment(8453),
+      governorAddress: zero,
+      govTokenAddress: zero,
+      timelockAddress: "",
+    });
+    expect(e.governorAddress).toBeUndefined();
+    expect(e.govTokenAddress).toBeUndefined();
+    expect(e.timelockAddress).toBeUndefined();
+  });
+
+  it("names an undescribed chain after its id rather than leaving it blank", () => {
+    const { chainName: _drop, ...rest } = deployment(8453);
+    expect(usable(rest).chainName).toBe("chain 8453");
+  });
+});
+
+describe("the cross-check between the deployment and the relayer", () => {
+  const OTHER_POOL = "0x5555555555555555555555555555555555555555";
+
+  const conflicts = (relayerRow: RelayerChainRow) => {
+    const reason = unusable(deployment(8453), relayerRow);
+    if (reason.kind !== "disagreement") throw new Error(`dropped as ${reason.kind}`);
+    return reason.conflicts;
+  };
+
+  it("drops a relayer writing to a different pool, quoting both sides", () => {
+    const [conflict] = conflicts({ ...relayer(8453), maspAddress: OTHER_POOL });
+    expect(conflict).toContain("maspAddress");
+    expect(conflict).toContain(OTHER_POOL);
+    expect(conflict).toContain(MASP);
+  });
+
+  it("drops a relayer mirroring a different tree shape", () => {
+    expect(conflicts({ ...relayer(8453), treeDepth: 11 })[0]).toContain("treeDepth");
+  });
+
+  it("reports both disagreements at once rather than only the first", () => {
+    expect(conflicts({ ...relayer(8453), maspAddress: OTHER_POOL, treeDepth: 11 })).toHaveLength(2);
+  });
+
+  it("accepts a relayer whose address differs only in case", () => {
+    expect(
+      usable({ ...deployment(8453), maspAddress: MASP.toLowerCase() }, relayer(8453)),
+    ).toBeDefined();
+  });
+});
+
+describe("entriesFromResponse", () => {
+  const bundle = (registryChains: unknown[], relayerChains: unknown[], assets: unknown[] = []) => ({
+    registryChains: { chains: registryChains },
+    assets,
+    relayerChains: { chains: relayerChains },
+  });
+
+  it("keeps a chain both services describe", () => {
+    const entries = entriesFromResponse(bundle([deployment(8453)], [relayer(8453)]), "network");
+    expect(entries.map((e) => e.chainId)).toEqual([8453n]);
+  });
+
+  it("drops a chain no relayer serves", () => {
+    const entries = entriesFromResponse(bundle([deployment(8453)], []), "network");
+    expect(entries).toEqual([]);
+  });
+
+  it("drops a chain the deployment registry does not describe", () => {
+    const entries = entriesFromResponse(bundle([], [relayer(8453)]), "network");
+    expect(entries).toEqual([]);
+  });
+
+  describe("URLs with a scheme that is not http(s)", () => {
+    it("drops a hostile explorerUrl without taking the chain with it", () => {
+      const entries = entriesFromResponse(
+        bundle([{ ...deployment(8453), explorerUrl: "javascript:alert(1)" }], [relayer(8453)]),
+        "network",
+      );
+      expect(entries.map((e) => e.chainId)).toEqual([8453n]);
+      expect(entries[0]?.explorerUrl).toBeUndefined();
+    });
+
+    it("drops the chain when rpcUrl is one", () => {
+      const entries = entriesFromResponse(
+        bundle([{ ...deployment(8453), rpcUrl: "javascript:alert(1)" }], [relayer(8453)]),
+        "network",
+      );
+      expect(entries).toEqual([]);
+    });
+
+    it("leaves every other chain in the bundle usable", () => {
+      const entries = entriesFromResponse(
+        bundle(
+          [{ ...deployment(8453), rpcUrl: "data:text/html,x" }, deployment(31337)],
+          [relayer(8453), relayer(31337)],
+        ),
+        "network",
+      );
+      expect(entries.map((e) => e.chainId)).toEqual([31337n]);
+    });
+
+    it("falls back to rpcUrl when readRpcUrl is one", () => {
+      const entries = entriesFromResponse(
+        bundle([{ ...deployment(8453), readRpcUrl: "javascript:alert(1)" }], [relayer(8453)]),
+        "network",
+      );
+      expect(entries[0]?.readRpcUrl).toBe("https://rpc.example");
+    });
+  });
+
+  it("resolves a page-relative readRpcUrl against the page origin", () => {
+    const entries = entriesFromResponse(
+      bundle([{ ...deployment(8453), readRpcUrl: "/rpc/v1/8453" }], [relayer(8453)]),
+      "network",
+    );
+    expect(entries[0]?.readRpcUrl).toBe(`${window.location.origin}/rpc/v1/8453`);
+  });
+
+  it("groups the flat asset list by chain", () => {
+    const asset = (chainId: number, assetId: number) => ({
+      chainId,
+      assetId,
+      token: MASP,
+      scale: "1",
+    });
+    const entries = entriesFromResponse(
+      bundle(
+        [deployment(1), deployment(8453)],
+        [relayer(1), relayer(8453)],
+        [asset(1, 7), asset(8453, 1), asset(8453, 2)],
+      ),
+      "network",
+    );
+    expect(entries.map((e) => e.tokens.map((t) => t.id))).toEqual([[7n], [1n, 2n]]);
+  });
+
+  it("leaves a chain with no indexed assets usable", () => {
+    const [only] = entriesFromResponse(bundle([deployment(8453)], [relayer(8453)]), "network");
+    expect(only?.tokens).toEqual([]);
+  });
+
+  it("sorts by chain id, so the switcher order does not follow response order", () => {
+    const entries = entriesFromResponse(
+      bundle([deployment(8453), deployment(1)], [relayer(8453), relayer(1)]),
+      "network",
+    );
+    expect(entries.map((e) => e.chainId)).toEqual([1n, 8453n]);
+  });
+
+  it("keeps the good chains when one disagrees", () => {
+    const entries = entriesFromResponse(
+      bundle([deployment(1), deployment(8453)], [relayer(1), { ...relayer(8453), treeDepth: 99 }]),
+      "network",
+    );
+    expect(entries.map((e) => e.chainId)).toEqual([1n]);
+  });
+});
+
+describe("assets with unparseable fields", () => {
+  const only = (raw: unknown) => {
+    const result = toChainEntry(deployment(1), relayer(1), [raw as AssetRow]);
+    expect(result.ok).toBe(true);
+    return result.ok ? result.entry.tokens[0] : undefined;
+  };
+
+  const asset = (extra: Record<string, unknown>) => ({
+    chainId: 1,
+    assetId: 1,
+    token: MASP,
+    scale: "1",
+    ...extra,
+  });
+
+  it("skips a chain with a malformed address or a non-integer scale instead of throwing", () => {
+    const bad = "not-an-address";
+    expect(() =>
+      unusable({ ...deployment(1), maspAddress: bad }, { ...relayer(1), maspAddress: bad }),
+    ).not.toThrow();
+    expect(() =>
+      unusable(deployment(1), relayer(1), [asset({ scale: "1.5" }) as AssetRow]),
+    ).not.toThrow();
+  });
+
+  it("reads an asset with no yieldState as plain custody at RAY", () => {
+    const a = only(asset({}));
+    expect(a?.index).toBe(RAY);
+    expect(a?.yieldEnabled).toBe(false);
+    expect(a?.yieldHalted).toBe(false);
+  });
+
+  it("carries the index and the halted flag when the pool reports them", () => {
+    const a = only(
+      asset({
+        yieldState: {
+          venue: RELAYER,
+          gross: "1100000",
+          supply: "1000000",
+          index: "1100000000000000000000000000",
+          halted: true,
+        },
+      }),
+    );
+    expect(a?.index).toBe(1_100_000_000_000_000_000_000_000_000n);
+    expect(a?.yieldEnabled).toBe(true);
+    expect(a?.yieldHalted).toBe(true);
+  });
+
+  const withYield = (extra: Record<string, unknown>) =>
+    asset({
+      yieldState: {
+        venue: RELAYER,
+        gross: "1000000",
+        supply: "1000000",
+        index: "1000000000000000000000000000",
+        halted: false,
+        ...extra,
+      },
+    });
+
+  it("converts the rate out of basis points and its window into days", () => {
+    const a = only(withYield({ apyBps: 418, apyWindowS: 7 * 86_400 }));
+    expect(a?.apy?.rate).toBeCloseTo(0.0418, 9);
+    expect(a?.apy?.windowDays).toBe(7);
+  });
+
+  it("leaves the rate undefined when the registry sent none", () => {
+    const a = only(withYield({}));
+    expect(a?.yieldEnabled).toBe(true);
+    expect(a?.apy).toBeUndefined();
+  });
+
+  it("drops a rate that arrives without its window, and the reverse", () => {
+    expect(only(withYield({ apyBps: 418 }))?.apy).toBeUndefined();
+    expect(only(withYield({ apyWindowS: 604_800 }))?.apy).toBeUndefined();
+  });
+
+  it("drops a window shorter than the measurement's floor", () => {
+    expect(only(withYield({ apyBps: 418, apyWindowS: 3_600 }))?.apy).toBeUndefined();
+    expect(only(withYield({ apyBps: 418, apyWindowS: 86_400 }))?.apy).toBeUndefined();
+    expect(only(withYield({ apyBps: 418, apyWindowS: 2 * 86_400 }))?.apy).toBeDefined();
+  });
+
+  it("carries the vault's name, and leaves it undefined when none was read", () => {
+    expect(only(withYield({ vaultName: "Steakhouse USDC" }))?.vaultName).toBe("Steakhouse USDC");
+    expect(only(withYield({}))?.vaultName).toBeUndefined();
+    expect(only(asset({}))?.vaultName).toBeUndefined();
+  });
+
+  it("keeps a venue loss, which is a real outcome", () => {
+    expect(only(withYield({ apyBps: -250, apyWindowS: 604_800 }))?.apy?.rate).toBeCloseTo(
+      -0.025,
+      9,
+    );
+  });
+
+  it("drops a malformed yieldState rather than the asset", () => {
+    const a = only(asset({ yieldState: { venue: 42, gross: null } }));
+    expect(a).toBeDefined();
+    expect(a?.index).toBe(RAY);
+    expect(a?.yieldEnabled).toBe(false);
+  });
+});

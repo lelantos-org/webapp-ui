@@ -1,13 +1,5 @@
 @layer components {
-  /* THE RELAYER'S FEE ASSET PICKER
-   *
-   * A popover listbox rather than a `<select>`, because the choice turns on
-   * figures — what the relay costs in each token, and what the wallet holds of
-   * it — that a native option list has nowhere to put. See `FeeAssetPicker.tsx`.
-   *
-   * The trigger stays a text-sized capsule on the relayer row: it is part of the
-   * label it sits in, not another form field stacked into the panel.
-   */
+  /* Fee asset picker */
   .feepick {
     position: relative;
     display: inline-flex;
@@ -44,22 +36,12 @@
     transform: rotate(180deg);
   }
 
-  /* Portalled to `<body>` and placed in viewport coordinates by the component,
-     because the fee panel's height animation wraps it in `overflow: hidden` and
-     would otherwise clip it to the panel, which this list is taller than by
-     design. `fixed`, so the coordinates it is given are the ones it was measured
-     against, with no offset parent in between.
-     `top`/`left` come from the component; everything else is here. */
+  /* Popover */
   .feepick__pop {
     position: fixed;
-    /* Above the sticky header (10) and everything on the page, below the
-       modal layer (50) — a dialog opening over the form must cover this,
-       not sit under it. */
     z-index: var(--z-popover);
     width: max-content;
     min-width: 240px;
-    /* Never wider than the viewport it is being clamped into, whatever the
-       symbols and figures inside come to. */
     max-width: min(320px, calc(100vw - 16px));
     padding: 6px;
     background: var(--bg-1);
@@ -69,7 +51,6 @@
     animation: drop-in var(--dur-140) var(--ease);
   }
 
-  /* Rises from the side it opened on, so the motion points back at the trigger. */
   .feepick__pop--up {
     animation-name: rise-in;
   }
@@ -86,15 +67,10 @@
     color: var(--fg-mute);
   }
   .feepick__list {
-    /* Capped so a relayer that takes a dozen assets scrolls rather than running
-       the length of the screen. The placement pass measures whatever this comes
-       to and picks the side with room for it. */
     max-height: min(244px, calc(100vh - 96px));
     overflow-y: auto;
   }
 
-  /* The list holds the keyboard while open, and `aria-activedescendant` — not
-     focus — marks the row. Its own focus ring would sit around all of them. */
   .feepick__list:focus {
     outline: none;
   }
@@ -115,8 +91,6 @@
     color: var(--accent);
   }
 
-  /* Kept legible rather than greyed to the edge of readable: the figures are the
-     reason to show an option the wallet cannot cover at all. */
   .feepick__opt--off {
     cursor: not-allowed;
   }

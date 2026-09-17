@@ -1,14 +1,7 @@
-// Every name this app writes browser storage under, in one place.
-//
-// These strings are persisted: a changed spelling orphans whatever a returning
-// user has stored under the old one — a cached key, a synced tree, a claim link
-// whose spending key exists nowhere else — with nothing failing to say so. Bump
-// a version segment deliberately, never by accident; seeing them side by side is
-// the point of the list. Nothing here may import anything.
+// Persisted names: a changed spelling silently orphans stored data, including claim-link keys.
 
 export const LOCAL_KEYS = {
-  /// The explicit light/dark choice. Also read by `public/theme-init.js`, which
-  /// cannot import this file and spells it independently.
+  /// The explicit light/dark choice. Also spelled independently in `public/theme-init.js`.
   theme: "lelantos:theme",
   /// Verbose logging switch (`window.__lelantosDebug`).
   debug: "lelantos:debug",

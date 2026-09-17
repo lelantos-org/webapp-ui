@@ -6,30 +6,14 @@ import { sessionStore } from "@/shared/lib/storage/safe";
 import { nskFieldFromHex, nskHexFromField } from "./nsk-codec";
 
 const log = createLogger("nsk-cache");
-/// Versioned by key shape. Entries live in `sessionStorage`, so a bump leaves any
-/// other ones to expire with the tab and a miss costs one key-derivation prompt.
-///
-/// Keyed by an opaque account key rather than an EOA, since a passkey session
-/// has no EOA and identifies itself by credential id instead.
 const PREFIX = SESSION_KEYS.nskPrefix;
 
-/// Not chain-scoped.
-///
-/// `LELANTOS_NSK_DOMAIN` omits chainId, so one EIP-712 signature yields the same
-/// nsk — and the same shielded address — on every chain. The passkey path is
-/// chain-independent for the same reason: `LELANTOS_PRF_SALT` names no chain
-/// either. Keying by chain would make a chain switch re-prompt for a
-/// derivation whose result is identical.
-///
-/// `accountKey` is whatever identifies the account to the wallet kind in play:
-/// the EOA for an injected wallet, the credential id for a passkey. It is
-/// digested rather than written out; see `accountDigest`.
+/// Not chain-scoped (the nsk is chain-independent); the account key is digested, never written out.
 function key(accountKey: string): string {
   return `${PREFIX}${accountDigest(accountKey)}`;
 }
 
-/// Read the cached nsk for `accountKey`. Returns `undefined` on a miss, a
-/// malformed entry, or unavailable storage.
+/// The cached nsk for `accountKey`, or `undefined` on a miss, bad entry or no storage.
 export function getCachedNsk(accountKey: string): Field | undefined {
   const raw = sessionStore.get(key(accountKey));
   if (raw === undefined) {
@@ -46,8 +30,7 @@ export function getCachedNsk(accountKey: string): Field | undefined {
   return parsed.value;
 }
 
-/// Persist `nsk` for `accountKey`. Best-effort: a storage failure costs one
-/// extra derivation prompt later rather than failing the wallet build.
+/// Persist `nsk` for `accountKey`. Best-effort.
 export function cacheNsk(accountKey: string, nsk: Field): void {
   if (sessionStore.set(key(accountKey), nskHexFromField(nsk))) log.debug("stored");
 }
@@ -56,12 +39,7 @@ export function clearCachedNsk(accountKey: string): void {
   sessionStore.remove(key(accountKey));
 }
 
-/// Clear every cached nsk in this tab.
-///
-/// Not only the connected account: a session that touched several accounts
-/// holds one raw spending key per account, and a disconnect must revoke all of
-/// them. Kind-agnostic, so one call clears both an EOA's entries and a
-/// passkey's.
+/// Clear every cached nsk in this tab: disconnect must revoke every raw spending key, not just the active one.
 export function clearAllCachedNsk(): void {
   sessionStore.removePrefix(PREFIX);
 }

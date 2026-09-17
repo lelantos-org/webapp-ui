@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import type { FeeBlock } from "@/features/fees";
 import { type SwapSubmitState, swapSubmitBlock } from "./swap-block";
@@ -24,8 +23,6 @@ describe("swapSubmitBlock", () => {
     expect(swapSubmitBlock(ready)).toEqual({ disabled: false });
   });
 
-  // The shared questions' wording is pinned in `op-form/submit-block.test.ts`;
-  // these are the swap's own.
   it.each<[string, Partial<SwapSubmitState>, string]>([
     [
       "a failed sync, naming the swap",
@@ -46,9 +43,6 @@ describe("swapSubmitBlock", () => {
     expect(swapSubmitBlock({ ...ready, amountValid: false })).toEqual({ disabled: true });
   });
 
-  // The ordering is the point of this module: each pair below would report the
-  // wrong one of two simultaneously-true conditions if the branches were
-  // reordered.
   describe("precedence", () => {
     it("reads the wallet before judging the amount against it", () => {
       const block = swapSubmitBlock({ ...ready, balancesLoading: true, amountValid: false });
@@ -57,8 +51,6 @@ describe("swapSubmitBlock", () => {
     });
 
     it("reports the amount before anything the amount causes", () => {
-      // An unusable amount is why there is no quote — reporting the quote would
-      // send the user looking at the wrong control.
       const block = swapSubmitBlock({
         ...ready,
         amountValid: false,
@@ -70,15 +62,12 @@ describe("swapSubmitBlock", () => {
     });
 
     it("reports staleness rather than absence when a quote expired in place", () => {
-      // `quote` is suppressed once stale, so both are true at once. "Expired"
-      // has a remedy; "waiting" implies something is still coming.
       const block = swapSubmitBlock({ ...ready, hasQuote: false, quoteStale: true });
 
       expect(block.reason).toBe("The quote expired — refresh it");
     });
 
     it("reports the quote before the fee", () => {
-      // No quote means no trade to pay a fee on yet.
       const block = swapSubmitBlock({ ...ready, hasQuote: false, feeBlock: QUOTE_FAILED });
 
       expect(block.reason).toBe("Waiting for a quote");

@@ -1,14 +1,3 @@
-// Public surface of the `assets` feature.
-//
-// Laid out by concern:
-//
-//   `registry/`   the active chain's registered assets.
-//   `balances/`   shielded balances with the in-flight overlay; transparent ones.
-//   `prices/`     USD prices.
-//   `yield/`      venue rates and what the wallet's notes have earned.
-//   `portfolio/`  Home's hero and asset list.
-//   `pickers/`    the asset pickers and their native-coin entries.
-
 export {
   useDepositSourceBalance,
   useInvalidateTransparentBalances,

@@ -1,7 +1,5 @@
 @layer components {
-  /* The shared modal shell: overlay, panel, title, and the body classes the
-     panels fill themselves with. Rendered by `shared/ui/Modal`; the overlay and
-     the panel each play their own fade on the way out. */
+  /* Modal */
   .modal-overlay {
     position: fixed;
     inset: 0;

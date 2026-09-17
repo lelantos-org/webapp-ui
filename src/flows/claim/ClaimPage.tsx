@@ -1,9 +1,3 @@
-// The recipient's side of a claim link.
-//
-// Not an `ActionScreen`: whoever opens this has probably never connected a
-// wallet here, so the page has to work before the connection gate every action
-// screen sits behind.
-
 import type { RegisteredAsset } from "@/config/chains";
 import type { WalletStatus } from "@/features/wallet";
 import { useWallet } from "@/features/wallet";
@@ -43,8 +37,6 @@ export function ClaimPage() {
         mismatch={mismatch}
         status={status}
         onConnect={connect}
-        // The link names its own chain and the notes live only there, so labels
-        // come from it rather than from the wallet's current chain.
         assets={linkChain?.tokens ?? []}
         destinationAddress={wallet?.address}
         onClaim={claim}
@@ -69,11 +61,6 @@ interface PhaseCardProps {
   onRetry(): void;
 }
 
-/// The one card that belongs to the current phase.
-///
-/// A switch rather than a chain of `phase.kind === …` checks: it returns on every
-/// phase, so adding one to the machine is a compile error here rather than a
-/// screen that renders nothing.
 function PhaseCard({
   phase,
   mismatch,
@@ -91,9 +78,6 @@ function PhaseCard({
     case "bad-link":
       return <BadLinkCard error={phase.error} reason={phase.reason} />;
 
-    // Both wait on the network gate, which is already on screen. A second card
-    // beneath it would read as a separate problem, and a wallet on an unsupported
-    // network would be asked to connect one.
     case "need-wallet":
       return mismatch ? null : <ConnectGate status={status} onConnect={onConnect} />;
 
@@ -110,8 +94,6 @@ function PhaseCard({
           destinationAddress={destinationAddress}
           busy={phase.kind === "sweeping"}
           busyAsset={phase.kind === "sweeping" ? phase.asset : undefined}
-          // Switching mid-flow is the only way to arrive here blocked, and the
-          // gate card explains it, so the buttons are just disabled.
           claimDisabled={mismatch !== undefined}
           onClaim={onClaim}
         />

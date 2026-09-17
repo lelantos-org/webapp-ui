@@ -1,9 +1,3 @@
-// Every sentence the governance screens say, and the small formatting they share.
-//
-// Kept apart from the components so the words can be read, and tested, in one
-// place — above all the reasons someone cannot vote, which each point at a
-// different fix.
-
 import type {
   GovErrorCode,
   Phase,
@@ -25,8 +19,7 @@ export function stateLabel(state: ProposalState | undefined): string {
 
 export type StateTone = "accent" | "warn" | "err" | "neutral" | "ok";
 
-/// Colour of a state badge: live votes in the accent, outcomes that pass in the
-/// success tone, those that failed in err, and the rest neutral.
+/// Colour of a proposal state badge.
 export function stateTone(state: ProposalState | undefined): StateTone {
   switch (state) {
     case "Active":
@@ -83,9 +76,7 @@ export function formatVotes(amount: bigint, decimals: number): string {
   return formatDecimalCompact(amount, decimals, 2);
 }
 
-/// A share in basis points as a percentage, trailing zeros dropped: "12.5%",
-/// "50%". Unlike the shared `formatBps`, whose fixed precision states how a rate
-/// was configured, this is a proportion of the votes cast.
+/// A vote share in basis points as a percentage, trailing zeros dropped: "12.5%", "50%".
 export function formatShare(bps: number): string {
   const pct = bps / 100;
   return `${Number.isInteger(pct) ? pct : pct.toFixed(1)}%`;

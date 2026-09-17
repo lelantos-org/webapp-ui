@@ -1,13 +1,9 @@
 @layer components {
-  /* Every action route renders as one centred column: a header (back button,
-     title, one subtitle line), then a card. See `ActionScreen`, `ScreenHeader`
-     and `ActionForm`. Widths: 560 for the single-card actions, 1120 for Send by
-     link's two columns, 900 for the vault. */
+  /* Action screen */
   .screen {
     width: 100%;
     max-width: 560px;
     margin: 0 auto;
-    /* On top of `.main`'s own 28px. */
     padding-top: var(--sp-8);
     display: flex;
     flex-direction: column;
@@ -17,7 +13,6 @@
   .screen--vault { max-width: 900px; }
 
   @media (max-width: 480px) {
-    /* Column padded 20/18, less what `.main` already pads. */
     .screen { padding: var(--sp-6) var(--sp-8) 0; gap: var(--sp-16); }
   }
 }

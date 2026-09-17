@@ -10,8 +10,7 @@ import {
   loadUnshield,
 } from "@/flows/loaders";
 
-/// `lazy()` over a module's named export: the routes' modules export their
-/// screen by name, not as a default.
+/// `lazy()` over a module's named export.
 export function lazyNamed<K extends string, P extends object>(
   load: () => Promise<Record<K, ComponentType<P>>>,
   name: K,
@@ -22,9 +21,6 @@ export function lazyNamed<K extends string, P extends object>(
 interface ActionRoute {
   path: string;
   width: NonNullable<ActionScreenProps["width"]>;
-  /// The route's chunk. Home warms it on intent and again at idle when
-  /// `prefetch` is set; `App` lazy-loads `Screen` through the same loader, so a
-  /// warmed chunk is the route's.
   load: () => Promise<unknown>;
   prefetch: boolean;
   Screen: LazyExoticComponent<ComponentType>;
@@ -40,8 +36,7 @@ function action<K extends string>(
   return { path, width, load, prefetch, Screen: lazyNamed(load, screen) };
 }
 
-/// The action screens, each its own route in the same shell: the connection
-/// gate, the chain-keyed remount, the chunk fallback. See `ActionScreen`.
+/// The action routes, each rendered inside `ActionScreen`.
 export const ACTIONS: readonly ActionRoute[] = [
   action("/shield", "narrow", loadShield, "DepositForm", true),
   action("/send", "narrow", loadSend, "TransferForm", true),
@@ -50,8 +45,6 @@ export const ACTIONS: readonly ActionRoute[] = [
   action("/swap", "narrow", loadSwap, "SwapForm", true),
   action("/links", "vault", loadLinks, "LinksPage", false),
   action("/governance", "vault", loadGovernance, "ProposalsPage", true),
-  // Static before dynamic is react-router's own ranking; listed in that order
-  // anyway so the table reads the way it matches.
   action("/governance/new", "wide", loadGovernance, "CreateProposalPage", false),
   action("/governance/:id", "vault", loadGovernance, "ProposalDetailPage", false),
 ];

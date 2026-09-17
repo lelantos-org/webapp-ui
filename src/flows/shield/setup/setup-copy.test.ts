@@ -62,10 +62,6 @@ describe("runningCopy", () => {
   });
 });
 
-// The setup card on Shield is an invitation, not a gate, so its copy has to say
-// whether the deposit on screen needs it — and never promise more than the
-// AllowanceTransfer path delivers (one wallet confirmation, not zero).
-
 describe("joinNames", () => {
   it("joins with commas and a final and", () => {
     expect(joinNames(["USDC"])).toBe("USDC");
@@ -102,8 +98,6 @@ describe("setupAllCopy", () => {
   });
 });
 
-// The card a deposit is blocked on names every token it pulls that still needs
-// setup: the deposited one, the one paying the relayer, or both.
 describe("depositSetupCopy", () => {
   const known = { unknown: false, willApproveErc20: false };
 

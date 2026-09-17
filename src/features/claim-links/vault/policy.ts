@@ -1,29 +1,8 @@
-// What the vault may hold, and how close it is to dropping something.
-//
-// Pure: every rule about retention — the TTL, the cap, the order records drop
-// in — is stated here once, and both the write path (`store.ts`) and the
-// warnings on screen read it, so a warning cannot disagree with what the next
-// write will do.
-
 import { DAY_MS } from "@/shared/lib/format/time";
 import type { StoredClaimLink } from "./record";
 
-/// Records older than this are dropped on the next write.
-///
-/// A week, not a month. Each record's `url` carries a live spending key, so this
-/// window is not really about bounding growth on disk — it is how long a bearer
-/// secret for unclaimed funds stays readable by any script on this origin, long
-/// after the tab that needed it closed. A link unclaimed after a week is far
-/// more likely forgotten than in flight, and the recipient's copy is unaffected
-/// either way: pruning here drops the *sender's* safety copy, not the link.
-///
-/// Not the primary control. `forgetClaimLink` is, and it fires as soon as the
-/// link has been handed over; the TTL is the backstop for the records that never
-/// reach it.
-///
-/// Every sentence on screen that names the window is derived from this (through
-/// `ClaimLinkPressure.ttlMs`), so shortening it cannot leave copy promising the
-/// old figure.
+/// Records older than this are dropped. A week: each `url` is a live spending key, readable by
+/// any script on this origin while stored.
 const TTL_MS = 7 * DAY_MS;
 
 /// Cap on retained records, newest kept.
@@ -39,9 +18,6 @@ export function newestFirst(a: StoredClaimLink, b: StoredClaimLink): number {
 }
 
 /// The canonical stored form: live records only, newest first, capped.
-///
-/// Applied on every write and reused by `pruneExpiredClaimLinks`, giving a
-/// single definition of what may be on disk.
 export function normalize(records: readonly StoredClaimLink[], now: number): StoredClaimLink[] {
   return records
     .filter((r) => isLive(r, now))
@@ -54,19 +30,7 @@ export function claimLinkExpiresIn(record: StoredClaimLink, now = Date.now()): n
   return record.createdAt + TTL_MS - now;
 }
 
-/// How close this vault is to losing a record, and why.
-///
-/// Both limits above drop the *sender's* copy of a bearer secret, and a link the
-/// sender never managed to hand over is unrecoverable once it goes — the header
-/// note applies. Neither limit is wrong, but a limit that fires silently is first
-/// noticed after it has been hit. This reports the pressure while there is still
-/// something to do about it.
-///
-/// Pure, and derived from the same `TTL_MS`/`MAX_RECORDS` as `normalize`, so a
-/// warning can never disagree with what the next write will actually do.
-///
-/// Browser-wide, not per chain: the cap counts every record on disk, so a
-/// per-chain count would promise room the next write does not have.
+/// How close the vault is to dropping a record, from the same limits as `normalize`. Browser-wide.
 export interface ClaimLinkPressure {
   /// Live records held right now, across every chain.
   count: number;
@@ -80,17 +44,13 @@ export interface ClaimLinkPressure {
   oldestExpiresIn: number | undefined;
   /// Creating this many more links would evict the oldest on the cap alone.
   roomLeft: number;
-  /// The record the next `rememberClaimLink` would drop: the oldest live one,
-  /// once there is no room left. Absent while there is room.
+  /// The record the next `rememberClaimLink` would drop; absent while there is room.
   nextEvicted: StoredClaimLink | undefined;
 }
 
-/// A day: near enough to act on, far enough not to cry wolf.
 const EXPIRING_SOON_MS = DAY_MS;
 
-/// The pressure on `records`: a snapshot the caller already holds — the one a
-/// `useSyncExternalStore` subscription returned — so the figure re-renders with
-/// the store rather than on whatever else happens to render its component.
+/// The pressure on a snapshot of `records` the caller already holds.
 export function claimLinkPressureOf(
   records: readonly StoredClaimLink[],
   now = Date.now(),

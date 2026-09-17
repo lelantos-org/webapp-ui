@@ -1,10 +1,8 @@
-// The unshield (withdraw) mutation, on the note-spending policy in
-// `features/ops`.
-
 import type { WithdrawResult } from "@lelantos-org/sdk";
 import { type ActionMutation, useSpendMutation, type WithdrawCall } from "@/features/ops";
 import { stepsFor } from "@/features/tx";
 
+/// The unshield (withdraw) mutation.
 export function useWithdraw(): ActionMutation<WithdrawCall, WithdrawResult> {
   return useSpendMutation<WithdrawCall, WithdrawResult>({
     label: (i) => (i.native ? "withdraw eth" : "withdraw"),

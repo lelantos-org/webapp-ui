@@ -1,9 +1,3 @@
-// The words the swap form puts around the trade, derived from the figures
-// behind it.
-//
-// Pure, so the Details row, the footnote and the venue badge are testable
-// without a quote query or a fee panel.
-
 import type { SwapVenue } from "@lelantos-org/sdk/services";
 import { type FeeSummaryModel, feeRowsOf, sumByAsset } from "@/features/fees";
 import { formatBaseFixed } from "@/shared/lib/format/asset";
@@ -14,25 +8,17 @@ const VENUES: Record<SwapVenue, string> = {
   univ4: "Uniswap v4",
 };
 
-/// "Uniswap v3" for the quoter's `univ3`. An id this build does not know is
-/// shown as sent rather than hidden: the badge says where the trade routes.
+/// "Uniswap v3" for the quoter's `univ3`; unknown ids are shown as sent.
 export function venueLabel(venue: string): string {
   return (VENUES as Record<string, string>)[venue] ?? venue;
 }
 
-/// "0.50%", "1.0%": two places under one percent, where the difference between
-/// 0.10 and 0.50 is the whole choice.
+/// "0.50%", "1.0%": two places under one percent.
 export function slippagePct(bps: number): string {
   return formatBps(bps, bps < 100 ? 2 : 1);
 }
 
-/// The fee half of the Details summary: "fees 1.20 USDC", or what stands in for
-/// it while there is nothing to state. `undefined` with nothing typed, when the
-/// row carries the slippage alone.
-///
-/// Figures at two places at least. Per asset, joined with
-/// "+" when the relayer is paid in another token: adding two tokens' base units
-/// would be a number that means nothing.
+/// The fee half of the Details summary: "fees 1.20 USDC", per asset joined with "+".
 export function swapFeeSummary(model: FeeSummaryModel | undefined): string | undefined {
   if (!model) return undefined;
   const fees = feeRowsOf(model);
@@ -61,9 +47,7 @@ export function revertFootnote(bps: number): string {
 /// Which line goes under "You receive".
 export type ReceiveLine = "quote-failed" | "stale" | "credited" | "pricing" | "fetching" | "empty";
 
-/// The line for the quote as it stands, most pressing first: a failure with
-/// nothing to show, an expired quote, the credited figure, a quote still being
-/// sized into what reaches the balance, a request in flight, or nothing asked.
+/// The line for the quote as it stands, most pressing first.
 export function receiveLine(s: {
   quoted: boolean;
   credited: boolean;

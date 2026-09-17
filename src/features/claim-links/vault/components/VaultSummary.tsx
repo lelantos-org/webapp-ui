@@ -7,8 +7,7 @@ import { useLinkVault } from "../use-link-vault";
 import { VaultMeter } from "./VaultMeter";
 import "./vault.css";
 
-/// The vault as one panel under Send by link's share column: how full it is and
-/// the way in.
+/// The vault as one panel under Send by link: how full it is, and the way in.
 export function VaultSummary() {
   const titleId = useId();
   const { pressure } = useLinkVault();

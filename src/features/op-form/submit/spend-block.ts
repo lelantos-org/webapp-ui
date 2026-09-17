@@ -1,8 +1,3 @@
-// What stops a shielded spend from being submitted.
-//
-// Shared by transfer and withdraw, which ask the same questions in the same
-// order. Pure and exported, so the ordering is testable without a form.
-
 import {
   type AmountReadiness,
   amountBlock,
@@ -15,27 +10,15 @@ import {
   walletReadinessBlock,
 } from "./submit-block";
 
-/// Why the submit button is dead, in the order a user can act on it.
-///
-/// The swap form has carried a table like this for a while; transfer and
-/// withdraw shipped `submitDisabled` with no reason at all, and never gated the
-/// recipient — a malformed address was caught by zod only after the click. The
-/// ordering follows the same argument `flows/swap/swap-block.ts` makes: the user's
-/// own input first, because it is the only thing they can act on directly.
-///
-/// The wallet's own state comes before even that, though, because it makes the
-/// input unjudgeable. Fee problems come last but do block.
-///
-/// A block without a reason means nothing useful can be said yet under the
-/// button — an amount the field already flags.
+/// What a Send or Unshield submit block is judged from.
 export interface SpendBlockInput extends WalletReadiness, AmountReadiness, FeeReadiness {
   recipient: string;
   recipientValid: (value: string) => boolean;
-  /// Which kind of address the recipient must be, for the message naming it: a
-  /// transfer takes a shielded address, a withdraw a public one.
+  /// Which kind of address the recipient must be, for the message naming it.
   recipientKind: "shielded" | "public";
 }
 
+/// Why a spend's submit is dead: wallet, amount, recipient, then fee.
 export function spendSubmitBlock(input: SpendBlockInput): SubmitBlock {
   return (
     walletReadinessBlock("sending", input) ??

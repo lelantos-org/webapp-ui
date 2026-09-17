@@ -1,14 +1,11 @@
-// Animation timings live in `SuccessCheck.css` (`.success-check`);
-// total ~950 ms.
-
 import type { ReactNode } from "react";
 import "./SuccessCheck.css";
 
 interface SuccessCheckProps {
-  /// Optional caption rendered under the tick.
   caption?: ReactNode;
 }
 
+/// The animated success tick, with an optional caption.
 export function SuccessCheck({ caption }: SuccessCheckProps) {
   return (
     <div className="success-check" role="status" aria-live="polite">

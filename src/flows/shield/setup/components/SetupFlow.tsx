@@ -1,10 +1,3 @@
-// One-time wallet setup modal for the Permit2 AllowanceTransfer flow.
-//
-// The modal, its lifecycle — dismiss, lock, auto-close — and its four screens.
-// The run itself is `useSetupRun`, the words and step rows `setup-copy.ts`. Each
-// screen opens with the paragraph the modal is described by, so `descId` lands
-// on whichever is showing.
-
 import { useCallback, useEffect, useId, useState } from "react";
 import type { RegisteredAsset } from "@/config/chains";
 import { useActiveChainOrUndefined, useTxExplorerUrl } from "@/features/chain";
@@ -21,31 +14,22 @@ import { useSetupRun } from "../use-setup-run";
 const DONE_AUTOCLOSE_MS = 1500;
 
 export interface SetupFlowProps {
-  /// Tokens to authorize. One entry is the deposit-form path; N entries collapse
-  /// the signature and the permit tx into one each, which is why this takes an
-  /// array.
+  /// Tokens to authorize; the signature and permit tx batch across them.
   assets: RegisteredAsset[];
-  /// Whether the run will send an ERC-20 → Permit2 approval for `asset`'s token.
-  /// Per token, because that step does not batch. Must be `SetupNeeds.
-  /// willApproveErc20`, not `needsErc20Approve`: the batch decides on the cap it
-  /// grants, so the gating predicate predicts a shorter run than the one the
-  /// wallet prompts for.
+  /// Whether the run approves `asset`'s token: `SetupNeeds.willApproveErc20`, not `needsErc20Approve`.
   willApproveErc20(asset: RegisteredAsset): boolean;
   onSuccess(): void;
   onCancel(): void;
 }
 
+/// The one-time Permit2 AllowanceTransfer setup modal.
 export function SetupFlow({ assets, willApproveErc20, onSuccess, onCancel }: SetupFlowProps) {
-  // Undefined variant: the modal can be mounted while the registry is still
-  // resolving, and a missing chain must degrade the disclosure rather than throw
-  // inside a flow the user has already started.
   const chain = useActiveChainOrUndefined();
   const { screen, progress, error, toApprove, canRun, run } = useSetupRun(assets, willApproveErc20);
   const { exiting, exit } = useExitTransition(MODAL_EXIT_MS);
   const descId = useId();
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // For the disclosure only; the run reads its own expiry when it starts.
   const expiryStr = new Date(defaultAllowanceExpirationSecs() * 1000).toISOString().slice(0, 10);
   const symbolOf = (token: string) =>
     assets.find((a) => sameAddress(a.token, token))?.symbol ?? "token";
@@ -54,13 +38,8 @@ export function SetupFlow({ assets, willApproveErc20, onSuccess, onCancel }: Set
 
   const steps = setupSteps(toApprove);
   const current = currentStepId(progress);
-  // The running and failed screens both need the label for the current step,
-  // which `steps` already holds.
   const currentLabel = steps.find((s) => s.id === current)?.label ?? progress.step;
 
-  // While the flow is running and the wallet is mid-prompt no dismiss path is
-  // open, and the overlay indicates this with a busy cursor. `Modal` also closes
-  // those paths for the duration of the exit.
   const locked = !(screen === "intro" || screen === "failed" || screen === "done");
 
   const requestCancel = useCallback(() => exit(onCancel), [exit, onCancel]);
@@ -100,16 +79,7 @@ export function SetupFlow({ assets, willApproveErc20, onSuccess, onCancel }: Set
             onToggle={(e) => setShowAdvanced((e.target as HTMLDetailsElement).open)}
           >
             <summary>Advanced</summary>
-            {/*
-              The spender, the Permit2 and the chain are named here because they
-              are what the grant is actually *to*, and none of them is a constant
-              this app knows: all three arrive from protocol-webserver at boot.
-              Stating only "unlimited, for N days" describes the size of the grant
-              while leaving out its recipient, which is the half a user would need
-              in order to notice a substituted address. Read from the active
-              `ChainEntry` rather than the wallet, so these are the same values the
-              registry/relayer cross-check passed.
-            */}
+            {/* Name the grant's recipients so a user can spot a substituted address. */}
             <p className="modal-meta">
               cap: unlimited ({symbolList})
               <br />

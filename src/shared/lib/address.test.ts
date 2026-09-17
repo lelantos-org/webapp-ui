@@ -3,7 +3,6 @@ import { grouped, sameAddress, shortAddr } from "./address";
 
 describe("shortAddr", () => {
   it("elides the middle of a full address", () => {
-    // Default n=6: "0x" + 6 leading chars, then the 6 trailing chars.
     expect(shortAddr("0x1234567890abcdef1234567890abcdef12345678")).toBe("0x123456…345678");
   });
 

@@ -8,8 +8,6 @@ import {
   SYSTEM_LIGHT_SELECTOR,
 } from "./light-theme";
 
-/// Runs `css` through Vite's own stylesheet pipeline with only this plugin
-/// configured — the path both `vite` and `vite build` take.
 async function process(css: string): Promise<string> {
   const config = await resolveConfig(
     { configFile: false, logLevel: "silent", css: { postcss: { plugins: [lightTheme()] } } },
@@ -18,7 +16,6 @@ async function process(css: string): Promise<string> {
   return (await preprocessCSS(css, "/virtual/tokens.css", config)).code;
 }
 
-/// Declarations as `name: value` pairs, whitespace-normalised.
 function declarations(block: string): string[] {
   return block
     .split(";")
@@ -54,8 +51,6 @@ ${LIGHT_SELECTOR} { --bg: #fff; --fg: #111; }
     ).rejects.toThrow(/hand-written/);
   });
 
-  // Against the real file: the palette has to stay authored under the selector
-  // this plugin looks for, or the system-preference theme silently disappears.
   it("finds the palette in tokens.css", async () => {
     const tokens = readFileSync(new URL("../../src/styles/tokens.css", import.meta.url), "utf8");
     const out = await process(tokens);

@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import type { FeeBreakdown } from "@/shared/domain/fee-math";
 import { asBaseUnits } from "@/shared/domain/units";
@@ -14,16 +13,12 @@ function breakdown(fee: bigint, total: bigint, feeBps = 30n): FeeBreakdown {
   };
 }
 
-/// Only the two fields `settledFee` reads; the rest of `UseQueryResult` is
-/// irrelevant to it.
 function preview(data: FeeBreakdown | undefined, stale: boolean): FeePreviewResult {
   return { data, stale } as FeePreviewResult;
 }
 
 describe("settledFee", () => {
   it("withholds the preview while the debounce is catching up", () => {
-    // `data` then describes the *previous* keystroke's amount, and this feeds
-    // the line the user reads immediately before submitting.
     expect(settledFee(preview(breakdown(3_000n, 1_003_000n), true))).toBeUndefined();
   });
 

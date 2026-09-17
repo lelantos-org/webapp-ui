@@ -1,14 +1,4 @@
-// The route chunks: one loader per flow.
-//
-// The single place a flow is imported, and only ever dynamically.
-// `app/routes/routes.ts` wraps each loader in `lazy()`, and Home calls the same
-// loaders to warm a chunk on intent. Sharing the function rather than restating the path is what keeps the
-// prefetch and the route on one chunk: a second spelling of the path is a second
-// chance to warm a chunk the route never asks for.
-//
-// Each loader names the flow's screen module, so it pulls in that flow and
-// whatever it builds on — never a sibling flow. `vite/chunks.ts` names the chunk
-// after the flow's folder.
+// Route chunk loaders, one per flow; the only place a flow is imported. Routes and prefetch share them.
 
 /// Shield: move an asset from the public wallet into the pool (`/shield`).
 export const loadShield = () => import("./shield/DepositForm");

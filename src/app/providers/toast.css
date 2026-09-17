@@ -1,26 +1,5 @@
-/* Sonner toasts, repainted in the app's tokens.
- *
- * Sonner is configured as its light theme (`<Toaster theme="light">`) and
- * styled from there: it declares its palette as custom properties, so almost
- * everything here is a variable assignment rather than a rule that has to win
- * an argument with sonner's own stylesheet.
- *
- * That matters because sonner injects its stylesheet at runtime, so import
- * order cannot be relied on. Where a rule is unavoidable, it is written to
- * beat its sonner counterpart on specificity alone — noted per rule below.
- *
- * The palette follows the inline surfaces (`.notice`, `.err`, `.badge`): a
- * tinted background at a low alpha, a matching border, and the semantic token as
- * the text colour. Success and info both take the accent, the way the app's
- * "fine" verdicts do (the denomination badge, the slippage presets).
- *
- * Unlayered, and imported by `providers.tsx` beside the `<Toaster>`: every other
- * stylesheet sits in a cascade layer, and a layered rule would lose to sonner's
- * unlayered one whatever its specificity.
- */
+/* Sonner toasts. Unlayered: sonner injects an unlayered stylesheet at runtime. */
 
-/* `:root` beats sonner's own `[data-sonner-toaster][data-theme='light']` block,
-   which is the only place it assigns these. */
 :root [data-sonner-toaster][data-theme="light"] {
   --normal-bg: var(--bg-1);
   --normal-border: var(--line-strong);
@@ -42,10 +21,6 @@
   --error-border: rgba(var(--err-rgb), 0.25);
   --error-text: var(--err);
 
-  /* The close button is drawn from sonner's grey ramp, and only from it. Naming
-     the ramp leaves sonner's own rules in charge of the button — including the
-     per-type tint `richColors` gives it, which a rule of ours would have to
-     either outrank or lose to by accident. */
   --gray1: var(--bg-1);
   --gray2: var(--bg-3);
   --gray4: var(--line-strong);
@@ -55,9 +30,6 @@
   --border-radius: var(--radius);
 }
 
-/* Everything below has no variable to set. Sonner declares these inside
-   `:where(...)`, which contributes no specificity, so one attribute is enough
-   to win. */
 [data-sonner-toaster] {
   font-family: var(--sans);
 }
@@ -74,11 +46,7 @@
   opacity: 0.85;
 }
 
-/* The action ("view") button: compact and outlined rather than sonner's solid
-   default, tinted by the toast it sits in. The only selector here needing
-   `:root`, because sonner styles this at
-   `[data-sonner-toast][data-styled='true'] [data-button]` — three attributes,
-   which three of ours would only tie. */
+/* Action button */
 :root [data-sonner-toaster] [data-sonner-toast] [data-button] {
   background: transparent;
   border: 1px solid currentColor;

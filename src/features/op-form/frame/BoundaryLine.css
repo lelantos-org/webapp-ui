@@ -1,8 +1,5 @@
 @layer components {
-  /* The pool boundary, stated under an action's title. Reads as a route rather
-     than a warning: an arrow between two plain words, with the shielded end in
-     the accent — or, for an op that never leaves the pool, one accent sentence
-     behind the pool's shield. See `BoundaryLine`. */
+  /* BoundaryLine */
   .boundary {
     margin: 0;
     font-size: var(--fs-14);
@@ -23,7 +20,7 @@
   .boundary--sentence { color: var(--accent); }
   .boundary__shield { flex: none; }
 
-  /* Phone copy; swapped in at the phone breakpoint below. */
+  /* Phone copy */
   .boundary__short { display: none; }
 
   @media (max-width: 480px) {

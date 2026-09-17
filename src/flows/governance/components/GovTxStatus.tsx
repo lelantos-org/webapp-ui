@@ -21,8 +21,6 @@ export interface GovTxStatusProps {
   onRetry?: (() => void) | undefined;
 }
 
-/// The line to show for a failed governance write: the governor's own reason
-/// where it gave one, otherwise the wallet's or the network's, logged.
 function txErrorMessage(e: unknown): string {
   return (
     governanceErrorText(governorErrorCode(e)) ?? reportError("governance tx failed", e).message
@@ -47,8 +45,7 @@ const STEPS = [
   },
 ] as const;
 
-/// A governance write's progress, result or failure, on the shared tx cards.
-/// Renders nothing while idle.
+/// A governance write's progress, result or failure on the shared tx cards; nothing while idle.
 export function GovTxStatus({
   status,
   error,

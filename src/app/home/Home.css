@@ -1,6 +1,5 @@
 @layer features {
-  /* The connected column. `.main` already pads 28/24, so only the difference is
-     added here. */
+  /* Connected column */
   .home {
     display: flex;
     flex-direction: column;
@@ -11,18 +10,14 @@
     padding: 12px 8px 0;
   }
 
-  /* TILES — Shield, Send, Swap, Unshield. Four across at every width; Shield is
-     the filled one always, since it is not a tab but the first thing to do. */
+  /* Tiles */
   .tiles {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--sp-12);
-    /* The hero sits 22 below the section above, not the 28 of the column gap. */
     margin-top: -6px;
   }
-  /* A fifth tile — Governance, where the chain runs a governor — joins the row
-     on wide screens and takes a row of its own on phones, where five across
-     leaves no room for its label. */
+  /* Governance tile */
   .tiles--five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
   .tile {
     display: flex;
@@ -72,14 +67,12 @@
     outline: var(--ring);
     outline-offset: 2px;
   }
-  /* The glyph carries the tile's colour with the label, so an active tile
-     recolours as one object. */
   .action__icon {
     display: block;
     flex: none;
   }
 
-  /* Provenance: what the figures rest on. */
+  /* Provenance */
   .provenance {
     display: flex;
     flex-direction: column;

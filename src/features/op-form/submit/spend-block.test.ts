@@ -1,8 +1,3 @@
-// @vitest-environment jsdom
-// The order these fire in is the whole point: a user should be told the thing
-// they can fix first, and never be allowed to pay for a proof that cannot settle.
-// The shared questions' own wording is pinned in `submit-block.test.ts`.
-
 import { describe, expect, it } from "vitest";
 import type { FeeBlock } from "@/features/fees";
 import { type SpendBlockInput, spendSubmitBlock } from "./spend-block";

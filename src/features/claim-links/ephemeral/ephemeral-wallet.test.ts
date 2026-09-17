@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { fakeWalletApi } from "@/test/fakes/wallet";
 import { summarizeEphemeralNotes } from "./ephemeral-wallet";
@@ -16,8 +15,6 @@ describe("summarizeEphemeralNotes", () => {
       { asset: 1n, amount: 2n, notes: 1 },
       { asset: 3n, amount: 12n, notes: 2 },
     ]);
-    // A spent note is already gone from the link; counting it would offer to
-    // sweep funds that are not there.
     expect(notes).toHaveBeenCalledWith({ spent: false });
   });
 

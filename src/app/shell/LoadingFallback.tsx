@@ -1,5 +1,4 @@
-/// The Suspense fallback while a route's chunk loads: a card skeleton, under a
-/// hero skeleton when the whole page is loading rather than one form in it.
+/// Suspense fallback skeleton for a lazy route; `hero` adds the page hero.
 export function LoadingFallback({ hero = false }: { hero?: boolean }) {
   return (
     <div role="status" aria-busy="true" aria-label="loading">

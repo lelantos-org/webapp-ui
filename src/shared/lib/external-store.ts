@@ -1,16 +1,3 @@
-// State that lives outside React and is read through `useSyncExternalStore`.
-//
-// Two layers, because the app's stores differ in where their snapshot comes
-// from. Most hold it in memory, and `createStore` is the whole store. A few
-// derive it from something else on each read — the DOM attribute the theme is
-// stamped on, the raw `localStorage` string the claim-link vault caches against
-// — and need only the subscription half, `createSubscribers`, around a snapshot
-// function of their own.
-//
-// Either way the contract `useSyncExternalStore` depends on is the caller's:
-// the snapshot must keep its identity until something actually changed, or the
-// subscribing component re-renders indefinitely.
-
 import { useSyncExternalStore } from "react";
 
 /// A listener set that can be told something changed.
@@ -22,15 +9,13 @@ export interface Subscribers {
 }
 
 export interface SubscriberHooks {
-  /// Before the first listener is added: attach whatever produces changes.
+  /// Before the first listener is added.
   onFirst?(): void;
-  /// After the last listener is removed: detach it again.
+  /// After the last listener is removed.
   onLast?(): void;
 }
 
-/// A listener set, optionally starting work on its first listener and stopping
-/// it after its last — so nothing is bound in a test or a tree that never
-/// subscribes.
+/// A listener set that can start work on its first listener and stop it after its last.
 export function createSubscribers(hooks: SubscriberHooks = {}): Subscribers {
   const listeners = new Set<() => void>();
   return {
@@ -55,8 +40,7 @@ export interface Store<T> {
 }
 
 export interface WritableStore<T> extends Store<T> {
-  /// Replace the state and notify. The new value becomes the snapshot as given,
-  /// so pass a fresh object for a change and never mutate the current one.
+  /// Replace the state and notify. Pass a fresh value; never mutate the current one.
   setState(next: T): void;
 }
 
@@ -74,12 +58,7 @@ export function createStore<T>(initial: T): WritableStore<T> {
   };
 }
 
-/// Subscribe a component to `store`, re-rendering when `selector`'s result
-/// changes.
-///
-/// Selectors must return a stable value for unchanged state — a primitive, a
-/// field of the state, or the state itself. One building a fresh object on every
-/// call re-renders indefinitely.
+/// Subscribe to `store`; `selector` must return a stable value for unchanged state.
 export function useStore<T>(store: Store<T>): T;
 export function useStore<T, S>(store: Store<T>, selector: (state: T) => S): S;
 export function useStore<T, S>(store: Store<T>, selector?: (state: T) => S): T | S {

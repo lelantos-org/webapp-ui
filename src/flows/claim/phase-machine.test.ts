@@ -4,8 +4,6 @@ import { fakeWalletApi } from "@/test/fakes/wallet";
 import { initial, type Phase, reduce } from "./phase-machine";
 
 const stubWallet = fakeWalletApi();
-/// Chain the link names. Threaded through every phase that carries `nskHex`,
-/// since the ephemeral wallet has to be built against the link's chain.
 const CHAIN = 31337n;
 const balances: EphemeralBalance[] = [{ asset: 1n, amount: 100n, notes: 1 }];
 const ready: Phase = { kind: "ready", nskHex: "x", chainId: CHAIN, eph: stubWallet, balances };
@@ -29,8 +27,6 @@ describe("phase-machine", () => {
   });
 
   it("fragment-missing → bad-link, marked missing", () => {
-    // The card words these two very differently: a missing fragment is what a
-    // *reload* produces, and the link itself is still good.
     const next = reduce(initial, { t: "fragment-missing" });
     expect(next).toMatchObject({ kind: "bad-link", reason: "missing" });
   });
@@ -99,8 +95,6 @@ describe("phase-machine", () => {
     });
   });
 
-  // Replayed events (StrictMode runs the fragment effect twice) and events from
-  // the wrong phase leave the state untouched, by identity.
   it.each<[string, Phase, Parameters<typeof reduce>[1]]>([
     ["fragment-missing from need-wallet", needWallet, { t: "fragment-missing" }],
     ["fragment-bad from need-wallet", needWallet, { t: "fragment-bad", error: "nope" }],
@@ -132,9 +126,6 @@ describe("retry", () => {
   });
 
   it("goes back to need-wallet with the secret it retained", () => {
-    // Without this transition `error` is terminal, and since the URL fragment is
-    // scrubbed on mount, a transient RPC failure during the scan would end the
-    // claim and a reload would destroy the secret.
     expect(reduce(failed(), { t: "retry" })).toEqual({
       kind: "need-wallet",
       nskHex: "ab",

@@ -11,8 +11,7 @@ import {
 import { Countdowns } from "./Countdowns";
 import { type GovTxState, GovTxStatus } from "./GovTxStatus";
 
-/// The longest reason the form accepts. The governor stores none of it, but
-/// every character is calldata the voter pays for.
+/// The longest vote reason accepted; every character is calldata the voter pays for.
 export const MAX_REASON = 1_000;
 
 export interface VotePanelProps {
@@ -52,7 +51,6 @@ export function VotePanel({
   const [reason, setReason] = useState("");
 
   const quorumVoteOpen = eligibility?.ok === true && eligibility.quorumVoteOpen;
-  // A choice made while For was open does not survive its closing.
   const chosen = support !== undefined && (support === 0 || quorumVoteOpen) ? support : undefined;
 
   const body = (() => {

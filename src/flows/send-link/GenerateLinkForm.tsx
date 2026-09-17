@@ -1,14 +1,3 @@
-// Sender side of the claim-link flow.
-//
-// Two columns: "1 · Compose" is the form, "2 · Share" is the link once it
-// exists, with the vault under it. One column on a phone, in the same order.
-//
-// The private-channel acknowledgement sits on the compose card and gates
-// "Create link" itself, so a submit goes straight to the running modal. The
-// modal stays: the transfer produces a bearer key that exists nowhere but this
-// component tree until the result is on screen, so that stretch holds the whole
-// screen and cannot be dismissed.
-
 import { useRef } from "react";
 import { useAssetSelectOptions } from "@/features/assets";
 import { daysLabel, EvictionBlock, VaultSummary } from "@/features/claim-links";
@@ -24,6 +13,7 @@ import { useGenerateLinkForm } from "./use-generate-link-form";
 import { useInert } from "./use-inert";
 import "./GenerateLinkForm.css";
 
+/// Send by link: compose a claim link, then share it.
 export function GenerateLinkForm() {
   const c = useGenerateLinkForm();
   const { form, mutation, spend } = c;
@@ -45,12 +35,6 @@ export function GenerateLinkForm() {
           <span className="sendlink__step" aria-hidden="true">
             1 · Compose
           </span>
-          {/* Held inert while the modal is up. `Modal` traps Tab inside its own
-              panel, but it portals, so this form is a sibling rather than a
-              descendant: without this the pointer still reaches these fields
-              and a screen reader still walks them, behind a dialog describing
-              the values they hold. The `pending` snapshot in `useGenerateLinkForm` remains the
-              correctness guarantee; this is the second layer. */}
           <div ref={formRef}>
             <ActionForm
               submitLabel="Create link"
@@ -128,8 +112,6 @@ export function GenerateLinkForm() {
   );
 }
 
-/// "I'll share this link only through a private channel", which gates "Create
-/// link" itself rather than a confirm step after it.
 function LinkAckCheckbox({
   checked,
   onChange,
@@ -153,8 +135,6 @@ function LinkAckCheckbox({
   );
 }
 
-/// The share column before a link exists: what will appear, and for how long
-/// this browser keeps it.
 function SharePlaceholder({ ttlMs }: { ttlMs: number }) {
   return (
     <div className="surface surface--card linkres linkres--empty">

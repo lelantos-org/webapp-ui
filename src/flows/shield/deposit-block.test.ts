@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { RAY } from "@lelantos-org/sdk/protocol";
 import { describe, expect, it } from "vitest";
 import type { FeeBlock } from "@/features/fees";
@@ -36,7 +35,6 @@ const block = (over: Partial<DepositBlockInput> = {}) =>
   });
 const input = (over: Partial<DepositBlockInput> = {}) => block(over).reason;
 
-/// The fee panel's shortfall in `symbol`, as a public balance judged it.
 const shortfall = (symbol: string): FeeBlock => ({
   kind: "shortfall",
   id: 3n,
@@ -93,7 +91,6 @@ describe("depositSubmitBlock reason", () => {
   });
 });
 
-// A relayer fee paid in another token names that token when it is the problem.
 describe("depositSubmitBlock reason with a fee in another token", () => {
   const cross = amountOf({ separateFee: DAI });
 
@@ -108,7 +105,6 @@ describe("depositSubmitBlock reason with a fee in another token", () => {
     expect(input({ amount: { ...cross, relayerProblem: "not-accepted" } })).toBe(
       "The relayer doesn't take DAI for its fee right now",
     );
-    // Paid in the deposited asset, the refusal is about that asset's deposits.
     expect(input({ amount: amountOf({ relayerProblem: "not-accepted" }) })).toBe(
       "The relayer doesn't take USDC deposits right now",
     );

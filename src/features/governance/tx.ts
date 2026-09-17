@@ -1,13 +1,3 @@
-// Sending a governance transaction from the user's browser wallet, and reading
-// back why one was refused.
-//
-// Each write is simulated first with an `eth_call` from the user's account. The
-// governor's refusals — For after the quorum-vote deadline, a second vote, a
-// proposer below the threshold — are all custom errors, and a wallet's gas
-// estimate buries them under a generic "execution reverted" if it surfaces them
-// at all. The simulation gets the revert data back whole, before the wallet has
-// asked the user to approve something that cannot land.
-
 import type { EthSigner, EvmAddress } from "@lelantos-org/sdk";
 import { decodeErrorResult, type PublicClient, type TransactionReceipt } from "viem";
 import { createLogger } from "@/shared/lib/logger";
@@ -15,6 +5,7 @@ import { governorAbi } from "./abi";
 
 const log = createLogger("governance:tx");
 
+/// A governance write: target, calldata and optional value.
 export interface GovTxRequest {
   to: EvmAddress;
   data: `0x${string}`;
@@ -23,6 +14,7 @@ export interface GovTxRequest {
   onSent?: ((hash: `0x${string}`) => void) | undefined;
 }
 
+/// What `sendGovernanceTx` needs: a signer, a read client and the sending account.
 export interface GovTxDeps {
   signer: Pick<EthSigner, "sendTransaction">;
   client: Pick<PublicClient, "call" | "waitForTransactionReceipt">;
@@ -55,11 +47,7 @@ export class GovernanceTxError extends Error {
 
 const REVERT_KEYS = ["data", "cause", "error", "originalError"] as const;
 
-/// ABI-encoded revert data, wherever a client or wallet nested it.
-///
-/// viem puts it on `RawContractError.data` under one or two `cause`s; wallets
-/// under `data`, `data.data` or `data.originalError.data`. Bounded, since both
-/// shapes are someone else's and a cycle must not hang the tab.
+/// ABI-encoded revert data, wherever a client or wallet nested it. Depth-bounded against cycles.
 export function revertData(e: unknown): `0x${string}` | undefined {
   const queue: { node: unknown; depth: number }[] = [{ node: e, depth: 0 }];
   const seen = new Set<unknown>();
@@ -102,12 +90,8 @@ export function governorErrorCode(e: unknown): GovErrorCode | undefined {
   }
 }
 
-/// Simulate, send through the wallet, and wait for the receipt on the read RPC.
-///
-/// A simulation that fails without revert data — the read proxy refusing the
-/// call, a flaky endpoint — does not block the send: the wallet's own estimate
-/// and the chain remain the authority, and the check exists to explain refusals,
-/// not to add a way to fail.
+/// Simulate (to surface governor custom errors), send through the wallet, and wait for the receipt.
+/// A simulation failing without revert data does not block the send.
 export async function sendGovernanceTx(
   deps: GovTxDeps,
   req: GovTxRequest,

@@ -1,6 +1,3 @@
-// The picker is where a registry could quietly become a recommendation. These
-// pin the order: registry, held first, never by rate.
-
 import { describe, expect, it } from "vitest";
 import { makeAsset } from "@/test/fixtures/assets";
 import { ethOption } from "./eth-option";

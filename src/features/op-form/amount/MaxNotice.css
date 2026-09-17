@@ -1,6 +1,5 @@
 @layer components {
-  /* `MaxNotice`: an "i" beside Max, opening the ceiling sentence and then the
-     reassurance a shade quieter. */
+  /* MaxNotice */
   .maxnote__btn {
     flex: none;
     display: inline-grid;
@@ -22,7 +21,7 @@
   }
   .maxnote__btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* Portalled and placed in viewport coordinates, as `.feepick__pop`. */
+  /* Popover */
   .maxnote__pop {
     position: fixed;
     z-index: var(--z-popover);

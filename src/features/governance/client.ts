@@ -1,17 +1,6 @@
-// protocol-webserver's governance index: the proposals the governor has seen
-// created, their indexed tallies, and the votes cast on each.
-//
-// The governor keeps no enumerable list of proposals, so the index is the only
-// way to find them. It is not the authority on anything that depends on time or
-// on the snapshot — a proposal's state, its quorum, whether a vote counts — and
-// never claims to be: those are read from the chain beside it (`onchain.ts`).
-//
-// Every figure that can exceed a JSON number arrives as a decimal string and is
-// held as a bigint; timestamps and block numbers are plain numbers.
-
+// protocol-webserver's governance index. Not authoritative for state, quorum or vote validity: read those on chain.
 import { z } from "zod";
 
-/// A uint256 on the wire.
 const decimal = z.string().regex(/^\d+$/, "expected a decimal integer");
 const hex = z.string().regex(/^0x[0-9a-fA-F]*$/, "expected 0x hex");
 
@@ -72,17 +61,16 @@ export interface Tallies {
   abstain: bigint;
 }
 
+/// An indexed proposal, without description or actions.
 export interface ProposalSummary {
-  /// Decimal. Kept as text: it is a keccak-sized uint256, used as a route segment
-  /// and a key, and only converted where a contract call takes it.
+  /// Decimal uint256, kept as text.
   id: string;
   proposer: string;
   title: string;
-  /// Unix seconds. The governor runs on the token's timestamp clock.
+  /// Unix seconds.
   voteStart: number;
   voteEnd: number;
-  /// After this For and Abstain are refused; Against stays open to `voteEnd`.
-  /// Absent where the indexer has not seen `ProposalQuorumVoteDeadline`.
+  /// After this only Against is accepted; absent where the indexer has not seen it.
   quorumVoteDeadline?: number | undefined;
   createdBlock: number;
   createdTx: string;
@@ -97,7 +85,7 @@ export interface ProposalSummary {
 export interface ProposalAction {
   target: string;
   value: bigint;
-  /// The legacy signature string. OZ Governor v5 emits it empty.
+  /// Legacy signature string; empty from OZ Governor v5.
   signature: string;
   calldata: `0x${string}`;
 }
@@ -148,9 +136,7 @@ function toSummary(r: SummaryRow): ProposalSummary {
   };
 }
 
-/// Each row checked on its own, so one malformed proposal costs its own line
-/// rather than the whole page. The envelope still has to parse: a body of the
-/// wrong shape is a service fault and is reported as one.
+/// Parse each row alone, dropping malformed ones; the envelope itself must parse.
 function rows<T, R>(raw: unknown[], schema: z.ZodType<R>, map: (r: R) => T): T[] {
   const out: T[] = [];
   for (const item of raw) {
@@ -211,13 +197,11 @@ function query(params: Record<string, string | number | undefined>): string {
   return q.toString();
 }
 
-/// Whether a string can be a proposal id: a decimal uint256. Ids come from the
-/// route, so anything else names no proposal.
+/// Whether a string can be a proposal id: a decimal uint256.
 export function isProposalId(id: string): boolean {
   return /^\d+$/.test(id);
 }
 
-/// Rejects the id before it reaches a path.
 function proposalPath(proposalId: string): string {
   if (!isProposalId(proposalId)) throw new GovernanceNotFound("proposal");
   return `/v1/governance/proposals/${proposalId}`;

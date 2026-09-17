@@ -1,6 +1,3 @@
-// The cadence helpers every polled query goes through: the per-tick jitter and
-// the idle widening.
-
 import { describe, expect, it, vi } from "vitest";
 import { IDLE_POLL_FACTOR, jitter, pollInterval } from "./cadence";
 
@@ -15,9 +12,6 @@ describe("jitter", () => {
     }
   });
 
-  /// A value fixed once per mount would be a constant offset, and so a stable
-  /// per-session fingerprint. Callers pass a function to `refetchInterval`, so
-  /// this is re-drawn per tick.
   it("draws afresh on every call, spanning the range rather than clustering", () => {
     const seen = new Set(Array.from({ length: 200 }, () => jitter(BASE)));
     expect(seen.size).toBeGreaterThan(50);
@@ -46,9 +40,7 @@ describe("pollInterval", () => {
     expect(pollInterval(BASE, false)).toBe(BASE);
   });
 
-  /// The regression this helper exists to prevent: `transparent-balances` polled
-  /// a bare 30s with no idle factor, so an unattended tab kept sending the
-  /// user's EOA to a third-party RPC every 30s for the life of the session.
+  // Without the idle factor an unattended tab leaks the EOA to a third-party RPC every 30s.
   it("widens by IDLE_POLL_FACTOR while idle", () => {
     vi.spyOn(Math, "random").mockReturnValue(0.5);
     expect(pollInterval(BASE, true)).toBe(BASE * IDLE_POLL_FACTOR);

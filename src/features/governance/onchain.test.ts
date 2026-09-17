@@ -15,8 +15,7 @@ const ME = evmAddress("0x1111111111111111111111111111111111111111");
 
 type Call = { functionName: string; args?: readonly unknown[]; address: string };
 
-/// A reader answering from a table of function names; a function returning an
-/// Error makes that read revert.
+// Answers reads from a table by function name; an answer returning an Error reverts.
 function reader(answers: Record<string, (args: readonly unknown[]) => unknown>) {
   const readContract = vi.fn(async (c: Call) => {
     const answer = answers[c.functionName];
@@ -33,7 +32,6 @@ describe("readListChain", () => {
     const { client, readContract } = reader({
       state: ([id]) => (id === 1n ? 1 : new Error("GovernorNonexistentProposal")),
       quorum: () => 40n,
-      // The governor's clock decides, not the browser's.
       clock: () => 500,
     });
     const out = await readListChain(client, GOVERNOR, [

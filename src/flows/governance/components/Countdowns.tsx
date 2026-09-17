@@ -7,8 +7,7 @@ export interface CountdownsProps {
   quorumVoteDeadline?: number | undefined;
 }
 
-/// The two clocks a voter has to watch: when For/Abstain close, and when voting
-/// closes altogether.
+/// Countdowns to For/Abstain closing and to voting closing.
 export function Countdowns({ now, voteStart, voteEnd, quorumVoteDeadline }: CountdownsProps) {
   const rows: [string, string][] = [];
   if (now <= voteStart) rows.push(["Voting opens", `in ${formatDuration(voteStart - now)}`]);

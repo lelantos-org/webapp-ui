@@ -1,14 +1,3 @@
-// Modal for the generate-claim-link flow: the transfer in flight, then the
-// success tick while the link is prepared.
-//
-// The exit is driven from outside: `useLinkStage` holds the modal mounted
-// in a `closing` stage for the length of the fade, so this only forwards it.
-//
-// A modal rather than `ActionForm`'s progress card, deliberately: the bearer key
-// the transfer produces exists only in this component tree until the result is
-// shown, so the flow holds the whole screen and cannot be dismissed while it
-// runs.
-
 import type { Step, TxPhase } from "@/features/tx";
 import { Modal } from "@/shared/ui/Modal";
 import { Stepper } from "@/shared/ui/Stepper";
@@ -26,11 +15,11 @@ export interface GenerateModalProps {
   amountLabel: string;
   steps: Step[];
   activePhase: TxPhase | undefined;
-  /// Applies the fade-out animation; the parent unmounts after the CSS transition
-  /// completes.
+  /// Applies the fade-out; the parent unmounts afterwards.
   closing?: boolean;
 }
 
+/// The claim-link modal: transfer progress, then the success tick.
 export function GenerateModal({
   screen,
   amountLabel,
@@ -38,8 +27,7 @@ export function GenerateModal({
   activePhase,
   closing = false,
 }: GenerateModalProps) {
-  // Never dismissable: a transfer is in flight and the bearer key it produces
-  // exists nowhere else yet.
+  // Never dismissable: the bearer key for funds in flight exists nowhere else yet.
   return (
     <Modal title={TITLES[screen]} busy exiting={closing} focusKey={screen}>
       {screen === "success" ? (
@@ -74,8 +62,6 @@ export function RunningScreen({
   );
 }
 
-/// Post-broadcast confirmation. Auto-advances after a short dwell — see
-/// `useLinkStage`'s `runWith`.
 function SuccessScreen({ amountLabel }: { amountLabel: string }) {
   return (
     <SuccessCheck

@@ -1,15 +1,4 @@
-// Vite recognises the `new Worker(new URL(..., import.meta.url), { type:
-// "module" })` pattern and emits a separate worker chunk, keeping
-// `WasmProver` and the rust pkg out of the main bundle.
-
-// 4x6 is the SDK's default shape, the only one `@lelantos-org/circuits` still
-// publishes keys for, and what the deployed verifier accepts. These artifacts
-// must match the `shape` passed to `connect` in `build-wallet.ts`: a mismatch
-// builds witnesses of the wrong arity and every proof is rejected. The package
-// version must also match the release the contracts' verifying keys and the
-// relayer's `4x6_verification_key.json` come from: each release re-runs the
-// setup, so a proof from another release's zkey is rejected (HTTP 400 on
-// `/v1/spend`) even though the shape agrees.
+// Artifacts must match `connect`'s shape and the verifier's circuits release, or every proof is rejected.
 import circuitUrl from "@lelantos-org/circuits/4x6/4x6.wasm?url";
 import zkeyUrl from "@lelantos-org/circuits/4x6/4x6_final.zkey?url";
 import { type Prover, type ProverArtifacts, WorkerProver } from "@lelantos-org/sdk/prover";
@@ -23,22 +12,14 @@ const proverArtifacts: ProverArtifacts = {
   zkey: zkeyUrl,
 };
 
-/// True only when the device reports 4 GB or less.
-///
-/// `deviceMemory` is Chromium-only and coarse. An absent value means unknown and
-/// is treated as not low: Safari and Firefox report nothing, so treating absence
-/// as low memory would withhold the preload from those browsers and impose the
-/// first-prove latency on all of them.
+/// True only when the device reports ≤4 GB; unknown (non-Chromium) counts as not low.
 function isLowMemoryDevice(): boolean {
   if (typeof navigator === "undefined") return false;
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
   return mem !== undefined && mem <= 4;
 }
 
-/// Rayon pool size. `?threads=N` takes precedence over `VITE_PROVER_THREADS`;
-/// with neither set the SDK default (`min(8, hardwareConcurrency)`) applies,
-/// except on a low-memory device where the pool is capped so the prover's
-/// thread stacks do not displace the rest of the tab.
+/// Rayon pool size: `?threads=N`, then `VITE_PROVER_THREADS`, else capped on low-memory devices.
 function threadOverride(): number | undefined {
   const fromUrl =
     typeof location === "undefined" ? null : new URLSearchParams(location.search).get("threads");
@@ -58,19 +39,11 @@ export function getProverWorker(): WorkerProver {
   if (cached) return cached;
   const threads = threadOverride();
   if (threads !== undefined) log.info(`thread override: ${threads}`);
-  // The `new Worker(new URL(…))` literal must stay inline here rather than
-  // going through the SDK's `browserWorkerProver`: Vite emits a worker chunk only
-  // for that exact form (see `scannerWorker` in `sync/scanner.ts`). A DOM
-  // `Worker` satisfies the SDK's `WorkerLike` as it is.
+  // Keep `new Worker(new URL(…))` inline: Vite emits a worker chunk only for that form.
   const worker = new Worker(new URL("@lelantos-org/sdk/workers/prover", import.meta.url), {
     type: "module",
   });
-  // The SDK persists artifacts keyed by URL, trusting the URL to change with
-  // the release. A production build hashes the file name, so it does; the dev
-  // server serves `/node_modules/@lelantos-org/circuits/build/4x6_final.zkey`
-  // for every version, so a circuits bump would keep proving with the cached
-  // old key and every spend would fail the relayer's pre-verification. A
-  // localhost fetch is cheap, so dev skips the cache instead.
+  // Dev serves an unversioned zkey URL, so caching would keep a stale key after a circuits bump.
   cached = new WorkerProver({
     worker,
     artifacts: proverArtifacts,
@@ -80,29 +53,12 @@ export function getProverWorker(): WorkerProver {
   return cached;
 }
 
-/// The worker as a wallet's `prover`: proves through the shared worker, resolved
-/// per proof.
-///
-/// The SDK never disposes a `Prover` the app passes in, so ownership is not the
-/// reason for this view: the worker's lifetime is `disposeProverWorker`'s either
-/// way. Handing `connect` the worker itself would still be wrong on two counts.
-/// `getProverWorker()` spawns the worker, so every wallet build — including a
-/// session that only reads balances — would pay for it; and a wallet outliving a
-/// disconnect (e.g. a claim link's ephemeral wallet) would keep proving against the
-/// terminated instance. Resolving per proof defers the spawn to the first proof
-/// and follows the fresh worker after a disconnect.
+/// A `Prover` that resolves the shared worker per proof: spawn waits for the first proof and follows reconnects.
 export function sharedProver(): Prover {
   return { prove: (input) => timed("prover.prove", () => getProverWorker().prove(input)) };
 }
 
-/// Warm the worker: build `WasmProver`, fetch the zkey and circuit wasm, and init
-/// the rayon pool. Idempotent; call from a non-blocking path to avoid 5–10s of
-/// setup latency on the first prove.
-///
-/// Triggered by intent to transact — hovering or focusing an action tab, or
-/// focusing an amount input — rather than by wallet construction, so a session
-/// that only reads a balance never loads the ~53 MB of artifacts or spawns the
-/// rayon pool. The interval between hover and submit covers the setup window.
+/// Warm the worker (artifacts, wasm, rayon pool) ahead of the first prove. Idempotent.
 export function preloadProverWorker(): Promise<void> {
   if (preloadPromise) return preloadPromise;
   if (isLowMemoryDevice()) {
@@ -119,14 +75,11 @@ export function preloadProverWorker(): Promise<void> {
   return preloadPromise;
 }
 
-/// Tear down the worker and release the zkey, circuit wasm and rayon pool.
-/// Called on disconnect, where any subsequent prove follows a fresh connect.
+/// Tear down the worker and release its artifacts and rayon pool.
 export function disposeProverWorker(): void {
   if (!cached) return;
   cached.dispose();
   cached = null;
-  // Cleared alongside `cached`: a resolved `preloadPromise` outliving the worker
-  // it warmed would make the next `preloadProverWorker()` a no-op against a newly
-  // constructed worker, moving the setup cost into `prove()`.
+  // Cleared with `cached`, or the next preload would no-op against a new worker.
   preloadPromise = null;
 }

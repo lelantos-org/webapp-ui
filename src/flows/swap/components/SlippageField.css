@@ -1,5 +1,5 @@
 @layer features {
-  /* SLIPPAGE — inside the Details row */
+  /* Slippage */
   .slip {
     margin: 0;
     padding: 0;
@@ -38,8 +38,6 @@
   }
   .slip__opt:hover { border-color: var(--fg-mute); color: var(--fg); }
 
-  /* The radio is `.input-hidden`: focusable and screen-reader visible, while
-     the label is the rendered control and carries the focus ring. */
   .slip__radio { pointer-events: none; }
   .slip__opt:has(.slip__radio:focus-visible) {
     outline: var(--ring);

@@ -38,7 +38,6 @@ describe("linkHeaderSnippet", () => {
     );
   });
 
-  // The Dockerfile and nginx include it unconditionally.
   it("still writes a file, as a comment, when there is nothing to hint", () => {
     expect(linkHeaderSnippet([])).toMatch(/^# /);
   });
@@ -52,7 +51,6 @@ describe("linkHeaders plugin", () => {
     root = undefined;
   });
 
-  /// Drive the plugin's two hooks the way Vite would, against a temp project.
   function run(html: string) {
     root = mkdtempSync(join(tmpdir(), "link-headers-"));
     const outDir = join(root, "dist");
@@ -61,7 +59,6 @@ describe("linkHeaders plugin", () => {
 
     const plugin = linkHeaders();
     const ctx = { info: vi.fn(), warn: vi.fn() };
-    // The hooks are plain functions here; Vite's types also admit `{ handler }`.
     const configResolved = plugin.configResolved as unknown as (c: unknown) => void;
     const closeBundle = plugin.closeBundle as unknown as (this: typeof ctx) => void;
     configResolved({ build: { outDir }, root });

@@ -16,7 +16,7 @@
     text-align: center;
   }
 
-  /* The line into each step from the one before, stopping short of both marks. */
+  /* Connector line */
   .claim-step + .claim-step::before {
     content: "";
     position: absolute;

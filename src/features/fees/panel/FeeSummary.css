@@ -1,9 +1,5 @@
 @layer components {
-  /* The itemised fees inside an action's Details row (`FeeSummary`), and the
-   * review's itemised rows (`FeeReview`). Label and value rows with one
-   * emphasised bottom line; the disclosure is already a section of the card, so
-   * the rows carry no box of their own.
-   */
+  /* Fee rows */
   .fees {
     position: relative;
     border-radius: var(--radius);
@@ -12,10 +8,7 @@
     gap: 10px;
   }
 
-  /* A figure on screen is being re-priced. A hairline along the panel's top edge
-     rather than a whole-panel dim: that would fire on every quote, read as the
-     panel blinking, and dim figures the user is mid-sentence reading. Inside the
-     border radius, so it reads as part of the panel. */
+  /* Re-pricing bar */
   .fees__bar {
     position: absolute;
     inset: 0 auto auto 0;
@@ -63,13 +56,10 @@
   .fees__val {
     color: var(--fg-dim);
     font-size: var(--fs-14);
-    /* Long amounts win over the label, which can wrap or truncate instead. */
     white-space: nowrap;
   }
 
-  /* Standing in for a figure that has not been priced yet. Sized in `ch` of the
-     monospace face the figure itself uses, so the row does not shift on the swap,
-     and right-aligned like the figure it stands in for. */
+  /* Placeholder */
   .fees__pending {
     display: inline-flex;
     justify-content: flex-end;
@@ -93,7 +83,7 @@
     font-weight: 500;
   }
 
-  /* The bottom line: what the counterparty gets, or what the payer is pulled. */
+  /* Headline */
   .fees__headline {
     display: flex;
     align-items: baseline;
@@ -113,8 +103,6 @@
     font-weight: 600;
     white-space: nowrap;
   }
-  /* A cross-asset deposit's two pulls: each figure stays on one line, and the
-     pair wraps between them rather than pushing the label off the row. */
   .fees__pulls {
     display: flex;
     flex-wrap: wrap;
@@ -124,8 +112,7 @@
     color: var(--fg-dim);
   }
 
-  /* Only shown for a cross-asset fee, where the charge lands on a balance the
-     amount field says nothing about. */
+  /* Note */
   .fees__note {
     margin: 0;
     font-size: var(--fs-12);
@@ -133,12 +120,9 @@
     color: var(--fg-mute);
   }
 
-  /* Inside the panel the note steps up with the rows; on its own (no model yet)
-     it stays at the smaller size. */
   .fees .fees__note { font-size: var(--fs-13); }
 
-  /* The review's itemised rows: 15px label left, figure right, the closing row
-     in the foreground ink. */
+  /* Review */
   .fees-review {
     display: flex;
     flex-direction: column;

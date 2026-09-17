@@ -1,7 +1,5 @@
-/* Recipient: the address field Send and Unshield put in the card beside
-   `AmountHero`. */
-
 @layer components {
+  /* RecipientField */
   .rcpt {
     display: flex;
     flex-direction: column;
@@ -34,9 +32,7 @@
     min-width: 0;
   }
 
-  /* A 164-character address wraps rather than scrolling out of sight. The height
-     follows the content: `field-sizing` where the browser has it, the measured
-     `--rcpt-h` where it does not. */
+  /* Input */
   .rcpt__inp {
     display: block;
     width: 100%;
@@ -59,7 +55,7 @@
   }
   .rcpt__inp::placeholder { color: var(--fg-mute); opacity: 1; }
 
-  /* Phones only; see the breakpoint below. */
+  /* Grouped display (phones) */
   .rcpt__grouped { display: none; }
   .rcpt__ok {
     flex: none;
@@ -72,8 +68,7 @@
     color: var(--accent);
   }
 
-  /* Text-sized, target-sized: the box's own padding is borrowed back so the
-     44px hit area does not grow the field. */
+  /* Paste */
   .rcpt__paste {
     flex: none;
     min-height: 44px;
@@ -113,13 +108,9 @@
     .rcpt__lbl { font-size: var(--fs-13); }
     .rcpt__box { padding: 13px var(--sp-14); }
     .rcpt__inp { font-size: var(--fs-14); line-height: 1.7; }
-    /* Neither on a phone: the grouped address is its own confirmation, and the
-       helper's advice does not fit the column. */
     .rcpt__helper,
     .rcpt__ok { display: none; }
-    /* A valid address reads in fours until the field is touched again. The
-       textarea stays on top, transparent, so the tap that wants to edit lands
-       in it — and once focused it is the one shown. */
+    /* Grouped display */
     .rcpt--valid .rcpt__grouped {
       display: block;
       font-size: var(--fs-14);

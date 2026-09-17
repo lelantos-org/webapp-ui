@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { detailRow, summaryRow, voteRow } from "@/test/fixtures/governance";
+import { jsonResponse, stubFetch } from "@/test/http";
 import {
   fetchProposal,
   fetchProposals,
@@ -69,14 +70,11 @@ describe("parseVotesPage", () => {
 });
 
 describe("fetchers", () => {
-  afterEach(() => vi.unstubAllGlobals());
-
   const respond = (status: number, body: unknown) =>
-    vi.fn(async () => new Response(JSON.stringify(body), { status }));
+    stubFetch(() => jsonResponse(body, { status }));
 
   it("asks for a chain's proposals with the cursor", async () => {
     const fetchMock = respond(200, { proposals: [summaryRow()] });
-    vi.stubGlobal("fetch", fetchMock);
     const page = await fetchProposals("/registry", 31337n, "abc");
     expect(page.items).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledWith(
@@ -86,15 +84,14 @@ describe("fetchers", () => {
   });
 
   it("maps a 404 to GovernanceNotFound and anything else to an error", async () => {
-    vi.stubGlobal("fetch", respond(404, {}));
+    respond(404, {});
     await expect(fetchProposal("/registry", 1n, "7")).rejects.toBeInstanceOf(GovernanceNotFound);
-    vi.stubGlobal("fetch", respond(500, {}));
+    respond(500, {});
     await expect(fetchVotes("/registry", 1n, "7")).rejects.toThrow(/500/);
   });
 
   it("never puts a non-numeric id in a path", async () => {
     const fetchMock = respond(200, {});
-    vi.stubGlobal("fetch", fetchMock);
     await expect(fetchProposal("/registry", 1n, "../chains")).rejects.toBeInstanceOf(
       GovernanceNotFound,
     );
@@ -104,12 +101,11 @@ describe("fetchers", () => {
   it("fetches one proposal and its votes", async () => {
     const signal = new AbortController().signal;
     const fetchMock = respond(200, detailRow());
-    vi.stubGlobal("fetch", fetchMock);
     await fetchProposal("/registry", 1n, "7", signal);
     expect(fetchMock).toHaveBeenCalledWith("/registry/v1/governance/proposals/7?chainId=1", {
       signal,
     });
-    vi.stubGlobal("fetch", respond(200, { votes: [voteRow()] }));
+    respond(200, { votes: [voteRow()] });
     const votes = await fetchVotes("/registry", 1n, "7", "next");
     expect(votes.items).toHaveLength(1);
   });

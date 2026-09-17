@@ -1,5 +1,5 @@
 @layer features {
-  /* "Available on" and the network pills, in one wrapping run. */
+  /* Network list */
   .networks {
     display: flex;
     flex-wrap: wrap;

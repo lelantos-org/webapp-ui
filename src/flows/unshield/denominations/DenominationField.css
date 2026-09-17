@@ -1,10 +1,5 @@
 @layer features {
-  /* The withdrawal denomination picker, "Private amounts".
-   *
-   * Chips rather than a `<select>`: the whole point is that the set is small,
-   * shared and worth reading at a glance, and a collapsed control hides it. A
-   * wrapping row, since a ladder runs to about fifteen entries at its widest and
-   * a horizontal scroller would put the largest ones out of sight. */
+  /* DenominationField */
   .den {
     display: flex;
     flex-direction: column;
@@ -22,15 +17,13 @@
     color: var(--fg);
   }
 
-  /* The verdict badge (`.badge`), a size up from the swap venue's. */
+  /* Verdict badge */
   .den__tag {
     font-size: var(--fs-13);
     letter-spacing: 0;
   }
 
-  /* A `<fieldset>`, so the chips group as the single choice they are. The UA
-     border, padding and `min-inline-size: min-content` all have to go — the last
-     would otherwise stop the row wrapping. */
+  /* Chips */
   .den__opts {
     display: flex;
     flex-wrap: wrap;
@@ -43,7 +36,6 @@
   .den__opt {
     display: inline-flex;
     align-items: center;
-    /* 44 rather than the 39 drawn: the touch floor holds on desktop too. */
     min-height: 44px;
     padding: 9px 15px;
     border: 1px solid var(--line-strong);
@@ -73,8 +65,7 @@
     font-weight: 600;
   }
 
-  /* The denomination the notice names. Dashed rather than filled, so it reads as
-     an offer next to the solid ring the current choice carries. */
+  /* Suggested */
   .den__opt--suggested {
     border-style: dashed;
     border-color: var(--warn);
@@ -86,7 +77,7 @@
     color: var(--fg-mute);
   }
 
-  /* Phones: 44px chips, a tighter row, and no hint line. */
+  /* Phones */
   @media (max-width: 480px) {
     .den { gap: 9px; }
     .den__tag { padding: 3px 9px; font-size: var(--fs-12); }

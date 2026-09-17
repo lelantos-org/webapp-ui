@@ -2,8 +2,7 @@ import type { ReactNode } from "react";
 import { shortAddr } from "@/shared/lib/address";
 import "./txcard.css";
 
-/// A tx card's transaction row: the hash, truncated for reading with the full
-/// value in `title`, any controls of the card's own, and the explorer link.
+/// A tx card's transaction row: truncated hash, the card's controls, and the explorer link.
 export function TxHashRow({
   hash,
   explorerUrl,

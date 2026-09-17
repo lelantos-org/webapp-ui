@@ -11,20 +11,10 @@ import "./MaxNotice.css";
 export interface MaxNoticeProps {
   spendable: SpendableMax | undefined;
   meta: AssetMeta;
-  /// "Sending" on Send, "Unshielding" on Unshield.
   verb: string;
 }
 
-/// Why Max is below the balance, when the circuit's input cap is the reason.
-/// Renders nothing otherwise.
-///
-/// An "i" beside Max that opens the note, rather than a box under the amount:
-/// nothing is wrong and nothing is asked of the user, so the explanation should
-/// not cost the form a block of height on every spend that hits the cap. See
-/// `maxNoticeCopy` for why the copy avoids "consolidate".
-///
-/// Portalled and anchored for the same reason as `FeeAssetPicker`: the form's
-/// panels animate height through `overflow: hidden`.
+/// An "i" beside Max explaining the circuit's input cap, when that is why Max is below the balance.
 export function MaxNotice({ spendable, meta, verb }: MaxNoticeProps) {
   const copy = maxNoticeCopy({ spendable, meta, verb });
   const popId = useId();
@@ -35,7 +25,6 @@ export function MaxNotice({ spendable, meta, verb }: MaxNoticeProps) {
     style,
   } = useAnchoredPopover<HTMLButtonElement, HTMLDivElement>(open, () => setOpen(false));
 
-  // Escape closes from anywhere, since focus stays on the button.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {

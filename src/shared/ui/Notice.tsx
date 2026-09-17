@@ -3,41 +3,25 @@ import { cx } from "@/shared/lib/cx";
 import { InfoGlyph, WarnGlyph } from "./icons/glyphs";
 import "./Notice.css";
 
-/// What a box is telling you, which decides its colour.
-///
-///   - `warn`    — a consequence to weigh before going on: the review's
-///                 irreversibility note, the linkability warning, a fee shortfall.
-///   - `err`     — something already wrong or about to be lost: the vault's
-///                 eviction box.
-///   - `accent`  — an invitation, not a problem: the one-time setup card.
-///   - `neutral` — a fact worth knowing: the consolidation note under Max.
+/// What a box is telling you, which decides its colour: `warn`, `err`, `accent` (invitation), `neutral`.
 export type NoticeTone = "accent" | "warn" | "err" | "neutral";
 
 export interface NoticeProps {
-  /// Defaults to `warn`, the tone every notice had before tones existed.
+  /// Defaults to `warn`.
   tone?: NoticeTone;
-  /// Bold first line. Optional: the review's warning is a single sentence.
+  /// Bold first line.
   title?: ReactNode;
   children?: ReactNode;
-  /// Leading glyph. Defaults to a triangle for `warn`/`err` and an "i" for
-  /// `neutral`; `accent` has none by default, since its design draws a tinted
-  /// tile — pass `<span className="notice__tile">…</span>` for that. `false`
-  /// draws nothing.
+  /// Leading glyph; defaults per tone (none for `accent`). `false` draws nothing.
   icon?: ReactNode | false;
   /// A control of the caller's own — a link, or a button with its own handler.
   action?: ReactNode;
-  /// Shorthand for the common case: an outline button in the notice's tone.
-  /// Ignored when `action` is given.
+  /// Shorthand for an outline button in the notice's tone. Ignored when `action` is given.
   actionLabel?: string;
   onAction?(): void;
-  /// `end` puts the action on the trailing edge (the setup card on desktop);
-  /// `below` puts it under the text (the fee shortfall's "Pay the fee in ETH").
-  /// Phones always stack it below.
+  /// `end` for the trailing edge, `below` under the text. Phones always stack it below.
   actionPlacement?: "end" | "below";
-  /// The live-region role. `status` (the default) announces the notice when it
-  /// appears, which is what a notice explaining a disabled submit needs; `alert`
-  /// interrupts. Pass `false` for a notice that is part of the page's static
-  /// content and should not announce itself.
+  /// Live-region role; `status` by default, `false` for static page content.
   announce?: "status" | "alert" | false;
   className?: string;
 }
@@ -54,11 +38,7 @@ function defaultIcon(tone: NoticeTone): ReactNode {
   }
 }
 
-/// A tinted box with an optional glyph, title, body and action — every warning,
-/// setup and note box.
-///
-/// Announced as a status by default, so a reason reaches a screen reader when the
-/// submit button it explains disables.
+/// A tinted box with an optional glyph, title, body and action: every warning, setup and note box.
 export function Notice({
   tone = "warn",
   title,

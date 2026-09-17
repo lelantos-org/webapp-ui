@@ -24,7 +24,6 @@ describe("chunkFileNames", () => {
         facadeModuleId: "/repo/src/features/wallet/build/build-wallet.ts",
       }),
     ).toBe("assets/[name]-[hash].js");
-    // A module nested inside a flow is never a route entry.
     expect(
       chunkFileNames({
         name: "SetupFlow",

@@ -1,10 +1,3 @@
-// The words and thresholds the vault screens are written from.
-//
-// Pure, so every figure the copy states — the window, the room left, when a row
-// drops — is derived from `ClaimLinkPressure` and testable without rendering.
-// Nothing here restates `TTL_MS` or `MAX_RECORDS`: a sentence that hardcodes
-// "30 days" promises a window the vault may not have.
-
 import type { RegisteredAsset } from "@/config/chains";
 import { findAsset } from "@/features/assets";
 import { formatAssetAmount } from "@/shared/lib/format/asset";
@@ -13,23 +6,12 @@ import { numberWord } from "@/shared/lib/format/words";
 import type { ClaimLinkPressure } from "./policy";
 import type { StoredClaimLink } from "./record";
 
-/// Room left at or under which the capacity box turns from a meter into a
-/// warning. Five links is a morning's work for someone paying several people;
-/// fewer would warn too late to export calmly.
 const VAULT_WARN_ROOM = 5;
 
-/// How close to its drop a row is marked. Two days, so a record is flagged on
-/// the day before it goes as well as the day it goes.
 const DROP_WARN_MS = 2 * DAY_MS;
 
-/// Label for a stored record's amount.
-///
-/// `amount` is in circuit units, and without a registered asset there is no
-/// scale to apply, so the raw figure is labelled with the asset id rather than
-/// printed bare beside properly denominated ones.
-///
-/// `BigInt` cannot throw here: `vault/store` rejects any record whose `amount` is
-/// not a digit string, so this is safe inside a render.
+/// Label for a stored amount, or the raw figure with its asset id when unregistered.
+/// `BigInt` is safe in render: the store rejects non-digit amounts.
 export function describeStoredAmount(
   link: StoredClaimLink,
   assets: readonly RegisteredAsset[],
@@ -57,8 +39,7 @@ export function vaultTone(p: ClaimLinkPressure): VaultTone {
   return p.roomLeft <= VAULT_WARN_ROOM ? "err" : "neutral";
 }
 
-/// The capacity box's first line. "Across every network" because the count is:
-/// a per-network figure would promise room the next write does not have.
+/// The capacity box's first line. Browser-wide, as the cap is.
 export function capacityHeadline(p: ClaimLinkPressure): string {
   return `This browser keeps ${p.capacity} links across every network. You have ${p.count}.`;
 }
@@ -84,8 +65,7 @@ export function dropsBadge(expiresInMs: number): string | undefined {
   return `drops in ${Math.ceil(expiresInMs / DAY_MS)} days`;
 }
 
-/// The result card's promise about the safety copy. Never "until it's claimed":
-/// nothing tells this browser when a link is claimed.
+/// The result card's retention promise. Never "until it's claimed": the browser cannot know.
 export function retentionSentence(ttlMs: number): string {
   return `Works once. We keep a copy in this browser for ${daysLabel(ttlMs)} or until you delete it.`;
 }

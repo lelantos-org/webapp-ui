@@ -10,22 +10,8 @@ import { earnedTotal, portfolioTotal } from "./portfolio-total";
 import { usePortfolio } from "./use-portfolio";
 import "./PortfolioHero.css";
 
-/// The shielded balance, at page scale, above everything else: "Shielded
-/// balance", the figure, one line under it.
-///
-/// It is not a property of a card — it is the answer to the question the page
-/// exists to answer, so it is rendered before any card and owns its own hooks
-/// rather than being threaded down as props. The queries are shared with
-/// `AssetsCard`, so mounting both costs one set of requests, not two.
-///
-/// Four states that must not look alike:
-/// - **counting** — no figure at all, only a skeleton and the scan count. A
-///   running total is deliberately not shown: the SDK settles spends after the
-///   scan, so a partial sum can fall, and "at least $X" would be untrue.
-/// - **nothing shielded** — finished, and the answer is zero: "$0.00", muted.
-/// - **stale** — the last sync failed: the figure that was true then, with when
-///   that was and a retry. Stale is not empty.
-/// - **settled** — the figure, and what it earned.
+/// The shielded balance at page scale. Shows no running total while counting: spends settle
+/// after the scan, so a partial sum could fall.
 export function PortfolioHero() {
   const { shielded, rows, byId, prices, gains } = usePortfolio();
   const total = useMemo(
@@ -116,7 +102,6 @@ function HeroShell({
   );
 }
 
-/// "Shielded balance", above the figure or the skeleton standing in for it.
 function HeroLabel() {
   return (
     <span className="pf-hero__label">
@@ -126,8 +111,6 @@ function HeroLabel() {
   );
 }
 
-/// Dollars at full size and cents in the muted ink, both at the same size.
-/// `≈` leads a total that leaves an unpriced asset out.
 function UsdFigure({ usd, approx }: { usd: number; approx: boolean }) {
   const [dollars, cents] = splitUsd(formatUsd(usd));
   return (
@@ -143,7 +126,6 @@ function UsdFigure({ usd, approx }: { usd: number; approx: boolean }) {
   );
 }
 
-/// First sync still running: no figure, because there is none yet.
 function Counting() {
   const { active, scanned, hits } = useSyncProgress();
   return (
@@ -165,7 +147,6 @@ function Counting() {
   );
 }
 
-/// The first sync failed, so there has never been a figure to keep.
 function FailedFirstSync() {
   return (
     <HeroShell muted figure="—">
@@ -176,8 +157,7 @@ function FailedFirstSync() {
   );
 }
 
-/// Its own component so only it subscribes to `isFetching`: the hero around it
-/// must not re-render on every background poll's fetch flag.
+/// Its own component so only it subscribes to `isFetching`, not the whole hero.
 function RetryButton() {
   const { refetch, isFetching } = useWalletState();
   return (
@@ -192,22 +172,13 @@ function RetryButton() {
   );
 }
 
-/// Split a rendered USD figure into dollars and cents, so the cents can be set
-/// in the muted ink and the magnitude reads first.
-///
-/// A string with no two-digit decimal tail, such as `formatUsd`'s `<$0.01`, is
-/// returned whole rather than cut at an arbitrary dot.
+/// Split a formatted USD figure into dollars and cents; returned whole without a two-digit tail.
 function splitUsd(s: string): [dollars: string, cents: string] {
   const dot = s.lastIndexOf(".");
   if (dot < 0 || s.length - dot !== 3) return [s, ""];
   return [s.slice(0, dot), s.slice(dot)];
 }
 
-/// "2 minutes ago", kept current.
-///
-/// Owns its own tick, so the 10s refresh re-renders this span alone rather than
-/// the hero or the list around it. Mounted only where a `syncedAt` is shown, so
-/// the timer stops with it.
 function SyncedAgo({ at }: { at: number }) {
   const [, force] = useState(0);
   useEffect(() => {

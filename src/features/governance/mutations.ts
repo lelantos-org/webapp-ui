@@ -1,7 +1,3 @@
-// The three governance writes — vote, delegate, propose — each sent from the
-// connected browser wallet and followed by one invalidation of every governance
-// read on the chain.
-
 import type { EthSigner, EvmAddress } from "@lelantos-org/sdk";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
@@ -17,13 +13,7 @@ import { governanceClient } from "./onchain";
 import { useGovernance } from "./queries";
 import { type GovTxDeps, sendGovernanceTx } from "./tx";
 
-/// The session's EVM signer, or `undefined` for a kind that has none.
-///
-/// Built from the same place `buildWallet` takes it: the kind adapter's
-/// `keySource`, whose `signer` is what the SDK's chain layer signs deposits
-/// with. `derive` is left uncalled, so no key-derivation prompt is raised. A
-/// passkey session returns no signer, which is what makes governance read-only
-/// there.
+/// The session's EVM signer without prompting key derivation, or `undefined` (e.g. passkey sessions).
 export function useGovernanceSigner(): EthSigner | undefined {
   const { kind, layer } = useSession();
   const chain = useActiveChainOrUndefined();
@@ -56,12 +46,11 @@ function useInvalidateGovernance(): () => Promise<void> {
   return () => qc.invalidateQueries({ queryKey: queryKeys.governance(chain.chainId) });
 }
 
-/// Every write reports its hash as soon as the wallet has broadcast, so the
-/// screen can move from "confirm in your wallet" to "waiting for the chain".
 interface Sent {
   onSent?: ((hash: `0x${string}`) => void) | undefined;
 }
 
+/// Inputs to `useCastVote`.
 export interface CastVoteInput extends Sent {
   support: VoteSupport;
   reason: string;
@@ -88,6 +77,7 @@ export function useCastVote(proposalId: string) {
   });
 }
 
+/// Inputs to `useDelegate`.
 export interface DelegateInput extends Sent {
   token: EvmAddress;
   delegatee: EvmAddress;
@@ -108,8 +98,7 @@ export function useDelegate() {
   });
 }
 
-/// The id of the proposal a `propose` receipt created, from its `ProposalCreated`
-/// log. Only logs the governor itself emitted are read.
+/// The new proposal id from a `propose` receipt's `ProposalCreated` log, emitted by `governor` only.
 export function createdProposalId(
   receipt: Pick<TransactionReceipt, "logs">,
   governor: EvmAddress,
@@ -126,6 +115,7 @@ export function createdProposalId(
   return undefined;
 }
 
+/// Inputs to `usePropose`.
 export interface ProposeInput extends Sent {
   actions: readonly BuiltAction[];
   description: string;

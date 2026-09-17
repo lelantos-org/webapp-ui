@@ -17,19 +17,12 @@ export interface BalancesCardProps {
   destinationAddress?: string | undefined;
   busy: boolean;
   busyAsset?: bigint | undefined;
-  /// Claiming is unavailable for a reason stated elsewhere on the page — a
-  /// wallet on the wrong chain. The buttons go inert without restating it.
+  /// Disables the buttons for a reason shown elsewhere (wallet on the wrong chain).
   claimDisabled?: boolean;
   onClaim(asset: bigint): void;
 }
 
-/// "≈ $75.00" for one claimable balance.
-///
-/// Its own component because `usePrices` reads the active chain and throws
-/// without one: it is mounted only while the wallet sits on the link's chain,
-/// which is also the only chain whose prices describe these notes. A wallet
-/// switching away unmounts it in the same render rather than pricing the link
-/// against another network.
+/// Separate component: `usePrices` throws without an active chain, so mount only on the link's chain.
 function Usd({ amount, asset }: { amount: bigint; asset: RegisteredAsset }) {
   const usd = assetUsd(amount, asset, usePrices());
   return usd === undefined ? null : <span className="claim-asset__usd">≈ {formatUsd(usd)}</span>;

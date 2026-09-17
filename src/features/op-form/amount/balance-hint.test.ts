@@ -3,8 +3,6 @@ import { RAY } from "@lelantos-org/sdk/protocol";
 import { describe, expect, it } from "vitest";
 import { maxNoticeCopy, settlingHint, withheldHint } from "./balance-hint";
 
-// 0 decimals and unit scale, so the figures in the assertions are the figures
-// passed in — this is about which number is chosen, not about formatting.
 const META = { symbol: "WETH", decimals: 0, scale: 1n, index: RAY };
 
 describe("settlingHint", () => {
@@ -19,9 +17,6 @@ describe("settlingHint", () => {
   });
 });
 
-// The line explaining a max lower than the balance printed beside it. Without
-// it, the app's own max is rejected by its own selector with "insufficient
-// unspent value for asset 1: have X, need Y".
 describe("withheldHint", () => {
   const spendable = (withheld: Partial<SpendableMax["withheld"]>): SpendableMax =>
     ({
@@ -36,7 +31,6 @@ describe("withheldHint", () => {
   });
 
   it("leaves the slot cap to MaxNotice, which explains it properly", () => {
-    // "Needs consolidating" named a remedy the user cannot perform (#04).
     expect(withheldHint(spendable({ slots: 42n }), META)).toBeUndefined();
     expect(withheldHint(spendable({ slots: 42n, cooldown: 3n }), META)).toBe(
       "3 WETH still settling",
@@ -44,7 +38,6 @@ describe("withheldHint", () => {
   });
 
   it("reports the largest cause when several apply", () => {
-    // One clause, not three: this sits inline under the amount field.
     expect(withheldHint(spendable({ cooldown: 700n, dust: 3n }), META)).toBe(
       "700 WETH still settling",
     );
@@ -91,8 +84,6 @@ describe("maxNoticeCopy", () => {
   });
 
   it("stays silent for causes that only need time", () => {
-    // Cooldown, reservation and dust are `withheldHint`'s; none of them is the
-    // "this is the most one transaction moves" story.
     expect(
       maxNoticeCopy({
         spendable: spendable(100n, { cooldown: 50n, reserved: 5n, dust: 1n }),

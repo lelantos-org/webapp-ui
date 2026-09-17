@@ -1,7 +1,3 @@
-// Ephemeral bearer wallets behind claim links: scanning a link's notes, sweeping
-// them to a connected wallet, and clearing what the link leaves behind.
-// Generating one is `generate.ts`.
-
 import { circuitAmount, connect, type WalletApi } from "@lelantos-org/sdk";
 import { deriveKeysFromNsk, type Field } from "@lelantos-org/sdk/primitives";
 import { type ChainEntry, chainKey } from "@/config/chains";
@@ -27,28 +23,12 @@ export async function deriveEphemeralAddress(nsk: Field): Promise<string> {
   return address;
 }
 
-/// Namespace for one link's ephemeral note store.
-///
-/// The suffix is a digest of the bearer key, never the key itself. Writing key
-/// bytes into an IndexedDB record name would persist the value this page is
-/// designed to keep out of storage (see `scrubLocationHash`), and would surface
-/// it on screen, since `userMessage` passes short raw messages through and an
-/// idb failure names the store.
-///
-/// Shares `storageDigest` with the per-account keys, so both namespaces agree on
-/// what a digest is.
+/// Namespace for one link's note store: a digest of the bearer key, never the key itself.
 function ephNoteStoreKey(chainId: bigint, nskEphHex: string): string {
   return `notes:eph:${chainKey(chainId)}:${storageDigest(nskEphHex)}`;
 }
 
-/// Read the link's notes with a throwaway wallet built from its bearer key.
-///
-/// Carries no `treePersistence` or `nullifierPersistence`: the wallet exists for
-/// one sweep, and persisting its tree would write a second copy of the feed into
-/// IndexedDB under a key never read again. The feed is re-walked on each visit,
-/// which the scanner and sync strategy below account for.
-///
-/// Callers own the returned wallet and must pass it to `releaseScanner`.
+/// A throwaway wallet over the link's notes; it persists no tree. Callers must `releaseScanner` it.
 export async function buildEphemeralWallet(
   nskEphHex: string,
   layer: ChainLayerSpec,
@@ -57,32 +37,15 @@ export async function buildEphemeralWallet(
   const nsk = nskFieldFromHex(nskEphHex);
   if (!nsk.ok) throw new Error(describeClaimError(nsk.error));
 
-  // Both arguments are required to keep the scan off the main thread. Without a
-  // strategy `connect` defaults to `{ kind: "full" }`, trial-decrypting every
-  // note in the pool; without a `scanner` it defaults to the inline
-  // `LocalScanner`, which runs that work on the calling thread.
-  //
-  // Subscribing discloses to the discovery service that a detection key watches
-  // this ephemeral address, the same trade the main wallet makes.
-  // `resolveSyncStrategy` declines to subscribe on a pool below the decoy floor,
-  // where the full scan is cheap and disclosing nothing is more private.
-  //
-  // Namespaced under the ephemeral address rather than the connected account, so
-  // the token cache entry is separate from the main wallet's.
+  // Strategy and scanner are both required, or `connect` scans the whole pool on the main thread.
   const ephAddress = await deriveEphemeralAddress(nsk.value);
   const plan = await resolveSyncStrategy(env.fmdUrl, chain.chainId, nsk.value, ephAddress);
 
-  // The key here is the link's, not the session's — but the *chain layer* is
-  // still the session's, and a kind with no signer has none to lend. Sweeping
-  // is a transfer, so a read-only layer is all it needs.
-  //
-  // `keySource` is asked only for its signer; `derive` is never called, so no
-  // prompt is raised for a key this wallet will not use.
+  // Borrow only the session's signer: `derive` is never called, so no key prompt is raised.
   const { signer } = kindAdapter(layer.kind).keySource(layer, chain);
   const chainLayer = signer ? { signer } : { readOnly: true as const };
 
-  // Below the wallet default: this scans a small window for a single note on a
-  // short-lived page. Held outside `connect` so a failed build still frees it.
+  // Created outside `connect` so a failed build still frees it.
   const scanner = createScanner(2);
   let w: WalletApi;
   try {
@@ -111,8 +74,7 @@ export interface EphemeralBalance {
   notes: number;
 }
 
-/// The link's unspent notes per asset, in asset order: the wallet's own fold,
-/// with the total named `amount`.
+/// The link's unspent notes per asset, in asset order.
 export async function summarizeEphemeralNotes(eph: WalletApi): Promise<EphemeralBalance[]> {
   const notes = heldNotes(await eph.notes({ spent: false }));
   return computeBalances(notes).map(({ asset, balance, notes }) => ({
@@ -132,7 +94,6 @@ export async function sweepEphemeral(
   if (!row || row.amount === 0n) throw new Error("nothing to claim");
   const { txHash } = await eph.transfer({
     recipient: destAddress,
-    // A sum of note values the wallet decrypted: circuit units.
     amount: circuitAmount(row.amount),
     asset,
     autoConsolidate: true,
@@ -140,17 +101,10 @@ export async function sweepEphemeral(
   return txHash;
 }
 
-/// Drop everything this link left behind once it has been swept.
-///
-/// Deletes the record rather than blanking it: the store caches one spent link
-/// and nothing in it is worth keeping. The FMD subscription token registered for
-/// the ephemeral address is dropped too, so a one-shot link leaves no permanent
-/// entry tying that address to this browser.
+/// Drop the link's note store and FMD subscription so nothing ties the link to this browser.
 export async function clearEphemeralStore(chainId: bigint, nskEphHex: string): Promise<void> {
   const nsk = nskFieldFromHex(nskEphHex);
   if (nsk.ok) clearCachedSubscription(chainId, await deriveEphemeralAddress(nsk.value));
-  // `IdbNoteStore` writes into the shared `lelantos` DB under per-key
-  // entries, so removing this one leaves every other wallet intact.
   const store = new IdbNoteStore(ephNoteStoreKey(chainId, nskEphHex));
   await store.destroy();
 }

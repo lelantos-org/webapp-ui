@@ -10,8 +10,7 @@ import { Notice } from "@/shared/ui/Notice";
 import { DELEGATE_NOTICES } from "../governance-copy";
 import { type GovTxState, GovTxStatus } from "./GovTxStatus";
 
-/// Who an account's votes go through: "Not delegated", "Yourself", or the
-/// delegate's short address; "…" while it is still being read.
+/// "Not delegated", "Yourself", the delegate's short address, or "…" while loading.
 export function delegateLabel(delegate: string | undefined, account: string | undefined): string {
   if (delegate === undefined) return "…";
   if (isZeroAddress(delegate)) return "Not delegated";

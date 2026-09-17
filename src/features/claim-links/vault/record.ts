@@ -1,6 +1,3 @@
-// The stored shape of a claim-link record, and the check a stored payload has to
-// pass before it is trusted.
-
 export interface StoredClaimLink {
   /// Random, not derived from the key material.
   id: string;
@@ -12,28 +9,15 @@ export interface StoredClaimLink {
   /// Circuit units, as passed to `transfer`.
   amount: string;
   createdAt: number;
-  /// Absent until the transfer is broadcast. Absent and old likely means the
-  /// transfer never went out; such records are still shown, since hiding them
-  /// risks hiding a live link.
+  /// Absent until broadcast. Such records are still shown: hiding them risks hiding a live link.
   txHash?: string;
-  /// When the link last left this browser through a copy or a share.
-  ///
-  /// The nearest thing to "handed over" the app can observe — nothing reports a
-  /// claim — and what "Clear the ones you have shared" selects on. Absent means
-  /// the link has never been copied, which is exactly the record most likely to
-  /// be the only copy there is.
+  /// When the link last left this browser via a copy or share. Absent: possibly the only copy.
   copiedAt?: number;
 }
 
-// Validation
-
 const DECIMAL = /^\d+$/;
 
-/// A `bigint` field in its stored form.
-///
-/// The digit check guards the row renderer, which calls `BigInt(amount)` during
-/// render. `BigInt` throws `SyntaxError` on a non-numeric literal, taking down
-/// the vault and with it the only remaining copy of every other link's key.
+/// A stored `bigint` field. Checked: a `BigInt` throw in render takes down the vault.
 function isDigitString(value: unknown): value is string {
   return typeof value === "string" && DECIMAL.test(value);
 }
@@ -46,8 +30,6 @@ function isOptionalTimestamp(value: unknown): boolean {
   return value === undefined || (typeof value === "number" && Number.isFinite(value));
 }
 
-/// One check per line with its own early return, so a breakpoint identifies the
-/// field that failed.
 function isRecord(value: unknown): value is StoredClaimLink {
   if (typeof value !== "object" || value === null) return false;
   const r = value as Record<string, unknown>;

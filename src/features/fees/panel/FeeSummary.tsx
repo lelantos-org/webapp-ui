@@ -1,23 +1,3 @@
-// The fee panel: every charge an action carries, itemised.
-//
-// Two presentations of one model:
-//
-//   * `details` — the rows, for the body of a `DetailsDisclosure`, which does
-//     the collapsing. The fee asset picker stays on the relayer row.
-//   * `review` — the itemised rows of the Send and Unshield reviews: 15px,
-//     unsigned, labelled "Relayer fee · paid in USDC", with the caller's own
-//     closing rows ("Leaves your balance", "They receive") under them.
-//
-// The rows sit directly above the submit button, so any height change moves
-// that button under the pointer, and the two fees they state arrive from two
-// queries at different times. Nothing here resizes when an answer lands:
-//
-//   * The row set is decided by the kind and the paying asset, both known at the
-//     first render. A row whose figure is in flight is drawn with a placeholder
-//     (`FeeRow.amount === undefined`).
-//   * A figure being re-priced keeps the old one on screen and marks the rows
-//     `refreshing` rather than reverting to a placeholder.
-
 import type { ReactNode } from "react";
 import { cx } from "@/shared/lib/cx";
 import { formatBaseFixed } from "@/shared/lib/format/asset";
@@ -32,26 +12,21 @@ import "./FeeSummary.css";
 export interface FeeExtraRow {
   label: string;
   value: ReactNode;
-  /// Drawn in the foreground colour, as the bottom line of the review is.
   strong?: boolean;
 }
 
+/// Props for `FeeSummary`.
 export interface FeeSummaryProps {
   model: FeeSummaryModel | undefined;
-  /// See the note at the top of this file.
   variant: "details" | "review";
-  /// `review` only: rows under the fee rows, such as "Leaves your balance".
+  /// `review` only: closing rows under the fee rows.
   extraRows?: readonly FeeExtraRow[];
-  /// A figure already on screen is being re-priced. Marks the panel without
-  /// moving it; see the note above on why nothing here may resize.
+  /// A figure on screen is being re-priced; marks the panel without resizing it.
   refreshing?: boolean;
-  /// Omitted where the asset is not the user's to choose: a native-ETH deposit
-  /// or withdraw, whose relayer is paid in the wrapped coin.
+  /// Omitted where the paying asset is not the user's choice.
   feeAsset?: FeeAssetChoice | undefined;
 }
 
-/// `formatDecimalCompact`'s default, restated so a caller can pass one
-/// explicitly without the two drifting apart.
 const DEFAULT_FRAC = 6;
 
 function amountOf(amount: bigint, row: FeeRow, precision: number): string {
@@ -60,15 +35,7 @@ function amountOf(amount: bigint, row: FeeRow, precision: number): string {
   return `${sign}${n} ${row.asset.symbol}`.trim();
 }
 
-/// The finest precision any of `rows` is displayed at, among those denominated
-/// in `asset`.
-///
-/// A derived figure — the fee total or the bottom line — is rendered at this
-/// precision rather than the default, which is a cap that dust extends past to
-/// keep four significant digits while a figure with a whole part does not.
-/// Without it a relayer fee of 0.00000002 prints in full while the total
-/// containing it stops at six places, so the panel reads
-/// `0.0025 + 0.00000002 = 0.0025`.
+/// The finest precision `asset`'s rows render at, so a derived total never reads coarser than its parts.
 function derivedPrecision(rows: FeeRow[], asset: RowAsset): number {
   return rows.reduce(
     (n, r) =>
@@ -79,9 +46,7 @@ function derivedPrecision(rows: FeeRow[], asset: RowAsset): number {
   );
 }
 
-/// A figure, or the space it will occupy. The placeholder is sized in `ch` of the
-/// same monospace face as the figure, so the row does not shift when the two
-/// swap.
+/// A figure, or a same-width placeholder while it is priced.
 function Figure({
   row,
   className,
@@ -89,8 +54,6 @@ function Figure({
 }: {
   row: FeeRow;
   className: string;
-  /// Fractional digits to allow. Omitted on a row that stands alone; only a
-  /// figure derived from others must keep step with them.
   precision?: number | undefined;
 }) {
   if (row.amount === undefined) {
@@ -108,6 +71,7 @@ function Figure({
   );
 }
 
+/// The fee panel's rows, as a Details body (`details`) or a review list (`review`).
 export function FeeSummary({
   model,
   refreshing = false,
@@ -130,13 +94,8 @@ interface FeeRowsProps {
 }
 
 function FeeRows({ model, refreshing, feeAsset }: FeeRowsProps) {
-  // Only offered when there is a choice: a relayer taking a single asset needs a
-  // label rather than a picker.
   const choosable = feeAsset && feeAsset.options.length > 1;
 
-  // Both derived figures come from the fee rows: the total sums them, and a
-  // deposit's bottom line carries them. Measured against the asset each figure
-  // is denominated in, since a cross-asset relayer fee is part of neither.
   const feeRows = feeRowsOf(model);
   const totalPrecision = model.total && derivedPrecision(feeRows, model.total.asset);
   const headlinePrecision = model.headline && derivedPrecision(feeRows, model.headline.asset);
@@ -145,7 +104,6 @@ function FeeRows({ model, refreshing, feeAsset }: FeeRowsProps) {
 
   return (
     <div className="fees" aria-busy={refreshing || undefined}>
-      {/* Signals that a figure is being re-priced without moving the layout. */}
       <span className={cx("fees__bar", refreshing && "fees__bar--on")} aria-hidden />
 
       <div className="fees__rows">
@@ -171,7 +129,6 @@ function FeeRows({ model, refreshing, feeAsset }: FeeRowsProps) {
         <div className="fees__headline">
           <span className="fees__lbl">{model.headline.label}</span>
           {extra ? (
-            // A cross-asset deposit's second token, stated rather than summed.
             <span className="fees__pulls">
               <Figure row={model.headline} className="fees__hero" precision={headlinePrecision} />
               <span>+</span>
@@ -183,17 +140,11 @@ function FeeRows({ model, refreshing, feeAsset }: FeeRowsProps) {
         </div>
       ) : null}
 
-      {note ? (
-        // The fee is spent from a balance the user is not otherwise touching, so
-        // it would go unnoticed against the amount row above.
-        <p className="fees__note">{note}</p>
-      ) : null}
+      {note ? <p className="fees__note">{note}</p> : null}
     </div>
   );
 }
 
-/// The label a row carries on the review, where each fee names how it is
-/// charged: "Protocol fee · 0.25%", "Relayer fee · paid in USDC".
 function reviewLabel(row: FeeRow): string {
   switch (row.key) {
     case "protocol":
@@ -205,11 +156,7 @@ function reviewLabel(row: FeeRow): string {
   }
 }
 
-/// The itemised rows of a review screen.
-///
-/// Unsigned: the review states each charge as what it is, and the caller's
-/// closing rows say where it lands. A row still being priced shows "—", and the
-/// review's Confirm is held on `allPriced` until it has a figure.
+/// The itemised, unsigned rows of a review screen.
 function FeeReview({
   model,
   extraRows,

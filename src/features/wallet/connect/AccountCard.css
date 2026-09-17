@@ -1,6 +1,5 @@
 @layer features {
-  /* Shielded address. A quiet accent tint: reference material at the foot of
-     the page, not a masthead. */
+  /* Shielded address */
   .acct {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -49,7 +48,7 @@
     color: var(--fg-mute);
   }
 
-  /* Narrow: one line, ellipsised — the copy button is how it leaves the page. */
+  /* Narrow */
   @media (max-width: 720px) {
     .acct__addr {
       overflow: hidden;

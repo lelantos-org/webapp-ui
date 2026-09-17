@@ -1,6 +1,3 @@
-// The shielded holdings, one row per asset, with a detail under the row that is
-// open.
-
 import { memo, useCallback, useId, useState } from "react";
 import type { RegisteredAsset } from "@/config/chains";
 import { usdValue } from "@/shared/domain/units";
@@ -25,14 +22,7 @@ export interface AssetListProps {
   gains: YieldGains;
 }
 
-/// Two columns: what you hold on the left, what it is worth and what it earned
-/// on the right. The venue's rate and what it means are in the row detail,
-/// where there is room to label them properly — the list answers "what do I
-/// have", the detail "how does it behave".
-///
-/// A list of disclosure buttons rather than a `<table>`: each row is an
-/// interactive control, and a table row that opens something is a pattern
-/// assistive technology does not announce. One detail open at a time.
+/// The shielded holdings as disclosure rows, one detail open at a time.
 export function AssetList({ rows, byId, prices, gains }: AssetListProps) {
   const [open, setOpen] = useState<bigint | undefined>(undefined);
   const toggle = useCallback((id: bigint) => setOpen((o) => (o === id ? undefined : id)), []);
@@ -58,14 +48,6 @@ export function AssetList({ rows, byId, prices, gains }: AssetListProps) {
   );
 }
 
-/// One row and its detail.
-///
-/// The figure is updated in place rather than keyed on its own value: keying on
-/// the balance would remount the element on every change and replay its entrance
-/// animation as a tx settled in stages.
-///
-/// Memoised. `row` identities are stable while the balances query is unchanged,
-/// and `onToggle` is stable, so opening one row re-renders two, not the list.
 const AssetRow = memo(function AssetRow({
   row,
   label,
@@ -78,8 +60,7 @@ const AssetRow = memo(function AssetRow({
   row: AssetBalanceView;
   label: string;
   meta: RegisteredAsset | undefined;
-  /// USD per whole token, or `undefined` when no price is known. Not zero: an
-  /// unpriced asset shows a dash rather than `$0.00`.
+  /// USD per whole token; `undefined` when unpriced, shown as a dash.
   price: number | undefined;
   gain: YieldGain | undefined;
   open: boolean;
@@ -88,7 +69,6 @@ const AssetRow = memo(function AssetRow({
   const detailId = useId();
   const { mounted, expanded } = useCollapseTransition(open, PANEL_COLLAPSE_MS);
 
-  // Capped for display; the figures behind it keep full precision.
   const fmt = (v: bigint) => (meta ? formatAmountForDisplay(v, meta) : v.toString());
   const total = row.balance + row.pending;
   const usd =
@@ -97,9 +77,7 @@ const AssetRow = memo(function AssetRow({
       : undefined;
   const earned = meta ? earnedLine(gain, meta, price) : undefined;
 
-  // Both directions are rendered. A single branch on `outflow` would hide an
-  // incoming amount whenever something was also leaving, so a swap — which has
-  // both legs in flight — would report only the debit.
+  // Render both legs: a swap has an incoming and an outgoing amount in flight at once.
   const settling = [
     row.outflow > 0n ? { dir: "out" as const, text: `−${fmt(row.outflow)}` } : undefined,
     row.pending > 0n ? { dir: "in" as const, text: `+${fmt(row.pending)}` } : undefined,
@@ -114,19 +92,13 @@ const AssetRow = memo(function AssetRow({
         aria-controls={mounted ? detailId : undefined}
         onClick={() => onToggle(row.asset)}
       >
-        {/* Seeded on the token address where there is one, so two rows sharing
-            a symbol still get different marks. */}
         <TokenIcon symbol={label} address={meta?.token} className="pf-row__mark" />
         <span className="pf-row__left">
           <span className="pf-row__name">
             {label}
-            {/* The symbol alone names a plain asset and its earning twin the
-                same; the vault is what tells them apart. */}
             {meta?.vaultName ? <span className="pf-row__vault"> · {meta.vaultName}</span> : null}
           </span>
           <span className="pf-row__bal mono">
-            {/* On the figure's own line rather than stacked beneath it, so the
-                row keeps its height as each leg appears and settles. */}
             {settling.length > 0 ? (
               <span className="bal__flow">
                 <span className="sr-only">settling</span>
@@ -171,16 +143,6 @@ const AssetRow = memo(function AssetRow({
   );
 });
 
-/// Everything the row leaves out: both yield figures, each with the words that
-/// say whose figure it is.
-///
-/// "You've earned" is this wallet's return on the notes it holds now; "Pool
-/// pays" is the venue's rate. They are different claims, and side by side with
-/// their labels is how the difference is shown rather than asserted.
-///
-/// No header: the row directly above already names the asset, its vault and its
-/// balance, and repeating them the moment it opens reads as a second, redundant
-/// row rather than as the row's detail.
 function AssetDetail({
   label,
   meta,
@@ -256,7 +218,6 @@ function PlainCustody({ label }: { label: string }) {
   );
 }
 
-/// One in-flight leg of a row's balance.
 interface SettleLeg {
   dir: "in" | "out";
   text: string;

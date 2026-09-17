@@ -1,6 +1,3 @@
-// Generating a claim link: a fresh bearer key, its vault record, and the
-// transfer that funds it.
-
 import type { CircuitAmount, SpendPhase, TransferResult, WalletApi } from "@lelantos-org/sdk";
 import { randomFr } from "@lelantos-org/sdk/primitives";
 import { nskHexFromField } from "@/features/wallet-kinds";
@@ -10,23 +7,14 @@ import { deriveEphemeralAddress } from "./ephemeral-wallet";
 
 export interface GenerateClaimLinkArgs {
   amount: CircuitAmount;
-  /// Required rather than left to the SDK's default: the id is written into the
-  /// vault record before the transfer, and a record naming a different asset
-  /// from the one that moved misstates what the link is worth.
+  /// Required: the vault record is written before the transfer and must name the asset that moves.
   asset: bigint;
-  /// Asset to pay the relayer in. Defaults to the asset being sent, as for any
-  /// transfer; Send by link offers the same "pay the fee in …" switch Send does.
+  /// Asset to pay the relayer in; defaults to `asset`.
   feeAsset?: bigint;
   /// Stamped into the link so the claimer knows which pool holds the notes.
   chainId: bigint;
   onPhase?: (phase: SpendPhase) => void;
-  /// Last-moment check that the wallet is still on `chainId`.
-  ///
-  /// Read immediately before the transfer rather than at render: the caller's
-  /// `useActiveChain()` is seconds stale by the time proving finishes, and a
-  /// `chainChanged` in that window would stamp the link with one chain for a
-  /// transfer that landed on another. The claimer would then scan the wrong pool
-  /// and be told there is nothing to claim.
+  /// Read right before the transfer, so a chain switch mid-proof cannot mislabel the link.
   currentChainId?: () => bigint | undefined;
 }
 
@@ -38,9 +26,7 @@ export interface GenerateClaimLinkResult {
   tx: TransferResult;
   nskEphHex: string;
   ephAddress: string;
-  /// Correlation handle into `vault/store` for the record written before the
-  /// broadcast. Dropping a record is the vault screen's responsibility, behind an
-  /// explicit confirmation, so this is not a delete token.
+  /// The vault record written before the broadcast. Not a delete token.
   recordId: string;
 }
 
@@ -53,9 +39,7 @@ export async function generateClaimLink(
   const nskEphHex = nskHexFromField(nskEph);
   const url = `${window.location.origin}/claim#${encodeClaimPayload(args.chainId, nskEphHex)}`;
 
-  // Persisted before the broadcast: afterwards the only copy of this key would
-  // be React state, which any chain or account switch discards once the funds
-  // have moved. See `vault/store`.
+  // Persist before broadcasting, or React state would hold the key's only copy once funds move.
   const recordId = rememberClaimLink({
     url,
     chainId: args.chainId,

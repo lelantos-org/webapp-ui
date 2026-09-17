@@ -4,8 +4,7 @@ import { type ClaimPayload, describeClaimError, parseClaimFragment } from "./cod
 export type FragmentError = "missing" | "invalid";
 export type FragmentRead = Result<ClaimPayload, { kind: FragmentError; message: string }>;
 
-/// Parse the URL hash fragment into a claim payload, distinguishing absent
-/// from malformed input.
+/// Parse the URL hash into a claim payload, telling a missing fragment from a malformed one.
 export function readFragmentFromHash(hash: string): FragmentRead {
   if (!hash || hash === "#") {
     return err({ kind: "missing", message: "missing claim secret in URL fragment" });
@@ -17,12 +16,7 @@ export function readFragmentFromHash(hash: string): FragmentRead {
   return ok(parsed.value);
 }
 
-/// Strip the `#…` from the visible URL so a refresh or a share does not leak the
-/// bearer secret. Idempotent, and acts only on the claim path.
-///
-/// Trailing slashes are tolerated: React Router routes `/claim/` to the same
-/// component, so an exact `=== "/claim"` test would leave a link written with a
-/// trailing slash carrying its secret in the address bar.
+/// Strip the bearer secret from the URL on `/claim`, trailing slash included, so it cannot leak.
 export function scrubLocationHash(loc: Location, history: History): void {
   const path = loc.pathname.replace(/\/+$/, "") || "/";
   if (path === "/claim" && loc.hash) {

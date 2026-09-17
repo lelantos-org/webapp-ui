@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { type PendingContext, pendingShapesFor } from "./pending-policy";
 
-// Only the fields the policy reads are populated; the rest of the SDK
-// receipt is irrelevant to this mapping.
 const money = (amount: bigint) => ({ amount });
 const asset = (id: bigint) => ({ id });
 
@@ -58,10 +56,7 @@ describe("pendingShapesFor", () => {
     });
 
     it("adds the leg-B note as an inflow the wallet's balance has to reach", () => {
-      // Sizing itself belongs to the quote's `credit`; what this asserts is the
-      // watermark built on top of it — the balance the note will actually
-      // produce, not `baseline + 1`, which any unrelated inflow on `assetOut`
-      // satisfied while the swap was still settling.
+      // The watermark is the note's resulting balance, not `baseline + 1`.
       const ctx = {
         kind: "swap",
         result: legA,

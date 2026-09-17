@@ -1,6 +1,4 @@
-/// Run `task` once the browser is idle — `requestIdleCallback` where it exists,
-/// the next macrotask where it does not (Safari). Returns a function that cancels
-/// it if it has not run yet.
+/// Run `task` when the browser is idle (next macrotask on Safari); returns a canceller.
 export function whenIdle(task: () => void): () => void {
   if (typeof requestIdleCallback === "function") {
     const id = requestIdleCallback(task);

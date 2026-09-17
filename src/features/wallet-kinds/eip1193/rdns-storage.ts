@@ -1,12 +1,3 @@
-// Which wallet to reattach to, in `localStorage`.
-//
-// Two keys with opposite lifetimes, which is why they are not one:
-//
-//   - the *attached* rdns is a session latch, cleared by `disconnect`, so a
-//     resume never reattaches something the user explicitly walked away from;
-//   - the *preferred* rdns is a lasting choice that must outlive a session, so
-//     the picker can order by it on the connect following a disconnect.
-
 import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
 import { localStore } from "@/shared/lib/storage/safe";
 
@@ -32,8 +23,7 @@ export function forgetAttachedRdns(): void {
   localStore.remove(ATTACHED_KEY);
 }
 
-/// The wallet chosen last time, if any. Survives a disconnect. Orders the
-/// picker.
+/// The wallet chosen last time, kept across disconnects. Orders the picker.
 export function preferredRdns(): string | undefined {
   return localStore.get(PREFERRED_KEY);
 }

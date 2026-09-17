@@ -2,14 +2,11 @@ import type { ReactNode } from "react";
 import "./ErrorCard.css";
 
 interface ErrorCardProps {
-  /// Sentence case, as the heading is painted and announced.
   title: string;
-  /// The message and the way out, stacked under the heading.
   children: ReactNode;
 }
 
-/// The card a page shows in place of itself: an unknown route, or a render that
-/// threw.
+/// Card shown in place of a page that is unknown or failed to render.
 export function ErrorCard({ title, children }: ErrorCardProps) {
   return (
     <div className="card">

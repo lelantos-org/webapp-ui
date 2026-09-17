@@ -9,8 +9,7 @@ export interface TxToastHandle {
   timedOut(): void;
 }
 
-/// Tx toast that emits only on failure or soft timeout. Success phases are shown
-/// inline by the form's `Stepper`.
+/// Tx toast shown only on failure or soft timeout; success is shown inline.
 export function toastTx(
   label: string,
   txHash: string,

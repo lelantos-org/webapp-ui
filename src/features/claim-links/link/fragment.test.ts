@@ -3,7 +3,6 @@ import { NSK_HEX_LEN } from "@/features/wallet-kinds";
 import { readFragmentFromHash, scrubLocationHash } from "./fragment";
 
 const NSK = "a".repeat(NSK_HEX_LEN);
-/// Links now carry the chain they were made on; `7a69` is 31337.
 const VALID = `7a69:${NSK}`;
 
 describe("readFragmentFromHash", () => {
@@ -34,9 +33,7 @@ describe("scrubLocationHash", () => {
     return replaceState;
   };
 
-  // React Router routes `/claim/` to the same component, but an exact
-  // `=== "/claim"` test did not match it — so any link written with a trailing
-  // slash kept its bearer secret in the address bar indefinitely.
+  // A trailing slash must not leave the bearer secret in the address bar.
   it.each(["/claim", "/claim/"])("drops the secret from %s, keeping the path", (pathname) => {
     expect(scrub(pathname, "#secret")).toHaveBeenCalledWith(null, "", pathname);
   });

@@ -1,33 +1,4 @@
-// What the progress and failure cards may truthfully say about an op, by stage.
-//
-// Two sentences carry a promise about the user's money, and both depend on how
-// far the op got:
-//
-//   * the walk-away note — whether closing the tab now stops the op; and
-//   * the failure reassurance — whether anything was spent, and whether trying
-//     again is safe.
-//
-// Neither has one version that holds for every op at every stage ("After that
-// you can leave — we'll finish in the background and tell you when it lands";
-// "Your funds never left the pool — nothing was spent"): nothing in
-// the app notifies anyone after the tab closes, and a deposit that failed after
-// the wallet sent it may still land. So the lines are chosen here, from the step
-// list and the last phase reached, and a stage this module cannot vouch for gets
-// the cautious line rather than the reassuring one.
-//
-// What is true, per op, from the SDK:
-//
-//   * Spend (transfer, withdraw, swap). Notes are picked and the proof built in
-//     this tab; closing it before `submitting` abandons the op and spends
-//     nothing. `submitting` hands the payload to the relayer, which broadcasts it
-//     from its own account and answers with the hash — both swap legs included —
-//     so once the hash is back the tab is no longer needed. A retry cannot spend
-//     the same notes twice: their nullifiers are refused on-chain.
-//   * Deposit. Approve (first time, witness path), sign the permit, confirm in
-//     the wallet: until the wallet sends it (`broadcast`) closing the tab stops
-//     the shield and no tokens move. After that the transaction is the wallet's
-//     and the chain's, and the relayer adds it to the pool from chain events —
-//     the tab plays no part. A second try after `broadcast` is a second deposit.
+// These lines promise things about the user's funds; a stage we cannot vouch for gets the cautious line.
 
 import { isDepositSteps, type Step, type TxPhase } from "./tx-progress";
 
@@ -35,8 +6,7 @@ export interface TxStage {
   steps: readonly Pick<Step, "id">[];
   /// The phase in progress, or the last one reached before a failure.
   phase: TxPhase | undefined;
-  /// The op's transaction hash is known. For a spend that means the relayer has
-  /// taken it; for a deposit, that the wallet has sent it.
+  /// The tx hash is known: the relayer took the spend, or the wallet sent the deposit.
   hash: boolean;
 }
 
@@ -44,7 +14,6 @@ function indexOf(steps: readonly Pick<Step, "id">[], phase: TxPhase | undefined)
   return phase === undefined ? -1 : steps.findIndex((s) => s.id === phase);
 }
 
-/// The phase is at or past `target` in this step list.
 function reached(stage: TxStage, target: TxPhase): boolean {
   const at = indexOf(stage.steps, stage.phase);
   const t = indexOf(stage.steps, target);
@@ -70,12 +39,7 @@ export function walkAwayNote(stage: TxStage): string {
   return "Keep this tab open until the proof is handed to the relayer. Closing it before then cancels this, and nothing is spent.";
 }
 
-/// Whether "Try again" may be offered after a failure.
-///
-/// Withheld once the transaction may be on-chain: a deposit the wallet sent can
-/// still land, so a retry would be a second deposit; a spend with a hash may have
-/// gone through, and its notes are recorded as spent locally, so a retry could
-/// pick different notes and send the amount twice.
+/// Whether "Try again" may be offered: never once the tx may be on-chain, or funds could move twice.
 export function retrySafe(stage: TxStage): boolean {
   return !handedOff(stage);
 }

@@ -1,25 +1,11 @@
-// The line glyphs the app draws.
-//
-// Apart from the token and chain artwork beside this file, the pool's shield
-// (`shield.tsx`) and third-party brand marks (`brand.tsx`): these are the plain
-// line marks — chevrons, arrows, the copy and power
-// buttons' marks, the theme toggle's sun and moon. Each is `currentColor` on a
-// 24-unit grid unless it says otherwise, so a parent's
-// colour is the glyph's colour, and each is `aria-hidden` — the text beside it,
-// or the button's label, always carries the meaning.
-//
-// Collected here rather than drawn inline where each was first needed, so a
-// glyph is found, and restyled, in one place.
-
 import type { ReactNode } from "react";
 
+/// Props every line glyph takes; glyphs are `currentColor` and `aria-hidden`.
 export interface GlyphProps {
   size?: number | undefined;
   className?: string | undefined;
 }
 
-/// Which stroke ends and corners are rounded. Most glyphs round both; a few
-/// are drawn with square ends, and keep them.
 type Rounding = "both" | "cap" | "none";
 
 function Svg({
@@ -54,8 +40,7 @@ function Svg({
   );
 }
 
-/// A glyph component drawing `paths`. `size` is a default the caller may
-/// override; the other options are fixed to the glyph.
+/// A glyph component drawing `paths`; only `size` is caller-overridable.
 function glyph(
   paths: ReactNode,
   {
@@ -110,11 +95,7 @@ export const ArrowRightGlyph = glyph(
   </>,
 );
 
-/// Straight down, from what you pay to what you receive: Swap's flip button.
-///
-/// Drawn rather than typed. A typed `↓` or `⇅` sits off-centre in its own line
-/// box and renders at a different weight per platform font, so no amount of
-/// flex centring squares it inside a 40px button.
+/// Straight down, for Swap's flip button. Drawn, since a typed arrow will not centre.
 export const ArrowDownGlyph = glyph(
   <>
     <path d="M12 5v14" />
@@ -187,13 +168,11 @@ export const MoonGlyph = glyph(
   { strokeWidth: 1.8, round: "none" },
 );
 
-/// A burst of rays: the setup card's invitation, as against the warning
-/// triangle.
+/// A burst of rays: the setup card's invitation.
 export const RaysGlyph = glyph(
   <path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4M4.9 19.1l2.9-2.9M16.2 7.8l2.9-2.9" />,
   { strokeWidth: 1.9 },
 );
 
-/// An open arc, for the in-flight tile. Spun by CSS, which stops it under
-/// reduced motion.
+/// An open arc for the in-flight tile, spun by CSS.
 export const ArcGlyph = glyph(<path d="M21 12a9 9 0 1 1-6.2-8.6" />);

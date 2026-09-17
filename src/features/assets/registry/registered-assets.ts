@@ -1,47 +1,20 @@
-// The asset list for the active chain.
-//
-// Read from the chain registry rather than fetched: the relayer's `/chains`
-// carries every registered asset with its symbol and decimals, so no explorer,
-// wallet, or per-token `symbol()` / `decimals()` round trip is needed.
-
 import type { RegisteredAsset } from "@/config/chains";
 import { useActiveChainOrUndefined } from "@/features/chain";
 
-/// The asset a form starts on: the first id the registry assigns.
-///
-/// A form default only. Every op names its asset explicitly (the SDK has no
-/// default), so nothing recorded about an op — the pending overlay, a claim
-/// link's vault record — can fall back to this and describe a different asset
-/// from the one that moved.
 const DEFAULT_ASSET = 1n;
 
-/// `DEFAULT_ASSET` in form spelling: the value a form starts on, and the id the
-/// pickers fall back to while the registry is empty or still loading.
-///
-/// A string, matching a `<select>` value and the zod form schemas; `findAsset`
-/// parses it back to the `bigint` id.
+/// The default asset id as a form string; also the pickers' fallback while the registry is empty.
 export const DEFAULT_ASSET_ID = DEFAULT_ASSET.toString();
 
-/// Shared empty result. A literal `[]` would produce a new array identity on
-/// every render while there is no active chain, invalidating any downstream
-/// `useMemo` or `useEffect` listing `assets` as a dependency.
+/// Stable empty result, so dependents' memo and effect deps do not churn.
 const NO_ASSETS: readonly RegisteredAsset[] = [];
 
-/// Assets registered on the active chain, lowest id first.
-///
-/// Synchronous: the backing registry resolves before anything below
-/// `ChainProvider` renders, so callers have no pending or error state to thread.
-///
-/// Empty means either the indexer has not caught up or there is no active chain,
-/// as on the claim page before a wallet connects. Callers that know which chain
-/// they mean should read `ChainEntry.tokens` directly.
+/// Assets registered on the active chain, lowest id first. Empty when there is no active chain.
 export function useRegisteredAssets(): readonly RegisteredAsset[] {
   return useActiveChainOrUndefined()?.tokens ?? NO_ASSETS;
 }
 
-/// Resolve a `RegisteredAsset` from a form-style asset id, given as a decimal
-/// string or a bigint. Returns `undefined` when the registry is empty or the id
-/// is unknown.
+/// Resolve a `RegisteredAsset` from a decimal-string or bigint id.
 export function findAsset(
   assets: readonly RegisteredAsset[] | undefined,
   id: string | bigint | undefined,

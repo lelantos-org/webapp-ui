@@ -1,14 +1,3 @@
-// Public surface of the `op-form` feature: the kit every shielded-op form is
-// built from.
-//
-// The frame (`ActionForm`), the amount/recipient/review building blocks, and the
-// pure logic behind them: parsing an amount against an asset's decimals and
-// scale, the balance hints, the spend-block reasons, and the field schemas each
-// flow assembles its own form schema from. Its own feature rather than part of
-// any one flow because shield, send, unshield, swap and send-by-link all build
-// out of it; nothing here imports a flow, and it knows how an op is performed
-// only through `features/ops`.
-
 export { AmountHero } from "./amount/AmountHero";
 export { AssetPill, AssetSelectPill } from "./amount/AssetPill";
 export type { AmountValidation, AssetMeta } from "./amount/amount-validation";

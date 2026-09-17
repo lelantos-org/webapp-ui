@@ -10,7 +10,6 @@ describe("txExplorerUrl", () => {
     expect(txExplorerUrl("https://basescan.org/", "0xabc")).toBe("https://basescan.org/tx/0xabc");
   });
 
-  // Rendered as plain text by callers, rather than as a link to nowhere.
   it("gives no link for a chain without an explorer", () => {
     expect(txExplorerUrl(undefined, "0xabc")).toBeUndefined();
     expect(txExplorerUrl("", "0xabc")).toBeUndefined();

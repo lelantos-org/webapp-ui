@@ -1,6 +1,3 @@
-// Running a Permit2 setup batch: the screen it is on, where it has got to, and
-// what stopped it.
-
 import { useCallback, useMemo, useState } from "react";
 import type { RegisteredAsset } from "@/config/chains";
 import { useWalletInstance } from "@/features/wallet";
@@ -22,11 +19,11 @@ export interface SetupRun {
   error: ReportedError | null;
   /// The distinct tokens the run will send an ERC-20 approval for.
   toApprove: RegisteredAsset[];
-  /// A wallet is connected to run against.
   canRun: boolean;
   run(): Promise<void>;
 }
 
+/// Runs a Permit2 setup batch and tracks its screen, progress and error.
 export function useSetupRun(
   assets: RegisteredAsset[],
   willApproveErc20: (asset: RegisteredAsset) => boolean,
@@ -35,9 +32,6 @@ export function useSetupRun(
   const invalidate = useInvalidateSetupStatus();
   const isMounted = useIsMounted();
   const [screen, setScreen] = useState<SetupScreen>("intro");
-  // Memoised so `run` below keeps a stable identity across renders. Per
-  // distinct token: two ids over one token are one approval, and
-  // `setupDepositAllowance` collapses them the same way.
   const toApprove = useMemo(
     () => byDistinctToken(assets).filter((a) => willApproveErc20(a)),
     [assets, willApproveErc20],
@@ -45,19 +39,12 @@ export function useSetupRun(
   const [progress, setProgress] = useState<SetupProgress>(() => initialProgress(toApprove));
   const [error, setError] = useState<ReportedError | null>(null);
 
-  // Progress, failure and success all land after wallet prompts the user may
-  // close the modal during, so each is dropped once the flow has unmounted.
   const run = useCallback(async () => {
     if (!wallet) return;
     setError(null);
     setProgress(initialProgress(toApprove));
     setScreen("running");
-    // Read when the run starts rather than at render: the clock moves under a
-    // modal left open, and an expiry read at render would grant a window counted
-    // from whenever the intro last re-rendered.
-    //
-    // Both terms passed explicitly, though they are the SDK's defaults too: the
-    // intro states the expiry, and the setup check compares against the cap.
+    // Expiry read at run start, not render, so the granted window is not already aged.
     try {
       await wallet.setupDepositAllowance({
         assets: assets.map((a) => a.id),
@@ -75,13 +62,7 @@ export function useSetupRun(
       return;
     }
     setScreen("done");
-    // Outside the try, and after the screen: the allowances are on-chain by this
-    // point, so a failed cache invalidation is a stale read, not a failed setup.
-    // Inside, it would render "setup failed" over a setup that succeeded and
-    // send the retry through a second signature and permit tx.
-    // One invalidation per distinct token, not per asset: the probes are cached
-    // by token, so ids sharing one would fire N identical invalidations of a
-    // single entry.
+    // Outside the try: a failed invalidation must not report a landed setup as failed.
     await Promise.all(byDistinctToken(assets).map((a) => invalidate(a.token))).catch((e) => {
       log.warn("setup succeeded but the allowance probe could not be invalidated", e);
     });

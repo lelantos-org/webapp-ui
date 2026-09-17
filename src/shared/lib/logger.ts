@@ -1,12 +1,3 @@
-// Centralized logger. `debug` and `info` are off, including in dev, unless
-// `VITE_DEBUG=true`, `?debug=1` is in the URL, or
-// `localStorage["lelantos:debug"] === "1"`. `warn` and `error` always fire.
-//
-// `?debug=1` holds for the tab only and is never persisted: a link carrying it
-// would otherwise enable verbose logging permanently for the origin, while the
-// query string is stripped from the address bar immediately afterwards. The
-// explicit `window.__lelantosDebug(true)` toggle does persist.
-
 import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
 
 type Level = "debug" | "info" | "warn" | "error";
@@ -22,8 +13,7 @@ function readDebugFlag(): boolean {
   } catch {
     // ignore URL parse errors
   }
-  // Read directly rather than through `shared/lib/storage`, which logs through
-  // this module and would form an import cycle.
+  // Not via `shared/lib/storage`: that logs through this module, an import cycle.
   try {
     return window.localStorage?.getItem(DEBUG_KEY) === "1";
   } catch {
@@ -31,15 +21,13 @@ function readDebugFlag(): boolean {
   }
 }
 
-/// Memoised after the first read; only `window.__lelantosDebug` changes it
-/// afterwards.
 let debugCached: boolean | undefined;
 function debugEnabled(): boolean {
   if (debugCached === undefined) debugCached = readDebugFlag();
   return debugCached;
 }
 
-/// Runtime toggle for operations and debugging: `window.__lelantosDebug(true)`.
+// Runtime toggle: `window.__lelantosDebug(true)`.
 if (typeof window !== "undefined") {
   (window as unknown as { __lelantosDebug?: (on: boolean) => void }).__lelantosDebug = (on) => {
     debugCached = on;
@@ -65,6 +53,7 @@ function emit(level: Level, scope: string, args: unknown[]): void {
   fn(tag, ...args);
 }
 
+/// Scoped logger; `debug`/`info` fire only with the debug flag, `warn`/`error` always.
 export interface Logger {
   debug(...args: unknown[]): void;
   info(...args: unknown[]): void;
@@ -83,15 +72,12 @@ export function createLogger(scope: string): Logger {
   };
 }
 
-/// Prefixes of noisy SDK and WASM-worker `console.log` lines. They cannot be
-/// gated from outside the SDK, so `console.log` is patched to drop them while
-/// debug is off.
+/// SDK and WASM-worker `console.log` prefixes dropped while debug is off.
 const NOISY_PREFIXES = ["[WasmProver]", "[worker-perf]", "[rayon-main"];
 
 let consoleFilterInstalled = false;
 
-/// Idempotent; call once at boot. The debug flag is re-evaluated per line, so the
-/// runtime toggle applies without a reload.
+/// Patch `console.log` to drop noisy SDK lines unless debugging. Idempotent; call once at boot.
 export function installConsoleFilter(): void {
   if (consoleFilterInstalled || typeof console === "undefined") return;
   consoleFilterInstalled = true;

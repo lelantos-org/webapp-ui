@@ -1,14 +1,3 @@
-// Wallet picker: the list of wallets, and the modal that shows it.
-//
-// EIP-6963 announces every installed extension, and a passkey is offered
-// alongside them; this is where the user says which one holds their key.
-//
-// Both are pure functions of their props; the ordering, the stored preference
-// and whether a passkey row appears at all are selection policy and live in
-// `wallet-offerings`. The list is shared: the modal opens it from the header,
-// and the Welcome screen draws the same rows inline in its wallet card, so the
-// two can never offer different wallets or name them differently.
-
 import { forwardRef, useCallback } from "react";
 import { useExitTransition } from "@/shared/hooks/use-exit-transition";
 import { cx } from "@/shared/lib/cx";
@@ -18,8 +7,7 @@ import { Modal } from "@/shared/ui/Modal";
 import type { WalletChoice } from "./wallet-offerings";
 import "./WalletPicker.css";
 
-/// The picker's copy, shared by the modal and Welcome's inline card so the two
-/// read the same.
+/// The picker's copy, shared by the modal and Welcome's inline card.
 export const PICKER_COPY = {
   subtitle: "Used only to derive your shielded key.",
   notListed: "Don't see yours? Unlock the extension, then reopen this.",
@@ -29,14 +17,11 @@ export interface WalletChoiceListProps {
   /// In display order.
   wallets: WalletChoice[];
   onChoose(choice: WalletChoice): void;
-  /// Draw the first row as the one to reach for. The order already puts the
-  /// passkey or the remembered extension first (see `offerings`), so the lead row
-  /// restates that choice rather than making a new one.
+  /// Draw the first row as the one to reach for.
   lead?: boolean;
 }
 
-/// The rows. `ref` lands on the first button, so a caller can move focus there —
-/// Welcome's "Connect wallet" does, rather than opening a second copy of the list.
+/// The wallet rows; `ref` lands on the first button.
 export const WalletChoiceList = forwardRef<HTMLButtonElement, WalletChoiceListProps>(
   function WalletChoiceList({ wallets, onChoose, lead = false }, firstRef) {
     return (
@@ -76,9 +61,6 @@ export function WalletPicker({ wallets, onChoose, onCancel }: WalletPickerProps)
   const { exiting, exit } = useExitTransition(MODAL_EXIT_MS);
 
   const dismiss = useCallback(() => exit(onCancel), [exit, onCancel]);
-  // Play the fade before handing off. The wallet's own prompt takes longer than
-  // the fade to appear, so the modal is gone by the time it does; waiting for the
-  // extension to answer would read as a dropped click.
   const pick = useCallback(
     (choice: WalletChoice) => exit(() => onChoose(choice)),
     [exit, onChoose],
@@ -98,13 +80,7 @@ export function WalletPicker({ wallets, onChoose, onCancel }: WalletPickerProps)
   );
 }
 
-/// EIP-6963 mandates a data URI, but `info.icon` is a string supplied by an
-/// untrusted browser extension. Anything else renders as a monogram: the CSP
-/// (`img-src 'self' data:`) would block a remote URL, and no extension-supplied
-/// host is contacted.
-///
-/// The passkey row never reaches that path — its glyph is inline and ships with
-/// the bundle, so there is no untrusted string to guard.
+// `info.icon` comes from an untrusted extension: only a data URI renders, anything else is a monogram.
 function WalletIcon({ choice }: { choice: WalletChoice }) {
   if (choice.kind === "passkey") {
     return (

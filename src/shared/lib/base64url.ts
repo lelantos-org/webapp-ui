@@ -1,5 +1,4 @@
-// Unpadded base64url (RFC 4648 §5), as WebAuthn spells credential ids.
-
+/// Unpadded base64url (RFC 4648 §5), as WebAuthn spells credential ids.
 export function toBase64Url(bytes: ArrayBuffer): string {
   let s = "";
   for (const b of new Uint8Array(bytes)) s += String.fromCharCode(b);

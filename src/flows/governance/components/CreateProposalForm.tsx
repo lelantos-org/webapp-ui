@@ -73,8 +73,7 @@ function emptyAction(contracts: readonly KnownContract[]): DraftValues {
 
 export interface CreateProposalFormProps {
   contracts: readonly KnownContract[];
-  /// Set when the account may not propose; the form stays editable, the submit
-  /// does not.
+  /// Why the account may not propose; disables submit only.
   blocked?: string | undefined;
   submitting?: boolean;
   onSubmit(actions: BuiltAction[], description: string): void;

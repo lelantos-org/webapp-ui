@@ -1,15 +1,4 @@
-// Public surface of the `wallet` feature.
-//
-// Laid out by concern:
-//
-//   `connect/`      the connection UI — Welcome, the wallet picker, the account pill.
-//   `session/`      who is connected and what they may do; `WalletProvider`.
-//   `build/`        turning a session into an SDK `WalletApi` (the lazy chunk).
-//   `sync/`         scanning, sync progress and the decrypted wallet state.
-//   `stores/`       the IndexedDB persistence the SDK stores sit on.
-//   `maintenance/`  clearing spent notes and wiping local wallet data (the hooks;
-//                   the "Manage wallet data" UI lives with the portfolio in `assets`).
-//   `prover/`       the proving worker, shared by every wallet in the tab.
+// Sub-directories: connect, session, build, sync, stores, maintenance, prover.
 
 export { networkPreset } from "./build/network-preset";
 export { instrumentWallet } from "./build/perf";

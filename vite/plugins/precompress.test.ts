@@ -39,7 +39,6 @@ describe("precompressDir", () => {
     expect(existsSync(join(dir, "tiny.js.gz"))).toBe(false);
   });
 
-  // Maps never reach the image; images and fonts are already compressed.
   it("skips extensions it does not serve compressed", () => {
     for (const name of ["index.js.map", "icon.png", "font.woff2"]) {
       writeFileSync(join(dir, name), compressible(8 * MIN_SIZE));

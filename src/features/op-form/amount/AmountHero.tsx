@@ -1,16 +1,3 @@
-// "The amount, twice": the figure as typed, set large, and the same figure in
-// words underneath, closed by a rule.
-//
-// Cheques have done this for a century against the decimal-point slip, which is
-// the characteristic catastrophic error on a money screen too — `250` and `2500`
-// differ by a glyph, "Two hundred fifty" and "Two thousand five hundred" do not.
-// The trailing rule is the cheque's line through the rest of the box: there is
-// nowhere to append anything after the words.
-//
-// Presentation only. Parsing, validation, the max ceiling and follow-max stay
-// with the form (`parseAmountSafe`, `validateAmount`, `useFollowMax`); nothing
-// here decides what is valid.
-
 import { type ReactNode, useId } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
 import { assetUsd, usePrices } from "@/features/assets";
@@ -27,43 +14,32 @@ export interface AmountHeroProps {
   /// Above the figure: "You send", "You shield", "You pay".
   label: string;
   selected: AssetMeta | undefined;
-  /// The raw field text, for the words line. The words are written from the
-  /// digits as typed — "1.500" is "500/1000" — so they take the string, not the
-  /// parsed amount.
+  /// The raw field text; the words are written from the digits as typed.
   value: string;
-  /// The typed amount in circuit units, for the dollar figure. `undefined` while
-  /// empty or mid-edit, which shows no dollar figure rather than a stale one.
+  /// Circuit units, for the dollar figure; `undefined` while empty or mid-edit.
   amount?: bigint | undefined;
-  /// The asset trigger, on the figure's row. A button that opens the area's own
-  /// picker; `AssetPill` is the shared look.
+  /// The asset trigger on the figure's row.
   asset?: ReactNode;
-  /// What the balance on the right is: "Shielded", "In your wallet".
+  /// "Shielded", "In your wallet".
   balanceLabel?: string;
-  /// The phone form of `balanceLabel`: "Wallet".
+  /// The phone form of `balanceLabel`.
   balanceLabelShort?: string;
-  /// The balance itself, already formatted — "8,420.00 USDC". Formatted by the
-  /// caller because a deposit's source balance is base units and a spend's is
-  /// circuit units, and only the caller knows which.
+  /// Already formatted, since only the caller knows base units from circuit units.
   balance?: ReactNode;
-  /// What "Max" writes, in circuit units; the button is withheld when
-  /// `undefined`. Not necessarily the balance — see `useSpendableMax`.
+  /// What Max writes, in circuit units; no button when `undefined`.
   maxAmount: bigint | undefined;
   onSetMax(formatted: string): void;
-  /// Beside Max: why it is lower than the balance, when that needs saying.
+  /// Beside Max: why it is lower than the balance.
   maxInfo?: ReactNode;
   validation: AmountValidation;
   formError?: string | undefined;
-  /// A quiet line under the balance row, for anything else the amount needs.
   hint?: ReactNode;
-  /// `lg` is 46px (Shield, Send, Unshield); `md` is 40px (Swap's two legs, Send
-  /// by link). Both step down to 36px on phones.
   size?: "lg" | "md";
-  /// Symbol the words end in. Defaults to the selected asset's.
+  /// Symbol the words end in; defaults to the selected asset's.
   wordsSymbol?: string | undefined;
 }
 
-/// Large bare amount input, the asset trigger, the amount in words, and a
-/// balance row with Max.
+/// The amount, twice: a large bare input with the asset trigger, the figure in words, and a balance row with Max.
 export function AmountHero({
   inputProps,
   label,
@@ -89,7 +65,6 @@ export function AmountHero({
   const hintId = `${id}-hint`;
 
   const prices = usePrices();
-  // Never `$0.00` for an unknown: no asset, no price, or nothing typed.
   const usd =
     selected && amount !== undefined && amount > 0n
       ? assetUsd(amount, selected, prices)
@@ -116,14 +91,10 @@ export function AmountHero({
           spellCheck={false}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          // Backstop for the tile-hover warm on Home: a deep link or a keyboard
-          // reaches this field without hovering anything. Idempotent.
           onFocus={() => void preloadProverWorker()}
         />
         {asset}
       </div>
-      {/* Rendered even when empty, so the row does not appear under the cursor
-          on the first keystroke. */}
       <div className="cheque amt-hero__words">
         <span className="cheque__txt amt-hero__words-txt" id={wordsId}>
           {words}
@@ -164,7 +135,6 @@ export function AmountHero({
   );
 }
 
-/// "Shielded 8,420.00 USDC", with the phone's shorter label where there is one.
 function BalanceFigure({
   label,
   short,

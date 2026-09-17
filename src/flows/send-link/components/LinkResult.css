@@ -79,7 +79,7 @@
   .linkres__again:hover { color: var(--fg); }
   .linkres__again:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* Before there is a link: the column keeps its shape, and says what will land. */
+  /* Placeholder */
   .linkres--empty {
     border: 1px dashed var(--line-strong);
     background: transparent;
@@ -93,7 +93,6 @@
   }
 
   @media (max-width: 900px) {
-    /* One column: nothing to hold a place for until the link exists. */
     .linkres--empty { display: none; }
   }
 

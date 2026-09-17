@@ -1,7 +1,3 @@
-// @vitest-environment jsdom
-// The vault's copy is derived, never typed: these pin the sentences to the
-// pressure figures they come from.
-
 import { describe, expect, it } from "vitest";
 import type { RegisteredAsset } from "@/config/chains";
 import { DAY_MS } from "@/shared/lib/format/time";
@@ -56,9 +52,6 @@ describe("describeStoredAmount", () => {
   });
 
   it("labels the raw figure when the asset is not registered on this chain", () => {
-    // A chain whose token list differs — or an indexer that has not caught up —
-    // makes the lookup miss. Printing "2500000" bare put a number six orders of
-    // magnitude off right beside properly denominated ones.
     expect(describeStoredAmount(link({ assetId: "9" }), [USDC])).toBe("2500000 (asset #9)");
   });
 
@@ -81,7 +74,6 @@ describe("capacity copy", () => {
   });
 
   it("warns at the threshold, counting the link that would evict", () => {
-    // 47 of 50: three fit, the fourth drops a record.
     const p = pressure({ count: 47, roomLeft: 3 });
     expect(vaultTone(p)).toBe("err");
     expect(capacityBody(p)).toMatch(/^Creating four more links will drop the oldest records/);

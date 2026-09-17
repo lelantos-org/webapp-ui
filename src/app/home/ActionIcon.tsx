@@ -1,12 +1,4 @@
-/// Glyphs for the five things a wallet can do.
-///
-/// Drawn here rather than pulled from a set: the two that matter are `shield`
-/// and `unshield`, which are the same outline with the arrow reversed — a
-/// relationship no general-purpose icon library expresses, and the one thing a
-/// first-time reader needs to understand about this app.
-///
-/// One stroke weight, 24-unit grid, round caps, `currentColor` throughout, so a
-/// tile's active state recolours the glyph with the label.
+/// Stroke glyphs for the Home action tiles; `shield` and `unshield` share an outline.
 export function ActionIcon({ name }: { name: ActionIconName }) {
   return (
     <svg
@@ -32,7 +24,6 @@ export type ActionIconName = "shield" | "send" | "swap" | "unshield" | "link" | 
 const POOL = "M12 3 20 6.2v6.1c0 4.3-3.4 7.3-8 8.7-4.6-1.4-8-4.4-8-8.7V6.2Z";
 
 const PATHS: Record<ActionIconName, React.ReactNode> = {
-  // Into the pool: the arrow points in.
   shield: (
     <>
       <path d={POOL} />
@@ -40,7 +31,6 @@ const PATHS: Record<ActionIconName, React.ReactNode> = {
       <path d="m9 11 3-3 3 3" />
     </>
   ),
-  // Out of it: the same outline, the arrow reversed.
   unshield: (
     <>
       <path d={POOL} />
@@ -63,7 +53,6 @@ const PATHS: Record<ActionIconName, React.ReactNode> = {
       <path d="m3 12 4-4 4 4" />
     </>
   ),
-  // A ballot going into its box.
   govern: (
     <>
       <path d="M4 13h16v7H4Z" />

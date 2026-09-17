@@ -1,6 +1,3 @@
-// The rate column's refusals: no rate without its window, no 0% for "not
-// measured", no error for "paused".
-
 import { describe, expect, it } from "vitest";
 import { type AssetOverrides, makeAsset } from "@/test/fixtures/assets";
 import { assetRateTag, formatWindowShort, rateLabel } from "./rate-label";
@@ -47,10 +44,6 @@ describe("formatWindowShort", () => {
 
 const asset = (over: AssetOverrides = {}) => makeAsset(1n, "USDC", { decimals: 6, ...over });
 
-/// The same words `rateLabel` gives the Shield picker and the portfolio, as the
-/// text a native `<option>` can hold. Halted is still
-/// backed; not measurable is not zero, and a bare dash in a native option
-/// explains nothing to a screen reader.
 describe("assetRateTag", () => {
   it.each([
     ["plain custody", asset(), "does not earn"],

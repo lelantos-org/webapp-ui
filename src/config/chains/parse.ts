@@ -1,10 +1,3 @@
-// Merging the deployment's account of a chain with one relayer's account of
-// itself, and reporting the chains that cannot be used.
-//
-// Nothing here does I/O or reads a cache — `registry.ts` owns both — so every
-// decision about what a partially-described or disagreeing deployment may still
-// be used for is testable against literal rows.
-
 import { type EvmAddress, evmAddress } from "@lelantos-org/sdk";
 import { RAY } from "@lelantos-org/sdk/protocol";
 import { sameAddress } from "@/shared/lib/address";
@@ -21,18 +14,13 @@ import type { ChainEntry, RegisteredAsset } from "./types";
 
 const log = createLogger("chains");
 
-/// Decimals implied by `scale` when the indexer has not read the token's own.
-///
-/// A last resort, not a default: `scale` is a circuit capacity parameter, so
-/// this is right only for the common `scale = 10^d` shape.
+/// Last-resort decimals from `scale`; right only when `scale = 10^d`.
 function scaleToDecimals(scale: bigint): number {
   let d = 0;
   for (let s = scale; s > 1n; s /= 10n) d++;
   return d;
 }
 
-/// A row the catalog could not fully describe is still usable: the id, address
-/// and scale suffice to transact, and only the label degrades.
 function toRegisteredAsset(t: AssetRow): RegisteredAsset {
   const id = BigInt(t.assetId);
   const scale = BigInt(t.scale);
@@ -48,21 +36,9 @@ function toRegisteredAsset(t: AssetRow): RegisteredAsset {
   };
 }
 
-/// Plain custody. `RAY` is the identity for every conversion, so an asset with
-/// no usable yield block reduces to plain `scale` arithmetic.
 const PLAIN_CUSTODY = { index: RAY, yieldEnabled: false, yieldHalted: false } as const;
 
-/// The yield half of a registered asset, degrading to plain custody.
-///
-/// Typed to the field it reads rather than `unknown`: the caller holds an
-/// `AssetRow`, so widening here bought no safety and cost the reader the one
-/// thing the signature could have told them. The `safeParse` stays — a JS caller
-/// or a hand-built row can still get past the compiler, and `z.string()` does not
-/// check that `index` is numeric — but the type now says what is expected.
-///
-/// A bad `scale` rightly rejects the asset, which cannot transact without it; a
-/// lost index only flattens the balance, so it degrades rather than dropping a
-/// spendable asset.
+/// The yield fields of an asset, degrading to plain custody rather than dropping it.
 function toYieldFields(
   raw: AssetRow["yieldState"],
 ): Pick<RegisteredAsset, "index" | "yieldEnabled" | "yieldHalted" | "apy" | "vaultName"> {
@@ -77,26 +53,15 @@ function toYieldFields(
       ...(parsed.data.vaultName === undefined ? {} : { vaultName: parsed.data.vaultName }),
     };
   } catch {
-    // `z.string()` does not check that `index` is numeric, the same gap the
-    // row-level catch exists for.
+    // `z.string()` does not check that `index` is numeric.
     return PLAIN_CUSTODY;
   }
 }
 
-/// Seconds in the shortest window the measurement will annualize over.
-///
-/// A mirror of protocol-webserver's `MIN_WINDOW_SECONDS`, and only a sanity
-/// check: it refuses to annualize anything shorter, so a row carrying one is
-/// malformed rather than merely fresh. Kept equal to the number the backend
-/// actually uses, since a looser floor here would render a figure the backend
-/// claims it never emits.
+/// Mirrors protocol-webserver's `MIN_WINDOW_SECONDS`; a shorter window is malformed.
 const MIN_WINDOW_S = 2 * 86_400;
 
-/// The rate half of a yield block.
-///
-/// Both or neither: a rate with no window cannot be labelled honestly, and a
-/// window with no rate says nothing, so a row carrying only one is treated as
-/// carrying none.
+/// The APY fields: both rate and window, or neither.
 function toApyFields(
   bps: number | undefined,
   windowS: number | undefined,
@@ -105,54 +70,26 @@ function toApyFields(
   return { apy: { rate: bps / 10_000, windowDays: Math.round(windowS / 86_400) } };
 }
 
-/// Why a chain cannot be used.
-///
-/// A union rather than one list of strings, because the cases are not the same
-/// kind of problem and an operator acts on them differently. `incomplete` is a
-/// deployment that has not finished filling a block in. `disagreement` is the
-/// two services describing the same pool or tree differently — the check that
-/// makes a third-party relayer safe to boot from, so it is the one case that may
-/// mean a relayer is pointed somewhere it should not be. Collapsing them into a
-/// single `string[]` left the difference legible only to whoever read the
-/// strings.
+/// Why a chain cannot be used; `disagreement` may mean a relayer points at the wrong pool.
 export type UnusableReason =
   | {
       kind: "incomplete";
-      /// Names of the fields neither service supplied.
       fields: string[];
     }
   | {
       kind: "disagreement";
-      /// One message per field the two services answered differently, each
-      /// naming both answers.
       conflicts: string[];
     }
-  /// A row that threw on the way in — a non-numeric `scale`, a malformed
-  /// address. Carries no detail: the throw was already logged where it happened,
-  /// with the error attached.
   | { kind: "unparseable" }
-  /// Described by the deployment, but no relayer serves it, so there is nothing
-  /// to submit through.
   | { kind: "no-relayer" }
-  /// A relayer serves it, but the deployment does not describe it: no rpcUrl to
-  /// reach it with, and nothing to check the relayer against.
   | { kind: "undescribed" };
 
-/// A chain that could not be used, and why.
-///
-/// Returned rather than logged in place, which keeps the merge pure: the caller
-/// reports every skipped chain once, and tests assert on the reason without
-/// reading log output.
 interface UnusableChain {
   chainId: bigint;
   reason: UnusableReason;
 }
 
 /// One reason as a line of log output.
-///
-/// The only place a `UnusableReason` is flattened to text. Exhaustive over the
-/// union, so a case added without a wording here is a compile error rather than
-/// a chain skipped for a reason nothing prints.
 export function describeUnusable(reason: UnusableReason): string {
   switch (reason.kind) {
     case "incomplete":
@@ -172,27 +109,11 @@ export type ChainEntryResult =
   | { ok: true; entry: ChainEntry }
   | { ok: false; reason: UnusableChain };
 
-/// Address equality, on identity rather than spelling.
-///
-/// Both services publish EIP-55 checksummed, so a plain `===` would usually do.
-/// Comparing the parsed value instead means a hand-edited config in either
-/// service is judged on the address it names — the thing that actually decides
-/// whether a proof lands — rather than on its capitalisation, which is exactly
-/// the difference between rejecting a misconfigured relayer and rejecting a
-/// correct one.
 function sameContract(a: string, b: string): boolean {
   return sameAddress(evmAddress(a), evmAddress(b));
 }
 
-/// What the deployment and the relayer must agree on before a wallet uses them
-/// together.
-///
-/// The reason both publish these two. The deployment says which pool is the
-/// deployment's and what tree shape it runs; the relayer says which pool it
-/// actually signs against and what depth it actually mirrors. A relayer pointed
-/// at a different pool, or mirroring a different shape, is caught here rather
-/// than after a proof has been built against it — and a self-hosted or
-/// third-party relayer is only trustworthy because this check exists.
+// The safety check for a third-party relayer: same pool and tree depth as the deployment declares.
 function crossCheck(registry: RegistryChainRow, relayer: RelayerChainRow): string[] {
   const disagreements: string[] = [];
   if (
@@ -211,11 +132,7 @@ function crossCheck(registry: RegistryChainRow, relayer: RelayerChainRow): strin
   return disagreements;
 }
 
-/// Fold one chain's two rows and its assets into a usable `ChainEntry`, or
-/// report why it cannot be one.
-///
-/// The rows are the only source; no build-time value stands in for a missing
-/// field, so a deployment can never run against stale baked-in addresses.
+/// Fold one chain's two rows and its assets into a `ChainEntry`, or say why it is unusable.
 export function toChainEntry(
   registry: RegistryChainRow,
   relayer: RelayerChainRow,
@@ -224,11 +141,7 @@ export function toChainEntry(
   try {
     return parseChain(registry, relayer, assets);
   } catch (e) {
-    // `evmAddress` and `BigInt` both throw on malformed input and zod catches
-    // neither: `z.string()` does not check that `scale` is numeric, and
-    // `z.number()` does not reject a float, where `BigInt(1.5)` raises
-    // `RangeError`. Catching here keeps one bad row from rejecting the whole
-    // registry, which is what the per-chain result type is for.
+    // `evmAddress`/`BigInt` throw on rows zod let through; fail this chain only.
     log.warn("unparseable chain", { chainId: registry.chainId, error: e });
     return {
       ok: false,
@@ -237,23 +150,13 @@ export function toChainEntry(
   }
 }
 
-/// Best-effort id for reporting a chain that could not be parsed at all.
-///
-/// `chainId` is `z.number()` and so already numeric, but a non-integer would
-/// still make `BigInt` throw. `Number.isInteger` keeps that from throwing inside
-/// the error handler.
 function safeChainId(raw: number): bigint {
   return Number.isInteger(raw) ? BigInt(raw) : 0n;
 }
 
 const ZERO_ADDRESS = /^0x0{40}$/i;
 
-/// An optional contract address where the zero address means "not deployed".
-///
-/// The stack's config files carry zero-address placeholders for the governance
-/// contracts, because its env overlay only rewrites keys already present. A
-/// governor at `0x0` is therefore a deployment that has none, not one whose
-/// every call would silently succeed against an empty account.
+// Zero address means not deployed: calls to an empty account would silently succeed.
 function optionalContract(v: string | undefined): EvmAddress | undefined {
   if (!v || ZERO_ADDRESS.test(v)) return undefined;
   return evmAddress(v);
@@ -268,14 +171,7 @@ function parseChain(
   const { rpcUrl, maspAddress, treeDepth } = registry;
   const { relayerAddress } = relayer;
 
-  // A wallet cannot be built without these four, and a guessed value would sign
-  // against the wrong deployment. Checked in one condition so the narrowing
-  // below follows from it, with the labels derived from the same checks.
-  //
-  // `maspAddress` and `treeDepth` are taken from the deployment rather than the
-  // relayer even though both publish them. They have just been checked equal, so
-  // the choice does not change the value — but it does mean a deployment that
-  // declares neither cannot silently skip the cross-check by omission.
+  // Never guess these: a wrong value signs against the wrong deployment.
   if (
     rpcUrl === undefined ||
     maspAddress === undefined ||
@@ -304,9 +200,6 @@ function parseChain(
       chainId,
       chainName: registry.chainName ?? `chain ${chainId}`,
       rpcUrl,
-      // Resolved once here rather than at each call site, so a consumer cannot
-      // forget the fallback and silently send read traffic to the wallet's
-      // endpoint — or, far worse, the reverse.
       readRpcUrl: registry.readRpcUrl ?? rpcUrl,
       maspAddress: evmAddress(maspAddress),
       relayerAddress: evmAddress(relayerAddress),
@@ -323,18 +216,7 @@ function parseChain(
   };
 }
 
-/// Fold the three bodies into the chains this app can use.
-///
-/// Shared by the network read and the cache read, so a cached bundle passes the
-/// same zod schemas, the same merge and the same cross-check as a fresh one. A
-/// bundle truncated mid-write or hand-edited is rejected here rather than
-/// reaching the app as a half-built `ChainEntry`.
-///
-/// A chain must appear on both sides to survive. One only the registry lists has
-/// no relayer to submit through; one only the relayer lists is undescribed, and
-/// the wallet has no rpcUrl to reach it with and nothing to check the relayer
-/// against. Both are reported, since which of the two services is behind is the
-/// first thing an operator needs to know.
+/// Validate and merge the three bodies into usable chains; shared by network and cache reads.
 export function entriesFromResponse(body: unknown, source: "network" | "cache"): ChainEntry[] {
   const bundle: RegistryBundle = registryBundle.parse(body);
 

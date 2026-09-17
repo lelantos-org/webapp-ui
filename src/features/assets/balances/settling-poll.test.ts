@@ -1,5 +1,3 @@
-// One shared timer, backing off, running exactly while someone has joined.
-
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createSettlingPoll } from "./settling-poll";
 
@@ -7,7 +5,6 @@ vi.mock("@/features/tx", () => ({ pruneExpired: vi.fn() }));
 
 beforeEach(() => {
   vi.useFakeTimers();
-  // No jitter, so the schedule below is exact.
   vi.spyOn(Math, "random").mockReturnValue(0.5);
 });
 
@@ -30,7 +27,6 @@ describe("createSettlingPoll", () => {
     expect(invalidate).toHaveBeenCalledTimes(2);
     vi.advanceTimersByTime(20_000);
     expect(invalidate).toHaveBeenCalledTimes(3);
-    // Capped at 30s from here on.
     vi.advanceTimersByTime(30_000);
     expect(invalidate).toHaveBeenCalledTimes(4);
     leave();

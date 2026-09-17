@@ -1,13 +1,3 @@
-// The claim-link vault screen. Send by link
-// borrows two pieces of the vault from beside this file: `VaultSummary` under
-// its share column and `EvictionBlock` over "Create link".
-//
-// A claim link's spending key exists only in the URL the sender holds.
-// `vault/store` writes the record before the transfer goes out, and this screen
-// is where the sender recovers it, saves it to a file, or deletes it. Nothing
-// here can observe whether the recipient has claimed, so the list is the
-// sender's to curate and the TTL is only a backstop.
-
 import { useId, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useActiveChain } from "@/features/chain";
@@ -35,8 +25,6 @@ export function ClaimLinkVault() {
   const links = useMemo(() => selectVaultLinks(stored, now), [stored, now]);
   const [showAll, setShowAll] = useState(false);
 
-  // A row on another network names it, because its amount is labelled from that
-  // network's tokens and a copy of it claims only there.
   const chainNameOf = (link: StoredClaimLink): string | undefined =>
     link.chainId === active.chainId.toString()
       ? undefined

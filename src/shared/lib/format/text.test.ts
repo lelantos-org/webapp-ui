@@ -7,7 +7,6 @@ describe("joinHint", () => {
   });
 
   it("is undefined rather than empty when every fragment is absent", () => {
-    // One spelling for "no hint", which is what `AmountHero` tests for.
     expect(joinHint(undefined, undefined)).toBeUndefined();
   });
 });

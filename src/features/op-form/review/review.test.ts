@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { RAY } from "@lelantos-org/sdk/protocol";
 import { describe, expect, it } from "vitest";
 import { feeSummary } from "@/features/fees";
@@ -6,14 +5,10 @@ import type { FeeBreakdown } from "@/shared/domain/fee-math";
 import { asBaseUnits } from "@/shared/domain/units";
 import { headlineLabel, leavesBalance, leavesBalanceLabel, reviewFigure } from "./review";
 
-// 6 decimals at scale 100, so a figure that skipped the circuit-to-base
-// conversion is off by a factor anyone would notice.
 const USDC = { symbol: "USDC", decimals: 6, scale: 100n, index: RAY };
 const ETH = { symbol: "ETH", decimals: 18, scale: 10_000_000_000n, index: RAY };
 
-/// 250 USDC in circuit units.
 const AMOUNT = 2_500_000n;
-/// 0.25 USDC, in circuit units.
 const RELAYER = 2_500n;
 
 const protocol = (fee: bigint): FeeBreakdown => ({
@@ -37,7 +32,6 @@ describe("leavesBalance", () => {
   });
 
   it("does not add the protocol fee, which comes out of the amount", () => {
-    // Decision 18: a withdraw's protocol fee is skimmed off the transparent leg.
     const m = feeSummary({
       kind: "withdraw",
       amount: AMOUNT,
@@ -46,7 +40,6 @@ describe("leavesBalance", () => {
       relayer: { amount: RELAYER, asset: USDC },
     });
     expect(leavesBalanceLabel(m)).toBe("250.25 USDC");
-    // And what the recipient gets is base less the protocol fee only.
     expect(headlineLabel(m)).toBe("249.375 USDC");
   });
 

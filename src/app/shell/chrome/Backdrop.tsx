@@ -4,34 +4,20 @@ import { prefersReducedMotion } from "@/shared/lib/motion";
 import { BackdropField } from "./backdrop-field";
 import { accentRgb, buildPalette } from "./backdrop-palette";
 
-/// Backing-store scale, fixed at 1 rather than tracking `devicePixelRatio`. The
-/// field is 14%-alpha hairlines under a radial mask, so the upscale is not
-/// visible, while a HiDPI backing store quadruples the per-frame clear and
-/// raster cost.
+// 1, not devicePixelRatio: faint hairlines hide the upscale and HiDPI quadruples raster cost.
 const RENDER_SCALE = 1;
 
-/// Frame budget. 30fps is sufficient for drift at this speed and halves the
-/// frame count on a 60Hz display, quartering it on 120Hz.
 const FRAME_MS = 1000 / 30;
 
-/// Quiet period after which the loop parks, including on a visible tab.
 const IDLE_MS = 8000;
 
-/// Ambient canvas backdrop, rendering the commitment set the wallet writes into.
-/// Decorative and non-interactive.
-///
-/// Schedules frames; `BackdropField` defines their contents.
-///
-/// The loop stops when the tab is hidden, when the user prefers reduced motion,
-/// and after `IDLE_MS` without input. Any input resumes it.
+/// Decorative canvas backdrop; parks when hidden, idle, or under reduced motion.
 export function Backdrop() {
   const ref = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    // `desynchronized`: this layer sits behind all content and does not need to
-    // land in the same frame as the DOM painted above it.
     const ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
     if (!ctx) return;
 
@@ -56,8 +42,6 @@ export function Backdrop() {
 
     const step = (now: number) => {
       raf = requestAnimationFrame(step);
-      // Frame cap. `lastFrame` advances only on processed frames, so `dt`
-      // covers the full elapsed time and drift speed is unaffected.
       if (now - lastFrame < FRAME_MS - 0.5) return;
       const dt = now - lastFrame;
       lastFrame = now;
@@ -65,7 +49,6 @@ export function Backdrop() {
       field.advance(dt);
       field.draw(ctx);
 
-      // Park after the idle budget. The frame just drawn remains on screen.
       sinceInput += dt;
       if (sinceInput >= IDLE_MS) stop();
     };
@@ -94,15 +77,12 @@ export function Backdrop() {
       wake();
     };
 
-    // Coalesced to one frame: dragging a window edge fires `resize`
-    // continuously, and re-fitting the canvas reallocates its backing store.
     let resizeRaf = 0;
     const onResize = () => {
       if (resizeRaf) return;
       resizeRaf = requestAnimationFrame(() => {
         resizeRaf = 0;
         fitToViewport();
-        // Paint here only while parked; a running loop covers it otherwise.
         if (!raf) field.draw(ctx);
       });
     };
@@ -116,8 +96,7 @@ export function Backdrop() {
     if (hasFinePointer && !reduced) {
       window.addEventListener("pointermove", onPointerMove, { passive: true });
     }
-    // Not limited to fine pointers, unlike `pointermove` above: without a
-    // pointer-move stream a touch device has no other way to resume the loop.
+    // All pointers: touch devices have no pointermove stream to resume the loop.
     const stopWatchingInput = onActivity(wake);
 
     return () => {

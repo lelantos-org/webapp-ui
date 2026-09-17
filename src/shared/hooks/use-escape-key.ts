@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 
-/// Run `onEscape` when Escape is pressed anywhere on the page, while it is set.
-/// Stops the event there, so a surface under this one does not also close.
+/// Run `onEscape` on Escape anywhere while set, stopping the event so lower surfaces stay open.
 export function useEscapeKey(onEscape: (() => void) | undefined): void {
   useEffect(() => {
     if (!onEscape) return;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { NSK_HEX_LEN } from "@/features/wallet-kinds";
-import { unwrap } from "@/test/harness";
+import { unwrap } from "@/test/result";
 import { describeClaimError, encodeClaimPayload, parseClaimFragment } from "./codec";
 
 const SAMPLE = "1".repeat(NSK_HEX_LEN);
@@ -23,8 +23,6 @@ describe("parseClaimFragment", () => {
     expect(parsed.nskHex).toBe(SAMPLE);
   });
 
-  // A bare 64-hex nsk with no chain prefix is rejected rather than silently
-  // assumed to belong to whichever chain is being viewed.
   it("rejects a link without a chain prefix", () => {
     const r = parseClaimFragment(SAMPLE);
     expect(r.ok).toBe(false);

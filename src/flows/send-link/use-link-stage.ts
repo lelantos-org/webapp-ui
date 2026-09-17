@@ -1,24 +1,12 @@
-// Stage machine for the generate-claim-link flow. `closing` keeps the modal
-// mounted with a fade-out class for `MODAL_EXIT_MS` so the CSS animation
-// completes before unmount.
-//
-// There is no confirm stage. The private-channel acknowledgement sits inline on
-// the form and gates "Create link" itself, so a submit goes straight to
-// `running`.
-
 import { useCallback, useState } from "react";
 import { useIsMounted } from "@/shared/hooks/use-is-mounted";
 import { animationDelay, MODAL_EXIT_MS, sleep } from "@/shared/lib/motion";
 
 export type LinkStage = "form" | "running" | "success" | "closing" | "result";
 
-/// Time the success animation is visible before the modal starts fading. Aligned
-/// with the `.success-check` animation (`components/SuccessCheck.css`) so the tick has time to draw. Not an
-/// `animationDelay`, since this is reading time for the result, which applies
-/// under reduced motion as well.
+/// Reading time for the success tick; not an `animationDelay`, so it holds under reduced motion.
 const SUCCESS_DWELL_MS = 1100;
 
-/// Stages during which the modal portal stays mounted.
 const MODAL_STAGES = new Set<LinkStage>(["running", "success", "closing"]);
 
 export interface LinkStageApi {
@@ -26,16 +14,14 @@ export interface LinkStageApi {
   modalOpen: boolean;
   closing: boolean;
   toForm(): void;
-  /// Async transition running → success → closing → result, covering the
-  /// post-success dwell and fade-out windows.
+  /// Runs `work` through running → success → closing → result.
   runWith<T>(work: () => Promise<T>): Promise<T>;
 }
 
+/// Stage machine for the generate-claim-link modal.
 export function useLinkStage(): LinkStageApi {
   const [stage, setStage] = useState<LinkStage>("form");
 
-  // The dwell below runs for over a second after the transfer resolves, so state
-  // updates are gated on the component still being mounted.
   const isMounted = useIsMounted();
 
   const setStageIfMounted = useCallback(

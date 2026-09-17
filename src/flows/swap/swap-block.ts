@@ -1,10 +1,3 @@
-// Why the swap's submit button is disabled.
-//
-// Several independent conditions gate this button, and collapsing them into one
-// dead control leaves the user to guess which one they are in — the quote
-// counter is visible, but "typed too much" and "still fetching" look identical
-// from the outside.
-
 import {
   type AmountReadiness,
   amountBlock,
@@ -21,28 +14,12 @@ export interface SwapSubmitState extends WalletReadiness, AmountReadiness, FeeRe
   /// The network lists two assets to trade between.
   hasPair: boolean;
   hasQuote: boolean;
-  /// A quote exists but has aged past `QUOTE_STALE_SECS`.
   quoteStale: boolean;
-  /// A quote request is in flight, or the debounce has not caught up.
   quoting: boolean;
-  /// The last quote request failed.
   quoteFailed: boolean;
 }
 
-/// Ordering is the substance here, not the strings.
-///
-/// The wallet's own state first, as in `op-form/submit/spend-block.ts`: against balances
-/// that are stale or not yet counted, "enter an amount you hold" is a question
-/// nobody can answer. Then the user's own input, because it is the only
-/// condition they can act on directly. `quoting` precedes the missing-quote case
-/// because a fetch in flight *is* why there is no quote yet, and reporting the
-/// absence instead reads as a dead end. A stale quote likewise outranks absence:
-/// one expired in place is a different situation from one that never arrived,
-/// and it has a remedy the other lacks.
-///
-/// Fee problems come after the quote but do block (ux-findings #02): a
-/// swap whose relayer cannot be paid would otherwise spend a full proof to learn
-/// it.
+/// Why Swap is disabled: wallet, input, quote, then fee, in that order.
 export function swapSubmitBlock(s: SwapSubmitState): SubmitBlock {
   return (
     walletReadinessBlock("swapping", s) ??

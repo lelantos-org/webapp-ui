@@ -25,8 +25,13 @@ env:
   # same configuration the published image ships with.
   VITE_METAQUOTER_URL: "/metaquoter"
 
+# Together the three jobs are a local `npm run verify` plus the build, run in
+# parallel rather than one after another. Each pays its own `npm ci`, which the
+# npm cache keeps short next to the test run and the build.
 jobs:
-  verify:
+  # Typecheck, Biome, the import rules and knip (unused files, exports and
+  # dependencies).
+  checks:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,10 +44,42 @@ jobs:
       - run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # The same gate as a local `npm run verify`: typecheck, Biome, the import
-      # rules, knip (unused files, exports and dependencies) and the test suite
-      # under its coverage floor.
-      - run: npm run verify
-      # Prover artifacts ship in the @lelantos-org/circuits package and are
-      # resolved through Vite `?url` imports, so `npm ci` is all the build needs.
-      - run: npm run build
+      - run: npm run typecheck
+      - run: npm run check:ci
+      - run: npm run check:imports
+      - run: npm run knip
+
+  # The test suite under its coverage floor.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@lelantos-org"
+      - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: npm run test:coverage
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          registry-url: "https://npm.pkg.github.com"
+          scope: "@lelantos-org"
+      - run: npm ci
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # `vite build` rather than `npm run build`, whose `tsc -b` is the
+      # `checks` job's typecheck run a second time. Prover artifacts ship in the
+      # @lelantos-org/circuits package and are resolved through Vite `?url`
+      # imports, so `npm ci` is all the build needs.
+      - run: npx vite build

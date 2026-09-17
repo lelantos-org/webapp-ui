@@ -1,15 +1,3 @@
-// Public surface of the `governance` feature: LNT holders reading proposals,
-// voting, delegating and proposing against `LelantosGovernor`.
-//
-//   `abi.ts`        the hand-kept governor and token ABI slices.
-//   `client.ts`     protocol-webserver's governance index (proposals, votes).
-//   `onchain.ts`    live reads — state, tallies, quorum, voting power.
-//   `model.ts`      what the figures mean: phase, quorum bar, who may vote.
-//   `actions.ts`    proposal actions decoded against known ABIs, and built.
-//   `tx.ts`         sending a write from the browser wallet; decoding refusals.
-//   `queries.ts`,
-//   `mutations.ts`  the React bindings.
-
 export type { BuiltAction, KnownContract } from "./actions";
 export {
   buildAction,

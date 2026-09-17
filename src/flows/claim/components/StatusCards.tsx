@@ -41,13 +41,7 @@ export function ScanningCard() {
   );
 }
 
-/// Two failures sharing one card.
-///
-/// `missing` is almost always a reload: the page strips the fragment from the
-/// address bar on mount so the secret never reaches history, which means the
-/// reloaded URL no longer carries it. Nothing is lost, since the original link
-/// still works, so this is a warning rather than an error — as with the network
-/// gate, the flow has stopped but nothing has broken.
+/// A link with no claim code (usually a reload; a warning) or an unreadable one (an error).
 export function BadLinkCard({ error, reason }: { error: string; reason: BadLinkReason }) {
   const missing = reason === "missing";
   return (
@@ -83,14 +77,7 @@ export function BadLinkCard({ error, reason }: { error: string; reason: BadLinkR
   );
 }
 
-/// `onRetry` must be rendered wherever it is supplied. The URL fragment is
-/// scrubbed on mount, so a reload destroys the secret rather than recovering it,
-/// and without a retry a transient RPC error during the scan would be terminal.
-///
-/// The reassurance is stage-aware and claims only what is true at that stage: a
-/// failed scan moved nothing, and a failed sweep leaves whatever was not claimed
-/// at the link — which a retry rescans rather than assuming, and which the pool
-/// will not let anyone spend twice.
+/// A failed scan or sweep; always offer `onRetry`, since a reload cannot recover the claim code.
 export function ClaimErrorCard({
   message,
   from,

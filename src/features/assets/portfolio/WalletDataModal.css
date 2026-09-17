@@ -1,6 +1,5 @@
 @layer components {
-  /* Wallet-data modal: one block per action, so a destructive one is visibly its
-     own thing rather than another item in a row. */
+  /* Wallet-data modal */
   .wdm__act {
     display: grid;
     gap: var(--sp-8);

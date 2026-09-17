@@ -26,13 +26,11 @@ import {
 import { describe, expect, it } from "vitest";
 import { isDuplicateSpend, walletErrorText } from "./wallet-copy";
 
-/// A relayer refusal as the wallet surfaces it: the reason parsed, the body kept.
 const rejected = (reason: RelayerRejectReason, status = 409) =>
   new RelayerRejectedError({ status, reason, body: `${reason}: chain 1` });
 
 const bucket = (value: bigint, count: number) => ({ value: circuitAmount(value), count });
 
-/// Notes held back from a 100-unit spend with nothing free to use.
 const held = (h: { reserved?: number; cooldown?: number; dust?: number }) =>
   new NotesHeldError({
     asset: assetId(1n),
@@ -203,7 +201,6 @@ describe("duplicate spend", () => {
   });
 
   it("reads the reason, not the relayer's text", () => {
-    // A body that says "in flight" under a spent reason is still a spent note.
     const err = new RelayerRejectedError({
       status: 409,
       reason: "nullifier-spent",
@@ -221,7 +218,6 @@ describe("duplicate spend", () => {
     const fee = rejected("fee-too-low", 402);
     expect(isDuplicateSpend(fee)).toBe(false);
     expect(walletErrorText(fee).text).toMatch(/Relayer rejected/);
-    // Another 409 reason: the status alone no longer decides it.
     expect(isDuplicateSpend(rejected("stale-estimate"))).toBe(false);
     expect(
       isDuplicateSpend(

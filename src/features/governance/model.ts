@@ -1,17 +1,3 @@
-// What a proposal's figures mean: its state, where it is in its voting window,
-// how close it is to quorum, and whether this account can vote on it and why
-// not. Pure, so every rule is testable against literal numbers.
-//
-// The rules mirror `LelantosGovernor` — OZ Governor with GovernorCountingSimple
-// plus a quorum-vote window:
-//
-//   - Votes are 0 Against, 1 For, 2 Abstain, weighted at the proposal snapshot.
-//   - Quorum counts For + Abstain; Against never helps reach it.
-//   - A proposal succeeds when quorum is reached and For > Against.
-//   - For and Abstain — the quorum votes — close at `quorumVoteDeadline`;
-//     Against stays open until `voteEnd`. The asymmetry stops a late For from
-//     passing a proposal with no time left to answer it.
-
 import type { Tallies } from "./client";
 
 /// `IGovernor.ProposalState`, in the contract's order.
@@ -26,35 +12,25 @@ export const PROPOSAL_STATES = [
   "Executed",
 ] as const;
 
+/// A governor proposal state name.
 export type ProposalState = (typeof PROPOSAL_STATES)[number];
 
-/// The contract's `uint8` state, or `undefined` for a value the enum does not
-/// have (a newer governor).
+/// The contract's `uint8` state, or `undefined` for an unknown value.
 export function proposalStateOf(raw: number): ProposalState | undefined {
   return PROPOSAL_STATES[raw];
 }
 
-/// Where a proposal sits in its voting window, from the clock alone.
-///
-/// - `upcoming`   before `voteStart`.
-/// - `open`       every option is open.
-/// - `against`    past `quorumVoteDeadline`: only Against is still accepted.
-/// - `closed`     past `voteEnd`.
-///
-/// State and phase are different questions. State is the governor's verdict and
-/// covers cancellation and execution; phase is only the calendar, so a canceled
-/// proposal still has one. Callers combine them — see `votingPhase`.
+/// Where a proposal sits in its voting window by the clock alone: `against` means only Against is accepted.
 export type Phase = "upcoming" | "open" | "against" | "closed";
 
+/// A proposal's voting bounds, in seconds.
 export interface VotingWindow {
   voteStart: number;
   voteEnd: number;
   quorumVoteDeadline?: number | undefined;
 }
 
-/// The governor's clock is `block.timestamp`, and OZ treats both bounds as
-/// inclusive: voting opens *after* `voteStart` and is accepted *at* `voteEnd`;
-/// For/Abstain are accepted at `quorumVoteDeadline` and refused one second later.
+/// The window phase at `nowSec`. OZ bounds: opens after `voteStart`, accepts at `voteEnd` and `quorumVoteDeadline`.
 export function windowPhase(w: VotingWindow, nowSec: number): Phase {
   if (nowSec <= w.voteStart) return "upcoming";
   if (nowSec > w.voteEnd) return "closed";
@@ -62,10 +38,7 @@ export function windowPhase(w: VotingWindow, nowSec: number): Phase {
   return "open";
 }
 
-/// The phase to show beside a state: the calendar's, but only while the
-/// governor agrees the proposal is live. A canceled proposal inside its window
-/// is not "open"; an `Active` state a second after `voteEnd` (the read raced the
-/// block) is shown as still open, since the chain has not closed it yet.
+/// The phase to show beside a state: the calendar's, but only while the governor says the proposal is live.
 export function votingPhase(
   state: ProposalState | undefined,
   w: VotingWindow,
@@ -79,9 +52,7 @@ export function votingPhase(
   return p;
 }
 
-/// A proposal's voting window: the governor's own figures where they have been
-/// read, the index's until then. The chain is the authority — the index can lag
-/// a block, or predate the event that carries `quorumVoteDeadline`.
+/// A proposal's voting window: the governor's live figures where read, else the index's.
 export function proposalWindow(
   indexed: VotingWindow | undefined,
   live: { snapshot: bigint; deadline: bigint; quorumVoteDeadline: bigint | undefined } | undefined,
@@ -96,12 +67,12 @@ export function proposalWindow(
   };
 }
 
-/// Basis points of `part` in `whole`, floored; 0 when `whole` is 0.
 function bps(part: bigint, whole: bigint): number {
   if (whole <= 0n) return 0;
   return Number((part * 10_000n) / whole);
 }
 
+/// A proposal's tallies laid out on one bar, with the quorum marker.
 export interface TallyBar {
   total: bigint;
   /// For + Abstain: what counts toward quorum.
@@ -109,21 +80,15 @@ export interface TallyBar {
   quorumReached: boolean | undefined;
   /// For > Against — the second half of passing.
   forLeads: boolean;
-  /// Segment widths in basis points of the bar, For then Abstain then Against, so
-  /// the quorum marker reads against the For + Abstain run that meets it.
+  /// Segment widths in basis points, For then Abstain then Against.
   forBps: number;
   abstainBps: number;
   againstBps: number;
-  /// Where the quorum line sits on the bar, in basis points; undefined when the
-  /// quorum is not known (a proposal whose snapshot is still in the future).
+  /// Quorum line position in basis points; undefined when the quorum is unknown.
   quorumBps: number | undefined;
 }
 
-/// Lay the three tallies and the quorum out on one bar.
-///
-/// The bar's scale is the larger of the votes cast and the quorum, so an empty
-/// proposal shows its quorum line at the far end and a crowded one shows the
-/// line inside the For + Abstain run it has passed.
+/// Lay the tallies and quorum out on one bar scaled to the larger of votes cast and quorum.
 export function tallyBar(t: Tallies, quorum: bigint | undefined): TallyBar {
   const total = t.for + t.against + t.abstain;
   const quorumVotes = t.for + t.abstain;
@@ -145,14 +110,10 @@ export function shareBps(part: bigint, total: bigint): number {
   return bps(part, total);
 }
 
-// ── titles ──────────────────────────────────────────────────────────────────
-
 /// The longest title the indexer keeps, and so the longest a new proposal is given.
 export const PROPOSAL_TITLE_MAX = 200;
 
-/// The proposal's title: the first non-empty line of its description with any
-/// leading `#`s and whitespace removed, capped at 200 characters. The same rule
-/// the indexer applies, so a title read here and one served agree.
+/// The proposal's title: first non-empty description line, `#`s stripped, capped. Matches the indexer.
 export function proposalTitle(description: string): string {
   for (const line of description.split(/\r?\n/)) {
     const t = line.replace(/^[\s#]+/, "").trim();
@@ -161,8 +122,7 @@ export function proposalTitle(description: string): string {
   return "";
 }
 
-/// The description after its title line, trimmed. Rendered as plain text only:
-/// anyone can propose, so this is attacker-controlled.
+/// The description after its title line. Attacker-controlled: render as plain text only.
 export function proposalBody(description: string): string {
   const lines = description.split(/\r?\n/);
   const at = lines.findIndex((l) => l.replace(/^[\s#]+/, "").trim() !== "");
@@ -180,14 +140,14 @@ export function composeDescription(title: string, body: string): string {
   return b ? `# ${t}\n\n${b}` : `# ${t}`;
 }
 
-// ── who can vote ────────────────────────────────────────────────────────────
-
 const ZERO = /^0x0{40}$/i;
 
+/// `a` is absent or the zero address.
 export function isZeroAddress(a: string | undefined): boolean {
   return a === undefined || ZERO.test(a);
 }
 
+/// Inputs to `voteEligibility`.
 export interface VoteEligibilityInput {
   /// The session can send an EVM transaction (an injected wallet).
   canSign: boolean;
@@ -202,6 +162,7 @@ export interface VoteEligibilityInput {
   currentVotes: bigint;
 }
 
+/// Whether an account may vote, or the reason it may not.
 export type VoteEligibility =
   /// Eligible. `quorumVoteOpen` false means only Against is still accepted.
   | { ok: true; quorumVoteOpen: boolean }
@@ -216,14 +177,7 @@ export type VoteEligibility =
         | "no-votes";
     };
 
-/// Whether this account can vote on this proposal, and if not, the one reason
-/// that matters most.
-///
-/// Ordered by what the user can act on. A passkey session cannot sign at all, so
-/// nothing else is worth saying; a closed proposal makes weight irrelevant;
-/// having voted already is final. Only then does weight come in, and zero weight
-/// is split three ways because each has a different fix — delegate, wait for the
-/// next proposal, or acquire LNT.
+/// Whether this account can vote on this proposal, else the most actionable reason it cannot.
 export function voteEligibility(i: VoteEligibilityInput): VoteEligibility {
   if (!i.canSign) return { ok: false, reason: "no-signer" };
   if (i.state !== "Active" || i.phase === "closed" || i.phase === "upcoming") {
@@ -238,8 +192,7 @@ export function voteEligibility(i: VoteEligibilityInput): VoteEligibility {
   return { ok: true, quorumVoteOpen: i.phase !== "against" };
 }
 
-/// Whether the account can create a proposal: its votes one second in the past
-/// (the governor reads `clock() - 1`) meet the threshold.
+/// Whether the account's votes at `clock() - 1` meet the proposal threshold.
 export function canPropose(votes: bigint, threshold: bigint): boolean {
   return votes >= threshold;
 }

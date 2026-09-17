@@ -1,7 +1,5 @@
 @layer features {
-  /* Observer: the one honest use of a redaction bar — what someone else is
-     denied, never the user's own figures from them. */
-
+  /* ObserverPanel */
   .observer--full {
     border: 1px solid var(--line-strong);
     background: var(--bg-1);
@@ -55,7 +53,7 @@
     min-width: 0;
   }
 
-  /* The line between what is hidden and what is not. */
+  /* Hidden / shown divider */
   .observer__row--sep {
     padding-top: var(--sp-12);
     border-top: 1px solid var(--line-strong);
@@ -81,7 +79,7 @@
   .observer__redact--b { width: 96px; }
   .observer__redact--c { width: 114px; }
 
-  /* Inside the review: a section of the card, not a panel of its own. */
+  /* Compact */
   .observer__cap {
     margin-bottom: 11px;
   }
@@ -101,7 +99,6 @@
   }
 
   @media (max-width: 480px) {
-    /* Phones get the compact block in the review only. */
     .observer--full { display: none; }
     .observer__redact--a { width: 96px; }
   }

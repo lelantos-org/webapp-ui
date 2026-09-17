@@ -15,8 +15,7 @@ export interface EvictionBlockProps {
   onExported(): void;
 }
 
-/// Over "Create link" when the vault is full: which record the new link would
-/// drop, and the one step that makes dropping it safe.
+/// Over "Create link" when the vault is full: the record the new link would drop, and the export.
 export function EvictionBlock({ pressure, assetsFor, onExported }: EvictionBlockProps) {
   const record = pressure.nextEvicted;
   if (!record) return null;

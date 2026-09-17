@@ -2,8 +2,7 @@ import { ShieldKeyholeGlyph } from "@/shared/ui/icons/shield";
 import { WideNarrow } from "@/shared/ui/WideNarrow";
 import "./ClaimHero.css";
 
-/// The page's title block. The title is fixed — whoever opens this page has been
-/// sent something — and the line under it follows the flow.
+/// The claim page's title block; `subtitle` follows the flow.
 export function ClaimHero({ subtitle }: { subtitle?: string | undefined }) {
   return (
     <div className="claim-hero">

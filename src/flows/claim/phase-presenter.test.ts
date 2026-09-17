@@ -13,8 +13,6 @@ const eph = fakeWalletApi();
 const balances = [{ asset: 1n, amount: 100n, notes: 1 }];
 
 describe("linkChainIdOf", () => {
-  // The claim page labels the link's balances with this chain's tokens, and
-  // offers to move the wallet to it. Getting it wrong mislabels every asset.
   it.each<[string, Phase]>([
     ["need-wallet", { kind: "need-wallet", nskHex: "ab", chainId: CHAIN }],
     ["loading", { kind: "loading", nskHex: "ab", chainId: CHAIN }],
@@ -27,9 +25,6 @@ describe("linkChainIdOf", () => {
     expect(linkChainIdOf(phase)).toBe(CHAIN);
   });
 
-  // `done` keeps the chain too: the success card names the asset, and the
-  // symbol and decimals come from that chain's token list. Dropping it made
-  // every successful claim read `1000000000000000000 asset#5`.
   it("keeps the link's chain after the sweep settles", () => {
     expect(
       linkChainIdOf({ kind: "done", txHash: "0x1", chainId: CHAIN, asset: 1n, amount: 5n }),
@@ -42,7 +37,6 @@ describe("linkChainIdOf", () => {
     ).toBe(CHAIN);
   });
 
-  // Before the fragment is decoded there is no chain to know.
   it.each<[string, Phase]>([
     ["reading-fragment", { kind: "reading-fragment" }],
     ["bad-link", { kind: "bad-link", error: "nope", reason: "malformed" }],
@@ -55,7 +49,6 @@ describe("stepperStateFor", () => {
   it.each<[string, Phase, string]>([
     ["reading-fragment", { kind: "reading-fragment" }, "link"],
     ["need-wallet", { kind: "need-wallet", nskHex: "ab", chainId: CHAIN }, "connect"],
-    // Finding the note is the first half of claiming it.
     ["loading", { kind: "loading", nskHex: "ab", chainId: CHAIN }, "claim"],
     ["ready", { kind: "ready", nskHex: "ab", chainId: CHAIN, eph, balances }, "claim"],
   ])("places %s on its step", (_label, phase, current) => {
@@ -70,8 +63,6 @@ describe("stepperStateFor", () => {
     });
   });
 
-  // A wrong network stops the flow before the scan, so the stepper has to
-  // stop there too rather than showing work that is not running.
   it.each<[string, Phase]>([
     ["need-wallet", { kind: "need-wallet", nskHex: "ab", chainId: CHAIN }],
     ["loading", { kind: "loading", nskHex: "ab", chainId: CHAIN }],
@@ -84,8 +75,6 @@ describe("stepperStateFor", () => {
     });
   });
 
-  // Settled phases keep their own state: a claim that already landed is not
-  // undone by the user switching networks afterwards.
   it.each<[string, Phase, boolean]>([
     ["done", { kind: "done", txHash: "0x1", chainId: CHAIN, asset: 1n, amount: 5n }, true],
     [
@@ -125,8 +114,6 @@ describe("claimStepStates", () => {
 });
 
 describe("heroSubtitleFor", () => {
-  // A reload lands here, and the link in the sender's chat is still good — so
-  // the two bad-link reasons must not share a line.
   it("does not call a reloaded page an unparseable link", () => {
     const missing = heroSubtitleFor({ kind: "bad-link", error: "gone", reason: "missing" });
     const malformed = heroSubtitleFor({ kind: "bad-link", error: "gone", reason: "malformed" });
@@ -135,7 +122,6 @@ describe("heroSubtitleFor", () => {
     expect(malformed).toContain("parsed");
   });
 
-  // The network gate card already names both chains and offers the switch.
   it("yields the line to the network gate while blocked", () => {
     expect(
       heroSubtitleFor({ kind: "loading", nskHex: "ab", chainId: CHAIN }, true),

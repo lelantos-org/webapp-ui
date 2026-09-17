@@ -1,8 +1,3 @@
-// Aggregate USD across the shielded balances.
-//
-// Kept out of the component so the partial case, which decides whether a total
-// can be shown at all, is testable without rendering a table.
-
 import type { RegisteredAsset } from "@/config/chains";
 import { baseUnitsUsd } from "@/shared/domain/units";
 import type { AssetBalanceView } from "../balances/use-balances";
@@ -14,17 +9,11 @@ export interface PortfolioTotalResult {
   usd: number;
   /// Rows that contributed to `usd`.
   priced: number;
-  /// Rows holding a non-zero balance that no price covered. A total with any of
-  /// these understates the portfolio, so the UI must report it rather than
-  /// present the smaller number as complete.
+  /// Non-zero rows no price covered. Any means the total is partial and must be flagged.
   unpriced: number;
 }
 
-/// Sum the priced rows and count what was left out.
-///
-/// A zero balance is ignored on both sides: an asset the wallet does not hold
-/// cannot affect the total, and counting it as unpriced would flag every
-/// portfolio on a chain the price provider covers only in part.
+/// Sum the priced rows and count the unpriced ones, ignoring zero balances.
 export function portfolioTotal(
   rows: readonly AssetBalanceView[],
   byId: ReadonlyMap<bigint, RegisteredAsset>,
@@ -54,17 +43,11 @@ export function portfolioTotal(
 export interface EarnedTotal {
   /// Sum of the priced, resolved gains, in USD. Signed.
   usd: number;
-  /// Something that earns was left out of `usd` — notes with no resolvable
-  /// basis, or an earning asset with no price — so the figure is a lower bound
-  /// on what the counted notes say, and is marked as one.
+  /// Some earning asset was left out, so `usd` is a lower bound.
   partial: boolean;
 }
 
-/// The hero's "+$X earned": what the notes held now have accrued, in dollars.
-///
-/// `undefined` when nothing contributes — no earning asset, no resolved basis,
-/// or no price for any of them. The hero then omits the clause rather than
-/// printing "+$0.00 earned", which would claim a measurement.
+/// The hero's "+$X earned", or `undefined` when nothing could be counted (never "+$0.00").
 export function earnedTotal(
   gains: YieldGains,
   byId: ReadonlyMap<bigint, RegisteredAsset>,
@@ -83,9 +66,7 @@ export function earnedTotal(
       partial = true;
       continue;
     }
-    // `YieldGain` keeps a gain in the token's base units, already through
-    // `scale` and `index`, so it is priced as base units rather than converted a
-    // second time. Signed: a venue loss prices negative.
+    // Gains are already in base units: price them directly, never convert again.
     usd += baseUnitsUsd(gain.gain, meta.decimals, price);
     counted++;
   }

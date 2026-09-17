@@ -1,9 +1,6 @@
-// The pool's shield, drawn on the 512 grid the brand mark uses rather than the
-// line glyphs' 24-unit one.
-
 import type { GlyphProps } from "./glyphs";
 
-/// The pool's shield outline on the 512 grid the brand mark uses.
+/// The pool's shield outline, on the brand mark's 512 grid.
 const SHIELD_D = "M256 88 L400 144 V276 C400 356 336 408 256 438 C176 408 112 356 112 276 V144 Z";
 
 /// The pool's shield, filled with a wash of the current colour.
@@ -29,8 +26,7 @@ export function ShieldGlyph({ size = 14, className }: GlyphProps) {
   );
 }
 
-/// The pool's shield with a keyhole, over the claim page's title. The 512 grid
-/// of `ShieldGlyph`.
+/// The pool's shield with a keyhole, over the claim page's title.
 export function ShieldKeyholeGlyph({ size = 30, className }: GlyphProps) {
   return (
     <svg

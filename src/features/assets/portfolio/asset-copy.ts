@@ -1,10 +1,3 @@
-// What Home says about one asset beyond its balance: what the notes held have
-// earned, and the empty state's line. Pure, so each rule is a test rather than
-// a comment.
-//
-// The venue's rate is not here: `rate-label.ts` states it for the Shield picker
-// and Home alike, so the two surfaces cannot word the rate rules differently.
-
 import type { RegisteredAsset } from "@/config/chains";
 import { baseUnitsUsd } from "@/shared/domain/units";
 import { DISPLAY_FRAC_DIGITS } from "@/shared/lib/format/asset";
@@ -12,8 +5,7 @@ import { formatPercent, formatUsd } from "@/shared/lib/format/money";
 import { formatDecimalCompact } from "@/shared/lib/format/number";
 import { growthOf, type YieldGain } from "../yield/yield-gains";
 
-/// Colour of an earned figure: accent when it grew, warn when the venue lost or
-/// was paused. Warn, not err — neither is a fault with the user's funds.
+/// Colour of an earned figure. A loss or a pause is warn, not err.
 export type EarnedTone = "up" | "down" | "paused";
 
 export interface EarnedLine {
@@ -21,22 +13,12 @@ export interface EarnedLine {
   tone: EarnedTone;
 }
 
-/// The sign an earned figure leads with: `−` or `+`, after a `≥` when some notes
-/// were left out of the sum.
+/// The sign an earned figure leads with: `+` or `−`, after `≥` when partial.
 export function signOf(partial: boolean, down: boolean): string {
   return `${partial ? "≥" : ""}${down ? "−" : "+"}`;
 }
 
-/// The asset row's second right-hand line: "+$12.40 earned".
-///
-/// `undefined` — no line — for plain custody, and for an earning asset whose
-/// basis did not resolve: the row detail explains that case, and a dash on the
-/// list would sit where every other row states a figure.
-///
-/// Dollars when the asset is priced, since the hero sums the same figures and
-/// the list should add up to it. Unpriced, the token amount with its symbol,
-/// which is still true and still comparable within the row. `≥` when some notes
-/// were left out of the sum.
+/// The row's earned line ("+$12.40 earned"); `undefined` for plain custody or no resolved basis.
 export function earnedLine(
   gain: YieldGain | undefined,
   meta: Pick<RegisteredAsset, "yieldEnabled" | "yieldHalted" | "decimals" | "symbol">,
@@ -96,9 +78,7 @@ const COUNT_WORDS = [
   "ten",
 ];
 
-/// The empty state's line under "Nothing shielded yet": "These five assets are
-/// supported on Base right now." Counts in words up to ten, and in digits past
-/// that.
+/// The empty state's line: "These five assets are supported on Base right now."
 export function supportedLine(count: number, chainName: string): string {
   if (count === 0) return `No assets are supported on ${chainName} yet.`;
   if (count === 1) return `This asset is supported on ${chainName} right now.`;

@@ -1,6 +1,4 @@
-/// The GitHub mark, for the footer link. Brand artwork, filled rather than
-/// stroked, and named by its own `<title>` since the link around it carries a
-/// label of its own.
+/// The GitHub mark for the footer link, named by its own `<title>`.
 export function GithubIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" role="img">

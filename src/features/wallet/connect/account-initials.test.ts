@@ -12,8 +12,6 @@ describe("accountInitials", () => {
     );
   });
 
-  // Every shielded address starts `lelantos1`; initials from the prefix would be
-  // the same for everyone.
   it("reads a passkey session's shielded address past its prefix", () => {
     expect(accountInitials(undefined, "lelantos1q9x8fk2mzp4v7n0")).toBe("q9");
   });

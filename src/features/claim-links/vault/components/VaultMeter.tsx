@@ -3,8 +3,7 @@ import { vaultFillPct } from "../copy";
 import type { ClaimLinkPressure } from "../policy";
 import "./vault.css";
 
-/// The bar under the vault's count. The figures are in the text beside it; the
-/// bar only draws them, so it is hidden from assistive technology.
+/// The bar under the vault's count, hidden from assistive technology: the text states the figures.
 export function VaultMeter({
   pressure,
   small = false,

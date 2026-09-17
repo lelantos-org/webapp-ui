@@ -1,15 +1,3 @@
-// The display balance: what the wallet holds, plus what is on its way.
-//
-// The composition is kept out of both halves. `useWalletState` answers only what
-// this wallet has decrypted; the pending store in `features/tx` holds only what is
-// in flight.
-// Folding the overlay into the wallet would make `features/wallet` import the
-// module that submits transactions, which already imports the wallet.
-//
-// It lives under `features/assets`, which is downstream of both halves and is
-// where an asset balance belongs; placing it beside the submitters would move
-// the cycle to `assets <-> ops`.
-
 import { useEffect, useMemo } from "react";
 import { useActiveChain } from "@/features/chain";
 import { type PendingTotals, pruneByBalances, usePending, usePendingByAsset } from "@/features/tx";
@@ -23,12 +11,9 @@ import { settlingPoll } from "./settling-poll";
 
 /// A confirmed balance plus the in-flight value attached to it.
 export interface AssetBalanceView extends AssetBalance {
-  /// Value expected once an in-flight tx's outputs are scanned. Added to the
-  /// confirmed total so the displayed balance does not dip while change notes
-  /// propagate.
+  /// In-flight value expected in, added so the balance does not dip while change notes propagate.
   pending: bigint;
-  /// Value leaving via in-flight tx(s). Drives the directional "settling"
-  /// hint: `outflow > 0` renders `-outflow`, otherwise `+pending`.
+  /// In-flight value leaving; decides the sign of the "settling" hint.
   outflow: bigint;
 }
 
@@ -36,22 +21,10 @@ export interface BalancesState extends Omit<WalletState, "balances" | "notes"> {
   balances: AssetBalanceView[];
 }
 
-/// What a balance consumer needs, and nothing else.
-///
-/// Not `UseQueryResult<BalancesState>`. Returning the whole result requires
-/// spreading `useWalletState()`'s, and a spread reads every property on
-/// react-query's tracking proxy, subscribing the observer to all of them. Every
-/// consumer then re-renders twice per background poll on the `isFetching` flip
-/// alone, with the balances unchanged — and since `useBalances` is reached from
-/// `useAssetBalance` and `useAssetBalanceLabel` as well as the portfolio card,
-/// that is every mounted form on the 30s cadence.
-///
-/// Naming the three fields callers actually read keeps the subscription to
-/// those three, none of which move on a no-op refetch. Anything wanting the
-/// query's fetch state — the hero's retry wants `isFetching` — reads
-/// `useWalletState()` directly, where tracking it is the point.
+/// What a balance consumer reads. Named fields, not the query result: spreading that
+/// subscribes to `isFetching` and re-renders every mounted form on each poll.
 export interface BalancesResult {
-  /// `undefined` until the first sync succeeds; see `useAssetBalance`.
+  /// `undefined` until the first sync succeeds.
   data: BalancesState | undefined;
   /// The last sync failure, surfaced by `SyncNotice`.
   error: Error | null;
@@ -59,11 +32,7 @@ export interface BalancesResult {
   isLoading: boolean;
 }
 
-/// Confirmed balances with the in-flight overlay applied.
-///
-/// Also owns the two side effects the overlay implies: clearing watermark-bound
-/// entries once a sync has credited them, and resyncing faster while any
-/// remain.
+/// Confirmed balances with the in-flight overlay; prunes settled entries, polls while any remain.
 export function useBalances(): BalancesResult {
   const query = useWalletState();
   const { chainId } = useActiveChain();
@@ -71,8 +40,6 @@ export function useBalances(): BalancesResult {
   const pending = usePendingByAsset(chainId);
   const allPending = usePending();
 
-  // Only this chain's entries; this query cannot observe another chain's
-  // in-flight swap settling.
   const hasWatermarkPending = useMemo(() => {
     for (const e of allPending.values()) {
       if (e.chainId === chainId && e.clearWhenBalanceAtLeast !== undefined) return true;
@@ -80,9 +47,6 @@ export function useBalances(): BalancesResult {
     return false;
   }, [allPending, chainId]);
 
-  // Keyed on `syncedAt` so this runs once per completed sync, the only point at
-  // which a watermark can newly be satisfied, against the confirmed balances that
-  // sync produced.
   const syncedAt = query.data?.syncedAt;
   const confirmed = query.data?.balances;
   // biome-ignore lint/correctness/useExhaustiveDependencies: `confirmed` is read as of the sync `syncedAt` names; its identity alone would skip a sync that moved nothing
@@ -91,30 +55,18 @@ export function useBalances(): BalancesResult {
     pruneByBalances(chainId, (asset) => confirmed.find((b) => b.asset === asset)?.balance ?? 0n);
   }, [chainId, syncedAt]);
 
-  // Joins the shared poll rather than starting one. `hasWatermarkPending` going
-  // false is the hard stop.
   useEffect(() => {
     if (!hasWatermarkPending) return;
     return settlingPoll.join(invalidate);
   }, [hasWatermarkPending, invalidate]);
 
-  // Read as three named fields rather than spread; see `BalancesResult`.
   const { data, error, isLoading } = query;
   const merged = useMemo(() => (data ? mergePending(data, pending) : undefined), [data, pending]);
   return useMemo(() => ({ data: merged, error, isLoading }), [merged, error, isLoading]);
 }
 
-/// The display row for one asset.
-///
-/// `undefined` means the balance is unknown: no sync has succeeded yet, or the
-/// last one failed. `SyncNotice` reports that on screen.
-///
-/// Once a sync has succeeded, an asset with no row is a zero balance and is
-/// reported as one. `computeBalances` emits only assets holding unspent notes,
-/// so returning `undefined` for a token the user holds none of would make
-/// `validateAmount` skip the balance check, leaving the submit button live and
-/// the hint and `max` controls absent until the SDK raised
-/// `InsufficientCoverError` after generating a proof.
+/// The display row for one asset: `undefined` only until a sync succeeds, then zero for an unheld
+/// asset, since `undefined` would skip the amount validation's balance check.
 export function useAssetBalance(assetId: bigint | undefined): AssetBalanceView | undefined {
   const data = useBalances().data;
   if (assetId === undefined || !data) return undefined;
@@ -129,8 +81,6 @@ export function useAssetBalance(assetId: bigint | undefined): AssetBalanceView |
   );
 }
 
-/// An asset with only in-flight value still needs a row; otherwise a first
-/// deposit shows nothing until the scanner catches up.
 function mergePending(
   { notes: _notes, ...state }: WalletState,
   pending: Map<bigint, PendingTotals>,

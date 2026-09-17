@@ -1,16 +1,3 @@
-// The two-stage spend Send and Unshield share: an amount against the shielded
-// balance, a recipient, the first press reviewing and the second sending.
-//
-// Both forms assembled the same chain — the amount and fee reads, the submit
-// block with its recipient gate, the parse-and-send submit, the review gate —
-// and handed `ActionForm`, `AmountHero` and `ReviewPanel` the same props from
-// it. Stated once, each form keeps only what is its own: its schema and send,
-// its copy, and what it adds around the card.
-//
-// The review gate has two conditions that are easy to get subtly wrong apart:
-// review closes on any edit to what would be sent (`useReview`), and the send
-// waits on a review that has something to show.
-
 import type { CircuitAmount } from "@lelantos-org/sdk";
 import type { Path, PathValue } from "react-hook-form";
 import { allPriced, crossAssetNote, FeeDetails, FeeLineSummary } from "@/features/fees";
@@ -44,8 +31,7 @@ export interface SpendFormOptions<T>
   /// The recipient's shape check, and which kind of address it names.
   recipient: Pick<SpendBlockInput, "recipientValid" | "recipientKind">;
   titles: Pick<TxCopy, "progressTitle" | "settledTitle">;
-  /// The mutation call for validated values: the amount in circuit units, the
-  /// asset's id, and the fee asset as it applies to this spend.
+  /// Sends validated values, with the amount in circuit units.
   send(
     values: T,
     ctx: { amount: CircuitAmount; asset: bigint; feeAsset: bigint | undefined },
@@ -54,24 +40,22 @@ export interface SpendFormOptions<T>
 
 export interface SpendForm {
   spend: SpendAmount;
-  /// The amount field's and the recipient field's live text.
   amountText: string;
   to: string;
   /// The asset as the screen names it: "ETH" on the native path.
   symbol: string;
   review: Review;
-  /// The recipient field's paste: written dirty and validated at once, since a
-  /// pasted address is a finished one.
+  /// Writes a pasted recipient, dirty and validated at once.
   onPasteTo(next: string): void;
   frame: Omit<ActionFormProps, "header" | "review" | "children">;
   hero: Omit<AmountHeroProps, "label" | "asset">;
-  /// `ReviewPanel`'s share of props while the review is open with something to
-  /// show; `undefined` otherwise.
+  /// `ReviewPanel`'s props while the review is open with figures to show.
   reviewPanel:
     | Pick<ReviewPanelProps, "busy" | "onCancel" | "figure" | "symbol" | "words" | "confirmBlocked">
     | undefined;
 }
 
+/// The two-stage spend Send and Unshield share: first press reviews, second sends.
 export function useSpendForm<T extends SpendFormValues, I, R extends OperationResult>(
   form: ActionFormApi<T>,
   { mutation: m, progress }: ActionMutation<I, R>,
@@ -91,27 +75,18 @@ export function useSpendForm<T extends SpendFormValues, I, R extends OperationRe
   const { parsed, fees, display } = spend;
   const symbol = display?.symbol ?? "";
 
-  // Both the dead-button reason and the recipient gate live here: the fee
-  // shortfall is only knowable once the quote lands, and a spend that cannot pay
-  // its relayer must not reach the prover.
   const block = spendSubmitBlock({ ...spend.readiness, recipient: to, ...recipient });
 
   const onSubmit = useActionSubmit<T>(form, (values, ctx) =>
     send(values, { amount: ctx.amount, asset: ctx.asset.id, feeAsset: spend.feeAsset }),
   );
 
-  // Every field that changes what gets sent — asset, amount, recipient, fee
-  // asset — so editing any of them drops back out of the summary rather than
-  // letting stale figures be confirmed.
+  // Every field that changes what gets sent, so an edit closes the review before stale figures are confirmed.
   const review = useReview([asset, amountText, to, spend.feeAsset].map((p) => p ?? "").join("|"));
   const figures =
     selected && parsed !== undefined ? reviewFigure(parsed, selected, symbol) : undefined;
 
-  // First press reviews, second sends. `submitDisabled` already stops an
-  // unfilled form reaching here, so entering review implies the fields are good.
-  // A review with nothing to show is not a review, so the send also waits on
-  // `figures` — otherwise a registry reload mid-review would drop the summary
-  // and leave the next press sending from the bare form.
+  // Waiting on `figures` stops a registry reload mid-review from sending off the bare form.
   const onFormSubmit = (e: React.FormEvent) => {
     if (!review.open || !figures) {
       e.preventDefault();
@@ -175,9 +150,6 @@ export function useSpendForm<T extends SpendFormValues, I, R extends OperationRe
             figure: figures.figure,
             symbol,
             words: figures.words,
-            // Confirm waits for every fee to have a figure:
-            // confirming a cost still drawn as "—" is agreeing to a number nobody
-            // has seen.
             confirmBlocked:
               block.reason ?? (allPriced(fees.model) ? undefined : "Working out the fee…"),
           }
@@ -185,10 +157,7 @@ export function useSpendForm<T extends SpendFormValues, I, R extends OperationRe
   };
 }
 
-/// `AmountHero`'s props for an amount against the shielded balance, for the
-/// forms that assemble their own spend rather than `useSpendForm`'s: Swap's pay
-/// leg and Send by link. The balance is the plain asset figure, where
-/// `useSpendForm`'s hero pins six decimals and drops the symbol on phones.
+/// `AmountHero`'s props for a shielded spend assembled outside `useSpendForm`.
 export function spendHeroProps<T extends ActionFormValues>(
   form: ActionFormApi<T>,
   spend: SpendAmount,
@@ -212,18 +181,7 @@ export function spendHeroProps<T extends ActionFormValues>(
   };
 }
 
-/// The balance on `AmountHero`'s right: "8,420.00 USDC", and "8,420.00" on
-/// phones, where the pill beside it already states the symbol.
-function SpendBalance({
-  value,
-  meta,
-  symbol,
-}: {
-  /// Circuit units, as the shielded balance is held.
-  value: bigint;
-  meta: AssetMeta;
-  symbol: string;
-}) {
+function SpendBalance({ value, meta, symbol }: { value: bigint; meta: AssetMeta; symbol: string }) {
   const figure = formatAssetFixed(value, meta, 6);
   return (
     <>

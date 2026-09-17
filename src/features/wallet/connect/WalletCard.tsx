@@ -8,8 +8,7 @@ import { PICKER_COPY, WalletChoiceList } from "./WalletPicker";
 import type { WalletChoice } from "./wallet-offerings";
 import "./Welcome.css";
 
-/// Welcome's right column: the wallet picker while disconnected, and every other
-/// connection state in its place.
+/// Welcome's right column: the wallet picker while disconnected, else the connection state.
 export function WalletCard({
   choices,
   firstRef,
@@ -19,8 +18,6 @@ export function WalletCard({
 }) {
   const { status, kind, connect, error } = useWallet();
   const titleId = useId();
-  // The panel is one shape for every kind; only the sentences differ, and they
-  // travel with the kind rather than being chosen here.
   const deriving = kind ? kindAdapter(kind).copy.deriving : undefined;
 
   return (
@@ -34,8 +31,6 @@ export function WalletCard({
             <p className="welcome__card-sub">{PICKER_COPY.subtitle}</p>
           </header>
           {choices.length > 0 ? (
-            // `selectKind` detaches the kinds it is not choosing; see the
-            // invariant on `features/wallet-kinds`.
             <WalletChoiceList
               ref={firstRef}
               wallets={choices}
@@ -43,9 +38,6 @@ export function WalletCard({
               lead
             />
           ) : (
-            // No extension has announced itself and no other kind is usable
-            // here. `connect` still waits out the announce window, so the
-            // button is worth pressing once an extension is unlocked.
             <button type="button" className="btn btn--outline" onClick={connect}>
               Look for a wallet again
             </button>
@@ -116,13 +108,6 @@ export function WalletCard({
   );
 }
 
-/// The card's title, in the tone of the state it names.
-///
-/// A modifier of its own rather than the `.warn` / `.err` utilities. `.warn`
-/// sets only a colour, which `.welcome__card-t`'s own colour beats, so the
-/// unsupported-network title rendered in the foreground ink; `.err` is the
-/// boxed error panel, so "Connection failed" drew a bordered, tinted box around
-/// the heading.
 function CardTitle({
   id,
   children,

@@ -1,6 +1,3 @@
-// The key spellings, pinned. A key is matched by value, so a respelling here
-// silently splits a cache entry from the invalidation that was meant to reach it.
-
 import { describe, expect, it } from "vitest";
 import { queryKeys } from "./keys";
 

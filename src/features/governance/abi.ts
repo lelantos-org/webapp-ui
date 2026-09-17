@@ -1,17 +1,6 @@
-// The slices of the governance contracts this app calls, decodes or offers as
-// proposal actions, as typed `as const` ABIs.
-//
-// Hand-kept rather than imported from `@lelantos-org/contracts`: the release
-// carrying the governor's quorum-vote window is not published yet. Every entry is
-// copied from `contracts/packages/abi/src/abis/` (LelantosGovernor,
-// LelantosToken, ProtocolAdmin, FeeBurner), less `internalType`, except the
-// quorum-vote items, which follow the governor change that adds them
-// (`quorumVoteCutoff`, `proposalQuorumVoteDeadline`, `setQuorumVoteCutoff`,
-// `ProposalQuorumVoteDeadline`, `QuorumVoteCutoffSet`, `QuorumVotingClosed`,
-// `InvalidQuorumVoteCutoff`). Swap this file for the package once it ships.
+// Hand-kept governance ABI slices (quorum-vote items not yet in `@lelantos-org/contracts`); swap for the package once it ships.
 
-/// What the app reads from and sends to `LelantosGovernor`, and the errors it
-/// can explain.
+/// What the app reads from and sends to `LelantosGovernor`, and the errors it can explain.
 export const governorAbi = [
   {
     type: "function",

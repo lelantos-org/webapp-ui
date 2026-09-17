@@ -20,7 +20,6 @@ describe("parseAmountSafe", () => {
   });
 
   it("returns undefined for partial input rather than throwing", () => {
-    // The user is mid-type; the form must still render.
     for (const partial of ["", ".", "1.", "abc", "-1"]) {
       expect(parseAmountSafe(partial, WETH), partial).toBeUndefined();
     }
@@ -88,7 +87,6 @@ describe("pickAmountError", () => {
 });
 
 describe("validateDepositAmount", () => {
-  // 1 WETH = 1e6 circuit units = 1e18 base units.
   const ONE = 1_000_000n;
   const ONE_BASE = asBaseUnits(ONE * WETH.scale);
 
@@ -102,21 +100,14 @@ describe("validateDepositAmount", () => {
   });
 
   it("refuses to validate while the fee is unknown", () => {
-    // The fee preview is debounced 300ms and can also error outright, in which
-    // case it never arrives. Falling back to the bare amount made the user's
-    // whole balance a valid deposit — live button, Permit2 signature, then a
-    // `transferFrom` that reverts for `amount + fee` with gas already paid.
     const v = validateDepositAmount(ONE, WETH, ONE_BASE, undefined);
     expect(v.feeUnknown).toBe(true);
     expect(v.valid).toBe(false);
-    // Not the user's fault, and nothing for them to fix.
     expect(v.insufficient).toBe(false);
     expect(pickAmountError(undefined, v)).toBeUndefined();
   });
 
   it("compares in base units, not circuit units", () => {
-    // The raw circuit amount (1e6) is far below the base balance (1e18), so a
-    // unit-blind comparison would wrongly accept 1000 WETH against 1 WETH.
     const total = asBaseUnits(1000n * ONE * WETH.scale);
     const v = validateDepositAmount(1000n * ONE, WETH, ONE_BASE, total);
     expect(v.insufficient).toBe(true);
@@ -124,14 +115,12 @@ describe("validateDepositAmount", () => {
   });
 
   it("counts the fee, which a deposit adds on top of the amount", () => {
-    // Exactly the balance in amount, but the fee pushes the debit over it.
     const total = asBaseUnits(ONE_BASE + 1n);
     const v = validateDepositAmount(ONE, WETH, ONE_BASE, total);
     expect(v.insufficient).toBe(true);
     expect(v.valid).toBe(false);
   });
 
-  // The unit confusion this check exists to prevent, caught before it runs.
   it("will not take a circuit amount where base units are due", () => {
     const circuit = circuitAmount(ONE);
     // @ts-expect-error a circuit amount is not a base-unit balance
@@ -155,14 +144,11 @@ describe("validateDepositAmount", () => {
 });
 
 describe("depositMaxAmount", () => {
-  /// What the deposit actually costs the wallet, in base units.
   const cost = (amount: bigint, scale: bigint, feeBps: bigint, index: bigint) =>
     feeBreakdown({ amount, scale, index, feeBps, leg: "deposit" }).total;
 
   it("leaves room for the fee charged on top", () => {
-    // 30bps on a 1000-unit balance: depositing all 1000 would need 1003. 998
-    // is the answer rather than the naive 997 — `applyFee` truncates, so the
-    // fee on 998 is 2, not 2.994.
+    // `applyFee` truncates, so 998 fits, not the naive 997.
     const max = depositMaxAmount(asBaseUnits(1_000n), 1n, 30n);
 
     expect(max).toBe(998n);
@@ -170,30 +156,21 @@ describe("depositMaxAmount", () => {
   });
 
   it("does not short-change the user where the fee truncates in their favour", () => {
-    // The closed-form inverse lands on 123086, but 123087 also fits once
-    // `applyFee`'s truncation is accounted for. Regression: the first version
-    // only corrected downwards and left that unit behind.
     expect(depositMaxAmount(asBaseUnits(123_456n), 1n, 30n)).toBe(123_087n);
   });
 
   it("never exceeds the publicIn cap, however large the balance", () => {
-    // Otherwise "max" writes an amount `validateAmount` rejects on sight.
     expect(depositMaxAmount(asBaseUnits((PUBLIC_IN_MAX + 1_000n) * 2n), 1n, 0n)).toBe(
       PUBLIC_IN_MAX,
     );
   });
 
   it("never returns an amount the balance cannot cover", () => {
-    // Swept rather than spot-checked: `applyFee` truncates, so the closed-form
-    // inverse can land a unit over for some (balance, bps) pairs and the
-    // verify loop is what actually holds the invariant.
     for (const balance of [1n, 7n, 999n, 1_000n, 123_456n, 10n ** 18n]) {
       for (const bps of [0n, 1n, 30n, 250n, 9_999n]) {
         const max = depositMaxAmount(asBaseUnits(balance), 1n, bps);
         if (max === undefined) continue;
         expect(cost(max, 1n, bps, RAY)).toBeLessThanOrEqual(balance);
-        // And it is the *largest* such amount, not merely a safe one — unless
-        // the publicIn cap is what bounded it rather than the balance.
         if (max < PUBLIC_IN_MAX) {
           expect(cost(max + 1n, 1n, bps, RAY)).toBeGreaterThan(balance);
         }
@@ -206,8 +183,6 @@ describe("depositMaxAmount", () => {
   });
 
   it("floors to the asset's granularity", () => {
-    // `scale > 1n` means the circuit cannot represent every base unit, and
-    // `parseAmountInput` rejects an amount that is not a multiple.
     const max = depositMaxAmount(asBaseUnits(1_000n), 100n, 0n);
 
     expect(max).toBe(10n);
@@ -220,7 +195,6 @@ describe("depositMaxAmount", () => {
   });
 
   it("offers nothing when the balance is too small to deposit anything", () => {
-    // Below one circuit unit there is no amount to write.
     expect(depositMaxAmount(asBaseUnits(0n), 1n, 30n)).toBeUndefined();
     expect(depositMaxAmount(asBaseUnits(50n), 100n, 0n)).toBeUndefined();
   });

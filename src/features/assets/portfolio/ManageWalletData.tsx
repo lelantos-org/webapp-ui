@@ -3,11 +3,7 @@ import { useWalletState } from "@/features/wallet";
 import { cx } from "@/shared/lib/cx";
 import { WalletDataModal } from "./WalletDataModal";
 
-/// "Manage wallet data" — compact and hard refresh, behind a surface with room
-/// to say what each costs.
-///
-/// Reads `isFetching` itself, where tracking it is the point: both actions are
-/// refused while a sync is running.
+/// "Manage wallet data" button and its modal. The actions are disabled while a sync runs.
 export function ManageWalletData({ className }: { className?: string }) {
   const [managing, setManaging] = useState(false);
   const { isFetching } = useWalletState();

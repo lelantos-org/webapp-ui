@@ -4,8 +4,6 @@ import type { RegisteredAsset } from "@/config/chains";
 import { makeAsset } from "@/test/fixtures/assets";
 import { computeGains, growthOf, type IndexAt, type YieldGain } from "./yield-gains";
 
-/// A yield asset at `index`. `scale` is 1 so the arithmetic under test is the
-/// index conversion alone; the scale leg is exercised once, at the end.
 function yieldAsset(id: bigint, index: bigint, scale = 1n): RegisteredAsset {
   return makeAsset(id, `T${id}`, { token: "0xAAAA", scale, index, yieldEnabled: true });
 }
@@ -20,19 +18,16 @@ const note = (asset: bigint, value: bigint, firstSeenBlock?: number) => ({
   firstSeenBlock,
 });
 
-/// Every block resolves to `index`, whatever it is asked for.
 function flat(index: bigint): IndexAt {
   return () => index;
 }
 
-/// Nothing resolves — an RPC with no archive state.
 const none: IndexAt = () => undefined;
 
 const pct = (n: number) => Number((n * 100).toFixed(6));
 
 describe("computeGains", () => {
   it("prices the gain as the difference between two conversions", () => {
-    // 100 units bought at 1.00, now worth 1.10.
     const got = computeGains(
       [note(1n, 100n, 10)],
       [yieldAsset(1n, (RAY * 110n) / 100n)],
@@ -53,8 +48,6 @@ describe("computeGains", () => {
   });
 
   it("weights notes by value, not by count", () => {
-    // 900 units bought at 1.00 and 100 at 2.00; the index is now 2.00, so only
-    // the first has gained. A count-weighted average would report +25%.
     const indexAt: IndexAt = (_asset, block) => (block === 1 ? RAY : RAY * 2n);
     const got = computeGains(
       [note(1n, 900n, 1), note(1n, 100n, 2)],
@@ -66,9 +59,6 @@ describe("computeGains", () => {
   });
 
   it("excludes an unresolved note from both sums rather than counting it flat", () => {
-    // One note resolves at 1.00 against an index of 1.10; the other has no
-    // block at all. Folding the second in at the current index would halve the
-    // reported return to +5%.
     const got = computeGains(
       [note(1n, 100n, 10), note(1n, 100n)],
       [yieldAsset(1n, (RAY * 110n) / 100n)],
@@ -83,8 +73,6 @@ describe("computeGains", () => {
   });
 
   it("reports nothing resolved rather than a zero gain", () => {
-    // The caller renders this as unknown. A `gain` of 0 with `resolvedNotes: 0`
-    // is the whole point: +0 would be a claim, and there is nothing to claim.
     const got = computeGains([note(1n, 100n, 10)], [yieldAsset(1n, RAY * 2n)], none);
     expect(got.get(1n)).toEqual({
       gain: 0n,
@@ -105,7 +93,6 @@ describe("computeGains", () => {
   });
 
   it("carries the asset's scale into the base-unit figure", () => {
-    // 1 circuit unit at scale 1e10 is 1e10 base units; up 10% is 1e9.
     const got = computeGains(
       [note(1n, 1n, 10)],
       [yieldAsset(1n, (RAY * 110n) / 100n, 10n ** 10n)],

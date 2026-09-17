@@ -39,7 +39,6 @@ describe("windowPhase", () => {
     expect(windowPhase(w, 101)).toBe("open");
   });
 
-  // For and Abstain are accepted at the quorum-vote deadline and refused one second later.
   it("opens the Against-only window one second past the quorum-vote deadline", () => {
     expect(windowPhase(w, 340)).toBe("open");
     expect(windowPhase(w, 341)).toBe("against");
@@ -84,7 +83,6 @@ describe("votingPhase", () => {
   const w = { voteStart: 100, voteEnd: 400, quorumVoteDeadline: 340 };
 
   it("reports no phase for a proposal the governor has closed", () => {
-    // A canceled proposal inside its window is not open.
     expect(votingPhase("Canceled", w, 200)).toBeUndefined();
     expect(votingPhase("Defeated", w, 500)).toBeUndefined();
     expect(votingPhase(undefined, w, 200)).toBeUndefined();
@@ -99,7 +97,6 @@ describe("votingPhase", () => {
     expect(votingPhase("Active", w, 350)).toBe("against");
   });
 
-  // The local clock and the chain disagree by a block; the chain decides.
   it("keeps an active proposal live when the local clock runs ahead of the chain", () => {
     expect(votingPhase("Active", w, 100)).toBe("open");
     expect(votingPhase("Active", w, 401)).toBe("against");
@@ -122,8 +119,6 @@ describe("tallyBar", () => {
     expect(tallyBar(t(1n, 1n, 0n), 0n).forLeads).toBe(false);
   });
 
-  // With fewer votes than quorum the bar is scaled to quorum, so the marker
-  // sits at the far end and the segments show how far there is to go.
   it("scales to the quorum when fewer votes have been cast", () => {
     const bar = tallyBar(t(25n, 0n, 25n), 100n);
     expect(bar.forBps).toBe(2_500);

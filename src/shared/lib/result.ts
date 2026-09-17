@@ -1,6 +1,4 @@
-/// Discriminated-union Result type. Convention: wrap synchronous parsers /
-/// validators; keep async + SDK errors on the throw path.
-
+/// Result for synchronous parsers and validators; async and SDK errors still throw.
 export type Result<T, E = string> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly error: E };

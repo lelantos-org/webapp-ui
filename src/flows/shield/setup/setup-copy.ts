@@ -1,7 +1,3 @@
-// The words of Permit2 setup, apart from what shows them, so they read — and
-// test — without a wallet, the registry or the probe hooks: the step rows of a
-// setup run, and the multi-token setup card under the Shield form.
-
 import type { AllowanceSetupStep } from "@lelantos-org/sdk";
 import type { RegisteredAsset } from "@/config/chains";
 import { plural } from "@/shared/lib/format/text";
@@ -14,8 +10,7 @@ const SHARED_STEPS: { id: AllowanceSetupStep; label: string }[] = [
   { id: "permitting", label: "submit allowances on-chain" },
 ];
 
-/// The approval line names its token and position, since it is the repeating
-/// step; without them, N identical prompts read as one stuck prompt.
+/// The status line for a running setup; approvals name their token and position.
 export function runningCopy(p: SetupProgress, symbolOf: (t: string) => string): string {
   if (p.step === "approving") {
     const symbol = symbolOf(p.token);
@@ -30,9 +25,7 @@ export function runningCopy(p: SetupProgress, symbolOf: (t: string) => string): 
     : "Submitted. Waiting for block confirmation…";
 }
 
-/// The cost of a run: approvals do not batch, so N tokens means N prompts plus
-/// the two shared steps. Shared with `SetupAllModal`, which quotes the same
-/// figure before the flow starts.
+/// The cost of a run: one prompt per approval plus the signature and transaction.
 export function setupCostLine(approvals: number): string {
   const a = approvals > 0 ? `${plural(approvals, "approval")}, ` : "";
   return `${a}1 signature, 1 transaction`;
@@ -46,19 +39,9 @@ export function initialProgress(toApprove: readonly RegisteredAsset[]): SetupPro
     : { step: "signing", status: "wallet" };
 }
 
-/// Stepper row id for one token's approval. Shared by the row and the highlight,
-/// so a rename cannot desynchronise them.
-///
-/// Keyed by token, not asset id: the pool registers a separate id per yield
-/// variant over the same ERC-20, and the approval is per token. Keyed by id, six
-/// ids over three tokens drew six rows, and `SetupProgress.token` then resolved
-/// to whichever id came first — so the highlight jumped back to row 1 on the
-/// fourth prompt.
 const approvalStepId = (t: { token: string }) => `approving:${tokenKey(t)}`;
 
-/// One approval row per token that needs one, then the shared steps. They are
-/// separate wallet prompts, so a single combined row would show a finished step
-/// while further prompts were still coming.
+/// One approval row per token that needs one, then the shared steps.
 export function setupSteps(toApprove: readonly RegisteredAsset[]): StepperItem[] {
   return [
     ...toApprove.map((a) => ({ id: approvalStepId(a), label: `authorize ${a.symbol}` })),
@@ -71,13 +54,10 @@ export function currentStepId(progress: SetupProgress): string {
   return progress.step === "approving" ? approvalStepId(progress) : progress.step;
 }
 
-// The multi-token setup card (`SetupAllNotice`).
-
 /// The asset the Shield form has selected, when its own deposit needs no setup.
 export interface SetupCurrentAsset {
   symbol: string;
-  /// Native coin, which never goes through Permit2 — as opposed to a token
-  /// that is already approved.
+  /// Native coin (never needs Permit2), as opposed to an already-approved token.
   native: boolean;
 }
 
@@ -87,9 +67,6 @@ export function joinNames(names: readonly string[]): string {
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
-// The setup card a deposit is blocked on (`SetupNotice`), and the submit reason
-// under it. More than one name for a deposit paying its relayer in another token.
-
 /// "Couldn't check USDC's approval", "Couldn't check approvals for USDC and DAI".
 export function uncheckedApprovalsLine(names: readonly string[]): string {
   return names.length > 1
@@ -98,9 +75,6 @@ export function uncheckedApprovalsLine(names: readonly string[]): string {
 }
 
 /// Title and body of the card for the tokens a deposit still needs set up.
-///
-/// `willApproveErc20`: the run sends an ERC-20 → Permit2 approval first, which
-/// the body owns up to. `unknown`: the allowances could not be read at all.
 export function depositSetupCopy(
   names: readonly string[],
   { unknown, willApproveErc20 }: { unknown: boolean; willApproveErc20: boolean },
@@ -130,7 +104,7 @@ export function depositSetupCopy(
   };
 }
 
-/// Title and body for `names` outstanding.
+/// Title and body of the multi-token setup card for `names` outstanding.
 export function setupAllCopy(
   names: readonly string[],
   current: SetupCurrentAsset | undefined,

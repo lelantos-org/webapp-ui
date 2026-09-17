@@ -1,6 +1,5 @@
 @layer components {
-  /* The form spans the column and lays its header, card and trailing blocks out
-     on the column's own rhythm. */
+  /* ActionForm */
   .action-form {
     display: flex;
     flex-direction: column;
@@ -12,7 +11,7 @@
     .action-form { gap: var(--sp-16); }
   }
 
-  /* Wraps an action form's fields so the review can hide them as one block. */
+  /* Fields */
   .action-form__fields {
     display: flex;
     flex-direction: column;
@@ -20,15 +19,13 @@
     min-width: 0;
   }
 
-  /* Why the submit button above is disabled. Directly under it and quiet: it is
-     an explanation of a control, not a warning in its own right. */
+  /* Blocked reason */
   .action-form__why {
     margin: calc(var(--sp-4) * -1) 0 0;
     text-align: center;
   }
 
-  /* The CTA and the line under it: the blocked reason when the button is dead,
-     the footnote when it is not. */
+  /* CTA */
   .action-form__cta {
     display: flex;
     flex-direction: column;
@@ -44,11 +41,7 @@
 
   @media (max-width: 480px) {
     .action-form__fields { gap: var(--sp-14); }
-    /* The CTA is pinned: it rides the bottom of the viewport while the card is
-       on screen, so a long form never hides the one thing it ends on. Sticky
-       rather than fixed, so it settles back into the card at the end instead of
-       covering the page below; the blocked reason travels with it, since a dead
-       button without its reason is exactly what must not happen. */
+    /* Sticky CTA */
     .action-form__cta {
       margin: 0 calc(var(--sp-16) * -1) calc(var(--sp-18) * -1);
       padding: var(--sp-12) var(--sp-16) calc(var(--sp-18) + env(safe-area-inset-bottom, 0px));

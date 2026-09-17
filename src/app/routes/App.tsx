@@ -41,8 +41,6 @@ export function App() {
               />
             ))}
             <Route path="/claim" element={<ClaimPage />} />
-            {/* Without this an unknown path rendered `<Layout>` around nothing,
-                which reads as the app having failed rather than as a bad URL. */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

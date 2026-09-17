@@ -1,7 +1,5 @@
 @layer features {
-  /* Swap: two legs with the flip button over the seam, then the Details row. The
-     light theme is the same markup on the light tokens, so nothing here names a
-     colour that does not come from them. */
+  /* Legs */
   .swap-pair {
     display: flex;
     flex-direction: column;
@@ -22,7 +20,6 @@
   .swap-leg--receive { border-color: rgba(var(--accent-rgb), 0.28); }
   .swap-leg--stale { border-color: rgba(var(--warn-rgb), 0.45); }
 
-  /* The pill sits on the leg's ground, so it steps back to the card's. */
   .swap-leg .tokpill { background: var(--bg-1); }
   .swap-leg__hdr {
     display: flex;
@@ -45,7 +42,7 @@
     white-space: nowrap;
   }
 
-  /* The age is the refresh control. Drawn as a small badge, hit as a 44px target. */
+  /* Quote age / refresh */
   .swap-age {
     position: relative;
     padding: 3px var(--sp-10);
@@ -99,7 +96,6 @@
   }
   .swap-leg__sub--warn { color: var(--warn); }
   .swap-leg__sub--err { color: var(--err-strong); }
-  /* Keeps the accent on hover, where `.link-btn` would deepen it. */
   .swap-leg__retry {
     margin: -12px 0;
     padding: 0 var(--sp-4);
@@ -110,8 +106,7 @@
   .swap-leg__retry:focus-visible { outline: var(--ring); outline-offset: -2px; }
   .swap-pair__err { color: var(--err); }
 
-  /* Over the seam: the row takes no height of its own (−21 + 40 − 21), so the
-     legs keep the card's 10px gap, less the 2px the button overlaps each. */
+  /* Flip button */
   .swap-flip-row {
     position: relative;
     z-index: 1;
@@ -150,7 +145,6 @@
     .swap-pair { gap: var(--sp-8); }
     .swap-leg { gap: var(--sp-10); padding: 15px var(--sp-14); }
     .swap-leg__lbl { font-size: var(--fs-13); }
-    /* The venue badge goes; the age stays, since it is the refresh. */
     .swap-venue { display: none; }
     .swap-age { font-size: var(--fs-11); padding: 2px var(--sp-8); }
     .swap-leg__row { gap: 11px; }

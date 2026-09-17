@@ -1,7 +1,3 @@
-// The React bindings for the governance reads: the index (`client.ts`) and the
-// chain (`onchain.ts`), each its own query so a slow RPC does not hold up the
-// list and an indexer outage does not blank the live figures.
-
 import type { EvmAddress } from "@lelantos-org/sdk";
 import { evmAddress } from "@lelantos-org/sdk";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
@@ -29,14 +25,7 @@ import {
   resolveToken,
 } from "./onchain";
 
-/// The governor's clock, in unix seconds, ticking locally every `tickMs`.
-///
-/// Countdowns and phases are computed against this rather than against the last
-/// query, so "closes in 12s" counts down between polls. It is the browser's
-/// clock shifted by how far the chain's `clock()` was from it at the last poll:
-/// the two can disagree by minutes (a skewed laptop, an anvil moved with
-/// `evm_increaseTime`), and a phase read off the wrong one would offer a For
-/// button the governor refuses. Until the first read lands the shift is zero.
+/// The governor's clock in unix seconds, ticking locally and corrected by the chain's `clock()` offset.
 export function useNowSeconds(tickMs = 1_000): number {
   const offset = useChainClockOffset();
   const [now, setNow] = useState(() => Math.floor(Date.now() / 1000));
@@ -61,6 +50,7 @@ function useChainClockOffset(): number {
   return q.data ?? 0;
 }
 
+/// The active chain's governor and connected EVM account.
 export interface GovernanceContext {
   chain: ChainEntry;
   /// Absent on a chain whose deployment runs no governance.
@@ -77,12 +67,12 @@ export function useGovernance(): GovernanceContext {
   return { chain, governor: chain.governorAddress, account };
 }
 
+/// An indexed proposal with its on-chain state, once read.
 export interface ProposalListItem extends ProposalSummary {
   chain: ListProposalChain | undefined;
 }
 
-/// The indexed proposals, newest first, a page at a time, each with its on-chain
-/// state and quorum.
+/// The indexed proposals, newest first, paged, each with its on-chain state and quorum.
 export function useProposalList() {
   const { chain, governor } = useGovernance();
   const polling = usePolling(GOVERNANCE_POLL_MS);
@@ -166,8 +156,7 @@ export function useProposalVotes(proposalId: string) {
   };
 }
 
-/// The connected account's LNT balance, delegate and voting power. Idle without
-/// an EVM account.
+/// The connected account's LNT balance, delegate and voting power.
 export function useVotingPower() {
   const { chain, governor, account } = useGovernance();
   return useQuery({

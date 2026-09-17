@@ -1,6 +1,3 @@
-// Unshield: shielded notes out to a public address. Two presses, as Send; the
-// review also states what the chain will publish.
-
 import { z } from "zod";
 import {
   DEFAULT_ASSET_ID,
@@ -38,6 +35,7 @@ import { ObserverPanel } from "./observer/ObserverPanel";
 import { isSelfWithdraw, observerFacts, observerOutro } from "./observer/observer";
 import { useWithdraw } from "./use-withdraw";
 
+/// The Unshield form's schema.
 export const withdrawSchema = z.object({
   to: evmAddressField,
   amount: amountField,
@@ -46,6 +44,7 @@ export const withdrawSchema = z.object({
 });
 export type WithdrawInput = z.infer<typeof withdrawSchema>;
 
+/// Unshield: shielded notes out to a public address, reviewed before it is sent.
 export function WithdrawForm() {
   const { ethAddress } = useWallet();
   const action = useWithdraw();
@@ -59,18 +58,11 @@ export function WithdrawForm() {
   const eth = useEthAssetField(form);
   const options = useAssetSelectOptions({ showEth: true });
 
-  // The native path spends WETH notes and pays out ETH; the screen names what
-  // arrives, as the pill does — in the fee rows, the hints and the ladder too.
-  // Same two-stage submit as Send. Unshielding adds a second thing worth a
-  // second look: the destination is public from here on, and reusing the account
-  // the user is connected with links the two sides of the pool together.
   const { spend, to, symbol, review, onPasteTo, frame, hero, reviewPanel } = useSpendForm(
     form,
     action,
     {
       kind: "withdraw",
-      // A withdraw's protocol fee comes off `publicOut` rather than the cover, so
-      // it is stated but reserves nothing in the max.
       protocolFee: true,
       spendSymbol: nativeEthView(selected, eth.asEth).spendSymbol,
       native: eth.asEth,
@@ -78,8 +70,6 @@ export function WithdrawForm() {
       titles: { progressTitle: "Unshielding", settledTitle: "Unshielded" },
       send: (values, ctx) =>
         m.mutateAsync({
-          // The amount field is what leaves the pool: the review states what
-          // arrives after the protocol fee ("They receive").
           gross: ctx.amount,
           asset: ctx.asset,
           recipient: values.to,
@@ -90,8 +80,7 @@ export function WithdrawForm() {
   );
   const { parsed, display, spendable } = spend;
 
-  // Bounded by the same ceiling as the max button: a denomination the selector
-  // would refuse is not a private amount, it is a failed spend. See `ladder.ts`.
+  // Bounded by the max: a denomination the selector would refuse is a failed spend.
   const ladder = useLadder({ selected: display, amount: parsed, max: spendable?.max });
 
   const selfWithdraw = isSelfWithdraw(to, ethAddress);
@@ -113,9 +102,6 @@ export function WithdrawForm() {
       })}
     />
   );
-  // Below the card, and only while the card is the form: under a progress or
-  // result card it would describe a withdrawal no longer being composed, and the
-  // review carries its own compact block.
   const showObserver = !review.open && !m.isPending && progress.steps.length === 0 && !m.error;
 
   return (
@@ -153,16 +139,12 @@ export function WithdrawForm() {
                 model={spend.fees.model}
                 extraRows={[
                   { label: "Leaves your balance", value: leavesBalanceLabel(spend.fees.model) },
-                  // Base less the protocol fee. The relayer is paid
-                  // from shielded change, not from what arrives.
                   { label: "They receive", value: headlineLabel(spend.fees.model), strong: true },
                 ]}
               />
             }
             observer={observerPanel("compact")}
             warning={
-              // The app has no deposit history, so the only account
-              // it can compare against is the one connected.
               selfWithdraw
                 ? "This cannot be reversed, and the destination is the account you're connected with — anyone can match your incoming funds to this withdrawal."
                 : "This cannot be reversed. The destination is not the account you're connected with — keep the two sides unlinked by not reusing it."
@@ -180,8 +162,6 @@ export function WithdrawForm() {
         maxInfo={<MaxNotice spendable={spendable} meta={display ?? NO_META} verb="Unshielding" />}
         label="You unshield"
         asset={
-          // The "ETH (native)" entries carry their WETH id inside the value; see
-          // `useEthAssetField`.
           <AssetSelectPill
             label="Asset"
             options={options}
@@ -205,9 +185,6 @@ export function WithdrawForm() {
         onPaste={onPasteTo}
         formError={errors.to?.message}
       />
-      {/* Non-blocking by design: the submit stays enabled. Withdrawing to your
-          own account is a tradeoff a user may take deliberately, so this states
-          the consequence rather than gating on it. Kept on phones. */}
       {selfWithdraw ? (
         <Notice tone="warn" title="This is the account you're connected with">
           Unshielding here puts the same address on both sides of the pool, so anyone can match your
@@ -217,9 +194,7 @@ export function WithdrawForm() {
       {ladder.notice ? (
         <>
           <hr className="rule" />
-          {/* `setAmount` rather than `onSetMax`: `useFollowMax` rewrites whatever
-              the max button last wrote when the ceiling moves, and a chosen
-              denomination must not drift off the ladder behind the user's back. */}
+          {/* `setAmount`, not `onSetMax`: `useFollowMax` would drift a picked denomination off the ladder. */}
           <DenominationField model={ladder} onPick={(d) => setAmount(d.text)} />
         </>
       ) : null}

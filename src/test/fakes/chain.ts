@@ -1,14 +1,4 @@
-// Stand-ins for the `chain` feature's hooks.
-//
-// `vi.mock` factories are hoisted above the test file's imports, so a factory
-// body that touches an imported binding fails with "Cannot access
-// '__vi_import_n__' before initialization" whenever the mocked module happens to
-// be imported first. Load this module from inside the factory instead, which
-// holds in any import order:
-//
-//   vi.mock("@/features/chain", async () =>
-//     (await import("@/test/fakes/chain")).activeChainHooks({ chainId: 1n }),
-//   );
+// `vi.mock` factories are hoisted: load this with `await import("@/test/fakes/chain")` inside them.
 
 import type { ChainEntry } from "@/config/chains";
 import { makeChain } from "@/test/fixtures/chains";
@@ -16,12 +6,10 @@ import { makeChain } from "@/test/fixtures/chains";
 interface ActiveChainHooks {
   useActiveChain: () => ChainEntry;
   useActiveChainOrUndefined: () => ChainEntry | undefined;
+  useTxExplorerUrl: () => (txHash: string) => string | undefined;
 }
 
-/// The active-chain hooks, answering with `makeChain(chain)`.
-///
-/// Pass a function instead to vary the chain between renders (it is read on
-/// every call) or to have `useActiveChainOrUndefined` answer "no chain".
+/// The active-chain hooks answering `makeChain(chain)`, or a per-call function (may return no chain).
 export function activeChainHooks(
   chain: Partial<ChainEntry> | (() => ChainEntry | undefined) = {},
 ): ActiveChainHooks {
@@ -33,5 +21,6 @@ export function activeChainHooks(
       return c;
     },
     useActiveChainOrUndefined: read,
+    useTxExplorerUrl: () => () => undefined,
   };
 }

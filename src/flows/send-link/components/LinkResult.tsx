@@ -1,11 +1,3 @@
-// Post-generation view for a claim link: Send by link's "2 · Share" card.
-//
-// The screen has one job: get the link to its recipient. It reads top to bottom
-// as what was sent, the link, the two ways to hand it over. The risk was stated
-// on the compose card and acknowledged there, so it is not repeated here. The URL
-// is masked by default and unreadable while masked, so it is a check rather than
-// the headline.
-
 import { useEffect, useId, useRef, useState } from "react";
 import { markClaimLinkCopied, retentionSentence } from "@/features/claim-links";
 import { useCopy } from "@/shared/hooks/use-copy";
@@ -19,13 +11,13 @@ const log = createLogger("claim-link:result");
 export interface LinkResultProps {
   url: string;
   amountLabel: string;
-  /// The vault record for this link, marked "shared" on copy or share.
   recordId: string;
-  /// The vault's retention window, for the promise under the buttons.
+  /// The vault's retention window.
   ttlMs: number;
   onReset(): void;
 }
 
+/// The created claim link, masked by default, with copy and share actions.
 export function LinkResult({ url, amountLabel, recordId, ttlMs, onReset }: LinkResultProps) {
   const [revealed, setRevealed] = useState(false);
   const { copy, copied } = useCopy(url);
@@ -34,8 +26,6 @@ export function LinkResult({ url, amountLabel, recordId, ttlMs, onReset }: LinkR
 
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
-  // Arrives below the compose card on a single column, out of view. Moving focus
-  // brings it on screen and tells a screen reader the link exists.
   useEffect(() => {
     titleRef.current?.focus();
   }, []);
@@ -51,8 +41,6 @@ export function LinkResult({ url, amountLabel, recordId, ttlMs, onReset }: LinkR
       await navigator.share({ url, title: "Claim link", text: `Claim ${amountLabel}` });
       markClaimLinkCopied(recordId);
     } catch (e) {
-      // Cancelling the share sheet rejects and is the common case, so it is
-      // recorded rather than reported to the user.
       log.debug("share dismissed", e);
     }
   }
@@ -106,7 +94,7 @@ export function LinkResult({ url, amountLabel, recordId, ttlMs, onReset }: LinkR
   );
 }
 
-/// Fixed width, so the masked form says nothing about the length of the secret.
+/// Fixed, so the mask does not leak the secret's length.
 const MASK_LENGTH = 16;
 
 /// Display form of the link: no scheme, fragment masked.

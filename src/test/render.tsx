@@ -1,21 +1,12 @@
-// Provider wrappers for `render` / `renderHook`.
-//
-// Centralised so every test gets a per-test `QueryClient` with retries disabled
-// — leaving retries on is a common source of tests that pass locally and hang in
-// CI — and a router configured the way the app's own is.
-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { ROUTER_FUTURE } from "@/app/providers/router-future";
 
 type WrapperProps = { children: ReactNode };
 
-/// A fresh, isolated `QueryClient`.
-///
-/// `retry: false` so an intentionally failing query settles immediately rather
-/// than running the default backoff schedule past the test timeout; `gcTime: 0`
-/// so nothing a test cached outlives it.
+/// A fresh `QueryClient` with retries off and no cache retention.
 export function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
@@ -25,16 +16,14 @@ export function createTestQueryClient(): QueryClient {
   });
 }
 
-/// Wrapper around a client the test holds, for tests that seed or inspect the
-/// cache directly.
+/// Wrapper around a client the test holds, to seed or inspect its cache.
 export function withQueryClient(client: QueryClient) {
   return function QueryClientWrapper({ children }: WrapperProps) {
     return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
   };
 }
 
-/// Wrapper providing a fresh `createTestQueryClient()` per render, so no cache
-/// leaks between tests.
+/// Wrapper providing a fresh `createTestQueryClient()` per render.
 export function queryWrapper({ children }: WrapperProps) {
   return <QueryClientProvider client={createTestQueryClient()}>{children}</QueryClientProvider>;
 }
@@ -47,4 +36,17 @@ export function routerWrapper({ children }: WrapperProps) {
 /// Router outside, query client inside — the order `AppProviders` nests them.
 export function appWrapper({ children }: WrapperProps) {
   return routerWrapper({ children: queryWrapper({ children }) });
+}
+
+/// `renderHook` inside a query client, returned alongside the result.
+export function renderQueryHook<Result, Props>(
+  hook: (props: Props) => Result,
+  options: { initialProps?: Props; client?: QueryClient } = {},
+) {
+  const client = options.client ?? createTestQueryClient();
+  const rendered = renderHook(hook, {
+    initialProps: options.initialProps,
+    wrapper: withQueryClient(client),
+  });
+  return { ...rendered, client };
 }

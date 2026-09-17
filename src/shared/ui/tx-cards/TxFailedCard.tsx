@@ -9,11 +9,7 @@ export interface TxFailedCardProps {
   title?: string | undefined;
   /// What went wrong, in the user's terms — `userMessage(error)`.
   message?: ReactNode;
-  /// What the failure means for the user's funds.
-  ///
-  /// No default, deliberately. "Nothing was spent" is true before a proof is
-  /// handed off and false after a deposit is broadcast or a Permit2 approval
-  /// lands, and a card that cannot tell which stage it failed at must not guess.
+  /// What the failure means for the user's funds. No default: the card cannot know the stage.
   reassurance?: ReactNode;
   /// Re-submit the same form. The button is withheld without it.
   onRetry?: (() => void) | undefined;
@@ -24,8 +20,7 @@ export interface TxFailedCardProps {
   explorerUrl?: string | undefined;
 }
 
-/// The card an action ends on when it does not go through: what failed, what it
-/// means, and the two ways forward.
+/// The card an action ends on when it fails: what failed, what it means, and the ways forward.
 export function TxFailedCard({
   title = "Couldn't submit",
   message,

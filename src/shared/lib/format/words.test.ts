@@ -28,7 +28,6 @@ describe("amountInWords", () => {
   });
 
   it("is exact past the float range", () => {
-    // 2^64 + 1: a `Number` would round the last digit away.
     expect(amountInWords("18446744073709551617", "WEI")).toBe(
       "Eighteen quintillion four hundred forty-six quadrillion seven hundred forty-four " +
         "trillion seventy-three billion seven hundred nine million five hundred fifty-one " +
@@ -50,7 +49,6 @@ describe("amountInWords", () => {
     expect(amountInWords("1.05", "X")).toBe("One and 05/100 X");
     expect(amountInWords("1.500", "X")).toBe("One and 500/1000 X");
     expect(amountInWords("0.000001", "ETH")).toBe("Zero and 000001/1000000 ETH");
-    // Mid-edit: the dot is typed, the digits are not yet.
     expect(amountInWords("3.", "X")).toBe("Three and 00/100 X");
   });
 

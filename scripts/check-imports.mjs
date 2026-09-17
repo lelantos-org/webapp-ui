@@ -1,27 +1,8 @@
-// Module-boundary checks Biome cannot express.
-//
-// `biome.json` owns the rules on ordinary `import` statements: `shared` and
-// `config` reach into no feature, a feature into no flow, and another module is
-// imported through its barrel (`@/features/x`), never a deep path. What Biome
-// cannot see, and this script checks:
-//
-//   1. Paths in `vi.mock` / `vi.doMock` / `typeof import()` / `import()`. A mock
-//      of a path that no longer exists applies to nothing and raises no error, so
-//      a file move silently turns a mocked test into one running the real module.
-//      Each must resolve, and one reaching another feature must name its barrel —
-//      which a move inside that feature cannot break.
-//   2. A reference that leaves its module uses the `@/` alias. Biome matches
-//      import specifiers as written, so a relative `../../features/x/internal`
-//      would pass it; this keeps every crossing visible to its rules.
-//   3. Flows are leaves reached only through `src/flows/loaders.ts`, and only
-//      dynamically, so each stays its own route chunk.
-//   4. Features import each other without cycles. A cycle through barrels leaves
-//      one side reading `undefined` during module initialisation.
-//
-// Barrels (`features/*/index.ts`) are each feature's public surface. Anything not
-// re-exported there is internal to the feature and can move freely. Within a
-// feature, import modules directly: routing a local import back through the
-// barrel is a cycle.
+// Module-boundary checks Biome cannot express:
+//   1. `vi.mock` / `import()` / `typeof import()` paths resolve, and cross-feature ones name the barrel.
+//   2. References that leave their module use the `@/` alias.
+//   3. Flows are imported only by src/flows/loaders.ts, dynamically.
+//   4. No import cycles between features.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -108,7 +89,6 @@ for (const file of sourceFiles(SRC)) {
     const base = spec.startsWith("@/") ? join(SRC, spec.slice(2)) : resolve(dirname(file), spec);
     const resolved = resolveFile(base);
     if (!resolved) {
-      // tsc reports unresolved imports; a mock or `typeof import` goes stale silently.
       if (kind === "mock" || kind === "typeof") report(where, `${spec} does not resolve`);
       continue;
     }

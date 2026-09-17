@@ -3,19 +3,15 @@ import { cx } from "@/shared/lib/cx";
 import "./ObserverPanel.css";
 
 export interface ObserverPanelProps {
-  /// `full` sits below the Unshield card; `compact` is the section inside the
-  /// review, and the only form phones get.
+  /// `full` sits below the card; `compact` is the review's section, and the only form on phones.
   variant: "full" | "compact";
-  /// The destination as it will appear on-chain, shortened: "0x9E2b…5Aa4".
-  /// `undefined` until the field holds a valid address.
+  /// Shortened; `undefined` until the field holds a valid address.
   destination: string | undefined;
-  /// The gross as published: "500.00 USDC". `undefined` until one is entered.
+  /// The gross as published; `undefined` until one is entered.
   amount: string | undefined;
-  /// The closing line, from `observerOutro`.
   outro: string | undefined;
 }
 
-/// One withheld fact: a label and the bar standing in for its value.
 function Redacted({ label, bar }: { label: string; bar: "a" | "b" | "c" }) {
   return (
     <div className="observer__row">
@@ -35,7 +31,6 @@ function Shown({
 }: {
   label: string;
   value: string | undefined;
-  /// Rule above the row: the line between what is hidden and what is not.
   sep?: boolean;
 }) {
   return (
@@ -46,12 +41,7 @@ function Shown({
   );
 }
 
-/// What an outside observer learns from a withdrawal: two facts in the clear,
-/// everything else behind a bar.
-///
-/// The bars are the one redaction in the app, and they redact from *someone
-/// else*: the user's own figures are never hidden from them. Each bar carries a
-/// screen-reader phrase, since a bar read as nothing would read as a missing row.
+/// What an outside observer learns from a withdrawal: two facts in the clear, the rest behind bars.
 export function ObserverPanel({ variant, destination, amount, outro }: ObserverPanelProps) {
   const titleId = useId();
 

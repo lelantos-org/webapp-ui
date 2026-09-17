@@ -2,8 +2,7 @@ import type { Phase, ProposalState } from "@/features/governance";
 import { cx } from "@/shared/lib/cx";
 import { stateLabel, stateTone } from "../governance-copy";
 
-/// The governor's verdict on a proposal, read from `state()`; "Against only"
-/// beside it once For and Abstain have closed.
+/// The proposal's `state()`, plus "Against only" once For and Abstain have closed.
 export function StateBadge({
   state,
   phase,

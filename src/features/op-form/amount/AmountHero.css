@@ -1,7 +1,5 @@
 @layer components {
-  /* The amount, twice (`AmountHero`): the figure set large and bare, the asset
-     trigger beside it, the same figure in words closed by a rule, and the
-     balance row with Max. */
+  /* AmountHero */
   .amt-hero {
     display: flex;
     flex-direction: column;
@@ -35,7 +33,6 @@
   .amt-hero--md .amt-hero__inp { font-size: 40px; }
   .amt-hero__words {
     margin-top: -4px;
-    /* Holds its line while empty, so the first keystroke moves nothing. */
     min-height: 1.6em;
   }
   .amt-hero__words-txt {
@@ -45,8 +42,7 @@
     transition: background var(--dur-160) var(--ease-soft);
   }
 
-  /* The input is bare, so focus is shown on the cheque line it writes into. The
-     caret marks the field itself. */
+  /* Focus */
   .amt-hero__row:focus-within + .amt-hero__words .amt-hero__rule { background: var(--accent); }
   .amt-hero__bal {
     display: flex;

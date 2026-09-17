@@ -28,9 +28,6 @@ export function VaultRow({ link, amount, chainName, now }: VaultRowProps) {
     <li className="vault-row">
       <div className="vault-row__main">
         <span className="vault-row__amt">{amount}</span>
-        {/* A record with no `txHash` means the transfer may never have gone out.
-            Shown rather than hidden, since the alternative is concealing a link
-            that may be live. */}
         {link.txHash ? null : (
           <span className="vault-tag vault-tag--warn" title="The transfer may not have gone out">
             unconfirmed
@@ -41,7 +38,6 @@ export function VaultRow({ link, amount, chainName, now }: VaultRowProps) {
         {chainName ? <span className="vault-tag">{chainName}</span> : null}
       </div>
       <span className="vault-row__age">{relativeTime(link.createdAt, now)}</span>
-      {/* Two-step delete in a fixed lane, so confirming one row shifts nothing. */}
       <div className="vault-row__actions">
         {confirming ? (
           <>
@@ -62,7 +58,6 @@ export function VaultRow({ link, amount, chainName, now }: VaultRowProps) {
               type="button"
               className="vault-btn vault-btn--strong"
               onClick={copy}
-              // Every row's button reads "Copy"; the amount tells them apart.
               aria-label={`Copy the link for ${amount}`}
             >
               Copy

@@ -1,7 +1,5 @@
 @layer components {
-  /* Details: the collapsed row an action card ends on (`DetailsDisclosure`).
-     "Details" and a chevron on the left, the resolved answer on the right in the
-     mono face, the itemisation underneath. */
+  /* Details */
   .details {
     display: flex;
     flex-direction: column;
@@ -51,7 +49,6 @@
   .details--warn .details__sum,
   .details--warn .details__chev { color: var(--warn); }
 
-  /* Side and bottom padding keep focus rings inside the clip. */
   .details__body {
     display: flex;
     flex-direction: column;

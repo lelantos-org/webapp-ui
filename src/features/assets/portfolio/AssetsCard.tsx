@@ -13,12 +13,7 @@ import { ManageWalletData } from "./ManageWalletData";
 import { usePortfolio } from "./use-portfolio";
 import "./AssetsCard.css";
 
-/// "Your assets": the breakdown under the hero, and the one way into the
-/// wallet-data maintenance modal.
-///
-/// No refresh control: the wallet re-syncs on its own whenever the server has
-/// something new, and a button implying otherwise would be noise. A failed sync
-/// is stated in the hero, with its own retry.
+/// "Your assets": the breakdown under the hero, with the way into wallet-data maintenance.
 export function AssetsCard() {
   const { shielded, rows, assets, byId, prices, gains } = usePortfolio();
   const titleId = useId();
@@ -49,9 +44,6 @@ export function AssetsCard() {
   );
 }
 
-/// First sync still running. Rows cannot appear one by
-/// one — balances exist only once the scan and its spend reconciliation finish —
-/// so the footer says when they will, rather than "as they are found".
 function AssetListSkeleton() {
   return (
     <div className="pf-list" role="status" aria-busy="true" aria-label="Loading your assets">
@@ -73,17 +65,7 @@ function AssetListSkeleton() {
   );
 }
 
-/// Finished, and genuinely nothing held. The only state that offers the action, and it lists what can be
-/// shielded here before asking for a commitment — a first-time user otherwise
-/// gets an empty table and a button.
-///
-/// Registry order, never ranked by rate: a sorted list is a recommendation the
-/// wallet has no basis for.
-///
-/// The call to action follows the deposit capability, as the Shield tile above
-/// it does. A passkey wallet cannot shield, and a filled "Shield an asset" under
-/// a disabled Shield tile would promise the one thing that wallet cannot do; it
-/// gets the ways in it does have instead.
+/// Registry order, never ranked by rate: a sorted list would read as a recommendation.
 function EmptyAssets({ assets }: { assets: readonly RegisteredAsset[] }) {
   const chain = useActiveChain();
   const { capabilities } = useWallet();
@@ -103,7 +85,6 @@ function EmptyAssets({ assets }: { assets: readonly RegisteredAsset[] }) {
               <TokenIcon symbol={a.symbol} address={a.token} className="pf-empty__mark" />
               <span className="pf-empty__sym">
                 {a.symbol}
-                {/* The vault is what tells a plain asset from its earning twin. */}
                 {a.vaultName ? <span className="pf-empty__vault"> · {a.vaultName}</span> : null}
               </span>
               <RateLabelView asset={a} variant="compact" />

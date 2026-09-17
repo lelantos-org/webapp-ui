@@ -1,23 +1,13 @@
 import type { WalletNote } from "@lelantos-org/sdk";
 
-/// Confirmed holdings for one asset: what the wallet has decrypted.
-///
-/// Carries no notion of in-flight value. Including it here would make
-/// `features/wallet` depend on `features/tx` and `features/ops`, which already
-/// depend on the wallet, and would conflate holdings with expected credits. `useBalances`
-/// composes the two.
+/// Confirmed holdings for one asset (no in-flight value; `useBalances` adds that).
 export interface AssetBalance {
   asset: bigint;
   balance: bigint;
   notes: number;
 }
 
-/// One unspent note, as plain data: what a fold over the holdings reads.
-///
-/// Not the SDK's `WalletNote`, whose `notePayload()` method is a fresh function
-/// on every read. React Query's structural sharing keeps a result's identity only
-/// when its contents compare equal, so a note carrying a method would hand every
-/// poll a new array and recompute everything keyed on it.
+/// One unspent note as plain data, so React Query's structural sharing keeps its identity.
 export interface HeldNote {
   asset: bigint;
   value: bigint;

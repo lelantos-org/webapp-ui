@@ -6,7 +6,6 @@ export interface ConnectGateProps {
   onConnect(): void;
 }
 
-/// The button's word while a connection is under way or has failed.
 const BUTTON_LABEL: Partial<Record<WalletStatus, string>> = {
   connecting: "Connecting…",
   "loading-networks": "Loading networks…",
@@ -15,15 +14,7 @@ const BUTTON_LABEL: Partial<Record<WalletStatus, string>> = {
   error: "Try again",
 };
 
-/// The claim page's connect state, without the amount.
-///
-/// The amount waiting is not shown before a wallet connects: the scan needs a
-/// session layer that only exists once one does (`use-claim-flow.ts`), so the
-/// card says what connecting is for and leaves the figure to the next step.
-///
-/// A chain mismatch is not handled here: deriving the destination address needs a
-/// signature but no particular network. `ClaimPage` offers the switch separately,
-/// since only the sweep signs against the link's chain.
+/// The claim page's connect prompt, shown before any amount is known.
 export function ConnectGate({ status, onConnect }: ConnectGateProps) {
   const waiting =
     status === "connecting" ||

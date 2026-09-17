@@ -1,16 +1,3 @@
-// The asset trigger beside an `AmountHero` figure — mark, symbol, chevron — in
-// its two forms.
-//
-// `AssetPill` is a button that opens the area's own picker. `AssetSelectPill` is
-// the same look over a native `<select>`: the asset picker of every spend — Send,
-// Unshield, Swap's two legs, Send by link. Its entries come from
-// `useAssetSelectOptions`.
-//
-// The select is the control, stretched transparent over the pill: the browser
-// supplies the keyboard model, the screen-reader announcement and the phone's
-// own picker sheet, none of which a hand-built listbox would get right for free.
-// The pill underneath only draws the chosen option.
-
 import { type ButtonHTMLAttributes, type ChangeEvent, forwardRef } from "react";
 import type { AssetSelectOption } from "@/features/assets";
 import { cx } from "@/shared/lib/cx";
@@ -22,14 +9,11 @@ export interface AssetPillProps extends Omit<ButtonHTMLAttributes<HTMLButtonElem
   symbol: string | undefined;
   /// Token address, for vendor artwork where the icon registry has it.
   address?: string | undefined;
-  /// Drawn open (chevron flipped) while the picker it controls is showing.
+  /// Drawn open while the picker it controls is showing.
   open?: boolean;
 }
 
-/// The asset trigger beside an `AmountHero` figure: mark, symbol, chevron.
-///
-/// Only the look is shared. Each area owns the picker it opens, because Shield
-/// lists public balances and the spends list shielded ones.
+/// The asset trigger beside an `AmountHero` figure, opening the caller's own picker.
 export const AssetPill = forwardRef<HTMLButtonElement, AssetPillProps>(function AssetPill(
   { symbol, address, open = false, className, ...rest },
   ref,
@@ -54,13 +38,14 @@ export interface AssetSelectPillProps {
   options: readonly AssetSelectOption[];
   value: string;
   onChange(value: string): void;
-  /// Accessible name: "Asset to pay with". The pill has no visible label.
+  /// Accessible name; the pill has no visible label.
   label: string;
   disabled?: boolean;
   invalid?: boolean;
   className?: string;
 }
 
+/// The `AssetPill` look over a transparent native `<select>`.
 export function AssetSelectPill({
   options,
   value,

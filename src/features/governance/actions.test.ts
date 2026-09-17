@@ -1,6 +1,7 @@
 import { evmAddress } from "@lelantos-org/sdk";
 import { encodeFunctionData } from "viem";
 import { describe, expect, it } from "vitest";
+import { hexBytes32 } from "@/test/fixtures/addresses";
 import { feeBurnerActionAbi, govTokenActionAbi } from "./abi";
 import {
   type ActionDraft,
@@ -92,7 +93,6 @@ describe("buildAction / decodeAction", () => {
     const d = decodeAction(r.action, contracts);
     if (d.kind !== "call") throw new Error("expected a call");
     expect(d.contract.id).toBe("feeBurner");
-    // FeeBurner has no registered address, so nothing to compare.
     expect(d.contractMatches).toBeUndefined();
     expect(d.args[0]?.value).toBe(`[${OTHER}, ${TOKEN}]`);
 
@@ -174,7 +174,7 @@ describe("parseArg", () => {
     expect(parseArg("bool", "false")).toBe(false);
     expect(() => parseArg("bool", "yes")).toThrow();
     expect(parseArg("string", " kept as typed ")).toBe(" kept as typed ");
-    const role = `0x${"ab".repeat(32)}`;
+    const role = hexBytes32("ab");
     expect(parseArg("bytes32", role)).toBe(role);
     expect(() => parseArg("bytes32", "0xab")).toThrow(/32 bytes/);
     expect(parseArg("bytes", "0x")).toBe("0x");

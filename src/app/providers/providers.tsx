@@ -7,7 +7,7 @@ import { ChainProvider } from "@/features/chain";
 import { WalletProvider } from "@/features/wallet";
 import { PwaUpdatePrompt } from "./PwaUpdatePrompt";
 import { ROUTER_FUTURE } from "./router-future";
-// Unlayered, unlike every other stylesheet: see the note in toast.css.
+// Unlayered on purpose, unlike every other stylesheet.
 import "./toast.css";
 
 const queryClient = new QueryClient({
@@ -21,9 +21,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        {/* Router above `ChainProvider`, so `RouteErrorBoundary` — which resets
-            on the location — has one available. `ChainProvider` itself reads no
-            route state; the chain comes from the wallet. */}
+        {/* Router must wrap ChainProvider: RouteErrorBoundary resets on location. */}
         <BrowserRouter future={ROUTER_FUTURE}>
           <ChainProvider>
             <WalletProvider>{children}</WalletProvider>

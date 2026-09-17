@@ -1,18 +1,6 @@
-// What names one operation within a transaction.
-//
-// A relayer bundles several operations into one transaction, so the tx hash is
-// not an operation's identity: two of this wallet's own spends can share one.
-// An operation is named instead by its first output commitment, which no other
-// operation can produce. The pending overlay keys by it, and the settled card
-// shows it beside the hash.
-
 import type { TxOperation } from "@/shared/ui/tx-cards/TxSettledCard";
 
-/// What a result says about the operation it describes.
-///
-/// Typed structurally rather than as the SDK's `TransactionResult`: `operation`
-/// arrives with the SDK release that locates bundled operations, and this reads
-/// it wherever it is present without depending on that release's types.
+/// What a result says about its operation. Structural, so `operation` may be absent.
 export interface OperationResult {
   txHash: string;
   commitments: readonly string[];
@@ -27,16 +15,12 @@ export interface PendingOp {
   opId: string;
 }
 
-/// The operation a result describes: its tx hash, and its first commitment as
-/// the id. Falls back to the hash for a result with no outputs, which no spend
-/// or deposit produces.
+/// The operation a result describes: its tx hash, and its first commitment as the id.
 export function pendingOpOf(result: OperationResult): PendingOp {
   return { txHash: result.txHash, opId: result.commitments[0] ?? result.txHash };
 }
 
-/// The settled card's operation row, for an operation that shares its
-/// transaction with others. `undefined` for a lone operation, an unlocated one,
-/// or no result yet — the transaction row already says everything.
+/// The settled card's operation row, or `undefined` unless the tx bundles several operations.
 export function operationOf(result: OperationResult | undefined): TxOperation | undefined {
   const op = result?.operation;
   const commitment = result?.commitments[0];

@@ -15,7 +15,7 @@
   .vault-cap--err .vault-meter__fill,
   .vault-sum--err .vault-meter__fill { background: var(--err); }
 
-  /* The capacity box. Neutral while there is room; the err tone once there is not. */
+  /* Capacity box */
   .vault-cap {
     display: flex;
     flex-direction: column;
@@ -102,7 +102,6 @@
     color: var(--fg-dim);
   }
 
-  /* The UA's own link colours otherwise: nothing in base.css styles a bare <a>. */
   .vault-list__empty a {
     color: var(--accent);
     font-weight: 500;
@@ -151,8 +150,7 @@
     white-space: nowrap;
   }
 
-  /* A fixed lane: the delete confirmation swaps two buttons for two others, and
-     without a reserved width every row below it jumped. */
+  /* Row actions */
   .vault-row__actions {
     display: flex;
     justify-content: flex-end;
@@ -194,7 +192,7 @@
   .vault-tag--warn { border-color: var(--warn); color: var(--warn); }
   .vault-tag--err { border-color: var(--err); color: var(--err); }
 
-  /* The vault as one panel under Send by link. */
+  /* Summary panel */
   .vault-sum {
     display: flex;
     flex-direction: column;
@@ -242,7 +240,6 @@
     .vault-cap__export { width: 100%; }
     .vault-list__hdr { padding: var(--sp-14) var(--sp-16); }
     .vault-list__body { padding: 2px var(--sp-16) var(--sp-16); }
-    /* Amount and age share a line; the two actions take the next one. */
     .vault-row {
       grid-template-columns: minmax(0, 1fr) auto;
       gap: var(--sp-10) var(--sp-12);

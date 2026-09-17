@@ -3,8 +3,7 @@ import { useActiveChain } from "@/features/chain";
 import { decodeAction, knownContracts, type ProposalDetail } from "@/features/governance";
 import { formatDecimal } from "@/shared/lib/format/number";
 
-/// What the proposal executes if it passes, decoded where a known ABI matches
-/// and shown as raw calldata where none does.
+/// What the proposal executes if it passes, decoded where a known ABI matches.
 export function ActionsList({ actions }: { actions: ProposalDetail["actions"] }) {
   const chain = useActiveChain();
   const contracts = useMemo(() => knownContracts(chain), [chain]);

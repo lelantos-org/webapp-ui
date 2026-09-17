@@ -1,9 +1,5 @@
-/* Home balance: the hero figure. The asset list is `AssetsCard.css` and
-   `AssetList.css`. */
-
 @layer features {
-  /* HERO — label, figure, one line. Outside any card: it is the page's answer,
-     not a property of a panel. */
+  /* Hero */
   .pf-hero {
     display: flex;
     flex-direction: column;
@@ -31,12 +27,8 @@
     overflow-wrap: anywhere;
   }
 
-  /* Nothing shielded, or nothing priced: the figure is true but carries nothing
-     to read first. */
   .pf-hero__val--muted { color: var(--fg-mute); }
 
-  /* Cents at the dollars' size, in the muted ink: kept for precision, stepped
-     back so the magnitude reads first. */
   .pf-hero__cents { color: var(--fg-mute); }
   .pf-hero__approx {
     margin-right: 4px;
@@ -54,7 +46,7 @@
   .pf-hero__partial { color: var(--warn); }
   .pf-hero__scan { color: var(--fg-dim); }
 
-  /* Stale, not empty: the last good figure stands, in warn ink, with a retry. */
+  /* Stale */
   .pf-hero__stale {
     display: inline-flex;
     align-items: center;
@@ -67,7 +59,7 @@
     font-size: var(--fs-14);
   }
 
-  /* Counting: two bars where the figure goes, at roughly its height. */
+  /* Skeleton */
   .pf-hero__skel {
     display: flex;
     flex-direction: column;

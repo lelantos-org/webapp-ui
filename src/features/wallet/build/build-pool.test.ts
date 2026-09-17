@@ -1,10 +1,5 @@
-// The pool decides whether a produced value is adopted or disposed, and it is
-// the only thing standing between a superseded wallet build and a leaked pool
-// of wasm-holding workers. Its invariant is to dispose exactly when no caller
-// adopted, and each case below covers one way that can fail.
-
 import { describe, expect, it, vi } from "vitest";
-import { deferred } from "@/test/harness";
+import { deferred } from "@/test/async";
 import { createSharedWorkPool } from "./build-pool";
 
 const take = async () => true;
@@ -39,9 +34,7 @@ describe("createSharedWorkPool", () => {
   });
 
   it("keeps a shared value when one caller declines and another adopts", async () => {
-    // The StrictMode case: the torn-down pass declines, the live pass adopts.
-    // Disposing on "my caller declined" alone frees the value the survivor is
-    // about to use.
+    // StrictMode: the torn-down pass declines, the live pass adopts.
     const dispose = vi.fn();
     const pool = createSharedWorkPool<string>(dispose);
     const work = deferred<string>();
@@ -68,7 +61,6 @@ describe("createSharedWorkPool", () => {
   });
 
   it("does not dispose when the work itself failed", async () => {
-    // Nothing was produced, so there is nothing holding workers.
     const dispose = vi.fn();
     const pool = createSharedWorkPool<string>(dispose);
 
@@ -117,8 +109,6 @@ describe("createSharedWorkPool", () => {
   });
 
   it("disposes a value whose adopter threw while deciding", async () => {
-    // `adopt` doing the deciding means it can also fail. The value still exists
-    // and still holds resources, so it cannot simply be dropped.
     const dispose = vi.fn();
     const pool = createSharedWorkPool<string>(dispose);
 

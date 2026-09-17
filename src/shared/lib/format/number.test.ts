@@ -15,7 +15,6 @@ describe("parseDecimal", () => {
   });
 
   it("pads a short fraction rather than misreading it", () => {
-    // "0.1" at 6dp is 100000, not 1.
     expect(parseDecimal("0.1", 6)).toBe(100_000n);
     expect(parseDecimal("0.000001", 6)).toBe(1n);
   });
@@ -38,7 +37,6 @@ describe("parseDecimal", () => {
 
 describe("formatDecimal", () => {
   it("round-trips with parseDecimal", () => {
-    // Expected values carry the grouping separators formatDecimal adds.
     const cases: ReadonlyArray<readonly [string, number, string]> = [
       ["1.5", 18, "1.5"],
       ["1234.5678", 6, "1,234.5678"],
@@ -67,7 +65,6 @@ describe("formatDecimal", () => {
 
 describe("formatDecimalCompact", () => {
   it("truncates long fractions to six digits", () => {
-    // 0.00293281582168355 ETH — the raw wei balance shown in the deposit hint.
     expect(formatDecimalCompact(2_932_815_821_683_550n, 18)).toBe("0.002932");
     expect(formatDecimalCompact(parseDecimal("1234.56789012", 18), 18)).toBe("1,234.56789");
   });
@@ -94,10 +91,6 @@ describe("formatDecimalCompact", () => {
 
 describe("parseDecimal with no fractional units", () => {
   it("rejects a fraction rather than truncating it", () => {
-    // `decimals` falls back to `scaleToDecimals(scale)`, which is 0 for
-    // `scale === 1n`. Zod only checks the string is decimal-shaped, so "1.9"
-    // reached this and came back as 1n — the user submitted 1 unit instead of
-    // 1.9, with no error anywhere.
     expect(() => parseDecimal("1.9", 0)).toThrow(/no fractional units/);
     expect(() => parseDecimal("1.0", 0)).toThrow(/no fractional units/);
   });

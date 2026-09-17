@@ -13,7 +13,6 @@
     transition: border-color var(--dur-120) var(--ease-soft), color var(--dur-120) var(--ease-soft);
   }
 
-  /* Drawn at 40, hit at 44: the touch floor sizes the target, not the box. */
   .screen-hdr__back::after {
     content: "";
     position: absolute;
@@ -49,7 +48,6 @@
   @media (max-width: 480px) {
     .screen-hdr { gap: var(--sp-12); }
     .screen-hdr__back { width: 38px; height: 38px; }
-    /* 38 + 2×3 keeps the hit area at 44. */
     .screen-hdr__back::after { inset: -3px; }
     .screen-hdr__t { font-size: 22px; }
     .screen-hdr__sub { font-size: var(--fs-13); }

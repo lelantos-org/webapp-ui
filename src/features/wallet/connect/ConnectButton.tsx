@@ -7,16 +7,7 @@ import { AccountMenu } from "./AccountMenu";
 import { accountInitials } from "./account-initials";
 import "./ConnectButton.css";
 
-/// The account control, in whichever state the connection is in.
-///
-/// Connected, it is two elements of which CSS shows one: the account pill on
-/// wider screens (address and a power button) and a 32px avatar on phones,
-/// which opens a small menu holding what the pill and
-/// the theme toggle hold on a desktop. Both stay mounted so a resize never
-/// loses the control under the cursor.
-///
-/// Before that, it is the connect button — which the claim page's gate still
-/// renders — or a word for the step in progress.
+/// The account control: connect button, progress word, or account pill (desktop) and avatar (phone).
 export function ConnectButton() {
   const { status, ethAddress, kind, wallet, connect, disconnect, error } = useWallet();
 
@@ -30,7 +21,6 @@ export function ConnectButton() {
   if (status === "connecting") return <span className="muted">Connecting…</span>;
   if (status === "loading-networks") return <span className="muted">Loading networks…</span>;
   if (status === "deriving") {
-    // The same copy the `Welcome` card shows, from the same place.
     const deriving = kind ? kindAdapter(kind).copy.deriving : undefined;
     return (
       <span className="muted">{deriving ? `${deriving.title} — ${deriving.body}` : null}</span>
@@ -47,8 +37,6 @@ export function ConnectButton() {
     );
   }
 
-  // A passkey has no eth address, so the shielded one identifies the session
-  // instead — `shortAddr(undefined)` would render an empty chip.
   const shielded = wallet?.address ?? "";
   const shown = ethAddress ? shortAddr(ethAddress, 4) : shortAddr(shielded, 8);
   const copyable = ethAddress ?? shielded;

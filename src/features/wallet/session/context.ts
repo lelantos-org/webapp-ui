@@ -6,17 +6,13 @@ import type { WalletCapabilities } from "./capabilities";
 export type WalletStatus =
   | "disconnected"
   | "connecting"
-  /// Connected, fetching the chain registry. Nothing is fetched before a
-  /// connection, so every session passes through this unless a cached registry
-  /// is on hand.
+  /// Connected, fetching the chain registry.
   | "loading-networks"
-  /// Connected, but the wallet's network is not one this deployment serves.
-  /// Blocking: no balance or form would be meaningful on an unknown pool.
+  /// Connected, but on a network this deployment does not serve.
   | "unsupported-chain"
-  /// Awaiting the key derivation: an EIP-712 signature in an injected wallet,
-  /// or a user-verification unlock on a passkey.
+  /// Awaiting the key derivation prompt (EIP-712 signature or passkey unlock).
   | "deriving"
-  /// Rebuilding from a cached nsk in sessionStorage — no prompt.
+  /// Rebuilding from a cached nsk, without a prompt.
   | "resuming"
   | "ready"
   | "error";
@@ -25,12 +21,11 @@ export interface WalletContextValue {
   status: WalletStatus;
   error?: string | undefined;
   wallet?: WalletApi | undefined;
-  /// Which kind of wallet backs this session. Undefined while disconnected.
+  /// Undefined while disconnected.
   kind?: WalletKind | undefined;
-  /// Absent for a passkey session, which holds no public Ethereum account.
+  /// Absent for a passkey session.
   ethAddress?: `0x${string}` | undefined;
-  /// What this wallet may do. Always a full record — all-denied while
-  /// disconnected — so no consumer needs a `?.`.
+  /// What this wallet may do; all-denied while disconnected.
   capabilities: WalletCapabilities;
   connect(): void;
   disconnect(): void;
@@ -38,12 +33,7 @@ export interface WalletContextValue {
 
 export const WalletContext = createContext<WalletContextValue | null>(null);
 
-/// The SDK wallet on its own, apart from the session around it.
-///
-/// Most readers — every query keyed on the wallet, every mutation — read nothing
-/// else, and the full context changes with the connection's status and error
-/// while the wallet does not. Behind its own context they re-render when the
-/// wallet does, not when the session does.
+/// The SDK wallet alone, so its readers do not re-render on session status changes.
 export const WalletInstanceContext = createContext<{ wallet: WalletApi | undefined } | null>(null);
 
 export function useWallet(): WalletContextValue {

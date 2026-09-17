@@ -2,12 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTheme } from "@/shared/hooks/use-theme";
 import "./ConnectButton.css";
 
-/// The phone header's avatar and its menu: copy address, theme, disconnect.
-///
-/// A disclosure of plain buttons rather than an ARIA `menu`: three actions do
-/// not need roving focus, and a `menu` role promises arrow-key behaviour a
-/// screen-reader user would then expect. Escape and a press outside close it,
-/// and Escape returns focus to the avatar so the keyboard is not stranded.
+/// The phone header's avatar and its disclosure menu: copy address, theme, disconnect.
 export function AccountMenu({
   initials,
   shown,
@@ -67,10 +62,7 @@ export function AccountMenu({
           <button type="button" className="link-btn account-menu__item" onClick={run(onCopy)}>
             Copy address
           </button>
-          {/* Mounted only while open, so it reads the theme in force now rather
-              than the one the header's own toggle last set. It leaves the menu
-              open: the new theme is the confirmation, and unmounting the item
-              in the same commit would drop the effect that stamps it. */}
+          {/* Mounted only while open, so it reads the theme in force now. */}
           <ThemeItem />
           <button
             type="button"

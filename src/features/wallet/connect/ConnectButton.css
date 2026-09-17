@@ -1,5 +1,5 @@
 @layer components {
-  /* ACCOUNT PILL — address and a power button, as one control. */
+  /* Account pill */
   .account {
     gap: var(--sp-10);
     padding: 7px var(--sp-8) 7px var(--sp-14);
@@ -28,7 +28,7 @@
   .account__power:hover { color: var(--err); }
   .account__power:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* Avatar menu: phones only. */
+  /* Avatar menu */
   .account-menu {
     position: relative;
     display: none;
@@ -49,7 +49,6 @@
     cursor: pointer;
   }
 
-  /* 32px drawn, 44px pressed. */
   .account-menu__avatar::after {
     content: "";
     position: absolute;
@@ -90,15 +89,13 @@
   .account-menu__item:focus-visible { outline: var(--ring); outline-offset: -2px; }
   .account-menu__item--danger { color: var(--err); }
 
-  /* Phones: see `Layout.css`. */
+  /* Phones */
   @media (max-width: 480px) {
     .account { display: none; }
     .account-menu { display: inline-flex; }
   }
 
-  /* Finger-sized targets keyed on the pointer, not the viewport: the constraint
-     is the fingertip, and a phone-width desktop window should keep the dense
-     bar this header is designed around. */
+  /* Coarse pointers */
   @media (pointer: coarse) {
     .account__power { position: relative; }
     .account__power::after { content: ""; position: absolute; inset: -9px; }

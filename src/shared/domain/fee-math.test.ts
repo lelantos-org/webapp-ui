@@ -13,7 +13,6 @@ describe("feeBreakdown", () => {
   });
 
   it("adds the fee on top for deposits — the payer is debited", () => {
-    // 50 bps of 1e12 == 5e9.
     const f = feeBreakdown({ amount: 1n, scale: SCALE, feeBps: 50n, leg: "deposit" });
     expect(f.fee).toBe(5_000_000_000n);
     expect(f.total).toBe(f.inAmt + f.fee);
@@ -26,11 +25,8 @@ describe("feeBreakdown", () => {
   });
 
   it("truncates the fee, matching Solidity integer division", () => {
-    // 1 * 1 / 10_000 == 0.0001 -> 0
     expect(feeBreakdown({ amount: 1n, scale: 1n, feeBps: 1n, leg: "deposit" }).fee).toBe(0n);
-    // 9999 * 1 / 10_000 -> 0
     expect(feeBreakdown({ amount: 9999n, scale: 1n, feeBps: 1n, leg: "deposit" }).fee).toBe(0n);
-    // 10_000 * 1 / 10_000 -> 1
     expect(feeBreakdown({ amount: 10_000n, scale: 1n, feeBps: 1n, leg: "deposit" }).fee).toBe(1n);
   });
 
@@ -46,12 +42,8 @@ describe("feeBreakdown", () => {
   });
 });
 
-// A yield asset's unit is worth `scale * index / RAY`, not `scale`. This figure
-// sizes the Permit2 window in `flows/shield/use-deposit.ts`, so understating it is not a
-// display bug — the pool pulls more than the window allows and the deposit
-// reverts.
+// Sizes the Permit2 window: understating it makes the deposit revert.
 describe("feeBreakdown on a yield asset", () => {
-  // 1.1 × RAY: the venue has earned 10%.
   const INDEX = (RAY * 11n) / 10n;
 
   it("costs more than the same amount at scale alone", () => {
@@ -73,10 +65,7 @@ describe("feeBreakdown on a yield asset", () => {
     expect(b).toEqual(a);
   });
 
-  // Deposits round up and withdrawals down, so neither direction flatters the
-  // user into a transaction that cannot settle.
   it("rounds a deposit up and a withdrawal down", () => {
-    // An index that does not divide evenly, so the direction is observable.
     const odd = RAY + 1n;
     const dep = feeBreakdown({ amount: 1n, scale: 1n, feeBps: 0n, leg: "deposit", index: odd });
     const wd = feeBreakdown({ amount: 1n, scale: 1n, feeBps: 0n, leg: "withdraw", index: odd });

@@ -1,5 +1,5 @@
 @layer components {
-  /* The asset trigger beside the figure. */
+  /* AssetPill */
   .tokpill {
     flex: none;
     display: inline-flex;
@@ -27,8 +27,7 @@
   }
   .tokpill--open .tokpill__chev { transform: rotate(180deg); }
 
-  /* `AssetSelectPill`: the same pill with a transparent native select stretched
-     over it. The select takes the pointer and the focus, so the pill draws both. */
+  /* AssetSelectPill */
   .tokpill--select { position: relative; }
   .tokpill--select:focus-within { outline: var(--ring); outline-offset: 2px; }
   .tokpill--invalid { border-color: var(--err); }
@@ -42,7 +41,7 @@
     margin: 0;
     opacity: 0;
     cursor: inherit;
-    /* 16px so iOS does not zoom the page when the select takes focus. */
+    /* 16px stops iOS zooming on focus. */
     font-size: var(--fs-16);
     appearance: none;
   }

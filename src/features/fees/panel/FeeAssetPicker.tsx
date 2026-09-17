@@ -1,19 +1,3 @@
-// Which token pays the relayer.
-//
-// A listbox rather than a native `<select>`, because the options differ in what
-// the relay costs in each asset, what this wallet holds of each, and whether the
-// second covers the first. A native option list can carry only a symbol, leaving
-// the figures the decision turns on off screen.
-//
-// Affordable options are selectable; unaffordable ones stay visible, since
-// topping one up is a valid response and a hidden row cannot suggest it.
-//
-// The list is portalled to `<body>` and anchored to the trigger's viewport rect
-// rather than positioned inside its row. The fee panel animates its height
-// through a wrapper carrying `overflow: hidden` (see `FeeSummary`), which clips
-// any descendant reaching past the panel, and this list is taller than the panel
-// by design. See `useAnchoredPopover`.
-
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredPopover } from "@/shared/hooks/use-anchored-popover";
@@ -24,10 +8,12 @@ import { TokenIcon } from "@/shared/ui/icons/TokenIcon";
 import type { FeeAssetChoice, FeeAssetOption } from "../model/fee-block";
 import "./FeeAssetPicker.css";
 
+/// Props for `FeeAssetPicker`.
 export interface FeeAssetPickerProps {
   choice: FeeAssetChoice;
 }
 
+/// Listbox choosing which asset pays the relayer, with each option's cost and balance.
 export function FeeAssetPicker({ choice }: FeeAssetPickerProps) {
   const { options, value, onChange } = choice;
   const listId = useId();
@@ -44,9 +30,6 @@ export function FeeAssetPicker({ choice }: FeeAssetPickerProps) {
 
   const selectedIndex = options.findIndex((o) => o.id === value);
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
-  // Where the keyboard is, which is distinct from the selection: arrowing
-  // through the list passes over options — including unaffordable ones, so they
-  // are announced — before committing to any.
   const [active, setActive] = useState(0);
 
   const openList = () => {
@@ -65,8 +48,6 @@ export function FeeAssetPicker({ choice }: FeeAssetPickerProps) {
     close();
   };
 
-  // Opening from the button moves focus to the list, so the arrow keys act on it
-  // without a second press.
   useEffect(() => {
     if (open) listRef.current?.focus();
   }, [open]);
@@ -95,8 +76,6 @@ export function FeeAssetPicker({ choice }: FeeAssetPickerProps) {
       case "Escape":
         close();
         break;
-      // Leaving the popover dismisses it, and Tab is already moving focus, so
-      // neither refocus nor `preventDefault` applies.
       case "Tab":
         close(false);
         return;
@@ -155,6 +134,7 @@ export function FeeAssetPicker({ choice }: FeeAssetPickerProps) {
         <ChevronDownSmallGlyph className="feepick__chev" />
       </button>
 
+      {/* Portalled: the fee panel's `overflow: hidden` wrapper would clip the list. */}
       {open && typeof document !== "undefined" ? createPortal(list, document.body) : null}
     </div>
   );
@@ -164,13 +144,11 @@ interface FeeAssetOptionRowProps {
   id: string;
   option: FeeAssetOption;
   selected: boolean;
-  /// Where the keyboard is, which is not focus; see the note on the element.
   active: boolean;
   onHover(): void;
   onPick(): void;
 }
 
-/// One asset, its price, and whether this wallet can cover it.
 function FeeAssetOptionRow({
   id,
   option: o,
@@ -180,9 +158,6 @@ function FeeAssetOptionRow({
   onPick,
 }: FeeAssetOptionRowProps) {
   return (
-    // The listbox pattern: the container holds focus and points at the current
-    // row with `aria-activedescendant`, so an option is neither focusable nor
-    // separately key-handled. Both rules below assume roving tabindex instead.
     // biome-ignore lint/a11y/useFocusableInteractive: focus stays on the listbox by design
     // biome-ignore lint/a11y/useKeyWithClickEvents: keys are handled once, on the listbox
     <div
@@ -204,7 +179,6 @@ function FeeAssetOptionRow({
         <span className="feepick__optsym">{o.symbol}</span>
         <span className="feepick__bal">
           {o.balance === undefined ? (
-            // Still being read: a zero here would read as an empty wallet.
             <>balance …</>
           ) : o.affordable ? (
             <>balance {formatAssetCompact(o.balance, o)}</>

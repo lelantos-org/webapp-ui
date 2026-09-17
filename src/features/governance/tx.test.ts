@@ -1,6 +1,7 @@
 import { evmAddress, type Hex32 } from "@lelantos-org/sdk";
 import { encodeErrorResult, type TransactionReceipt } from "viem";
 import { describe, expect, it, vi } from "vitest";
+import { hexBytes32 } from "@/test/fixtures/addresses";
 import { governorAbi } from "./abi";
 import {
   GovernanceTxError,
@@ -12,7 +13,7 @@ import {
 
 const GOVERNOR = evmAddress("0x5555555555555555555555555555555555555555");
 const ME = evmAddress("0x1111111111111111111111111111111111111111");
-const HASH = `0x${"cd".repeat(32)}` as const;
+const HASH = hexBytes32("cd");
 
 const quorumVoteClosed = encodeErrorResult({
   abi: governorAbi,
@@ -100,7 +101,6 @@ describe("sendGovernanceTx", () => {
     });
   });
 
-  // The wallet is never asked to approve a vote the governor will refuse.
   it("stops before the wallet when the simulation hits a known refusal", async () => {
     const d = deps({
       call: vi.fn(async () => Promise.reject(viemRevert(quorumVoteClosed))) as never,
@@ -117,7 +117,6 @@ describe("sendGovernanceTx", () => {
     expect(d.signer.sendTransaction).not.toHaveBeenCalled();
   });
 
-  // A read proxy refusing the call is not the governor refusing the vote.
   it("sends anyway when the simulation fails without revert data", async () => {
     const d = deps({ call: vi.fn(async () => Promise.reject(new Error("403"))) as never });
     await sendGovernanceTx(d, req);

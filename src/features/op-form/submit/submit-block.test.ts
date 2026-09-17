@@ -1,7 +1,3 @@
-// @vitest-environment jsdom
-// The questions every form's submit button asks, stated once. Each form's own
-// test keeps only its extra questions and the order it asks them in.
-
 import { describe, expect, it } from "vitest";
 import { type FeeBlock, feeBlockReason } from "@/features/fees";
 import { amountBlock, blockedBy, feeBlockTail, walletReadinessBlock } from "./submit-block";
@@ -29,8 +25,6 @@ describe("walletReadinessBlock", () => {
   });
 
   it("holds the form while the first sync is still counting", () => {
-    // Before this, the validator compared against an empty balance set and said
-    // "More than you hold" — which reads as an empty wallet, not an unfinished one.
     expect(walletReadinessBlock("sending", { ...ready, balancesLoading: true })?.reason).toBe(
       "Still adding up your balance",
     );

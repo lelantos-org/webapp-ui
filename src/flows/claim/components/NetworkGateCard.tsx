@@ -4,12 +4,7 @@ import { ArrowRightGlyph } from "@/shared/ui/icons/glyphs";
 import type { ChainMismatch } from "../chain-guard";
 import "./claim-cards.css";
 
-/// The stop between connect and scan: the wallet is on a chain where the link's
-/// notes do not exist.
-///
-/// A warning rather than an error: nothing has failed and the link is still
-/// valid. One remedy, named after where the funds are rather than after the
-/// mistake — "These funds live on Base", not "Wrong network".
+/// Warning that the wallet is not on the link's chain, with a switch button.
 export function NetworkGateCard({ mismatch }: { mismatch: ChainMismatch }) {
   const switchChain = useSwitchChain();
   const { link, walletChainId, walletLabel } = mismatch;

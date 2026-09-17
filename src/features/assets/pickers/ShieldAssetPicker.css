@@ -1,8 +1,5 @@
 @layer features {
-  /* `ShieldAssetPicker`: every asset the pool accepts, what the public wallet
-     holds of each, and each venue's rate. The chosen row carries the accent. The
-     footnote box under the list is what makes the rate column honest, so it is
-     part of the screen, not a tooltip. */
+  /* Shield asset picker */
   .apick {
     display: flex;
     flex-direction: column;
@@ -85,7 +82,6 @@
     color: var(--fg-mute);
   }
 
-  /* The chosen mark. Always in the grid, so choosing a row does not shift it. */
   .apick__check {
     display: inline-grid;
     place-items: center;

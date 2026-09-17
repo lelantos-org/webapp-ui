@@ -1,5 +1,4 @@
-/// Joins conditional class names: `cx("a", cond && "b")`. Falsy parts drop out,
-/// which keeps a multi-modifier `className` readable as a list.
+/// Joins conditional class names: `cx("a", cond && "b")`.
 export function cx(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(" ");
 }

@@ -1,6 +1,4 @@
-// The governance route chunk: the three screens under `/governance`, loaded
-// together through `loadGovernance` since a visit to one nearly always moves to
-// another.
+// The `/governance` screens, lazy-loaded as one chunk through `loadGovernance`.
 
 export { CreateProposalPage } from "./CreateProposalPage";
 export { ProposalDetailPage } from "./ProposalDetailPage";

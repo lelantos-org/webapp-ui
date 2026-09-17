@@ -1,7 +1,5 @@
 @layer features {
-  /* In flight, settled, failed: the cards `ActionForm` shows in place of the
-     fields while an op runs and after it ends (`TxProgressCard`, `TxSettledCard`,
-     `TxFailedCard`). */
+  /* Tx cards */
   .txcard {
     gap: var(--sp-20);
   }

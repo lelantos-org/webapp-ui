@@ -1,14 +1,3 @@
-// The "You receive" leg of the swap: the quote and the asset it is in, as one
-// panel mirroring "You pay" above it.
-//
-// The figure is the quote's `credit`, not the venue's `expectedOut`. The swap
-// encodes exactly this as the deposit leg's `publicIn`, and both the leg-2
-// protocol fee and the relayer's flush note come out of it, so `minOut / scale`
-// overstates the credit by both. It is a fixed amount rather than a floor: a
-// better fill goes to the treasury as dust, never to the wallet. Hence a
-// sub-line that promises no upside — "exactly this, or the trade reverts" —
-// never "at least".
-
 import type { SwapQuote } from "@lelantos-org/sdk";
 import { type ReactNode, useId } from "react";
 import type { RegisteredAsset } from "@/config/chains";
@@ -21,18 +10,17 @@ import "../swap.css";
 
 export interface ReceiveLegProps {
   outAsset: RegisteredAsset | undefined;
-  /// The out-asset trigger, beside the figure.
   picker: ReactNode;
   quote: SwapQuote | undefined;
   ageSecs: number | undefined;
   stale: boolean;
   onRefresh(): void;
   refreshing: boolean;
-  /// A request is in flight or the debounce is catching up.
   quoting: boolean;
   error: Error | null;
 }
 
+/// The "You receive" leg: the quote's exact credit (not `expectedOut`), venue and age.
 export function ReceiveLeg({
   outAsset,
   picker,
@@ -47,8 +35,6 @@ export function ReceiveLeg({
   const labelId = useId();
   const prices = usePrices();
 
-  // Only against the quote's own out asset: the pair may have moved on while a
-  // refetch for the new one is in flight.
   const received = quote && outAsset?.id === quote.assetOut.id ? quote.credit.amount : undefined;
   const usd = received !== undefined && outAsset ? assetUsd(received, outAsset, prices) : undefined;
 

@@ -1,7 +1,3 @@
-// The step list is a promise about wallet prompts: one step per prompt the user
-// should expect, in order, and a terminal phase that closes the stepper only once
-// the op is actually over.
-
 import { describe, expect, it } from "vitest";
 import type { OpKind } from "@/shared/domain/op-kind";
 import { isDepositSteps, isTerminal, stepsFor, terminalOf } from "./tx-progress";
@@ -27,8 +23,6 @@ describe("stepsFor", () => {
     ]);
   });
 
-  // Neither path has a per-deposit prompt before the send: native ETH is one
-  // payable tx, and an AllowanceTransfer window already covers the pull.
   it("drops the approval and the signature on the native and allowance paths", () => {
     const tail = ["submitting", "broadcast", "mined"];
     expect(ids("deposit", { asEth: true, needsApproval: true })).toEqual(tail);
@@ -60,7 +54,6 @@ describe("isDepositSteps", () => {
 });
 
 describe("terminalOf", () => {
-  // A deposit's last step stays current until the relayer flushes it.
   it("closes a deposit on the flush and every spend on inclusion", () => {
     for (const opts of [
       {},
@@ -84,8 +77,6 @@ describe("isTerminal", () => {
     }
   });
 
-  // `mined` closes a spend's card through `terminalOf`, not here: on a deposit
-  // it is the wait for the relayer.
   it("keeps every in-flight phase running", () => {
     for (const phase of [
       "wrapping",

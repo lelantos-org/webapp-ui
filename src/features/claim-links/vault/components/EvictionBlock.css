@@ -1,5 +1,5 @@
 @layer features {
-  /* The eviction block's two ways out. */
+  /* Eviction actions */
   .evict__actions {
     display: inline-flex;
     flex-wrap: wrap;

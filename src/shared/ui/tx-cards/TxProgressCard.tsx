@@ -1,16 +1,3 @@
-// The card shown in place of an action's fields while its transaction is in
-// flight.
-//
-// Proving takes twenty to forty seconds on most machines, and a bare stepper
-// under a still-editable form would make that wait read as a hang — or as an
-// invitation to change the amount mid-proof. The fields go away while the op runs, and this
-// says what is happening instead: a title, the amount, a bar, and the steps
-// with the current one explained.
-//
-// Presentation only. What the steps say, the estimate in the sub-line and the
-// walk-away note are decided by the op (`features/tx`: `stepsFor`, `useProveEta`,
-// `walkAwayNote`), because only the op knows what is true at each stage.
-
 import type { ReactNode } from "react";
 import { cx } from "@/shared/lib/cx";
 import { ArcGlyph, CheckGlyph, CrossGlyph, InfoGlyph } from "@/shared/ui/icons/glyphs";
@@ -39,8 +26,7 @@ export interface TxProgressCardProps {
   current?: string | undefined;
   /// Every step is done.
   done?: boolean;
-  /// The walk-away note under the steps. Omit rather than promise something the
-  /// op cannot keep.
+  /// The walk-away note under the steps. Omit rather than promise something the op cannot keep.
   note?: ReactNode;
   /// A trailing control, such as a link home once the proof is handed off.
   action?: ReactNode;
@@ -53,8 +39,7 @@ function labelFor(s: TxProgressStep, state: StepState): string {
   return s.label;
 }
 
-/// How far along the bar is: half a step into the current one, so the bar moves
-/// the moment a step starts rather than only when it ends.
+/// Bar progress: half a step into the current one, so it moves as a step starts.
 function fraction(count: number, currentIdx: number, done: boolean): number {
   if (count === 0) return 0;
   if (done) return 1;
@@ -62,6 +47,7 @@ function fraction(count: number, currentIdx: number, done: boolean): number {
   return Math.min(1, (currentIdx + 0.5) / count);
 }
 
+/// The card shown in place of an action's fields while its transaction is in flight.
 export function TxProgressCard({
   title,
   subtitle,
@@ -73,7 +59,6 @@ export function TxProgressCard({
 }: TxProgressCardProps) {
   const currentIdx = current ? steps.findIndex((s) => s.id === current) : -1;
   const pct = Math.round(fraction(steps.length, currentIdx, done) * 100);
-  // `done` completes every step, the current one included.
   const states = done ? steps.map((): StepState => "done") : stepStates(steps.length, currentIdx);
   const active = currentIdx === -1 ? undefined : steps[currentIdx];
   const activeText = active ? labelFor(active, states[currentIdx] ?? "current") : undefined;
@@ -129,8 +114,6 @@ export function TxProgressCard({
           })}
         </ol>
       ) : null}
-      {/* The list is a picture — marks are hidden and state lives in class
-          names — so one sentence names the active step, as `Stepper` does. */}
       <p className="sr-only" role="status" aria-live="polite">
         {active ? `Step ${currentIdx + 1} of ${steps.length}: ${activeText}` : ""}
       </p>

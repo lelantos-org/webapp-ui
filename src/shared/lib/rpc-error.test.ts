@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { hasRpcCode, rpcErrorChain, rpcErrorMessage } from "./rpc-error";
 
-/// The shape MetaMask and Rabby actually send, via the `rpc-errors` package.
 const wrapped = {
   code: -32603,
   message: "Internal JSON-RPC error.",
@@ -41,15 +40,12 @@ describe("hasRpcCode", () => {
 
   it("does not treat a missing code as a match", () => {
     expect(hasRpcCode({ message: "nope" }, 4001)).toBe(false);
-    // `Number(undefined)` is NaN and `Number(null)` is 0 — neither may sneak in.
     expect(hasRpcCode({ code: null }, 0)).toBe(false);
   });
 });
 
 describe("rpcErrorMessage", () => {
   it("prefers the innermost message over the generic wrapper", () => {
-    // "Internal JSON-RPC error." is the outer wrapper's text; the line worth
-    // showing is one level down.
     expect(rpcErrorMessage(wrapped)).toBe("User rejected the request.");
   });
 

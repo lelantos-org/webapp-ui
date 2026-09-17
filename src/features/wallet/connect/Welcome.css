@@ -1,6 +1,5 @@
 @layer features {
-  /* Welcome: the pitch on the left, the wallet card on the right; stacked on
-     narrow screens with the card after the pitch. */
+  /* Welcome */
   .welcome {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 400px;
@@ -86,7 +85,7 @@
   .welcome__points li > span { font-size: var(--fs-14); color: var(--fg-mute); }
   .welcome__point-mark { margin-right: 6px; }
 
-  /* THE WALLET CARD — the picker itself, or whatever the connection is doing. */
+  /* Wallet card */
   .welcome__card {
     display: flex;
     flex-direction: column;
@@ -104,8 +103,7 @@
     color: var(--fg);
   }
 
-  /* A state's title in its tone: text only. Not `.warn` (loses to the colour
-     above) or `.err` (the boxed error panel, border and all). */
+  /* Card title tones */
   .welcome__card-t--warn { color: var(--warn); }
   .welcome__card-t--err { color: var(--err); }
   .welcome__card-sub {

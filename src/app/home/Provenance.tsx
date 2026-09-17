@@ -1,20 +1,6 @@
 import { useId } from "react";
 
-/// What the figures on this page rest on, in place of a padlock.
-///
-/// Said without the vocabulary — no "viewing key", no "decrypted", no "decoys".
-/// This is the first thing a first-time holder reads about why the numbers can
-/// be trusted, and a claim they have to look up is not one they can weigh.
-///
-/// Only what the page can stand behind. Never "checked against block N": the
-/// sync watermark the wallet reads carries no block number, and a legend of what
-/// you can verify is the last place to print one we did not check.
-///
-/// Never "no server was asked what you hold", for the same reason. A subscribed
-/// wallet registers an FMD detection key, and the discovery service answers with
-/// a match set that holds this account's notes among decoys (`DECOY_FLOOR` in
-/// `fmd-subscription.ts`). It is asked, and it learns a superset; what it cannot
-/// do is tell which notes are yours or read an amount.
+/// Plain-language note on where the balances come from. Claim only what is true: servers do see a decoy superset.
 export function Provenance() {
   const titleId = useId();
   return (

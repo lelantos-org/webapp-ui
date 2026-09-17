@@ -1,17 +1,3 @@
-// Step model for the tx progress card.
-//
-// Each shielded op declares an ordered list of phases. The form renders them as
-// the steps of `TxProgressCard`, and the mutation hook and lifecycle tracker
-// advance the `phase` field as work proceeds. Phases that do not apply to an op —
-// `approving` on a deposit whose token is already approved, say — are omitted from
-// the list rather than hidden, so the step count matches the number of wallet
-// prompts to expect.
-//
-// The copy lives here, beside the phases it describes, rather than in the form:
-// `submitting` and `mined` mean different things on a deposit (the user's wallet
-// sends it; the relayer later adds it to the pool) and on a spend (the relayer
-// sends it; a block includes it), and only the step list knows which op it is.
-
 import type { OpKind } from "@/shared/domain/op-kind";
 
 export type TxPhase =
@@ -26,43 +12,31 @@ export type TxPhase =
   | "flushed"
   | "settled"
   | "failed"
-  /// The lifecycle stopped without learning the outcome: the adapter cannot read
-  /// receipts, or a timeout fired. Terminal, so the stepper stops spinning, but
-  /// distinct from `failed` — the tx may have succeeded, and the accompanying
-  /// toast links to the explorer.
+  /// Outcome unobserved (no receipts, or timed out). Terminal, but the tx may have succeeded.
   | "unknown";
 
 export interface Step {
   id: TxPhase;
-  /// The step as a plan, before it starts: "Build the zero-knowledge proof". Also
-  /// the only label a caller that knows nothing of the other two reads.
+  /// The step as a plan, before it starts; the fallback label.
   label: string;
   /// While it runs: "Building the zero-knowledge proof".
   activeLabel?: string;
   /// Once it is behind the user: "Built the zero-knowledge proof".
   doneLabel?: string;
-  /// One sentence under the label while the step is current, where the wait
-  /// needs explaining.
+  /// One sentence under the label while the step is current.
   detail?: string;
 }
 
 export interface StepsOpts {
   asEth?: boolean;
   needsApproval?: boolean;
-  /// AllowanceTransfer-mode deposit. The allowance window covers the pull, so no
-  /// per-deposit Permit2 signature is needed and the stepper drops `signing`.
-  /// Setup itself runs in the standalone SetupFlow modal, never inline.
+  /// AllowanceTransfer-mode deposit: no per-deposit Permit2 signature, so no `signing` step.
   allowanceTransfer?: boolean;
 }
 
 type StepCopy = Omit<Step, "id">;
 
-/// A note-spending op: transfer, withdraw, swap. The relayer, not the user's
-/// account, puts these on-chain — which is why handing off is the step that
-/// ends the tab's part in it.
-///
-/// "Funds", never "notes": the labels are read by someone watching a transfer,
-/// and the split of a balance into notes is the wallet's business, not theirs.
+/// Copy for a note-spending op. Say "funds", never "notes".
 const SPEND = {
   preparing: {
     label: "Pick the funds to spend",
@@ -89,8 +63,7 @@ const SPEND = {
   },
 } satisfies Partial<Record<TxPhase, StepCopy>>;
 
-/// A deposit: the user's own wallet sends it, and the relayer adds it to the
-/// pool in a later batch.
+/// Copy for a deposit.
 const DEPOSIT = {
   approving: {
     label: "Approve the token once",
@@ -125,41 +98,23 @@ const DEPOSIT = {
 
 export function stepsFor(kind: OpKind, opts: StepsOpts = {}): Step[] {
   if (kind !== "deposit") {
-    // The card terminates at `mined`, when block inclusion is confirmed.
-    // `settled` (scanner catch-up) is tracked downstream for pending overlays
-    // and balance refresh but is not shown here. Swap shares this shape, since
-    // its leg-1 is a transact proof like withdraw and the relayer carries leg 2.
     return (["preparing", "proving", "submitting", "mined"] as const).map((id) => ({
       id,
       ...SPEND[id],
     }));
   }
-  // Deposit. Phase mapping:
-  //   submitting → wallet prompt open
-  //   broadcast  → signed and sent, awaiting a block
-  //   mined      → included, awaiting the relayer's flush
-  //   flushed    → terminal (`terminalOf`), so the last step completes only
-  //                once the relayer has flushed.
   const tail = (["submitting", "broadcast", "mined"] as const).map((id) => ({
     id,
     ...DEPOSIT[id],
   }));
-  // Native-ETH path: a single payable tx, no Permit2. AllowanceTransfer path:
-  // the pre-signed window covers the pull, so neither an approval nor a
-  // per-deposit signature is needed.
   if (opts.asEth || opts.allowanceTransfer) return tail;
-  // Witness path: per-deposit Permit2 signature, plus a first-time approve.
   const out: Step[] = [];
   if (opts.needsApproval) out.push({ id: "approving", ...DEPOSIT.approving });
   out.push({ id: "signing", ...DEPOSIT.signing }, ...tail);
   return out;
 }
 
-/// Whether a step list describes a deposit rather than a spend.
-///
-/// Read off the list rather than threaded through as a kind: the list is what
-/// the form already holds, and `broadcast` appears only where the user's own
-/// wallet sends the transaction.
+/// Whether a step list describes a deposit: only deposits have `broadcast`.
 export function isDepositSteps(steps: readonly Pick<Step, "id">[]): boolean {
   return steps.some((s) => s.id === "broadcast");
 }
@@ -168,12 +123,7 @@ export function isTerminal(phase: TxPhase | undefined): boolean {
   return phase === "flushed" || phase === "settled" || phase === "failed" || phase === "unknown";
 }
 
-/// Phase that closes out the stepper for a step list.
-///
-/// For a deposit the last step (`mined`) is not terminal: it stays current until
-/// the relayer flushes, which `flushed` then closes. For the spend ops the
-/// user-visible terminal is their last step, `mined`, so the form completes
-/// without waiting for scanner catch-up.
+/// Phase that closes the stepper: `flushed` for a deposit, else the last step.
 export function terminalOf(steps: readonly Pick<Step, "id">[]): TxPhase | undefined {
   return isDepositSteps(steps) ? "flushed" : steps[steps.length - 1]?.id;
 }

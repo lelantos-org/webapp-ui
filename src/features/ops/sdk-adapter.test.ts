@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { circuitAmount, evmAddress } from "@lelantos-org/sdk";
 import { describe, expect, it, vi } from "vitest";
 import type { TxPhase } from "@/features/tx";
@@ -15,7 +14,6 @@ function fakeWallet() {
   return fakeWalletApi({ deposit, transfer, withdraw, swap });
 }
 
-/// The options object the SDK method received on its last call.
 function lastArgs(fn: unknown): Record<string, unknown> {
   return (fn as ReturnType<typeof vi.fn>).mock.lastCall?.[0];
 }

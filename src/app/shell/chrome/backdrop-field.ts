@@ -1,26 +1,14 @@
-// Simulation behind `<Backdrop />`: a drifting field of nodes wired to their
-// near neighbours, with periodic expanding pulses.
-//
-// Contains no React, DOM or `requestAnimationFrame` bindings. The component
-// schedules frames; this module defines their contents. `advance` depends only
-// on `dt` and the injected RNG, so a field can be driven deterministically
-// without a canvas or a timer.
-
 import { type FieldPalette, TIERS } from "./backdrop-palette";
 
-/// One drifting node.
 interface Node {
   x: number;
   y: number;
-  /// Heading in radians; speed is constant, only the heading curls.
+  /// Heading, radians.
   a: number;
-  /// Per-node phase, so the curl does not synchronise across the field.
   phase: number;
-  /// Dot radius.
   r: number;
 }
 
-/// An expanding ring, retired once `t` reaches 1.
 interface Pulse {
   x: number;
   y: number;
@@ -32,35 +20,26 @@ interface Pulse {
 const NODE_AREA = 40_000;
 export const MAX_NODES = 56;
 const MIN_NODES = 24;
-/// Nodes closer than this are joined by a link.
 const LINK_DIST = 150;
 const LINK_DIST_SQ = LINK_DIST * LINK_DIST;
 /// px per ms.
 const SPEED = 0.05;
-/// Radians per ms of heading drift.
+/// Heading drift, radians per ms.
 const CURL = 0.00022;
-/// Radians per ms of curl-phase advance.
 const CURL_PHASE = 0.0004;
-/// Upper bound on a frame delta, so a stalled frame cannot displace nodes far.
 const MAX_DT = 48;
 const PULSE_EVERY_MS = 2600;
 const PULSE_MS = 1600;
 const PULSE_R = 46;
-/// px of pointer-follow at the field's edge.
+/// Max pointer-follow offset, px.
 const PARALLAX = 14;
-/// Per-ms approach rate toward the pointer target.
 const PARALLAX_EASE = 0.0035;
 
-/// Node count for a viewport, scaled by area and bounded at both ends.
 function nodeCountFor(w: number, h: number): number {
   return Math.max(MIN_NODES, Math.min(MAX_NODES, Math.round((w * h) / NODE_AREA)));
 }
 
-/// Subset of the 2D context used by `draw`; the surface a stub must provide.
-///
-/// Picked from `CanvasRenderingContext2D` rather than restated: `strokeStyle`
-/// and `fillStyle` are mutable, so TypeScript compares them invariantly and a
-/// declaration narrowing them to `string` is not assignable.
+/// The 2D context surface `draw` uses; a test stub must provide it.
 export type FieldContext = Pick<
   CanvasRenderingContext2D,
   | "clearRect"
@@ -78,6 +57,7 @@ export type FieldContext = Pick<
   | "lineWidth"
 >;
 
+/// Canvas-free simulation of the backdrop: drifting linked nodes and pulses. Deterministic given `random`.
 export class BackdropField {
   private nodes: Node[] = [];
   private pulses: Pulse[] = [];
@@ -85,15 +65,12 @@ export class BackdropField {
   private h = 0;
   private sincePulse = 0;
 
-  /// Eased parallax offset, and the target it approaches.
   private px = 0;
   private py = 0;
   private targetX = 0;
   private targetY = 0;
 
-  /// Scratch buffers for one frame of links, sized for the node cap and
-  /// allocated once. The neighbour sweep fills them; the draw pass replays them
-  /// per tier. Holds a frame to a single O(n²) pass with no allocation.
+  // Preallocated link buffers: the draw path must not allocate.
   private readonly linkXY = new Float32Array(((MAX_NODES * (MAX_NODES - 1)) / 2) * 4);
   private readonly linkTier = new Uint8Array((MAX_NODES * (MAX_NODES - 1)) / 2);
   private linkCount = 0;
@@ -103,20 +80,15 @@ export class BackdropField {
     private readonly random: () => number = Math.random,
   ) {}
 
-  /// Live node count.
   get size(): number {
     return this.nodes.length;
   }
 
-  /// Rings currently animating.
   get pulseCount(): number {
     return this.pulses.length;
   }
 
-  /// Fit the field to a new viewport.
-  ///
-  /// Rescales existing nodes and adjusts the count rather than reseeding, so a
-  /// resize does not reshuffle the field.
+  /// Fit to a new viewport, rescaling existing nodes rather than reseeding.
   resize(w: number, h: number): void {
     const prevW = this.w;
     const prevH = this.h;
@@ -140,25 +112,19 @@ export class BackdropField {
     if (this.nodes.length > want) this.nodes.length = want;
   }
 
-  /// Point the parallax at a viewport coordinate. The field eases toward it.
   aimAt(clientX: number, clientY: number): void {
     if (this.w === 0 || this.h === 0) return;
     this.targetX = (clientX / this.w - 0.5) * -2 * PARALLAX;
     this.targetY = (clientY / this.h - 0.5) * -2 * PARALLAX;
   }
 
-  /// Advance by `dtMs`, clamped to `MAX_DT` so a resume after a long pause
-  /// cannot displace the field by an arbitrary distance.
+  /// Advance by `dtMs`, clamped to `MAX_DT`.
   advance(dtMs: number): void {
     const dt = Math.min(MAX_DT, dtMs);
     if (dt <= 0) return;
 
-    // Nodes wrap one link-distance outside the viewport, so a link never
-    // appears at the edge with one end already on screen.
     const wrap = LINK_DIST;
     for (const n of this.nodes) {
-      // Curling the heading rather than reflecting at the edges keeps motion
-      // continuous and avoids a node reversing in place.
       n.phase += dt * CURL_PHASE;
       n.a += Math.sin(n.phase) * CURL * dt;
       n.x += Math.cos(n.a) * SPEED * dt;
@@ -169,8 +135,6 @@ export class BackdropField {
       else if (n.y > this.h + wrap) n.y = -wrap;
     }
 
-    // Exponential approach: frame-rate independent, so the motion matches at
-    // 30, 60 and 120Hz.
     const k = 1 - Math.exp(-PARALLAX_EASE * dt);
     this.px += (this.targetX - this.px) * k;
     this.py += (this.targetY - this.py) * k;
@@ -178,7 +142,6 @@ export class BackdropField {
     this.sincePulse += dt;
     if (this.sincePulse >= PULSE_EVERY_MS && this.nodes.length > 0) {
       this.sincePulse = 0;
-      // An injected RNG may return 1, which would index one past the end.
       const n = this.nodes[Math.floor(this.random() * this.nodes.length)];
       if (n) this.pulses.push({ x: n.x, y: n.y, t: 0 });
     }
@@ -212,11 +175,9 @@ export class BackdropField {
     };
   }
 
-  /// Single O(n²) neighbour pass into the scratch buffers.
   private sweepLinks(): void {
     this.linkCount = 0;
     for (let i = 0; i < this.nodes.length; i++) {
-      // Both indices are bounded by `nodes.length`, so both reads hit a node.
       const a = this.nodes[i]!;
       for (let j = i + 1; j < this.nodes.length; j++) {
         const b = this.nodes[j]!;
@@ -236,7 +197,6 @@ export class BackdropField {
     }
   }
 
-  /// One batched path per alpha tier, rather than one stroke per link.
   private strokeLinks(ctx: FieldContext): void {
     ctx.lineWidth = 1;
     for (let tier = 0; tier < TIERS; tier++) {
@@ -247,20 +207,17 @@ export class BackdropField {
           ctx.beginPath();
           opened = true;
         }
-        // `k < linkCount`, and `sweepLinks` wrote four coordinates per link.
         const o = k * 4;
         ctx.moveTo(this.linkXY[o]!, this.linkXY[o + 1]!);
         ctx.lineTo(this.linkXY[o + 2]!, this.linkXY[o + 3]!);
       }
       if (opened) {
-        // `buildPalette` builds `TIERS` entries and `tier < TIERS`.
         ctx.strokeStyle = this.palette.link[tier]!;
         ctx.stroke();
       }
     }
   }
 
-  /// All dots in a single path; they share one alpha.
   private fillNodes(ctx: FieldContext): void {
     ctx.fillStyle = this.palette.node;
     ctx.beginPath();
@@ -274,13 +231,9 @@ export class BackdropField {
   private strokePulses(ctx: FieldContext): void {
     ctx.lineWidth = 1.2;
     for (const p of this.pulses) {
-      // Ease-out radius against ease-in alpha, so the ring dissolves rather
-      // than disappearing at full size.
       const alpha = (1 - p.t) ** 2;
       if (alpha <= 0) continue;
       const grow = 1 - (1 - p.t) ** 3;
-      // `alpha > 0` here, so `tierOf` answers within `0..TIERS-1` — inside
-      // `buildPalette`'s ramp.
       ctx.strokeStyle = this.palette.pulse[tierOf(alpha)]!;
       ctx.beginPath();
       ctx.arc(p.x, p.y, 3 + grow * PULSE_R, 0, Math.PI * 2);
@@ -289,7 +242,6 @@ export class BackdropField {
   }
 }
 
-/// Quantise a 0..1 alpha onto the palette ramp.
 function tierOf(alpha: number): number {
   return Math.min(TIERS - 1, Math.floor(alpha * TIERS));
 }

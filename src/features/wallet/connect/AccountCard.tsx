@@ -8,15 +8,7 @@ export interface AccountCardProps {
   shielded: string;
 }
 
-/// The shielded address, at the foot of Home.
-///
-/// Reference, not a headline: wanted when receiving, and otherwise the least
-/// urgent thing on the page. The Ethereum account is in the header, which is
-/// where the app says whose session this is.
-///
-/// Copy, then QR. The address wraps in full on a wide screen, where
-/// there is room to read it against what the sender pasted, and ellipsises on a
-/// narrow one, where the copy button is how it leaves the page anyway.
+/// The shielded address at the foot of Home, with copy and QR.
 export function AccountCard({ shielded }: AccountCardProps) {
   const [showQr, setShowQr] = useState(false);
 
@@ -50,8 +42,7 @@ export function AccountCard({ shielded }: AccountCardProps) {
 
       {showQr ? (
         <div className="acct__qr">
-          {/* Literal colours, not tokens: a scanner needs dark modules on a
-              light ground whichever theme the page is in. */}
+          {/* Literal colours: a scanner needs dark modules on light in any theme. */}
           <QRCodeSVG value={shielded} size={156} bgColor="#ffffff" fgColor="#14110E" level="M" />
           <p>Scan to send to this shielded address</p>
         </div>

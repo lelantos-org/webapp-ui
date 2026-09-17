@@ -1,5 +1,3 @@
-// Reads Permit2 AllowanceTransfer setup state for the ERC-20s a deposit pulls.
-
 import type { EvmAddress, WalletApi } from "@lelantos-org/sdk";
 import { supportsAllowanceTransfer } from "@lelantos-org/sdk/advanced";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
@@ -12,13 +10,6 @@ import { byDistinctToken, tokenKey } from "./by-token";
 import { evaluateSetup, type SetupNeeds } from "./evaluate-setup";
 import { type Permit2AllowanceState, readPermit2AllowanceState } from "./permit2-setup";
 
-/// The query both hooks register, spelled once.
-///
-/// They share one cache entry by construction — the point of keying by token —
-/// so a `staleTime` or `refetchOnWindowFocus` changed in one place and not the
-/// other would leave the deposit form and the modal disagreeing about whether
-/// the same entry is fresh. The token keying exists to remove that class of bug,
-/// so the options are not written twice.
 function setupStatusQuery(
   chainId: bigint | undefined,
   wallet: WalletApi | undefined,
@@ -37,29 +28,21 @@ function setupStatusQuery(
 
 /// The AllowanceTransfer state of each token a deposit pulls, in the order given.
 export interface SetupStatus {
-  /// One entry per asset; `undefined` while its probe has not answered, and for
-  /// a chain that cannot answer (see `readPermit2AllowanceState`).
+  /// One entry per asset; `undefined` while unanswered or on a chain that cannot answer.
   data: (Permit2AllowanceState | undefined)[];
   isLoading: boolean;
   isError: boolean;
-  /// The first probe's failure, for the log.
   error: unknown;
-  /// Re-read every probe.
   refetch(): Promise<unknown>;
 }
 
-/// Probe the AllowanceTransfer state for each of `assets` — the deposited token,
-/// and the one paying the relayer where that is another. Disabled for the
-/// native-ETH path, which needs no Permit2, and for adapters without
-/// AllowanceTransfer.
+/// Probe the AllowanceTransfer state of each of `assets`; disabled for native ETH.
 export function useSetupStatus(
   assets: readonly RegisteredAsset[],
   opts: { asEth?: boolean } = {},
 ): SetupStatus {
   const wallet = useWalletInstance();
   const { chainId } = useActiveChain();
-  // The records, not ids resolved back into them: the caller holds the
-  // `RegisteredAsset`s already, and `useSetupNeedsByToken` takes records too.
   const enabled = !!wallet && !opts.asEth && supportsAllowanceTransfer(wallet.chain);
 
   const results = useQueries({
@@ -67,9 +50,6 @@ export function useSetupStatus(
       setupStatusQuery(chainId, wallet as WalletApi | undefined, a.token, enabled),
     ),
   });
-  // Stable, as a single query's `refetch` is: `useQueries` hands back a new
-  // array each render, and the setup modal's auto-close is keyed on the callback
-  // this ends up in.
   const latest = useRef(results);
   latest.current = results;
   const refetch = useCallback(() => Promise.all(latest.current.map((r) => r.refetch())), []);
@@ -83,22 +63,7 @@ export function useSetupStatus(
   };
 }
 
-/// Probe several assets' tokens at once, and say what each needs.
-///
-/// Per token, keyed by `tokenKey`: the pool registers a separate asset id per
-/// yield variant over the same ERC-20, and both halves of setup — the ERC-20
-/// approval and the `(owner, token, spender)` allowance — are keyed by token, so
-/// six ids over three tokens are three probes and three answers.
-///
-/// `useQueries` rather than one aggregate query: each token keeps its own cache
-/// entry under `queryKeys.setupStatus`, so {@link useInvalidateSetupStatus}
-/// reaches it and the single-asset deposit form and the multi-token surfaces
-/// share the same cached reads.
-///
-/// No totals: with no amount typed this is the existence check `evaluateSetup`
-/// falls back to. A token whose probe has not settled has no entry, since
-/// `evaluateSetup(undefined, …)` means the chain cannot answer and reporting a
-/// pending row would read a still-loading probe as requiring no setup.
+/// What each distinct token of `assets` needs, keyed by `tokenKey`; unsettled probes have no entry.
 export function useSetupNeedsByToken(assets: readonly RegisteredAsset[]): {
   needs: Map<string, SetupNeeds>;
   isLoading: boolean;
@@ -128,8 +93,7 @@ export function useSetupNeedsByToken(assets: readonly RegisteredAsset[]): {
   };
 }
 
-/// Invalidator hook used by the setup flow on success: drops `token`'s probe for
-/// this (chain, payer), which every asset id over that token reads.
+/// Invalidates `token`'s setup probe for the active chain and payer.
 export function useInvalidateSetupStatus(): (token: string) => Promise<void> {
   const wallet = useWalletInstance();
   const { chainId } = useActiveChain();

@@ -1,9 +1,3 @@
-// Multi-token Permit2 setup: pick tokens, authorize them in one pass.
-//
-// The signature and the on-chain `permit` batch across tokens via Permit2's
-// `PermitBatch`, while the ERC-20 approval does not. Authorizing a portfolio one
-// token at a time therefore repeats the two batchable steps once per token.
-
 import { useCallback, useId, useMemo, useState } from "react";
 import type { RegisteredAsset } from "@/config/chains";
 import { useRegisteredAssets } from "@/features/assets";
@@ -21,49 +15,29 @@ export interface SetupAllModalProps {
   onClose(): void;
 }
 
+/// Multi-token Permit2 setup: pick tokens, authorize them in one batch.
 export function SetupAllModal({ onClose }: SetupAllModalProps) {
   const assets = useRegisteredAssets();
   const wallet = useWalletInstance();
   const descId = useId();
   const { exiting, exit } = useExitTransition(MODAL_EXIT_MS);
 
-  // Every registered asset is a candidate, WETH included: only the native ETH
-  // path skips Permit2, and that is a flag on the deposit form rather than a
-  // property of the asset. Depositing ERC-20 WETH needs the same setup as any
-  // other token.
   const { needs, isLoading } = useSetupNeedsByToken(assets);
 
-  // Presented, picked and run per token, not per asset id: the pool registers a
-  // separate id for each yield variant over the same ERC-20, and both the ERC-20
-  // approval and the Permit2 window are keyed by token. Listed by id, one token
-  // appeared once per variant and each copy authorized the other.
   const distinct = useMemo(() => byDistinctToken(assets), [assets]);
 
-  // `needs` holds entries only for tokens whose probe settled, so a missing
-  // entry means unanswered rather than nothing to do — hence the explicit split
-  // rather than one filter and its negation.
+  // A missing entry means unanswered, so neither list is the other's negation.
   const outstanding = distinct.filter((a) => needs.get(tokenKey(a))?.needsSetup === true);
   const covered = distinct.filter((a) => needs.get(tokenKey(a))?.needsSetup === false);
 
-  // `true` for a token whose probe has not settled: assuming the approval is
-  // needed costs at most a skipped tx, while assuming it is not breaks the pull —
-  // and the badge and the cost line cannot come in under the run they describe.
+  // Unsettled defaults to true: wrongly assuming no approval breaks the pull.
   const willApprove = (a: RegisteredAsset) => needs.get(tokenKey(a))?.willApproveErc20 ?? true;
 
-  // Pre-check everything that needs setup. `undefined` until the probes settle,
-  // so the checkboxes do not render empty and then fill in.
   const [picked, setPicked] = useState<ReadonlySet<string> | undefined>(undefined);
   const selectedTokens = picked ?? new Set(outstanding.map((a) => tokenKey(a)));
   const selected = distinct.filter((a) => selectedTokens.has(tokenKey(a)));
 
-  // The run is frozen at launch rather than re-derived from `needs` while in
-  // flight.
-  //
-  // `SetupFlow` invalidates each token's probe on success, which empties
-  // `outstanding` and with it the default selection; a live-derived asset list
-  // would then empty and unmount the flow before its done screen could
-  // auto-close. Snapshotting also keeps the stepper from re-labelling itself when
-  // an approval lands mid-run.
+  // Frozen at launch: success invalidates the probes, which would otherwise unmount the flow.
   const [run, setRun] = useState<{
     assets: RegisteredAsset[];
     needsApproval: ReadonlySet<string>;
@@ -74,8 +48,6 @@ export function SetupAllModal({ onClose }: SetupAllModalProps) {
       needsApproval: new Set(selected.filter(willApprove).map(tokenKey)),
     });
 
-  // Reads the frozen snapshot, so it keeps a stable identity for the whole run;
-  // `SetupFlow` memoises `toApprove` over it.
   const runApproval = run?.needsApproval;
   const runWillApproveErc20 = useCallback(
     (a: RegisteredAsset) => runApproval?.has(tokenKey(a)) ?? true,

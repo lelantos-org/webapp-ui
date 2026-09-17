@@ -5,18 +5,9 @@ import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("pwa");
 
-/// How long a dismissal holds before the prompt is offered again.
 const SNOOZE_MS = 30 * 60_000;
 
-/// Offers a reload when a new build is waiting.
-///
-/// Pairs with `registerType: "prompt"`. The new service worker stays in
-/// `waiting` until `updateServiceWorker(true)` runs, so the running page keeps
-/// its precache and its lazy route chunks stay fetchable. Accepting swaps the
-/// worker and reloads, which is the only point at which stale caches are
-/// cleaned up.
-///
-/// Never auto-dismissed: a user mid-transaction decides when the page reloads.
+/// Offers a reload when a new build is waiting; never auto-dismissed, so a user mid-transaction decides.
 export function PwaUpdatePrompt() {
   const {
     needRefresh: [needRefresh],
@@ -30,9 +21,7 @@ export function PwaUpdatePrompt() {
     },
   });
 
-  // Dismissing snoozes the toast rather than clearing it. `setNeedRefresh(false)`
-  // is permanent and nothing re-raises it, so an accidental swipe would pin the
-  // user to the current build until every tab was closed.
+  // Dismissing snoozes: `setNeedRefresh(false)` would hide the update until every tab closes.
   const [snoozedAt, setSnoozedAt] = useState<number | undefined>(undefined);
 
   useEffect(() => {

@@ -7,7 +7,6 @@ describe("formatUsd", () => {
   });
 
   it("reports dust as below a cent rather than as zero", () => {
-    // "$0.00" would read as a measured zero; the balance is real but tiny.
     expect(formatUsd(0.0001)).toBe("<$0.01");
   });
 

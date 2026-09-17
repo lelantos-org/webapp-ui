@@ -1,21 +1,10 @@
-// A venue's rate, drawn for the three places the wallet states one: an asset's
-// detail in the portfolio, the list of what can be shielded on an empty wallet,
-// and Shield's "Choose an asset".
-//
-// The words come from `rateLabel`, so an asset reads the same way
-// everywhere; each surface keeps its own markup and length, which is why this
-// is one component with three shapes rather than three switches over the same
-// four cases in three files.
-
 import type { RegisteredAsset } from "@/config/chains";
 import { cx } from "@/shared/lib/cx";
 import { formatWindowShort, RATE_WORDS, type RateLabel, rateLabel } from "./rate-label";
 
 export interface RateLabelViewProps {
   asset: RegisteredAsset;
-  /// `detail` — the portfolio row's "Pool pays" figure and note.
-  /// `compact` — one line in the empty wallet's list: "4.18% / yr · 7d".
-  /// `picker` — the rate column of "Choose an asset".
+  /// `detail`: portfolio row; `compact`: empty-wallet list; `picker`: "Choose an asset".
   variant: "detail" | "compact" | "picker";
 }
 
@@ -31,8 +20,6 @@ export function RateLabelView({ asset, variant }: RateLabelViewProps) {
   }
 }
 
-/// The figure and the words beside it, for a rate or a pause. The two states
-/// every surface draws the same way, differing only in markup.
 function figureOf(label: RateLabel): { fig: string; note: string; paused: boolean } | undefined {
   if (label.kind === "rate") return { fig: label.rate, note: label.window, paused: false };
   if (label.kind === "paused")
@@ -40,7 +27,7 @@ function figureOf(label: RateLabel): { fig: string; note: string; paused: boolea
   return undefined;
 }
 
-/// A yield asset only: the portfolio draws plain custody with its own sentence.
+/// Yield assets only: the portfolio words plain custody itself.
 function DetailRate({ label }: { label: RateLabel }) {
   const { fig, note, paused } = figureOf(label) ?? {
     fig: "—",
@@ -55,12 +42,9 @@ function DetailRate({ label }: { label: RateLabel }) {
   );
 }
 
-/// "4.18% / yr · 7d", "does not earn", "paused · still backed", or a dash for a
-/// rate that could not be measured.
 function CompactRate({ label, asset }: { label: RateLabel; asset: RegisteredAsset }) {
   const f = figureOf(label);
   if (f) {
-    // The window short, and the pause's reassurance shorter, to keep one line.
     const tail = f.paused
       ? "still backed"
       : asset.apy

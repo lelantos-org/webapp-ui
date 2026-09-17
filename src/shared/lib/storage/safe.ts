@@ -1,26 +1,10 @@
-// Web storage that cannot throw.
-//
-// `localStorage` and `sessionStorage` fail in several ways: Safari in private
-// mode throws on access to the property rather than only on write, a sandboxed
-// iframe throws `SecurityError` on the same, and `setItem` throws
-// `QuotaExceededError` once the origin's budget is spent. Handling that once
-// here keeps every call site from carrying its own try/catch.
-//
-// Storage here is always a cache or a preference, never a source of truth, so
-// unavailable and absent are the same answer and both are `undefined`. Writes
-// are best-effort and report whether they landed.
-
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("storage");
 
 export type StorageKind = "local" | "session";
 
-/// Resolve the backing store, or `undefined` where it is unavailable.
-///
-/// Both the presence check and the try/catch are needed: the first covers SSR and
-/// test environments where the global is missing, the second covers browsers that
-/// define it and throw on access.
+/// The backing store, or `undefined` where it is missing or throws on access.
 function backing(kind: StorageKind): Storage | undefined {
   try {
     const store = kind === "local" ? globalThis.localStorage : globalThis.sessionStorage;
@@ -30,14 +14,14 @@ function backing(kind: StorageKind): Storage | undefined {
   }
 }
 
+/// Web storage that never throws; unavailable reads as absent.
 export interface SafeStorage {
   /// `undefined` for a missing key and for unavailable storage.
   get(key: string): string | undefined;
   /// `false` when the write could not be made (quota, private mode).
   set(key: string, value: string): boolean;
   remove(key: string): void;
-  /// Every key starting with `prefix`. Snapshotted before use, so a caller may
-  /// remove entries while iterating the result.
+  /// Every key starting with `prefix`, snapshotted so the caller may remove while iterating.
   keys(prefix: string): string[];
   /// Remove every key starting with `prefix`.
   removePrefix(prefix: string): void;
@@ -93,12 +77,7 @@ function make(kind: StorageKind): SafeStorage {
 export const localStore: SafeStorage = make("local");
 export const sessionStore: SafeStorage = make("session");
 
-/// Read a JSON value, or `undefined` when it is missing, unreadable or does not
-/// satisfy `isValid`.
-///
-/// The guard is required: stored JSON is untrusted input — written by an older
-/// build, hand-edited, or truncated mid-write — and without it the parse result
-/// is typed on assumption alone.
+/// Read a JSON value, or `undefined` when missing, unparseable or rejected by `isValid`.
 export function readJson<T>(
   store: SafeStorage,
   key: string,
@@ -115,6 +94,7 @@ export function readJson<T>(
   }
 }
 
+/// Write a JSON value; `false` when it could not be serialised or stored.
 export function writeJson(store: SafeStorage, key: string, value: unknown): boolean {
   try {
     return store.set(key, JSON.stringify(value));

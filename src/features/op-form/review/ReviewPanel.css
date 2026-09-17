@@ -1,11 +1,5 @@
-/* Review: step 2 of Send and Unshield (`ReviewPanel`). The observer block inside
-   it is `flows/unshield/observer/ObserverPanel.css`.
-
-   The review takes the place of the fields inside the form card and draws edge
-   to edge: sections divided by hairlines, each with its own padding, so the
-   card's own padding is given back. */
-
 @layer components {
+  /* ReviewPanel */
   .action-form__card > .spend-review {
     margin: -26px calc(var(--sp-24) * -1) calc(var(--sp-24) * -1);
   }
@@ -28,8 +22,7 @@
     padding-bottom: 0;
   }
 
-  /* Back / Confirm and the reason under them, continuing the last section's
-     rhythm: 14 between the three, the section's padding round the outside. */
+  /* CTA */
   .spend-review__cta {
     display: flex;
     flex-direction: column;
@@ -41,7 +34,7 @@
   }
   .spend-review__sec--lead .spend-review__cap { margin-bottom: 11px; }
 
-  /* The figure this screen exists to get right, set as large as the form set it. */
+  /* Amount */
   .spend-review__amt {
     font-size: 46px;
     color: var(--fg);
@@ -77,14 +70,12 @@
   }
   .spend-review__actions .btn--outline { padding: var(--sp-16) 26px; }
 
-  /* Drawn flat: the lift the form's CTA carries is for inviting a first press,
-     and this is the deliberate second one. */
+  /* Confirm */
   .spend-review__confirm {
     padding: var(--sp-16);
     box-shadow: none;
   }
 
-  /* Restores `.btn--cta`'s hover lift, which the flat rule above would cancel. */
   .spend-review__confirm:hover:not(:disabled) { box-shadow: 0 6px 22px rgba(var(--accent-rgb), 0.38); }
   .spend-review__why {
     text-align: center;
@@ -94,15 +85,11 @@
   }
 
   @media (max-width: 480px) {
-    /* The card pads 18/16 here; see `.screen-card` in styles/primitives/surface.css. */
     .action-form__card > .spend-review { margin: calc(var(--sp-18) * -1) calc(var(--sp-16) * -1); }
     .spend-review__sec { padding: var(--sp-16); }
     .spend-review__sec--lead { padding: var(--sp-20) var(--sp-16) var(--sp-18); }
     .spend-review__end { padding-bottom: 0; }
-    /* Pinned like the form's CTA (`.sticky-cta`): a
-       long review never hides the buttons it ends on, and the blocked reason
-       travels with them. The review already runs to the card's edges, so no
-       negative margin is needed to reach them. */
+    /* Sticky CTA */
     .spend-review__cta {
       padding: var(--sp-12) var(--sp-16) calc(var(--sp-16) + env(safe-area-inset-bottom, 0px));
     }

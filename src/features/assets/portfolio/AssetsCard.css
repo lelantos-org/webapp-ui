@@ -1,5 +1,5 @@
 @layer features {
-  /* ASSETS SECTION — title row, then the list card. */
+  /* Assets section */
   .pf-assets {
     display: flex;
     flex-direction: column;
@@ -28,7 +28,7 @@
   .pf-assets__manage:hover { color: var(--accent); }
   .pf-assets__manage:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* SKELETON ROWS — the first sync, still counting. */
+  /* Skeleton rows */
   .pf-skel-row {
     display: flex;
     align-items: center;
@@ -51,7 +51,7 @@
   }
   .pf-skel-row__bar { display: block; }
 
-  /* EMPTY — what can be shielded here, then the one action. */
+  /* Empty */
   .pf-empty__head {
     padding: 30px var(--sp-22);
     text-align: center;
@@ -100,7 +100,6 @@
     box-shadow: none;
   }
 
-  /* Flat at rest, lifted on hover, as `.spend-review__confirm`. */
   .pf-empty__cta:hover:not(:disabled) { box-shadow: 0 6px 22px rgba(var(--accent-rgb), 0.38); }
   .pf-empty__note {
     margin: 11px 0 0;

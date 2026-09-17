@@ -14,7 +14,7 @@
     color: var(--fg-mute);
   }
 
-  /* ROW — mark, then name over balance; value over earned on the right. */
+  /* Row */
   .pf-row { border-bottom: 1px solid var(--line); }
   .pf-row:last-child { border-bottom: 0; }
   .pf-row__btn {
@@ -78,12 +78,10 @@
   }
   .pf-row__earned--up { color: var(--accent); }
 
-  /* A venue loss or a paused venue: a direction, not an error. */
   .pf-row__earned--down,
   .pf-row__earned--paused { color: var(--warn); }
 
-  /* In-flight legs, ahead of the figure they are moving. Never wraps apart: a
-     swap has both legs in flight at once. */
+  /* In-flight legs */
   .bal__flow {
     display: inline-flex;
     align-items: center;
@@ -102,7 +100,6 @@
   .bal__delta--in { color: var(--accent); }
   .bal__delta--out { color: var(--warn); }
 
-  /* Quieter than either delta: it says "still moving", it is not the number. */
   .bal__spin {
     flex: none;
     width: 7px; height: 7px;
@@ -112,7 +109,7 @@
     animation: spin 800ms linear infinite;
   }
 
-  /* ROW DETAIL — an inline disclosure under the row, in a `.collapse`. */
+  /* Row detail */
   .pf-detail {
     border-top: 1px solid var(--line);
     background: var(--bg-1);

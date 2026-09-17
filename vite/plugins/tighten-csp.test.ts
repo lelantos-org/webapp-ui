@@ -4,7 +4,6 @@ import { tightenCspHtml } from "./tighten-csp";
 
 const indexHtml = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
 
-/// The meta policy's `content`, split into directives.
 function directives(html: string): Map<string, string> {
   const content = html.match(/http-equiv="Content-Security-Policy"\s+content="([^"]+)"/)?.[1];
   if (!content) throw new Error("no meta CSP");
@@ -17,8 +16,7 @@ function directives(html: string): Map<string, string> {
 }
 
 describe("tightenCspHtml", () => {
-  // Against the real `index.html`: the plugin's needles have to keep matching
-  // the file it rewrites, which is exactly what a unit fixture could not catch.
+  // Runs against the real index.html so the plugin's needles are checked too.
   it("strips the dev-only allowances from the shipped policy", () => {
     const csp = directives(tightenCspHtml(indexHtml));
     expect(csp.get("script-src")).toBe("'self' 'wasm-unsafe-eval'");
@@ -36,8 +34,6 @@ describe("tightenCspHtml", () => {
     }
   });
 
-  // The dangerous direction: a reworded directive must fail the build rather
-  // than ship the loose dev policy.
   it("fails when a directive it tightens no longer matches", () => {
     const reworded = indexHtml.replace(
       "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'",

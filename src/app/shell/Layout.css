@@ -1,7 +1,5 @@
 @layer components {
-  /* Header: the wordmark on the left; on the right three pills, one question
-     each — is it working, which network, whose account — and the theme switch.
-     Disconnected, the right side is only the theme switch. */
+  /* Header */
   .hdr {
     display: flex;
     align-items: center;
@@ -20,24 +18,13 @@
   .hdr__health,
   .hdr__theme { display: inline-flex; }
 
-  /* One height for the row's pills. Each pill pads its own contents — a dot,
-     a 16px chain mark, the account's 26px power button — and left to that they
-     stand 32, 34 and 42px tall side by side. The header sets the height and
-     the pills centre what they hold, so a new pill here lines up by default. */
   .hdr { --hdr-pill-h: 36px; }
   .hdr__right .pill {
     box-sizing: border-box;
     height: var(--hdr-pill-h);
     padding-block: 0;
   }
-  /* The theme switch is not a pill — it holds a glyph and no label, so it has
-     nothing to pad around — but it stands in the same row, and gets the row's
-     height as a square. Set as a variable on the wrapper rather than as a
-     height on the button: the button's own rules would compete with it, and
-     `chrome/ThemeToggle` should not be reading a header's measurements. */
   .hdr__theme { --theme-toggle-size: var(--hdr-pill-h); }
-  /* The health pill is a button: a fingertip needs 44px, and the other two
-     grow with it rather than sit short beside it. */
   @media (pointer: coarse) {
     .hdr { --hdr-pill-h: 44px; }
   }
@@ -46,9 +33,7 @@
     .hdr { padding: var(--sp-12) var(--sp-18); gap: var(--sp-10); }
   }
 
-  /* Phones: network pill and avatar. Health goes, and the account pill and
-     theme switch fold into the avatar menu (`ConnectButton.css`). The network
-     pill, now a read-only label, matches the 32px avatar beside it. */
+  /* Phones */
   @media (max-width: 480px) {
     .hdr { padding: var(--sp-14) var(--sp-18); --hdr-pill-h: 32px; }
     .hdr__health,
@@ -76,8 +61,6 @@
     display: inline-flex;
     align-items: center;
     color: var(--fg-mute);
-    /* Needed since this started carrying text as well as an icon: there is no
-       global anchor reset, so the browser default would underline it. */
     text-decoration: none;
     transition: color 0.15s ease;
   }
@@ -85,16 +68,13 @@
   .ftr__link:hover { color: var(--accent); }
   .ftr__link:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* Rules dropped on a phone, gap doing the separating: a wrapped row strands
-     the vertical rules at the start of a line, where they read as stray marks. */
+  /* Footer */
   @media (max-width: 560px) {
     .ftr {
       gap: 6px 12px;
       padding: 14px 14px calc(14px + env(safe-area-inset-bottom, 0px));
     }
     .ftr__sep { display: none; }
-    /* Its own centred line: mid-row it pushes the links onto a ragged second
-       line anyway. Same treatment as the docs footer. */
     .ftr__note {
       order: 2;
       flex: 1 1 100%;
@@ -105,8 +85,7 @@
     }
   }
 
-  /* Present but recessive: wanted when reporting a bug, noise the rest of the
-     time. Dropped on narrow screens, where the row has no space to spare. */
+  /* Build id */
   .ftr__ver {
     font-size: var(--fs-12);
     opacity: 0.7;
@@ -117,8 +96,7 @@
   }
 
   @media (max-width: 480px) {
-    /* Padding keeps the safe-area term from the footer's own breakpoint —
-       dropping it here would put the links under the iOS home indicator. */
+    /* Keep the safe-area inset: the footer must clear the iOS home indicator. */
     .ftr {
       padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 0px));
       font-size: var(--fs-12);

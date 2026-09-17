@@ -4,12 +4,10 @@ import type { FeeBreakdown } from "@/shared/domain/fee-math";
 import { asBaseUnits } from "@/shared/domain/units";
 import { allPriced, feeSummary, feeTotalUsd } from "./fee-summary";
 
-// 6-decimal token at scale 100 — so circuit units and base units differ, and a
-// row that forgot to scale one of them shows up.
+// Scale 100, so a row that skips circuit-to-base scaling shows.
 const USDC = { symbol: "USDC", decimals: 6, scale: 100n, index: RAY };
 const USDT = { symbol: "USDT", decimals: 6, scale: 100n, index: RAY };
 
-/// 100 USDC in circuit units.
 const AMOUNT = 1_000_000n;
 const AMOUNT_BASE = AMOUNT * USDC.scale;
 
@@ -21,14 +19,11 @@ const protocol = (fee: bigint, feeBps = 30n): FeeBreakdown => ({
   leg: "deposit",
 });
 
-/// A relayer charge, already joined to a registry entry — the shape
-/// `resolveFeeOption` hands back.
 const relayerIn = (asset: typeof USDC, amount: bigint) => ({ amount, asset });
 type Relayer = ReturnType<typeof relayerIn>;
 
 type SummaryInputs = Parameters<typeof feeSummary>[0];
 
-/// `feeSummary` on 100 USDC, with nothing priced unless the case says so.
 const summary = (over: Partial<SummaryInputs> & Pick<SummaryInputs, "kind">) =>
   feeSummary({
     amount: AMOUNT,
@@ -64,8 +59,6 @@ describe("feeSummary", () => {
   });
 
   describe("deposit", () => {
-    // Permit2 pulls all three parts in one transfer, so both fees are on top
-    // and both belong in the headline.
     const deposit = (relayer?: Relayer) =>
       summary({
         kind: "deposit",
@@ -91,8 +84,6 @@ describe("feeSummary", () => {
       expect(deposit()?.headlineExtra).toBeUndefined();
     });
 
-    // Paid in another token, the relayer's share is a pull of its own: stated
-    // beside the headline, per token, and never summed into it.
     it("states a cross-asset relayer fee per token", () => {
       const m = deposit(relayerIn(USDT, 2_042n));
       expect(m?.crossAsset).toBe(true);
@@ -119,8 +110,6 @@ describe("feeSummary", () => {
     });
 
     it("leaves the relayer fee out of what the recipient receives", () => {
-      // It is funded from the sender's shielded change, not skimmed off
-      // `publicOut` — so it must not move this figure.
       const withFee = withdraw(relayerIn(USDC, 2_042n));
       expect(withFee?.headline?.amount).toBe(AMOUNT_BASE - 300_000n);
       expect(withFee?.headline?.amount).toBe(withdraw()?.headline?.amount);
@@ -132,8 +121,6 @@ describe("feeSummary", () => {
     const transfer = (relayer?: Relayer) =>
       summary({
         kind: "transfer",
-        // A transfer has no transparent leg, so `MASP._takeFee` never runs.
-        // Even handed a breakdown, it must not state a protocol fee.
         protocol: protocol(300_000n),
         relayer,
       });
@@ -149,15 +136,11 @@ describe("feeSummary", () => {
     });
 
     it("has no total when the relayer fee is the only fee", () => {
-      // One row is not a sum, and labelling it "Total fees" would just repeat
-      // the line above it.
       expect(transfer(relayerIn(USDC, 2_042n))?.total).toBeUndefined();
     });
   });
 
   describe("a yield asset's index", () => {
-    // A pool index 8% above par: a note credited at par is now worth 1.08x its
-    // deposit, and that gain is withdrawable like any other value.
     const RAY = 10n ** 27n;
     const INDEX = (RAY * 108n) / 100n;
     const YUSDC = { ...USDC, index: INDEX };
@@ -170,10 +153,7 @@ describe("feeSummary", () => {
     });
 
     it("is counted in what a withdraw pays out", () => {
-      // The headline is `amount - protocolFee`, and `feeBreakdown` sizes that
-      // fee against the *indexed* amount. Scaling the amount without the index
-      // would subtract today's fee from the deposit-time value, understating
-      // the payout by the whole of the yield.
+      // Scaling without the index would subtract today's fee from the deposit-time value.
       const fee = 324_000n;
       const m = summary({
         kind: "withdraw",
@@ -208,15 +188,11 @@ describe("feeSummary", () => {
     });
 
     it("refuses to total two different tokens", () => {
-      // Adding raw base units across assets yields a number that looks right
-      // and means nothing.
       expect(crossed?.total).toBeUndefined();
     });
   });
 
   it("omits a zero fee rather than showing a zero row", () => {
-    // A subsidised chain charges nothing, and "0.00" reads as a failed pricing
-    // rather than as free.
     const m = summary({ kind: "withdraw", protocol: protocol(0n), relayer: relayerIn(USDC, 0n) });
     expect(row(m, "protocol")).toBeUndefined();
     expect(row(m, "relayer")).toBeUndefined();
@@ -225,9 +201,6 @@ describe("feeSummary", () => {
   });
 
   describe("charges that have not been priced yet", () => {
-    // The panel sits directly above the submit button, so a row appearing when
-    // a query lands moves the button under the pointer. A charge known to be
-    // coming gets its row now, with no figure in it.
     const pendingBoth = () =>
       summary({ kind: "deposit", protocolPending: true, feeBps: 30n, relayerAsset: USDC });
 
@@ -257,24 +230,17 @@ describe("feeSummary", () => {
     });
 
     it("refuses to total or headline a sum it does not have", () => {
-      // Both are figures the reader acts on, so a partial sum that corrects
-      // itself a moment later is withheld in favour of a visible gap.
       expect(pendingBoth()?.total?.amount).toBeUndefined();
       expect(pendingBoth()?.headline?.amount).toBeUndefined();
     });
 
     it("keeps a withdraw's headline once the protocol fee lands, relayer or not", () => {
-      // Only the protocol fee moves what the recipient receives, so the
-      // relayer quote being in flight must not blank it.
       const m = summary({ kind: "withdraw", protocol: protocol(300_000n), relayerAsset: USDT });
       expect(m?.headline?.amount).toBe(AMOUNT_BASE - 300_000n);
       expect(row(m, "relayer")?.amount).toBeUndefined();
     });
 
     it("opens no protocol row for a caller that will never fill one in", () => {
-      // A swap is charged the fee and states it on its own quote card, so it
-      // passes no breakdown. Inferring one from the rate would leave the panel
-      // holding a line open forever.
       const m = summary({ kind: "swap", feeBps: 30n });
       expect(row(m, "protocol")).toBeUndefined();
     });
@@ -291,8 +257,6 @@ describe("feeSummary", () => {
     });
 
     it("does not claim a cross-asset fee when there is no relayer row at all", () => {
-      // The panel's note names `rows.find(key === "relayer")`, so setting the
-      // flag without such a row would print an undefined symbol.
       const m = summary({
         kind: "withdraw",
         protocol: protocol(300_000n),
@@ -336,8 +300,6 @@ describe("feeTotalUsd", () => {
   const price = (token: string | undefined) => (token === "0xusdc" ? 2 : undefined);
 
   it("prices base-unit rows without scaling them a second time", () => {
-    // 0.25 USDC at scale 100: the row is 250_000 base units. Handing that to
-    // `usdValue` with scale 100 would read it as 25 USDC.
     const m = summary({ kind: "transfer", spendAsset: PRICED, relayer: relayerIn(PRICED, 2_500n) });
     expect(feeTotalUsd(m, price)).toBeCloseTo(0.5, 9);
   });

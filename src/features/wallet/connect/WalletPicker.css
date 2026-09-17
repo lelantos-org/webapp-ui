@@ -1,6 +1,5 @@
 @layer features {
-  /* The wallet rows, shared by the picker modal and the Welcome card. The
-     overlay, panel and both animations come from shared/ui/Modal.css. */
+  /* Wallet rows */
   .wallet-list {
     list-style: none;
     margin: 0;
@@ -31,8 +30,7 @@
     border-color: var(--accent);
   }
 
-  /* The row the order already leads with — a remembered extension, or the
-     passkey on a device that enrolled one. */
+  /* Lead row */
   .wallet-choice--lead {
     border-color: var(--accent);
     background: rgba(var(--accent-rgb), 0.08);
@@ -50,7 +48,7 @@
     background: var(--bg-2);
   }
 
-  /* Fallback for a wallet whose announced icon is not a data URI. */
+  /* Icon fallback */
   .wallet-choice__icon--mono,
   .wallet-choice__icon--glyph {
     display: inline-flex;

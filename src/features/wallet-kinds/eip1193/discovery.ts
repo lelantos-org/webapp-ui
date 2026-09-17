@@ -1,10 +1,3 @@
-// EIP-6963 provider discovery.
-//
-// Split from the connection store: discovery is a page-lifetime listener over an
-// event any wallet extension may fire at any time, while the store tracks the
-// single provider that ended up latched. Keeping them apart separates which
-// wallets exist from which wallet is in use.
-
 import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("eip6963");
@@ -27,11 +20,7 @@ export class ProviderRegistry {
   private listeners = new Set<() => void>();
   private wired = false;
 
-  /// Ask wallets to announce, wiring the listener on the first call.
-  ///
-  /// Safe to call repeatedly; boot reaches it from three places. Only the request
-  /// event repeats, since registering the handler more than once would turn a
-  /// single announce into one notification per prior call.
+  /// Ask wallets to announce, wiring the listener once. Safe to call repeatedly.
   start(): void {
     if (typeof window === "undefined") return;
     if (!this.wired) {
@@ -57,15 +46,8 @@ export class ProviderRegistry {
     return this.list().find((d) => d.info.rdns.toLowerCase() === wanted);
   }
 
-  /// Choose a provider.
-  ///
-  /// With `rdns`, only an exact match; never a substitute. Falling through to the
-  /// preference order when the named wallet has not yet announced would attach a
-  /// different wallet — a different EOA, and so a different nsk and shielded
-  /// address — so this fails closed and leaves the caller to wait or give up.
-  ///
-  /// Without `rdns`, prefer MetaMask, then whatever announced first. Reached only
-  /// when the caller had no wallet to name.
+  /// With `rdns`, that wallet only: a substitute would be another EOA, nsk and shielded address.
+  /// Without, prefer MetaMask, then the first to announce.
   pick(rdns?: string): Eip6963ProviderDetail | undefined {
     if (rdns) return this.find(rdns);
     const list = this.list();
@@ -76,11 +58,7 @@ export class ProviderRegistry {
     );
   }
 
-  /// Resolve as soon as `choose` finds a provider, or after `timeoutMs` with
-  /// whatever it returns by then.
-  ///
-  /// Waits on the announce event rather than sleeping a fixed interval, so an
-  /// extension announcing a few ms late is still found.
+  /// Resolve once `choose` finds a provider, or after `timeoutMs` with whatever it returns then.
   waitFor(
     choose: () => Eip6963ProviderDetail | undefined,
     timeoutMs: number,
@@ -104,10 +82,7 @@ export class ProviderRegistry {
     });
   }
 
-  /// Forget every announced wallet and unwire the listener.
-  ///
-  /// For tests: the registry is a singleton, so without this each case inherits
-  /// the previous one's announcements and assertions become order-dependent.
+  /// Forget every announced wallet and unwire the listener. For tests.
   reset(): void {
     this.seen.clear();
     if (this.wired && typeof window !== "undefined") {

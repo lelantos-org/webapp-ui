@@ -4,10 +4,7 @@ import { isStaleNonce, withNonceSync } from "./nonce-sync";
 
 const TO = evmAddress("0x0000000000000000000000000000000000000001");
 
-/// A wallet whose view of the chain trails the app's: its node already has the
-/// receipts in `minedAt`, but its own tracker reports `head` as the latest block.
-/// Each `eth_blockNumber` read moves `head` one block, which stands in for time
-/// passing between polls.
+/// A wallet trailing the app: its node has the receipts, but `head` lags and advances one block per read.
 function laggingWallet(opts: { head: number; minedAt: Record<string, number> }) {
   let head = opts.head;
   let reported: number | undefined;
@@ -26,12 +23,9 @@ function laggingWallet(opts: { head: number; minedAt: Record<string, number> }) 
       throw new Error(`unexpected ${method}`);
     }),
   };
-  /// The last block the wallet reported, if it was asked.
   return { provider, calls, reported: () => reported };
 }
 
-/// A signer answering each send with the next outcome: a hash string, or
-/// anything else thrown as-is — wallets reject with plain objects, not `Error`s.
 function signerSending(...outcomes: unknown[]): EthSigner & {
   sendTransaction: Mock<EthSigner["sendTransaction"]>;
 } {
@@ -61,8 +55,6 @@ describe("withNonceSync", () => {
   });
 
   it("holds the next send until the wallet has seen the previous one mined", async () => {
-    // The incident: the approval mined at 149 while the wallet still sat at 140,
-    // and the permit sent straight after it was signed with the approval's nonce.
     const wallet = laggingWallet({ head: 140, minedAt: { "0xapprove": 149 } });
     const inner = signerSending("0xapprove", "0xpermit");
     const signer = withNonceSync(inner, wallet.provider, fast);

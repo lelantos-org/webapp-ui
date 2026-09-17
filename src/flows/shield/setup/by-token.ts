@@ -1,24 +1,11 @@
-// Asset ids collapsed to the ERC-20s behind them.
-//
-// The pool registers a separate asset id per yield variant, and those ids share
-// an underlying token. Permit2 keys both halves of setup — the ERC-20 approval
-// and the `(owner, token, spender)` allowance — by token, so anything the setup
-// flow counts, lists or prompts for is per token, while the probes and the cache
-// stay per id.
-
 import type { RegisteredAsset } from "@/config/chains";
 
-/// Key anything naming a token — an asset, a progress event — by
-/// that token, for a `Set` or a `Map`. Lowercased, since an address arrives in
-/// either EIP-55 or lowercase form.
+/// Case-insensitive key for anything naming a token.
 export function tokenKey(a: { token: string }): string {
   return a.token.toLowerCase();
 }
 
 /// One entry per distinct token, keeping the first asset that names it.
-///
-/// A representative rather than a bare address: callers need a symbol to label
-/// the token with, and every id over one token carries the same one.
 export function byDistinctToken(assets: readonly RegisteredAsset[]): RegisteredAsset[] {
   const seen = new Map<string, RegisteredAsset>();
   for (const a of assets) {

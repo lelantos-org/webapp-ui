@@ -1,17 +1,9 @@
-// The field is decorative, so appearance is not asserted. These cover the cost
-// properties instead: bounded node count, bounded pulse list, no per-frame
-// allocation, one batched stroke per alpha tier. A regression in any of them
-// raises the render cost of an ambient background without changing how it
-// looks, so none would be caught by a screenshot.
-
 import { describe, expect, it, vi } from "vitest";
 import { BackdropField, type FieldContext, MAX_NODES } from "./backdrop-field";
 import { buildPalette } from "./backdrop-palette";
 
 const PALETTE = buildPalette([10, 20, 30]);
 
-/// Deterministic stand-in for `Math.random`, cycling a fixed ramp so node
-/// placement and pulse targets are reproducible across runs.
 function seededRandom(): () => number {
   let i = 0;
   const ramp = [0.1, 0.9, 0.35, 0.6, 0.05, 0.75, 0.5, 0.25];
@@ -24,7 +16,6 @@ function field(w = 1440, h = 900): BackdropField {
   return f;
 }
 
-/// Records the calls `draw` makes, so a test can count strokes without a canvas.
 function recordingContext() {
   const calls = { stroke: 0, fill: 0, beginPath: 0, clearRect: 0, arc: 0, lineTo: 0 };
   const ctx = {
@@ -70,7 +61,6 @@ describe("BackdropField sizing", () => {
     const f = field(1000, 1000);
     const before = f.size;
     f.resize(1100, 1000);
-    // The count moves only by what the new area requires.
     expect(f.size).toBeGreaterThanOrEqual(Math.min(before, MAX_NODES) - 1);
   });
 });
@@ -87,8 +77,6 @@ describe("BackdropField.advance", () => {
   });
 
   it("clamps a large dt so a resumed loop cannot displace the field", () => {
-    // Covers resuming after a hidden tab or a parked loop, where the true
-    // elapsed time would move every node across the viewport at once.
     const clamped = field();
     const huge = field();
     clamped.advance(48);
@@ -98,8 +86,6 @@ describe("BackdropField.advance", () => {
     const b = recordingContext();
     clamped.draw(a.ctx);
     huge.draw(b.ctx);
-    // Same seed and same field, so an unclamped advance diverges in link
-    // count. Identical geometry confirms the clamp applied.
     expect(b.calls.lineTo).toBe(a.calls.lineTo);
   });
 
@@ -107,11 +93,9 @@ describe("BackdropField.advance", () => {
     const f = field();
     expect(f.pulseCount).toBe(0);
 
-    // One pulse per PULSE_EVERY_MS, with dt clamped, so advance in steps.
     for (let i = 0; i < 70; i++) f.advance(40);
     expect(f.pulseCount).toBeGreaterThan(0);
 
-    // The list drains rather than growing without bound.
     for (let i = 0; i < 400; i++) f.advance(40);
     expect(f.pulseCount).toBeLessThanOrEqual(2);
   });
@@ -124,17 +108,11 @@ describe("BackdropField.draw", () => {
     const { ctx, calls } = recordingContext();
     f.draw(ctx);
 
-    // Batching invariant: at most 10 link tiers plus one ring per live pulse.
-    // Stroking per link would raise this into the hundreds.
     expect(calls.stroke).toBeLessThanOrEqual(10 + f.pulseCount);
-    // All dots go into a single path.
     expect(calls.fill).toBe(1);
   });
 
   it("does not rebuild the style ramps per frame", () => {
-    // Narrow proxy for the no-allocation property of the draw path: catches
-    // `buildPalette`'s work moving into `draw`, which would introduce GC
-    // pauses visible as stutter.
     const f = field();
     for (let i = 0; i < 20; i++) f.advance(40);
 

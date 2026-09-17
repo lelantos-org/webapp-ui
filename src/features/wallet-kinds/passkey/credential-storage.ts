@@ -1,14 +1,4 @@
-// Which passkey to reattach to, in `localStorage`.
-//
-// Two keys with opposite lifetimes, as in `eip1193/rdns-storage.ts`: the
-// *attachment* is a session latch released by `disconnect`; the *credential* is
-// the wallet's identity and outlives the session. Collapsing them destroys a
-// wallet — `nsk` comes from one credential's PRF output, so dropping the id on
-// sign-out makes `attachOrEnrol` enrol a second credential under a different
-// key, stranding the first with nothing having failed.
-//
-// The id is not a secret: it rides in `allowCredentials` on every assertion and
-// authorises nothing alone.
+// Passkey storage. The credential outlives disconnect: dropping it re-enrols a new nsk and strands funds.
 
 import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
 import { localStore, readJson, writeJson } from "@/shared/lib/storage/safe";
@@ -29,8 +19,7 @@ function isStoredCredential(v: unknown): v is StoredCredential {
   return typeof v === "object" && v !== null && typeof (v as StoredCredential).id === "string";
 }
 
-/// The credential this device has enrolled, attached or not. Decides which
-/// passkey to attach, and the picker's "Passkey" vs "Create a passkey" label.
+/// The credential this device has enrolled, attached or not.
 export function storedCredential(): StoredCredential | undefined {
   return readJson(localStore, CREDENTIAL_KEY, isStoredCredential);
 }
@@ -50,16 +39,12 @@ export function markAttached(): void {
   localStore.set(ATTACHED_KEY, "1");
 }
 
-/// Sign out, keeping the credential. Deleting that is the platform's job, and
-/// doing it here would strand every note the derived key owns.
+/// Sign out, keeping the credential: deleting it would strand every note its key owns.
 export function releaseAttachment(): void {
   localStore.set(ATTACHED_KEY, "0");
 }
 
 /// The chain a passkey session last selected.
-///
-/// Persisted because it is a user choice with no other home: an injected wallet
-/// carries its own network, and a passkey has none to read.
 export function storedChainId(): bigint | undefined {
   const raw = localStore.get(CHAIN_KEY);
   if (raw === undefined) return undefined;
@@ -75,13 +60,7 @@ export function rememberChainId(chainId: bigint): void {
   localStore.set(CHAIN_KEY, chainId.toString());
 }
 
-/// The `accountKey` a passkey session is identified by: the nsk cache, the
-/// note/tree/nullifier namespaces, the build pool. Namespaced so a credential
-/// cannot collide with an EOA.
-///
-/// One definition, because `passkeyStore.connect` seeds the nsk cache under it
-/// and `passkeyKind.useSnapshot` publishes it — two spellings would not fail,
-/// they would silently miss.
+/// The `accountKey` of a passkey session. Single spelling shared by the nsk cache seed and snapshot.
 export function passkeyAccountKey(credentialId: string): string {
   return `passkey:${credentialId}`;
 }

@@ -17,7 +17,6 @@ describe("earnedLine", () => {
     ).toBeUndefined();
   });
 
-  // The detail explains an unresolved basis; the list must not read it as +$0.
   it("is absent when no basis resolved", () => {
     expect(earnedLine(gain({ resolvedNotes: 0, unknownNotes: 3 }), meta(), 2000)).toBeUndefined();
     expect(earnedLine(undefined, meta(), 2000)).toBeUndefined();

@@ -1,9 +1,3 @@
-// The file "Export all links" downloads, and the download itself.
-//
-// The document is pure. The download is the vault's one DOM side effect — a
-// Blob URL and a synthetic click — kept here so the store stays free of the DOM
-// beyond `localStorage`.
-
 import { plural } from "@/shared/lib/format/text";
 import { createLogger } from "@/shared/lib/logger";
 import { toast } from "@/shared/lib/toast";
@@ -18,12 +12,7 @@ export function exportFileName(now = Date.now()): string {
   return `lelantos-claim-links-${new Date(now).toISOString().slice(0, 10)}.json`;
 }
 
-/// The file "Export all links" downloads.
-///
-/// Every field needed to use or place a link again, and nothing derived: a
-/// link's amount is in circuit units, as stored, alongside the chain and asset
-/// that give it meaning. The warning travels inside the file, because the file
-/// outlives the screen that explained it.
+/// The file "Export all links" downloads. It carries its own warning.
 export interface ClaimLinkExport {
   kind: "lelantos-claim-links";
   version: 1;
@@ -45,8 +34,7 @@ export const EXPORT_WARNING =
   "Every url in this file is a spending key. Anyone who opens one takes the funds. " +
   "Keep the file somewhere only you can read, and delete it once the links are claimed.";
 
-/// Pure: the export document for `records`, oldest first — the order the vault
-/// lists them and the order they drop.
+/// The export document for `records`: live links, oldest first.
 export function claimLinksExport(
   records: readonly StoredClaimLink[],
   now = Date.now(),
@@ -68,11 +56,8 @@ export function claimLinksExport(
   };
 }
 
-/// Download every live link as JSON. Returns how many went into the file.
-///
-/// The object URL is revoked on the next task rather than immediately: some
-/// engines start the download asynchronously and cancel it if the URL is gone
-/// by then.
+/// Download every live link as JSON and return the count. The object URL is revoked a task
+/// later: some engines cancel a download whose URL is already gone.
 export function downloadClaimLinks(now = Date.now()): number {
   const doc = claimLinksExport(claimLinksSnapshot(), now);
   const blob = new Blob([`${JSON.stringify(doc, null, 2)}\n`], { type: "application/json" });
@@ -90,8 +75,7 @@ export function downloadClaimLinks(now = Date.now()): number {
   return doc.links.length;
 }
 
-/// Export, with the confirmation toast. Shared by the capacity box and the
-/// eviction block so both say the same thing about the file.
+/// Export with the confirmation toast, shared by the capacity box and the eviction block.
 export function exportAllClaimLinks(): number {
   const n = downloadClaimLinks();
   toast.success(`Saved ${plural(n, "link")} to a file`, {

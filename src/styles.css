@@ -1,31 +1,4 @@
-/* The stylesheet's entry, and the one place the cascade order is decided.
- *
- * Every file wraps its rules in one of the layers named below, and a later layer
- * beats an earlier one whatever the selectors' specificity. The order is fixed
- * by this first statement, which is why `main.tsx` imports this file before
- * anything else: a stylesheet that names a layer before this line has run would
- * rank that layer first.
- *
- *   reset       box-sizing and `[hidden]`
- *   tokens      custom properties (the light palette is repeated at build time)
- *   base        fonts, page ground, the ambient backdrop, shared keyframes
- *   utilities   single-purpose helpers; they lose to every component on purpose
- *   primitives  building blocks many components share (button, pill, marks…)
- *   components  the shared surfaces of the app shell and the op forms
- *   features    one surface each; free to retune anything above
- *
- * This file imports only what every screen needs: the foundations and the
- * primitives. A component's own stylesheet sits beside it (`Notice.tsx` and
- * `Notice.css`) and is imported by it, so it arrives with the chunk that renders
- * it — a lazy route's CSS loads with that route. That is safe only because of
- * the layers: a stylesheet that loads late cannot outrank an earlier layer, and
- * no two files in one layer set the same property on the same element.
- *
- * `app/providers/toast.css` stays unlayered: sonner injects its own unlayered stylesheet
- * at runtime, and only an unlayered rule can argue with it on specificity.
- *
- * Breakpoints live beside the rules they retune, at the end of each file.
- */
+/* Entry stylesheet: fixes the cascade layer order, so main.tsx must import it first. */
 @layer reset, tokens, base, utilities, primitives, components, features;
 
 @import "./styles/reset.css";

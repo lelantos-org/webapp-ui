@@ -1,7 +1,3 @@
-// What every react-query mutation hook for a shielded op shares. Each hook
-// returns the mutation result plus a `progress` view for the form's stepper; the
-// hooks themselves live with the flow that runs them (`flows/*/use-*.ts`).
-
 import { type UseMutationResult, useMutation } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { type ProgressView, type TxProgressApi, type TxResult, useTxProgress } from "@/features/tx";
@@ -14,12 +10,7 @@ import { type TrackTxArgs, type TrackTxRequest, useTxTracker } from "./use-tx-tr
 
 const log = createLogger("actions:spend");
 
-/// The SDK actions bound to the current wallet, or `undefined` while the wallet
-/// isn't ready. Mutation hooks should fail loudly (`requireActions`) rather than
-/// silently no-op.
-///
-/// Memoised on the wallet, so the actions keep their identity across the renders
-/// in between rather than being rebuilt for each.
+/// The SDK actions bound to the current wallet, or `undefined` while it isn't ready.
 function useShieldedActions(): ShieldedActions | undefined {
   const wallet = useWalletInstance();
   return useMemo(() => (wallet ? createSdkActions(wallet) : undefined), [wallet]);
@@ -30,15 +21,7 @@ export function requireActions(a: ShieldedActions | undefined): ShieldedActions 
   return a;
 }
 
-/// One policy for post-submit bookkeeping across every op's mutation, the claim
-/// link's included.
-///
-/// Never returned to react-query: a returned promise is awaited inside
-/// react-query's own `try`, so a rejection would flip an already-broadcast tx to
-/// `error` — red stepper, "failed" toast, `m.data` discarded and so no explorer
-/// link, no pending overlay and no lifecycle watch. Floating the call instead
-/// would surface a rejection as an unhandled rejection and leave the stepper
-/// stalled, so the rejection is caught and logged here.
+/// Run post-submit tracking detached from react-query, where a rejection would mark a sent tx failed.
 export function trackPostSubmit(
   track: (args: TrackTxArgs) => Promise<void>,
   args: TrackTxArgs,
@@ -46,32 +29,21 @@ export function trackPostSubmit(
   void track(args).catch((e: unknown) => log.warn("post-submit tracking failed", e));
 }
 
-/// Common return shape for every action hook: the mutation and its progress
-/// view. Forms read both.
+/// An action hook's mutation and its progress view.
 export interface ActionMutation<I, R = TxResult> {
   mutation: UseMutationResult<R, Error, I>;
   progress: ProgressView;
 }
 
-/// Failure path shared by the three ops that spend notes.
-///
-/// A duplicate-spend rejection is the one failure that reports on local state
-/// rather than the request: the relayer refuses it because the notes are already
-/// spent or in flight, meaning the note store still lists notes the chain has
-/// consumed. Resyncing drops them so the next attempt selects live notes. Notes
-/// merely in flight are not yet on-chain and survive the sync, and the message
-/// directs the user to wait for those.
+/// Failure path for note-spending ops: a duplicate-spend rejection resyncs stale notes.
 function useSpendFailed(): (label: string, progress: TxProgressApi, e: unknown) => void {
   const invalidateWallet = useInvalidateWalletState();
   return useCallback(
     (label, progress, e) => {
       markFailed(label, progress, e);
       if (isDuplicateSpend(e)) {
-        // The reason, not the body: the relayer's text can echo the submitted
-        // payload, and the reason already says which of the two it was.
+        // Log the reason, not the body: the relayer's text can echo the submitted payload.
         log.warn(`${label}: notes already spent or in flight, resyncing`, { reason: e.reason });
-        // Fire-and-forget: the toast carries the user-facing answer, and a
-        // failing sync must not replace the error explaining the refusal.
         void invalidateWallet();
       }
     },
@@ -79,31 +51,20 @@ function useSpendFailed(): (label: string, progress: TxProgressApi, e: unknown) 
   );
 }
 
-/// What one op does that the others do not.
-///
-/// Every op differs only in the call it makes, the tracker request it produces,
-/// and — for a few — what else a success or failure has to settle. Everything
-/// around that — the stepper, the failure toast and the post-submit tracking —
-/// is one policy, stated once in `useTrackedMutation`.
+/// What one op does differently; the shared policy lives in `useTrackedMutation`.
 export interface TrackedSpec<I, R extends TxResult> {
-  /// Names the op in the failure toast and in the tracker. A function because
-  /// withdraw's label depends on whether the native-ETH bridge is used.
+  /// Names the op in the failure toast and the tracker.
   label(input: I): string;
-  /// Start the stepper and drive the op. The step list is op-specific, so
-  /// `progress.start` is the callee's to call.
+  /// Start the stepper and drive the op.
   run(actions: ShieldedActions, input: I, progress: TxProgressApi): Promise<R>;
-  /// The tracker request for a broadcast result. Built per op because
-  /// `TrackTxRequest` correlates `kind` with the shape of `result`, which a
-  /// generic `{ kind, result }` pair would erase.
+  /// The tracker request for a broadcast result.
   track(input: I, result: R): TrackTxRequest;
-  /// Bookkeeping a success settles before it is tracked — a deposit's
-  /// transparent balance, which the funds have just left.
+  /// Bookkeeping a success settles before it is tracked.
   onSuccess?(result: R, input: I): void;
   /// The failure path. Marks the stepper failed and toasts by default.
   onError?(label: string, progress: TxProgressApi, e: unknown): void;
 }
 
-/// The default failure path: the stepper reads failed and the toast says why.
 function markFailed(label: string, progress: TxProgressApi, e: unknown): void {
   progress.set("failed");
   toastError(`${label} failed`, e);
@@ -119,7 +80,6 @@ export function useTrackedMutation<I, R extends TxResult>(
     mutationFn: (input) => spec.run(requireActions(actions), input, progress),
     onSuccess: (result, input) => {
       spec.onSuccess?.(result, input);
-      // Not returned; see `trackPostSubmit`.
       trackPostSubmit(track, {
         ...spec.track(input, result),
         label: spec.label(input),
@@ -131,8 +91,7 @@ export function useTrackedMutation<I, R extends TxResult>(
   return { mutation, progress };
 }
 
-/// A note-spending op: transfer, withdraw, swap. The tracked policy, with the
-/// duplicate-spend resync on failure.
+/// A note-spending op's spec: tracked, with the duplicate-spend resync on failure.
 export type SpendSpec<I, R extends TxResult> = Omit<TrackedSpec<I, R>, "onError">;
 
 export function useSpendMutation<I, R extends TxResult>(

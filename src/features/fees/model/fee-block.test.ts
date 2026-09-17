@@ -1,5 +1,3 @@
-// Each case here is a spend that used to reach the prover and fail after it.
-
 import { RAY } from "@lelantos-org/sdk/protocol";
 import { describe, expect, it, vi } from "vitest";
 import type { FeeAssetOption } from "./fee-block";

@@ -1,9 +1,3 @@
-// The claim page's row stepper: three numbered marks joined by a line, done in the
-// accent, the current one outlined.
-//
-// Not the shared `Stepper`, which is a vertical list of an op's phases. This one
-// is a wayfinding strip for a stranger, and its steps are fixed.
-
 import { CheckGlyph, CrossGlyph } from "@/shared/ui/icons/glyphs";
 import type { StepState } from "@/shared/ui/Stepper";
 import { CLAIM_STEPS, claimStepStates, type StepperState } from "../phase-presenter";
@@ -40,7 +34,6 @@ export function ClaimStepper({ state }: { state: StepperState }) {
           );
         })}
       </ol>
-      {/* The strip is a picture; this is the sentence it draws. */}
       <p className="sr-only" role="status" aria-live="polite">
         {announce(states)}
       </p>

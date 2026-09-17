@@ -7,11 +7,7 @@ const log = createLogger("wasm");
 
 let booted: Promise<void> | undefined;
 
-/// Register SDK WASM loaders. Idempotent; configuration is synchronous, and the
-/// Promise exists only so callers can `await` initialisation uniformly.
-///
-/// Covers the snarkjs path only: the rust prover's `wasm-bindgen-rayon` glue
-/// initialises lazily in its own worker chunk (`features/wallet/prover/`).
+/// Register the SDK's jubjub WASM loader. Idempotent.
 export function ensureWasm(): Promise<void> {
   if (booted) return booted;
   log.debug("registering jubjub loader");
@@ -23,13 +19,10 @@ export function ensureWasm(): Promise<void> {
   return booted;
 }
 
-/// Fetch the WASM bytes during idle time so the first crypto call does not block
-/// on the network. Safe to repeat: the HTTP cache deduplicates.
+/// Warm the WASM bytes in the HTTP cache during idle time.
 export function prefetchWasm(): void {
   const start = () => {
-    fetch(jubjubWasmUrl, { credentials: "omit" }).catch(() => {
-      /* The network may be offline; the first real call retries. */
-    });
+    fetch(jubjubWasmUrl, { credentials: "omit" }).catch(() => {});
   };
   whenIdle(start);
 }

@@ -1,6 +1,5 @@
 @layer features {
-  /* Shield, unavailable: the card shown in place of the form when the wallet
-     cannot deposit at all. */
+  /* Shield unavailable */
 
   .shield-off { gap: var(--sp-14); }
   .shield-off__t {

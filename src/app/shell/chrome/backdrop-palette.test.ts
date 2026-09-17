@@ -7,7 +7,6 @@ describe("buildPalette", () => {
     expect(p.link).toHaveLength(10);
     expect(p.pulse).toHaveLength(10);
     expect(p.link[0]).toContain("rgba(1, 2, 3,");
-    // Monotonic ramp; index 0 is the faintest.
     const alpha = (s: string) => Number(s.slice(s.lastIndexOf(",") + 1, -1));
     expect(alpha(p.link[0]!)).toBeLessThan(alpha(p.link[9]!));
   });

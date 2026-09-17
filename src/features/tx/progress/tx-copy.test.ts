@@ -1,8 +1,3 @@
-// The two sentences that make a promise about the user's money — whether the
-// tab can be closed, and whether a failure cost anything — have to change with
-// the stage the op reached. These pin the stages where the reassuring version
-// would be false.
-
 import { describe, expect, it } from "vitest";
 import {
   failureReassurance,

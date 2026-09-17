@@ -1,8 +1,3 @@
-// Swap. One card: "You pay" and "You receive" as two panels with the flip button
-// overlapping the seam, the Details row (slippage and the relayer fee), and the
-// Swap button with the revert threshold under it. No review step, on any width:
-// the quote expires in seconds, and a summary screen would spend them.
-
 import { isWalletError } from "@lelantos-org/sdk";
 import { useEffect } from "react";
 import {
@@ -41,6 +36,7 @@ import { useSwap } from "./use-swap";
 import { useSwapQuoteState } from "./use-swap-quote-state";
 import "./swap.css";
 
+/// The swap screen: pay and receive legs, Details row, and Swap.
 export function SwapForm() {
   const action = useSwap();
   const { mutation: m, progress } = action;
@@ -50,15 +46,11 @@ export function SwapForm() {
     schema: swapSchema,
     defaultValues: {
       assetIn: DEFAULT_ASSET_ID,
-      // Derived rather than hardcoded, and safe to compute here: the registry
-      // resolves before anything below `ChainProvider` renders (see
-      // `registered-assets.ts`), so there is nothing to reconcile afterwards.
       assetOut: defaultSwapOut(assets),
       amount: "",
       slippageBps: DEFAULT_SLIPPAGE_BPS,
     },
     action,
-    // The amount is denominated in the asset paid with.
     assetField: "assetIn",
   });
   const { register, setValue, watch, errors, clearAmount, clearFinished } = form;
@@ -72,9 +64,6 @@ export function SwapForm() {
 
   const inAsset = form.selected;
   const outAsset = findAsset(assets, wAssetOut);
-  // Relayer fee only: the protocol fee on leg 2 is already inside the credited
-  // figure `ReceiveLeg` shows (`quote.credit`), so repeating it here would
-  // double-count it.
   const spend = useSpendAmount({
     kind: "swap",
     selected: inAsset,
@@ -91,10 +80,6 @@ export function SwapForm() {
     slippageBps: wSlippage,
   });
   const { quote } = q;
-  // A swap refused because the quote's figures moved — a yield index, the
-  // relayer's flush fee — is retryable by re-quoting, so the form fetches a fresh
-  // quote at once rather than leaving the user to press refresh; the failure's
-  // message says the quote was refreshed.
   const staleQuote = isWalletError(m.error, "QUOTE_STALE");
   const { refresh } = q;
   useEffect(() => {
@@ -110,37 +95,24 @@ export function SwapForm() {
     quoteFailed: q.failed,
   });
 
-  // Swapping the pair drops the amount. It is denominated in the *in* asset, so
-  // carrying it across reinterprets "1.0" against a different token and a
-  // different balance — the same digits, a trade orders of magnitude apart.
-  // Clearing also retires the quote by construction, the mechanism the
-  // post-submit path relies on: the request goes `undefined` and the query
-  // idles.
+  // Flipping must clear the amount: the same digits in the other token are a different trade.
   const flip = () => {
     clearFinished();
     void flipPair({ setValue, trigger }, { assetIn: wAssetIn, assetOut: wAssetOut });
     clearAmount();
   };
 
-  // The quote is bound to this exact amount, so the amount cleared on success
-  // retires it: the request becomes `undefined` and the query goes idle, while
-  // the pair and slippage are preserved.
   const onSubmit = useActionSubmit<SwapInput>(form, async (_values, ctx) => {
-    // The quote carries the pair and the gross it was priced for; it describes
-    // the form's current trade by construction (`useSwapQuoteState`).
     if (!outAsset || !quote || quote.gross.amount !== ctx.amount) return false;
     return m.mutateAsync({ quote, feeAsset: spend.feeAsset });
   });
 
-  // Either leg's pick revalidates both: the schema rejects a pair of one asset.
   const pick = (field: "assetIn" | "assetOut") => (next: string) => {
     clearFinished();
     setValue(field, next);
     void trigger(["assetIn", "assetOut"]);
   };
 
-  // The pair error is reported on both paths by `swapSchema`; one sentence
-  // under the pay leg is enough.
   const pairError = errors.assetIn?.message ?? errors.assetOut?.message;
 
   return (

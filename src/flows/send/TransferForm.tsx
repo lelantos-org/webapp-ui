@@ -1,6 +1,3 @@
-// Send privately: a shielded transfer to another shielded address. Two presses:
-// the first reviews, the second sends.
-
 import { ADDRESS_HRP } from "@lelantos-org/sdk/primitives";
 import { Link } from "react-router-dom";
 import { z } from "zod";
@@ -28,6 +25,7 @@ import { SyncNotice } from "@/features/wallet";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
 import { useTransfer } from "./use-transfer";
 
+/// The Send form's schema.
 export const transferSchema = z.object({
   to: shieldedAddressField,
   amount: amountField,
@@ -35,6 +33,7 @@ export const transferSchema = z.object({
 });
 export type TransferInput = z.infer<typeof transferSchema>;
 
+/// Send privately: a shielded transfer, reviewed before it is sent.
 export function TransferForm() {
   const action = useTransfer();
   const form = useActionForm({
@@ -44,8 +43,6 @@ export function TransferForm() {
   });
   const { register, setValue, errors, clearFinished } = form;
   const options = useAssetSelectOptions();
-  // A transfer has no transparent leg, so `MASP._takeFee` never runs and the
-  // panel states the relayer's fee alone.
   const { spend, to, review, onPasteTo, frame, hero, reviewPanel } = useSpendForm(form, action, {
     kind: "transfer",
     recipient: { recipientValid: isShieldedAddress, recipientKind: "shielded" },
@@ -137,8 +134,6 @@ export function TransferForm() {
         formError={errors.to?.message}
         helper="A shielded address. Ask the recipient for theirs — it never appears on-chain."
         extra={
-          // Send by link has no Home tile: it is the answer to a recipient with
-          // no shielded address, so it is offered where that becomes apparent.
           <p className="rcpt__extra">
             No shielded address?{" "}
             <Link to="/send/link" className="rcpt__link">

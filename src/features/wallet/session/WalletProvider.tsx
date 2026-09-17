@@ -1,10 +1,3 @@
-// React context wiring for the SDK wallet: the session, the wallet built from
-// it, the connect flow's picker, and the store's boot.
-//
-// The picker is mounted once here rather than at each connect button, so
-// `connect` means "start the flow" and no picker state is threaded through the
-// call sites.
-
 import { type ReactNode, useCallback, useEffect, useMemo, useRef } from "react";
 import { useActiveChainOrUndefined } from "@/features/chain";
 import { clearAllCachedNsk, clearCachedNsk, eip1193Store } from "@/features/wallet-kinds";
@@ -32,12 +25,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   });
   const registryFailure = session.registry.status === "failed" ? session.registry : undefined;
   const error = registryFailure?.message ?? deriveError ?? session.connectError;
-  // Every "try again" is wired to `connect`. After a registry failure the wallet
-  // is connected already, and what needs repeating is the fetch.
+  // After a registry failure, "try again" repeats the fetch.
   const connect = registryFailure?.retry ?? flow.begin;
 
-  // Derived once here rather than in each consumer, so no component
-  // re-implements the rule and drifts from it.
   const activeChain = useActiveChainOrUndefined();
   const capabilities = useMemo(
     () =>
@@ -48,12 +38,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [wallet, session.kind, session.ethAddress, activeChain],
   );
 
-  // Drop the outgoing account's nsk when the session rotates accounts.
-  //
-  // The cache is keyed by account and lives for the tab's life, so without this
-  // a session touching several accounts accumulates one raw spending key per
-  // account in `sessionStorage`, readable by any script on the origin. Switching
-  // back re-prompts for a derivation.
+  // Drop the outgoing account's nsk on account rotation, so raw spending keys do not pile up in sessionStorage.
   const prevAccount = useRef<string | undefined>(session.accountKey);
   useEffect(() => {
     const prev = prevAccount.current;
@@ -62,13 +47,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, [session.accountKey]);
 
   const disconnect = useCallback(() => {
-    // Every entry, not only the connected address: `clearCachedNsk(address)`
-    // would leave the keys of any account used earlier in the session in place.
+    // Every entry, not only the current account's: earlier accounts' keys must go too.
     clearAllCachedNsk();
-    // The two worker pools together hold the ~49 MB zkey, the circuit wasm, a
-    // rayon pool and one jubjub wasm instance per scanner worker.
-    // None of it is reachable from a disconnected wallet, and any later proof
-    // follows a fresh connect.
     disposeProverWorker();
     releaseScanner(wallet);
     session.disconnect();
@@ -91,16 +71,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const instance = useMemo(() => ({ wallet }), [wallet]);
 
-  // Boot the wallet store once at mount: EIP-6963 discovery plus a silent
-  // reconnect to the last connected wallet. Prompts only when the site's
-  // permission has been revoked. Last, so this effect runs after the provider's
-  // own subscriptions are in place.
+  // Boot the wallet store once: EIP-6963 discovery and a silent reconnect.
   useEffect(() => {
     eip1193Store.startDiscovery();
     void eip1193Store.resumeFromStorage();
-    // No passkey call here: that store seeds itself from storage at
-    // construction, so a returning session is already `connected` on the first
-    // render rather than after a second pass over the tree.
   }, []);
 
   return (

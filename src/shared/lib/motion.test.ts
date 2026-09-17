@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { stubReducedMotion } from "@/test/dom";
+import { stubReducedMotion } from "@/test/browser";
 import { animationDelay, MODAL_EXIT_MS, prefersReducedMotion } from "./motion";
 
 describe("prefersReducedMotion", () => {
@@ -41,7 +41,6 @@ describe("animationDelay", () => {
     const settled = vi.fn();
     const p = animationDelay(MODAL_EXIT_MS).then(settled);
 
-    // No timers advanced: a pending timeout would leave this unresolved.
     await p;
     expect(settled).toHaveBeenCalledTimes(1);
   });

@@ -1,8 +1,7 @@
 import { NSK_HEX_LEN, type NskParseError, nskFieldFromHex } from "@/features/wallet-kinds";
 import { err, ok, type Result } from "@/shared/lib/result";
 
-/// What a claim link carries: which chain the notes are on, and the ephemeral
-/// key that spends them.
+/// What a claim link carries: the notes' chain and the ephemeral key that spends them.
 export interface ClaimPayload {
   chainId: bigint;
   /// Ephemeral nsk, kept as hex: the ephemeral wallet is built from the string.
@@ -11,14 +10,7 @@ export interface ClaimPayload {
 
 export type ClaimParseError = NskParseError | "malformed" | "invalid-chain";
 
-/// `<chainIdHex>:<nskHex>`.
-///
-/// The chain is part of the payload because the key alone does not identify
-/// where the notes live. Without it, a link made on one chain and opened against
-/// another scans the wrong pool and reports nothing to claim, which is
-/// indistinguishable from an already-claimed link.
-///
-/// Links in any other format do not parse.
+/// `<chainIdHex>:<nskHex>`. The chain names the pool; the key alone cannot.
 export function encodeClaimPayload(chainId: bigint, nskHex: string): string {
   return `${chainId.toString(16)}:${nskHex}`;
 }
@@ -32,8 +24,6 @@ export function parseClaimFragment(hash: string): Result<ClaimPayload, ClaimPars
 
   let chainId: bigint;
   try {
-    // Hex, matching `encodeClaimPayload`. `BigInt` requires the prefix to read it
-    // as hex and rejects anything non-numeric.
     chainId = BigInt(`0x${chainHex}`);
   } catch {
     return err("invalid-chain");

@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isUnrecognizedChain } from "./errors";
 
-// Walking the wrapped error (depth, cycles, string codes) is pinned in
-// `shared/lib/rpc-error.test.ts`; these are the chain-specific readings.
 describe("isUnrecognizedChain", () => {
   it("reads the bare code the spec describes", () => {
     expect(isUnrecognizedChain({ code: 4902 })).toBe(true);
@@ -10,9 +8,7 @@ describe("isUnrecognizedChain", () => {
   });
 
   it("unwraps the generic -32603 MetaMask and Rabby wrap it in", () => {
-    // Both build on the same `rpc-errors` package, so the real code sits under
-    // `data.originalError` and the top-level one is a useless "internal error".
-    // Reading only the top level skipped `wallet_addEthereumChain` entirely.
+    // Wallets built on `rpc-errors` nest the real code under `data.originalError`.
     expect(
       isUnrecognizedChain({
         code: -32603,
@@ -23,7 +19,6 @@ describe("isUnrecognizedChain", () => {
   });
 
   it("falls back to the message for wallets that send no usable code", () => {
-    // Verbatim from the incident: Rabby on Anvil (0x7a69 = 31337).
     expect(
       isUnrecognizedChain({
         code: -32603,
