@@ -17,8 +17,10 @@
     gap: var(--sp-12);
     margin-top: -6px;
   }
-  /* Governance tile */
+  /* Five tiles: the governance or agents tile joins the four core actions. */
   .tiles--five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  /* Six: both join, and the row splits evenly rather than leaving one stranded. */
+  .tiles--six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .tile {
     display: flex;
     flex-direction: column;
@@ -106,6 +108,8 @@
       grid-column: 1 / -1;
       flex-direction: row;
     }
+    /* Two rows of three, so neither row leaves a gap. */
+    .tiles--six { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .provenance { padding: var(--sp-14) var(--sp-16); margin-top: -8px; }
     .provenance__facts,
     .provenance__note { font-size: var(--fs-13); }

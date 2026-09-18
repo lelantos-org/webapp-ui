@@ -20,6 +20,7 @@ const TILES = [
   { to: "/send", label: "Send", icon: "send" },
   { to: "/swap", label: "Swap", icon: "swap" },
   { to: "/unshield", label: "Unshield", icon: "unshield" },
+  { to: "/agents", label: "Agents", icon: "agent" },
   { to: "/governance", label: "Governance", icon: "govern", needsGovernor: true },
 ] as const satisfies readonly {
   to: string;
@@ -56,7 +57,14 @@ export function Home() {
           {/* Withheld until Welcome's own h1 unmounts. */}
           {welcomeMounted ? null : <h1 className="sr-only">Lelantos shielded wallet</h1>}
           <PortfolioHero />
-          <nav className={cx("tiles", tiles.length > 4 && "tiles--five")} aria-label="What to do">
+          <nav
+            className={cx(
+              "tiles",
+              tiles.length === 5 && "tiles--five",
+              tiles.length >= 6 && "tiles--six",
+            )}
+            aria-label="What to do"
+          >
             {tiles.map((t) => {
               const gate = "capability" in t ? capabilities[t.capability] : undefined;
               const primary = "primary" in t && t.primary;

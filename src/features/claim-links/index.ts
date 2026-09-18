@@ -2,6 +2,7 @@ export type { EphemeralBalance } from "./ephemeral/ephemeral-wallet";
 export {
   buildEphemeralWallet,
   clearEphemeralStore,
+  deriveEphemeralAddress,
   summarizeEphemeralNotes,
   sweepEphemeral,
 } from "./ephemeral/ephemeral-wallet";

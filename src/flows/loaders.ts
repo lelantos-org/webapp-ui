@@ -16,3 +16,5 @@ export const loadClaim = () => import("./claim/ClaimPage");
 export const loadLinks = () => import("./links/LinksPage");
 /// Governance: proposals, voting, delegation and new proposals (`/governance`).
 export const loadGovernance = () => import("./governance/GovernanceRoutes");
+/// Agents: shielded wallets funded here and handed to a process (`/agents`).
+export const loadAgents = () => import("./agents/AgentsRoutes");

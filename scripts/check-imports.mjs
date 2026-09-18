@@ -3,6 +3,7 @@
 //   2. References that leave their module use the `@/` alias.
 //   3. Flows are imported only by src/flows/loaders.ts, dynamically.
 //   4. No import cycles between features.
+//   5. In-app links go through react-router, not a bare `<a href="/...">`.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -119,6 +120,18 @@ for (const file of sourceFiles(SRC)) {
       if (!edges.has(to)) edges.set(to, where);
       featureEdges.set(from, edges);
     }
+  }
+}
+
+// 5. an in-app `<a href="/...">` is a full page reload: the app remounts, the
+// wallet reconnects, and only then does the route render. Every internal
+// destination must go through react-router's `<Link to>` / `navigate()`.
+// External links (`http:`, `mailto:`) and `#` anchors are untouched.
+for (const file of sourceFiles(SRC)) {
+  if (/\.(test|dom\.test)\.tsx?$/.test(file)) continue;
+  const text = readFileSync(file, "utf8");
+  for (const [, quote] of text.matchAll(/<a\s[^>]*?href=\{?["'`](\/[^"'`]*)/g)) {
+    report(file, `<a href="${quote}"> reloads the app — use react-router's <Link to="${quote}">`);
   }
 }
 

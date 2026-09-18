@@ -7,6 +7,12 @@ export const LOCAL_KEYS = {
   debug: "lelantos:debug",
   /// Claim links this browser generated, each carrying its bearer spending key.
   claimLinks: "lelantos:claim-links:v1",
+  /// Agent wallets this browser funded, each holding a long-lived spending key.
+  ///
+  /// Unlike `claimLinks` these never expire: the stored `nsk` is the browser's
+  /// only copy, and dropping a record would strand whatever the agent still
+  /// holds. See `features/agents/policy.ts`.
+  agents: "lelantos:agents:v1",
   /// Recent proving durations, for the progress card's estimate.
   proveDurations: "lelantos:prove-durations",
   /// The injected wallet to reattach to on load.

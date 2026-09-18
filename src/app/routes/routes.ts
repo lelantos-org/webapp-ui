@@ -1,6 +1,7 @@
 import { type ComponentType, type LazyExoticComponent, lazy } from "react";
 import type { ActionScreenProps } from "@/app/shell/ActionScreen";
 import {
+  loadAgents,
   loadGovernance,
   loadLinks,
   loadSend,
@@ -47,6 +48,8 @@ export const ACTIONS: readonly ActionRoute[] = [
   action("/governance", "vault", loadGovernance, "ProposalsPage", true),
   action("/governance/new", "wide", loadGovernance, "CreateProposalPage", false),
   action("/governance/:id", "vault", loadGovernance, "ProposalDetailPage", false),
+  action("/agents", "vault", loadAgents, "AgentsPage", true),
+  action("/agents/new", "narrow", loadAgents, "NewAgentForm", false),
 ];
 
 /// Route chunks behind each Home tile, keyed by path.
