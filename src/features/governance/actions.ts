@@ -17,11 +17,12 @@ import {
   feeBurnerActionAbi,
   governorActionAbi,
   govTokenActionAbi,
-  protocolAdminActionAbi,
+  poolActionAbi,
+  swapWrapperActionAbi,
 } from "./abi";
 
 /// Contracts a proposal action can target by name.
-export type KnownContractId = "governor" | "token" | "protocolAdmin" | "feeBurner";
+export type KnownContractId = "governor" | "token" | "pool" | "swapWrapper" | "feeBurner";
 
 /// A contract whose calls this app can decode and build.
 export interface KnownContract {
@@ -29,7 +30,7 @@ export interface KnownContract {
   label: string;
   /// The functions a proposal may call on it.
   functions: readonly AbiFunction[];
-  /// Registry address; absent for ProtocolAdmin and FeeBurner, whose target is typed by hand.
+  /// Registry address; absent for SwapWrapper and FeeBurner, whose target is typed by hand.
   address?: EvmAddress | undefined;
 }
 
@@ -40,7 +41,9 @@ const writes = (abi: Abi): AbiFunction[] =>
   );
 
 /// The contracts whose calls this app can read and build, for one chain.
-export function knownContracts(chain: Pick<ChainEntry, "governorAddress" | "govTokenAddress">) {
+export function knownContracts(
+  chain: Pick<ChainEntry, "governorAddress" | "govTokenAddress" | "maspAddress">,
+) {
   const out: KnownContract[] = [
     {
       id: "governor",
@@ -54,7 +57,13 @@ export function knownContracts(chain: Pick<ChainEntry, "governorAddress" | "govT
       functions: writes(govTokenActionAbi),
       address: chain.govTokenAddress,
     },
-    { id: "protocolAdmin", label: "ProtocolAdmin", functions: writes(protocolAdminActionAbi) },
+    {
+      id: "pool",
+      label: "MASP pool",
+      functions: writes(poolActionAbi),
+      address: chain.maspAddress,
+    },
+    { id: "swapWrapper", label: "SwapWrapper", functions: writes(swapWrapperActionAbi) },
     { id: "feeBurner", label: "FeeBurner", functions: writes(feeBurnerActionAbi) },
   ];
   return out;

@@ -17,7 +17,12 @@ import {
 const GOVERNOR = evmAddress("0x5555555555555555555555555555555555555555");
 const TOKEN = evmAddress("0x6666666666666666666666666666666666666666");
 const OTHER = "0x7777777777777777777777777777777777777777";
-const contracts = knownContracts({ governorAddress: GOVERNOR, govTokenAddress: TOKEN });
+const MASP = evmAddress("0x8888888888888888888888888888888888888888");
+const contracts = knownContracts({
+  governorAddress: GOVERNOR,
+  govTokenAddress: TOKEN,
+  maspAddress: MASP,
+});
 
 const draft = (over: Partial<ActionDraft>): ActionDraft => ({
   target: TOKEN,
@@ -41,7 +46,9 @@ describe("knownContracts", () => {
   it("places the governor and token at the registry's addresses", () => {
     expect(contracts.find((c) => c.id === "governor")?.address).toBe(GOVERNOR);
     expect(contracts.find((c) => c.id === "token")?.address).toBe(TOKEN);
+    expect(contracts.find((c) => c.id === "pool")?.address).toBe(MASP);
     expect(contracts.find((c) => c.id === "feeBurner")?.address).toBeUndefined();
+    expect(contracts.find((c) => c.id === "swapWrapper")?.address).toBeUndefined();
   });
 
   it("includes the quorum-vote cutoff setter on the governor", () => {

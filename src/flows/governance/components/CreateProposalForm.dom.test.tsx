@@ -9,7 +9,12 @@ import { CreateProposalForm } from "./CreateProposalForm";
 const GOVERNOR = evmAddress("0x5555555555555555555555555555555555555555");
 const TOKEN = evmAddress("0x6666666666666666666666666666666666666666");
 const OTHER = "0x7777777777777777777777777777777777777777";
-const contracts = knownContracts({ governorAddress: GOVERNOR, govTokenAddress: TOKEN });
+const MASP = evmAddress("0x8888888888888888888888888888888888888888");
+const contracts = knownContracts({
+  governorAddress: GOVERNOR,
+  govTokenAddress: TOKEN,
+  maspAddress: MASP,
+});
 
 function setup(blocked?: string) {
   const onSubmit = vi.fn();

@@ -728,93 +728,77 @@ export const govTokenActionAbi = [
   },
 ] as const;
 
-/// `ProtocolAdmin`: the pool's admin, owned by the timelock.
-export const protocolAdminActionAbi = [
+/// `MASP`: the pool, owned by the timelock. Includes the proxy's reserved
+/// admin surface, which the proxy answers itself and which the timelock holds
+/// alongside ownership.
+export const poolActionAbi = [
   {
     type: "function",
-    name: "execute",
+    name: "addAsset",
     inputs: [
-      {
-        name: "target",
-        type: "address",
-      },
-      {
-        name: "data",
-        type: "bytes",
-      },
-    ],
-    outputs: [
-      {
-        name: "",
-        type: "bytes",
-      },
-    ],
-    stateMutability: "nonpayable",
-  },
-  {
-    type: "function",
-    name: "migrateAdmin",
-    inputs: [
-      {
-        name: "newAdmin",
-        type: "address",
-      },
+      { name: "id", type: "uint64" },
+      { name: "token", type: "address" },
+      { name: "scale", type: "uint256" },
+      { name: "depositBps", type: "uint16" },
+      { name: "withdrawBps", type: "uint16" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
   },
   {
     type: "function",
-    name: "grantRole",
+    name: "addYieldAsset",
     inputs: [
-      {
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        name: "account",
-        type: "address",
-      },
+      { name: "id", type: "uint64" },
+      { name: "token", type: "address" },
+      { name: "scale", type: "uint256" },
+      { name: "depositBps", type: "uint16" },
+      { name: "withdrawBps", type: "uint16" },
+      { name: "venue_", type: "address" },
+      { name: "bufferBps_", type: "uint16" },
+      { name: "perfBps_", type: "uint16" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
   },
   {
     type: "function",
-    name: "revokeRole",
+    name: "setAssetFee",
     inputs: [
-      {
-        name: "role",
-        type: "bytes32",
-      },
-      {
-        name: "account",
-        type: "address",
-      },
+      { name: "id", type: "uint64" },
+      { name: "depositBps", type: "uint16" },
+      { name: "withdrawBps", type: "uint16" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
   },
   {
     type: "function",
-    name: "disableAsset",
+    name: "setAssetDisabled",
     inputs: [
-      {
-        name: "id",
-        type: "uint64",
-      },
+      { name: "id", type: "uint64" },
+      { name: "disabled", type: "bool" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
   },
   {
     type: "function",
-    name: "haltYield",
+    name: "setYieldParams",
     inputs: [
-      {
-        name: "id",
-        type: "uint64",
-      },
+      { name: "id", type: "uint64" },
+      { name: "bufferBps", type: "uint16" },
+      { name: "perfBps", type: "uint16" },
+    ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setHalted",
+    inputs: [
+      { name: "id", type: "uint64" },
+      { name: "halted", type: "bool" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
@@ -822,41 +806,80 @@ export const protocolAdminActionAbi = [
   {
     type: "function",
     name: "emergencyUnwind",
-    inputs: [
-      {
-        name: "id",
-        type: "uint64",
-      },
-    ],
-    outputs: [
-      {
-        name: "",
-        type: "uint256",
-      },
-    ],
+    inputs: [{ name: "id", type: "uint64" }],
+    outputs: [{ name: "", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setCancelDelay",
+    inputs: [{ name: "newDelay", type: "uint32" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setTreasury",
+    inputs: [{ name: "newTreasury", type: "address" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "queueUpgrade",
+    inputs: [{ name: "newImplementation", type: "address" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "cancelUpgrade",
+    inputs: [],
+    outputs: [],
     stateMutability: "nonpayable",
   },
   {
     type: "function",
     name: "pauseSpends",
+    inputs: [{ name: "duration", type: "uint256" }],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "queueVerifierUpdate",
     inputs: [
-      {
-        name: "duration",
-        type: "uint256",
-      },
+      { name: "treeUpdateBatchVerifier", type: "address" },
+      { name: "spendVerifier", type: "address" },
     ],
     outputs: [],
     stateMutability: "nonpayable",
   },
   {
     type: "function",
-    name: "disallowAdapter",
+    name: "cancelVerifierUpdate",
+    inputs: [],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+] as const;
+
+/// `SwapWrapper`: the swap escrow, owned by the timelock.
+export const swapWrapperActionAbi = [
+  {
+    type: "function",
+    name: "setAdapterAllowed",
     inputs: [
-      {
-        name: "adapter",
-        type: "address",
-      },
+      { name: "adapter", type: "address" },
+      { name: "allowed", type: "bool" },
     ],
+    outputs: [],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "setTreasury",
+    inputs: [{ name: "t", type: "address" }],
     outputs: [],
     stateMutability: "nonpayable",
   },
