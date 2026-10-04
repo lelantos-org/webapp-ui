@@ -6,7 +6,6 @@ export function detail(uuid: string, rdns: string, name = rdns, icon = ""): Eip6
   return { info: { uuid, name, icon, rdns }, provider: { request: vi.fn() } };
 }
 
-/// Fire the announce event a wallet extension would.
 export function announce(d: Eip6963ProviderDetail): void {
   window.dispatchEvent(new CustomEvent("eip6963:announceProvider", { detail: d }));
 }

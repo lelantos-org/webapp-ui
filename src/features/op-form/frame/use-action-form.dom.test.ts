@@ -22,9 +22,11 @@ const ASSET = {
 };
 
 const assets = vi.hoisted(() => ({ value: [] as unknown[] }));
+const remember = vi.fn();
 vi.mock("@/features/assets", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/assets")>()),
   useRegisteredAssets: () => assets.value,
+  useRememberAsset: () => remember,
 }));
 
 const schema = z.object({ amount: z.string(), asset: z.string() });
@@ -55,6 +57,19 @@ describe("useActionForm", () => {
     const { result } = setup(send);
     await act(() => result.current.onSubmit());
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("remembers the asset of a send that went out, and of no other", async () => {
+    assets.value = [ASSET];
+    remember.mockClear();
+
+    const held = setup(async () => false);
+    await act(() => held.result.current.onSubmit());
+    expect(remember).not.toHaveBeenCalled();
+
+    const sent = setup(async () => {});
+    await act(() => sent.result.current.onSubmit());
+    expect(remember).toHaveBeenCalledWith(5n);
   });
 
   it("hands `send` the amount already in circuit units", async () => {

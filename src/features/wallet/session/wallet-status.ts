@@ -7,6 +7,21 @@ export interface WalletStatusInputs {
   wallet: WalletApi | undefined;
   deriveError: string | undefined;
   hasCachedKey: boolean;
+  /// The key was derived in this build: the prompt is answered and the wallet is on its way.
+  keyResolved: boolean;
+}
+
+const WAITING: ReadonlySet<WalletStatus> = new Set([
+  "connecting",
+  "loading-networks",
+  "deriving",
+  "preparing",
+  "resuming",
+]);
+
+/// Whether the connection is under way: neither settled nor waiting on the user to start it.
+export function isConnectionPending(status: WalletStatus): boolean {
+  return WAITING.has(status);
 }
 
 /// The user-facing wallet status; an unserved chain outranks a derive error, which it causes.
@@ -15,8 +30,13 @@ export function deriveWalletStatus({
   wallet,
   deriveError,
   hasCachedKey,
+  keyResolved,
 }: WalletStatusInputs): WalletStatus {
-  if (!session.isConnected) return session.isConnecting ? "connecting" : "disconnected";
+  if (!session.isConnected) {
+    if (!session.isConnecting) return "disconnected";
+    // A stored session coming back asks nothing of the user: not "approve in your wallet".
+    return session.isRestoring ? "resuming" : "connecting";
+  }
   if (session.registry.status === "loading" || session.registry.status === "idle") {
     return "loading-networks";
   }
@@ -24,5 +44,6 @@ export function deriveWalletStatus({
   if (!session.chainSupported) return "unsupported-chain";
   if (deriveError) return "error";
   if (wallet) return "ready";
-  return hasCachedKey ? "resuming" : "deriving";
+  if (hasCachedKey) return "resuming";
+  return keyResolved ? "preparing" : "deriving";
 }

@@ -8,9 +8,15 @@ import {
   normalizeNumericInput,
 } from "@/shared/lib/format/number";
 
-/// Circuit units as full-precision grouped decimal text; `parseAmountInput` inverts it exactly.
+/// Circuit units as full-precision grouped decimal text, for display.
 export function formatAmountForAsset(circuitUnits: bigint, asset: AssetUnits): string {
   return formatDecimal(toBaseUnits(circuitUnits, asset), asset.decimals);
+}
+
+/// Circuit units as ungrouped decimal text for the amount field; `parseAmountInput` inverts it
+/// exactly in any locale.
+export function formatAmountForInput(circuitUnits: bigint, asset: AssetUnits): string {
+  return formatDecimal(toBaseUnits(circuitUnits, asset), asset.decimals, false);
 }
 
 /// Parse typed text into circuit units of `asset`. Throws an `Error` worded for the amount field.
@@ -56,7 +62,7 @@ export function formatAssetAmount(
   return asset.symbol ? `${formatted} ${asset.symbol}` : formatted;
 }
 
-/// Circuit units with two to `maxFrac` fractional places, as a money screen sets a figure.
+/// Circuit units with two to `maxFrac` fractional places.
 export function formatAssetFixed(
   circuitUnits: bigint,
   asset: AssetUnits,

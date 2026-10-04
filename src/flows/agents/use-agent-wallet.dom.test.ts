@@ -1,7 +1,5 @@
-// Sweeping is how an operator revokes an agent, and "revoked" is a claim about
-// the whole wallet. These pin the rule that the claim is only made once the
-// wallet is actually empty — an agent holding a second token is not revoked
-// because the first one was swept.
+// An agent is marked revoked only once its whole wallet is empty, not when one
+// asset is swept.
 
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,7 +20,7 @@ vi.mock("@/features/claim-links", () => ({
     sync: async () => undefined,
     dispose: async () => undefined,
   }),
-  summarizeEphemeralNotes: async () => scans.shift() ?? [],
+  scanEphemeralBalances: async () => scans.shift() ?? [],
   sweepEphemeral: (eph: unknown, to: string, asset: bigint) => sweepEphemeral(eph, to, asset),
 }));
 

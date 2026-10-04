@@ -63,6 +63,14 @@ describe("formatDecimal", () => {
   });
 });
 
+describe("formatDecimal ungrouped", () => {
+  it("leaves out the thousand separators, with and without decimals", () => {
+    expect(formatDecimal(1_234_567_800_000n, 6, false)).toBe("1234567.8");
+    expect(formatDecimal(1_000_000n, 0, false)).toBe("1000000");
+    expect(formatDecimal(-1_234_500_000n, 6, false)).toBe("-1234.5");
+  });
+});
+
 describe("formatDecimalCompact", () => {
   it("truncates long fractions to six digits", () => {
     expect(formatDecimalCompact(2_932_815_821_683_550n, 18)).toBe("0.002932");
@@ -97,7 +105,7 @@ describe("parseDecimal with no fractional units", () => {
 
   it("still accepts whole numbers", () => {
     expect(parseDecimal("19", 0)).toBe(19n);
-    expect(parseDecimal("1,234", 0)).toBe(1234n);
+    expect(parseDecimal("1,234,567", 0)).toBe(1234567n);
   });
 });
 
@@ -134,5 +142,28 @@ describe("formatFixed", () => {
 describe("normalizeNumericInput", () => {
   it("strips the grouping a user may type, and surrounding space", () => {
     expect(normalizeNumericInput(" 1,234_567.5 ")).toBe("1234567.5");
+    expect(normalizeNumericInput("1,234,567")).toBe("1234567");
+  });
+
+  it("reads a lone comma as the decimal point where it cannot be grouping", () => {
+    for (const decimalComma of [false, true]) {
+      expect(normalizeNumericInput("0,5", decimalComma)).toBe("0.5");
+      expect(normalizeNumericInput("1,5", decimalComma)).toBe("1.5");
+      expect(normalizeNumericInput("12,25", decimalComma)).toBe("12.25");
+      expect(normalizeNumericInput("0,500", decimalComma)).toBe("0.500");
+      expect(normalizeNumericInput("1,2345", decimalComma)).toBe("1.2345");
+    }
+  });
+
+  it("takes the last separator as the decimal point when both are present", () => {
+    expect(normalizeNumericInput("1,234.56")).toBe("1234.56");
+    expect(normalizeNumericInput("1.234,56")).toBe("1234.56");
+    expect(normalizeNumericInput("1.234.567,8")).toBe("1234567.8");
+  });
+
+  it("reads the grouped-thousand shape by the locale's convention", () => {
+    expect(normalizeNumericInput("1,234", false)).toBe("1234");
+    expect(normalizeNumericInput("123,456", false)).toBe("123456");
+    expect(normalizeNumericInput("1,234", true)).toBe("1.234");
   });
 });

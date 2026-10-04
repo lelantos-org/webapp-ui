@@ -5,6 +5,7 @@ import { decodeEventLog, encodeFunctionData, type TransactionReceipt } from "vie
 import { useActiveChainOrUndefined } from "@/features/chain";
 import { useSession } from "@/features/wallet";
 import { kindAdapter } from "@/features/wallet-kinds";
+import { sameAddress } from "@/shared/lib/address";
 import { queryKeys } from "@/shared/query/keys";
 import { governorAbi, govTokenAbi } from "./abi";
 import type { BuiltAction } from "./actions";
@@ -50,7 +51,6 @@ interface Sent {
   onSent?: ((hash: `0x${string}`) => void) | undefined;
 }
 
-/// Inputs to `useCastVote`.
 export interface CastVoteInput extends Sent {
   support: VoteSupport;
   reason: string;
@@ -77,7 +77,6 @@ export function useCastVote(proposalId: string) {
   });
 }
 
-/// Inputs to `useDelegate`.
 export interface DelegateInput extends Sent {
   token: EvmAddress;
   delegatee: EvmAddress;
@@ -104,7 +103,7 @@ export function createdProposalId(
   governor: EvmAddress,
 ): string | undefined {
   for (const log of receipt.logs) {
-    if (log.address.toLowerCase() !== governor.toLowerCase()) continue;
+    if (!sameAddress(log.address, governor)) continue;
     try {
       const ev = decodeEventLog({ abi: governorAbi, data: log.data, topics: log.topics });
       if (ev.eventName === "ProposalCreated") return ev.args.proposalId.toString();
@@ -115,7 +114,6 @@ export function createdProposalId(
   return undefined;
 }
 
-/// Inputs to `usePropose`.
 export interface ProposeInput extends Sent {
   actions: readonly BuiltAction[];
   description: string;

@@ -16,17 +16,14 @@ function hash(seed: string): number {
   return h >>> 0;
 }
 
-/// An HSL triple, as the brand table stores one.
-export type Hsl = readonly [h: number, s: number, l: number];
+const SATURATION = 58;
+const LIGHTNESS = 42;
 
-const DERIVED_SL: readonly [number, number] = [58, 42];
-
-/// The `--mono-*` custom properties `.tok__mark` and `.chain-icon` read: brand hue or one hashed from `seed`.
-export function monogramStyle(seed: string, brand?: Hsl): CSSProperties {
-  const [h, s, l] = brand ?? [hash(seed.toLowerCase()) % 360, ...DERIVED_SL];
+/// `--mono-*` properties for `.tok__mark` and `.chain-icon`: a hue hashed from `seed`.
+export function monogramStyle(seed: string): CSSProperties {
   return {
-    "--mono-h": `${h}`,
-    "--mono-s": `${s}%`,
-    "--mono-l": `${l}%`,
+    "--mono-h": `${hash(seed.toLowerCase()) % 360}`,
+    "--mono-s": `${SATURATION}%`,
+    "--mono-l": `${LIGHTNESS}%`,
   } as CSSProperties;
 }

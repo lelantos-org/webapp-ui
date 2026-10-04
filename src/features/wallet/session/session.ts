@@ -20,6 +20,8 @@ export interface Session {
   layer?: ChainLayerSpec | undefined;
   isConnected: boolean;
   isConnecting: boolean;
+  /// `isConnecting` for a stored session being restored, not a connection the user just asked for.
+  isRestoring: boolean;
   connectError?: string | undefined;
   disconnect(): void;
 }
@@ -29,8 +31,11 @@ export function useSession(): Session {
   const registry = useChainRegistryState();
   const { active, snapshots } = useWalletKinds();
 
-  // Keyed on the adapter (a module constant), not the per-render `active` wrapper.
-  const adapter = active?.adapter;
+  const pending = snapshots.find((s) => s.snapshot.connecting);
+
+  // Keyed on the adapter (a module constant), not the per-render `active` wrapper. A connection
+  // still being made counts, so it can be called off.
+  const adapter = (active ?? pending)?.adapter;
   const disconnect = useCallback(() => adapter?.disconnect(), [adapter]);
 
   // Must stay referentially stable: a fresh object aborts `useBuildWallet`'s in-flight build.
@@ -39,7 +44,6 @@ export function useSession(): Session {
     [active, activeChain],
   );
 
-  const pending = snapshots.find((s) => s.snapshot.connecting);
   const failed = snapshots.find((s) => s.snapshot.error !== undefined);
 
   return {
@@ -51,6 +55,7 @@ export function useSession(): Session {
     layer,
     isConnected: !!active,
     isConnecting: !!pending,
+    isRestoring: !!pending?.snapshot.silent,
     connectError: failed?.snapshot.error,
     disconnect,
   };

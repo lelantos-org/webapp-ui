@@ -23,7 +23,7 @@ export function forgetAttachedRdns(): void {
   localStore.remove(ATTACHED_KEY);
 }
 
-/// The wallet chosen last time, kept across disconnects. Orders the picker.
+/// The wallet chosen last time. Orders the picker.
 export function preferredRdns(): string | undefined {
   return localStore.get(PREFERRED_KEY);
 }

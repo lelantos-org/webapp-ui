@@ -2,18 +2,15 @@ import type { ChainEntry } from "@/config/chains";
 import { userMessage } from "@/shared/lib/errors";
 import { createStore } from "@/shared/lib/external-store";
 import { createLogger } from "@/shared/lib/logger";
+import { isMobileBrowser } from "@/shared/lib/platform";
 import type { ConnectionStatus } from "../types";
 import { type Eip6963ProviderDetail, ProviderRegistry } from "./discovery";
 import { attachProviderEvents, type Eip1193Provider, firstAccount, parseChainId } from "./provider";
 import { attachedRdns, forgetAttachedRdns, rememberRdns } from "./rdns-storage";
 import { switchWalletChain } from "./switch-chain";
 
-export { preferredRdns } from "./rdns-storage";
-export type { Eip1193Provider, Eip6963ProviderDetail };
-
 const log = createLogger("eip1193");
 
-/// How long to wait for the requested wallet to announce.
 const ANNOUNCE_WAIT_MS = 400;
 
 export interface Eip1193State {
@@ -23,6 +20,8 @@ export interface Eip1193State {
   address?: `0x${string}` | undefined;
   chainId?: number | undefined;
   error?: string | undefined;
+  /// `connecting` is a stored session being restored, with nothing asked of the user.
+  resuming?: boolean | undefined;
   /// All EIP-6963 providers seen so far (deduped by uuid).
   discovered: Eip6963ProviderDetail[];
 }
@@ -32,13 +31,20 @@ const initial: Eip1193State = {
   discovered: [],
 };
 
+/// A returning user's first paint: already restoring, so the logged-out screen never flashes.
+/// `resumeFromStorage` settles it either way.
+function bootState(): Eip1193State {
+  if (typeof window === "undefined" || !attachedRdns()) return initial;
+  return { ...initial, status: "connecting", resuming: true };
+}
+
 interface Handshake {
   address: `0x${string}`;
   chainId: number;
 }
 
 class Eip1193Store {
-  private readonly store = createStore<Eip1193State>(initial);
+  private readonly store = createStore<Eip1193State>(bootState());
   private detach: (() => void) | null = null;
   private readonly registry = new ProviderRegistry();
   private connecting = false;
@@ -72,7 +78,7 @@ class Eip1193Store {
     if (typeof window === "undefined") return;
     if (this.connecting) return;
     this.connecting = true;
-    this.set({ status: "connecting", error: undefined });
+    this.set({ status: "connecting", resuming: false, error: undefined });
     try {
       if (this.registry.list().length === 0) this.startDiscovery();
       const pick = await this.awaitProvider(rdns);
@@ -103,12 +109,13 @@ class Eip1193Store {
     const rdns = attachedRdns();
     if (!rdns) return;
     const generation = this.generation;
-    const pick = await this.awaitProvider(rdns);
-    if (!pick) {
-      log.debug("resume: no announced provider matched stored rdns", rdns);
-      return;
-    }
+    if (this.getState().status === "idle") this.set({ status: "connecting", resuming: true });
     try {
+      const pick = await this.awaitProvider(rdns);
+      if (!pick) {
+        log.debug("resume: no announced provider matched stored rdns", rdns);
+        return;
+      }
       const shake = await this.handshake(pick.provider, "eth_accounts");
       if (!shake) {
         log.debug("resume: wallet has no authorised account or chain; staying idle");
@@ -126,6 +133,9 @@ class Eip1193Store {
       log.info("resumed", { rdns, ...shake });
     } catch (err) {
       log.warn("resume failed", err);
+    } finally {
+      // A miss: back to logged out. An explicit connect or a disconnect has already moved on.
+      if (this.getState().resuming) this.set({ status: "idle", resuming: false });
     }
   };
 
@@ -144,6 +154,7 @@ class Eip1193Store {
     forgetAttachedRdns();
     this.set({
       status: "idle",
+      resuming: false,
       provider: undefined,
       rdns: undefined,
       address: undefined,
@@ -179,6 +190,7 @@ class Eip1193Store {
     });
     this.set({
       status: "connected",
+      resuming: false,
       provider: detail.provider,
       rdns: detail.info.rdns,
       address,
@@ -199,7 +211,10 @@ class Eip1193Store {
   /// The not-found error, naming the wallet as the picker showed it.
   private notFoundMessage(rdns?: string): string {
     if (!rdns) {
-      return "No EVM wallet detected. Install MetaMask, Rabby or another browser wallet.";
+      // A phone's wallet app injects only into its own browser, so installing one is not the fix.
+      return isMobileBrowser()
+        ? "No wallet found in this browser. Open this site from your wallet app's built-in browser."
+        : "No EVM wallet detected. Install MetaMask, Rabby or another browser wallet.";
     }
     const known = this.registry.find(rdns);
     return `${known?.info.name ?? rdns} did not respond. Is it installed and unlocked?`;

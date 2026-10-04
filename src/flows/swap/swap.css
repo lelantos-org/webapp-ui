@@ -1,5 +1,4 @@
 @layer features {
-  /* Legs */
   .swap-pair {
     display: flex;
     flex-direction: column;
@@ -42,7 +41,6 @@
     white-space: nowrap;
   }
 
-  /* Quote age / refresh */
   .swap-age {
     position: relative;
     padding: 3px var(--sp-10);
@@ -106,7 +104,6 @@
   .swap-leg__retry:focus-visible { outline: var(--ring); outline-offset: -2px; }
   .swap-pair__err { color: var(--err); }
 
-  /* Flip button */
   .swap-flip-row {
     position: relative;
     z-index: 1;

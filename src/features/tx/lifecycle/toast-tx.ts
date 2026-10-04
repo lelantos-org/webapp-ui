@@ -3,7 +3,6 @@ import { txExplorerUrl } from "@/config/chains/explorer";
 import { reportError } from "@/shared/lib/errors";
 
 export interface TxToastHandle {
-  /// Replace the description with an error and mark the toast failed.
   failed(error: unknown): void;
   /// Soft timeout, for unflushed deposits past the tracker deadline.
   timedOut(): void;
@@ -41,4 +40,9 @@ export function toastTx(
       });
     },
   };
+}
+
+/// A confirmed op whose form is no longer on screen to show it.
+export function toastConfirmed(label: string): void {
+  toast.success(`${label} confirmed`);
 }

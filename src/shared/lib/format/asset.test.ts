@@ -1,6 +1,6 @@
 import { RAY } from "@lelantos-org/sdk/protocol";
 import { describe, expect, it } from "vitest";
-import { formatAmountForAsset, parseAmountInput } from "./asset";
+import { formatAmountForAsset, formatAmountForInput, parseAmountInput } from "./asset";
 
 const plain = (decimals: number, scale: bigint) => ({ decimals, scale, index: RAY });
 
@@ -15,6 +15,12 @@ describe("parseAmountInput", () => {
 
   it("strips the grouping `formatAmountForAsset` adds", () => {
     expect(parseAmountInput("1,234.5", plain(6, 1n))).toBe(1_234_500_000n);
+  });
+
+  it("reads a comma as the decimal point where it cannot be grouping", () => {
+    expect(parseAmountInput("0,5", plain(6, 1n))).toBe(500_000n);
+    expect(parseAmountInput("1,5", plain(6, 1n))).toBe(1_500_000n);
+    expect(parseAmountInput("1.234,5", plain(6, 1n))).toBe(1_234_500_000n);
   });
 
   it("rejects precision the asset cannot represent", () => {
@@ -52,21 +58,21 @@ describe("yield index conversions", () => {
   it("reads a formatted amount back as exactly what it was", () => {
     for (const scale of [1n, 100n]) {
       const asset = { decimals: 6, scale, index: INDEX };
-      for (const units of [1n, 7n, 1_000_000n, 123_456_789n]) {
-        expect(parseAmountInput(formatAmountForAsset(units, asset), asset)).toBe(units);
+      for (const units of [1n, 7n, 1_000_000n, 123_456_789n, 1_234_000_000n]) {
+        expect(parseAmountInput(formatAmountForInput(units, asset), asset)).toBe(units);
       }
     }
   });
 
   it("keeps a one-unit balance spendable", () => {
     const asset = { decimals: 6, scale: 1n, index: INDEX };
-    expect(parseAmountInput(formatAmountForAsset(1n, asset), asset)).toBe(1n);
+    expect(parseAmountInput(formatAmountForInput(1n, asset), asset)).toBe(1n);
   });
 
   it("never reads back more than the balance it was formatted from", () => {
     const asset = { decimals: 6, scale: 1n, index: INDEX };
     const balance = 123_456_789n;
-    expect(parseAmountInput(formatAmountForAsset(balance, asset), asset)).toBeLessThanOrEqual(
+    expect(parseAmountInput(formatAmountForInput(balance, asset), asset)).toBeLessThanOrEqual(
       balance,
     );
   });

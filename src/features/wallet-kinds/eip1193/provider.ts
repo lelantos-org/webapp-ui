@@ -31,9 +31,7 @@ export function firstAccount(accounts: unknown): `0x${string}` | undefined {
 
 /// Provider events, in the store's terms.
 export interface ProviderEvents {
-  /// The wallet switched to another account.
   onAccount(address: `0x${string}`): void;
-  /// The wallet switched networks.
   onChain(chainId: number): void;
   /// The wallet went away: no authorised account, or an explicit `disconnect`.
   onDisconnect(): void;

@@ -1,5 +1,5 @@
 import { FmdClient } from "@lelantos-org/sdk/services";
-import { skipToken, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { env } from "@/config/env";
 import { useActiveChain } from "@/features/chain";
@@ -18,16 +18,13 @@ function headClient(chainId: bigint): FmdClient {
 /// Poll `/v1/head` for a token that changes only when the server has something new.
 export function useSyncHead(): SyncHead {
   const { chainId } = useActiveChain();
-  const fmd = useMemo(() => (chainId === undefined ? undefined : headClient(chainId)), [chainId]);
+  const fmd = useMemo(() => headClient(chainId), [chainId]);
   const { data } = useQuery<SyncHead>({
     queryKey: queryKeys.syncHead(chainId),
-    queryFn:
-      fmd === undefined
-        ? skipToken
-        : async () => {
-            const head = await fmd.fetchHead();
-            return `${head.maxNoteId}:${head.maxNullifierSeq}`;
-          },
+    queryFn: async () => {
+      const head = await fmd.fetchHead();
+      return `${head.maxNoteId}:${head.maxNullifierSeq}`;
+    },
     ...usePolling(HEAD_POLL_MS),
     staleTime: 0,
     retry: 2,

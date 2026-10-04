@@ -30,25 +30,25 @@ const CACHE_TTL_MS = DAY_MS;
 
 // Expiring hint: trusting a token forever turns an expired subscription into a silent zero balance.
 const tokenCache = {
-  key: (chainId: bigint, ethAddr: string) =>
-    `${PREFIX}${chainKey(chainId)}:${accountDigest(ethAddr)}`,
+  key: (chainId: bigint, account: string) =>
+    `${PREFIX}${chainKey(chainId)}:${accountDigest(account)}`,
 
   /// The cached token, or `undefined` if absent or past its expiry.
-  get(chainId: bigint, ethAddr: string, now = Date.now()): string | undefined {
-    const entry = readJson(localStore, this.key(chainId, ethAddr), isCacheEntry);
+  get(chainId: bigint, account: string): string | undefined {
+    const entry = readJson(localStore, this.key(chainId, account), isCacheEntry);
     if (!entry) return undefined;
-    return now < entry.expiresAt ? entry.token : undefined;
+    return Date.now() < entry.expiresAt ? entry.token : undefined;
   },
 
-  set(chainId: bigint, ethAddr: string, token: string, now = Date.now()): void {
-    writeJson(localStore, this.key(chainId, ethAddr), {
+  set(chainId: bigint, account: string, token: string): void {
+    writeJson(localStore, this.key(chainId, account), {
       token,
-      expiresAt: now + jitter(CACHE_TTL_MS),
+      expiresAt: Date.now() + jitter(CACHE_TTL_MS),
     });
   },
 
-  clear(chainId: bigint, ethAddr: string): void {
-    localStore.remove(this.key(chainId, ethAddr));
+  clear(chainId: bigint, account: string): void {
+    localStore.remove(this.key(chainId, account));
   },
 };
 
@@ -63,9 +63,9 @@ function isCacheEntry(value: unknown): value is CacheEntry {
   return typeof r.token === "string" && typeof r.expiresAt === "number";
 }
 
-/// Forget the subscription registered for `ethAddr` (claim links leave no trace).
-export function clearCachedSubscription(chainId: bigint, ethAddr: string): void {
-  tokenCache.clear(chainId, ethAddr);
+/// Forget the subscription registered for `account` (claim links leave no trace).
+export function clearCachedSubscription(chainId: bigint, account: string): void {
+  tokenCache.clear(chainId, account);
 }
 
 /// Largest γ keeping `noteCount` above the decoy floor, capped at the sender's γ; 0 means do not subscribe.
@@ -77,7 +77,8 @@ export function maxDetectionGamma(noteCount: number): number {
 /// Why the wallet takes the full note firehose: `poolTooSmall` is cheap, `unavailable` may not be.
 export type FullSyncReason = "poolTooSmall" | "unavailable";
 
-/// The chosen strategy, plus why it was chosen when it is the fallback.
+const SUBSCRIBE_BUDGET = { timeoutMs: 5_000, retries: 1 } as const;
+
 export interface SyncPlan {
   strategy: SyncStrategy;
   fallback?: FullSyncReason;
@@ -88,10 +89,10 @@ export async function resolveSyncStrategy(
   fmdUrl: string,
   chainId: bigint,
   nsk: Field,
-  ethAddr: string,
+  account: string,
 ): Promise<SyncPlan> {
   try {
-    const token = await ensureFmdSubscription(fmdUrl, chainId, nsk, ethAddr);
+    const token = await ensureFmdSubscription(fmdUrl, chainId, nsk, account);
     if (token === undefined) return { strategy: { kind: "full" }, fallback: "poolTooSmall" };
     return { strategy: { kind: "matches", token } };
   } catch (e) {
@@ -105,18 +106,19 @@ async function ensureFmdSubscription(
   fmdUrl: string,
   chainId: bigint,
   nsk: Field,
-  ethAddr: string,
+  account: string,
 ): Promise<string | undefined> {
   const { P, J } = await cryptoContext();
   const { keys } = await deriveKeysFromNsk(nsk, { P, J });
   const tokenHex = subscriptionTokenToHex(deriveSubscriptionToken(P, keys.ivk));
 
-  if (tokenCache.get(chainId, ethAddr) === tokenHex) {
+  if (tokenCache.get(chainId, account) === tokenHex) {
     log.debug("cache hit");
     return tokenHex;
   }
 
-  const fmd = new FmdClient(fmdUrl, chainId);
+  // A short budget: this runs inside wallet connect, and a slow service falls back to a full scan.
+  const fmd = new FmdClient(fmdUrl, chainId, SUBSCRIBE_BUDGET);
 
   // γ must be settled first: the server pins a subscription to its detection key.
   const { leafCount } = await fmd.fetchTreeState();
@@ -138,9 +140,9 @@ async function ensureFmdSubscription(
   });
   // An inactive subscription fails silently (empty pages, zero balance), so throw to take the firehose.
   if (!sub.active) {
-    tokenCache.clear(chainId, ethAddr);
+    tokenCache.clear(chainId, account);
     throw new Error("FMD subscription is not active");
   }
-  tokenCache.set(chainId, ethAddr, tokenHex);
+  tokenCache.set(chainId, account, tokenHex);
   return tokenHex;
 }

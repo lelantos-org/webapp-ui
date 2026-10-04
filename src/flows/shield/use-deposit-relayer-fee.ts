@@ -16,7 +16,6 @@ export interface DepositRelayerFee {
   amount: TokenAmount | undefined;
   /// Why the charge cannot be known. Never read as `0n`: that would under-size the Permit2 window.
   problem: "quote-failed" | "not-accepted" | undefined;
-  retry(): void;
 }
 
 /// Which asset pays a deposit's relayer, and what it charges in that asset.
@@ -51,7 +50,6 @@ export function useDepositRelayerFee(
             toBaseUnits(relayer.amount, relayer.asset)
           : ZERO_BASE,
     problem,
-    retry: () => void quote.refetch(),
   };
 }
 

@@ -5,11 +5,11 @@ import { stepsFor } from "@/features/tx";
 import { useWalletInstance } from "@/features/wallet";
 import { approvePermit2, needsPermit2Approval } from "./setup/permit2-approval";
 
-/// The shield (deposit) mutation.
 export function useDeposit(): ActionMutation<DepositCall, DepositResult> {
   const wallet = useWalletInstance();
   const invalidateTransparent = useInvalidateTransparentBalances();
   return useTrackedMutation<DepositCall, DepositResult>({
+    key: "deposit",
     label: () => "deposit",
     run: async (a, i, progress) => {
       if (!wallet) throw new Error("wallet not ready");

@@ -1,28 +1,25 @@
 import type { CircuitAmount, SpendPhase, TransferResult, WalletApi } from "@lelantos-org/sdk";
-import { randomFr } from "@lelantos-org/sdk/primitives";
-import { nskHexFromField } from "@/features/wallet-kinds";
-import { encodeClaimPayload } from "../link/codec";
+import type { RelayerFeeTerms } from "@/shared/domain/relayer-fee";
 import { markClaimLinkBroadcast, rememberClaimLink } from "../vault/store";
-import { deriveEphemeralAddress } from "./ephemeral-wallet";
+import { allocateLink, claimUrl, markLinkFunded, type ProbeLink } from "./seed-links";
 
-export interface GenerateClaimLinkArgs {
+export interface GenerateClaimLinkArgs extends RelayerFeeTerms {
   amount: CircuitAmount;
   /// Required: the vault record is written before the transfer and must name the asset that moves.
   asset: bigint;
-  /// Asset to pay the relayer in; defaults to `asset`.
-  feeAsset?: bigint;
   /// Stamped into the link so the claimer knows which pool holds the notes.
   chainId: bigint;
   onPhase?: (phase: SpendPhase) => void;
   /// Read right before the transfer, so a chain switch mid-proof cannot mislabel the link.
   currentChainId?: () => bigint | undefined;
+  /// Reads a link account's history, so the link takes an index no earlier link was made from.
+  probe: ProbeLink;
 }
 
 export interface GenerateClaimLinkResult {
   url: string;
   /// Alias for `tx.txHash`.
   txHash: string;
-  /// Full SDK transfer receipt: own commitments, amount and change.
   tx: TransferResult;
   nskEphHex: string;
   ephAddress: string;
@@ -34,17 +31,18 @@ export async function generateClaimLink(
   senderWallet: WalletApi,
   args: GenerateClaimLinkArgs,
 ): Promise<GenerateClaimLinkResult> {
-  const nskEph = randomFr();
-  const ephAddress = await deriveEphemeralAddress(nskEph);
-  const nskEphHex = nskHexFromField(nskEph);
-  const url = `${window.location.origin}/claim#${encodeClaimPayload(args.chainId, nskEphHex)}`;
+  // The key derives from the sender's seed, at an index whose account has never held a note.
+  const link = await allocateLink(senderWallet, args.chainId, args.probe);
+  const { nskHex: nskEphHex, address: ephAddress } = link;
+  const url = claimUrl(window.location.origin, args.chainId, nskEphHex);
 
-  // Persist before broadcasting, or React state would hold the key's only copy once funds move.
+  // Persist before broadcasting: the vault is how the sender finds the link again without a scan.
   const recordId = rememberClaimLink({
     url,
     chainId: args.chainId,
     assetId: args.asset,
     amount: args.amount,
+    derived: true,
   });
 
   const stillHere = args.currentChainId?.();
@@ -59,10 +57,12 @@ export async function generateClaimLink(
     amount: args.amount,
     asset: args.asset,
     feeAsset: args.feeAsset,
+    maxFee: args.maxFee,
     autoConsolidate: true,
     onPhase: args.onPhase,
   });
 
   markClaimLinkBroadcast(recordId, tx.txHash);
+  markLinkFunded(senderWallet.address, args.chainId, link.index);
   return { url, txHash: tx.txHash, tx, nskEphHex, ephAddress, recordId };
 }

@@ -1,6 +1,4 @@
 @layer features {
-  /* Shield unavailable */
-
   .shield-off { gap: var(--sp-14); }
   .shield-off__t {
     margin: 0;

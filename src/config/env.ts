@@ -32,7 +32,6 @@ export const Schema = z.object({
 
 type Env = z.infer<typeof Schema>;
 
-/// Thrown when the deployment is misconfigured.
 class EnvConfigError extends Error {
   constructor(message: string) {
     super(message);

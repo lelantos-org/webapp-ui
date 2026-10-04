@@ -1,7 +1,6 @@
 /* Small controls that several surfaces draw the same way. */
 @layer primitives {
-  /* A bordered square holding one glyph: the screen's Back, the address card's
-     copy and QR buttons. Size and ground are the caller's. */
+  /* A bordered square holding one glyph. Size and ground are the caller's. */
   .icon-btn {
     display: inline-grid;
     place-items: center;
@@ -14,8 +13,8 @@
   .icon-btn:hover { border-color: var(--accent); color: var(--accent); }
   .icon-btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* A text-sized action in the accent that still takes a 44px press: "Copy",
-     "Show", "Show more". Padding and size are the caller's. */
+  /* A text-sized accent action with a 44px press target. Padding and size are
+     the caller's. */
   .link-btn {
     min-height: 44px;
     border: 0;
@@ -48,5 +47,55 @@
     border: 2px solid var(--accent);
     border-radius: var(--radius-round);
     color: var(--accent);
+  }
+
+  /* A full-width text field. */
+  .text-input {
+    width: 100%;
+    min-height: 44px;
+    padding: var(--sp-10) var(--sp-12);
+    border: 1px solid var(--line-field);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    color: var(--fg);
+    font: inherit;
+    font-size: var(--fs-15);
+  }
+  .text-input.mono { font-family: var(--mono); font-size: var(--fs-14); }
+  /* iOS zooms the page on focusing a field under 16px and does not zoom back. */
+  @media (pointer: coarse) {
+    .text-input,
+    .text-input.mono { font-size: var(--fs-16); }
+  }
+  .text-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
+  }
+  .text-input[aria-invalid="true"] { border-color: var(--err); }
+
+  /* One of N choices in a row, `--on` for the chosen one. Square corners, as in `pill.css`. */
+  .choice {
+    min-height: 36px;
+    padding: var(--sp-6) var(--sp-14);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font: inherit;
+    font-size: var(--fs-14);
+    color: var(--fg-dim);
+    cursor: pointer;
+  }
+  .choice:hover { border-color: var(--fg-mute); color: var(--fg); }
+  @media (pointer: coarse) {
+    .choice { min-height: 44px; }
+  }
+  .choice:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .choice--on,
+  .choice--on:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(var(--accent-rgb), 0.08);
+    font-weight: 600;
   }
 }

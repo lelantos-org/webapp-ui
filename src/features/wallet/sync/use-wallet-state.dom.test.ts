@@ -5,15 +5,23 @@ import { queryKeys } from "@/shared/query/keys";
 import { deferred } from "@/test/async";
 import { fakeWalletApi, fakeWalletContext } from "@/test/fakes/wallet";
 import { createTestQueryClient, withQueryClient } from "@/test/render";
-import { useInvalidateWalletState } from "./use-wallet-state";
+import { useInvalidateWalletState, useWalletState } from "./use-wallet-state";
 
 const CHAIN = 31337n;
 const ADDRESS = "lelantos1me";
 
-vi.mock("../session/context", () => ({
-  useWallet: () => fakeWalletContext({ wallet: fakeWalletApi({ address: ADDRESS }) }),
-  useWalletInstance: () => fakeWalletApi({ address: ADDRESS }),
+const chainHead = vi.hoisted(() => ({ value: null as string | null }));
+const wallet = vi.hoisted(() => ({
+  address: "lelantos1me",
+  sync: vi.fn(async () => {}),
+  notes: vi.fn(async () => []),
 }));
+
+vi.mock("../session/context", () => ({
+  useWallet: () => fakeWalletContext({ wallet: fakeWalletApi(wallet) }),
+  useWalletInstance: () => fakeWalletApi(wallet),
+}));
+vi.mock("./use-sync-head", () => ({ useSyncHead: () => chainHead.value }));
 vi.mock("@/features/chain", () => ({ useActiveChain: () => ({ chainId: CHAIN }) }));
 
 describe("useInvalidateWalletState", () => {
@@ -59,5 +67,29 @@ describe("useInvalidateWalletState", () => {
     await done;
     await waitFor(() => expect(quoteFee).toHaveBeenCalledTimes(2));
     expect(otherAccount).toHaveBeenCalledOnce();
+  });
+});
+
+describe("useWalletState on a new chain head", () => {
+  it("syncs once per head however many callers are mounted", async () => {
+    chainHead.value = "10:3";
+    wallet.sync.mockClear();
+    const { rerender } = renderHook(
+      () => {
+        useWalletState();
+        useWalletState();
+        useWalletState();
+      },
+      { wrapper: withQueryClient(createTestQueryClient()) },
+    );
+    await waitFor(() => expect(wallet.sync).toHaveBeenCalledTimes(1));
+
+    chainHead.value = "11:3";
+    rerender();
+    await waitFor(() => expect(wallet.sync).toHaveBeenCalledTimes(2));
+
+    // Nothing further is queued behind that one sync.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(wallet.sync).toHaveBeenCalledTimes(2);
   });
 });

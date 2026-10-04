@@ -1,6 +1,8 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { chunkFileNames, manualChunks } from "./vite/chunks";
+import { hashedPublicScript } from "./vite/plugins/hashed-script";
+import { headPreloads } from "./vite/plugins/head-preloads";
 import { lightTheme } from "./vite/plugins/light-theme";
 import { linkHeaders } from "./vite/plugins/link-headers";
 import { precompress } from "./vite/plugins/precompress";
@@ -28,6 +30,9 @@ export default defineConfig({
     react(),
     pwa(),
     tightenCsp(),
+    hashedPublicScript("theme-init.js"),
+    headPreloads({ fonts: ["public-sans", "newsreader"], screen: "/src/app/home/Home.tsx" }),
+    // Reads the tags the three above leave in `index.html`.
     linkHeaders(),
     // Must stay last.
     precompress(),

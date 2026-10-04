@@ -15,14 +15,12 @@ const NO_CAPABILITIES: WalletCapabilities = {
   govern: DISCONNECTED,
 };
 
-/// Every capability allowed.
 export const ALL_CAPABILITIES: WalletCapabilities = {
   deposit: { allowed: true },
   depositEth: { allowed: true },
   govern: { allowed: true },
 };
 
-/// Every capability refused, for the same reason.
 export function deniedCapabilities(reason: string): WalletCapabilities {
   const no = { allowed: false, reason } as const;
   return { deposit: no, depositEth: no, govern: no };
@@ -49,6 +47,7 @@ export function fakeWalletContext(over: Partial<WalletContextValue> = {}): Walle
 interface SpendFormWalletHooks {
   SyncNotice: () => null;
   useSpendableMax: typeof useSpendableMax;
+  useWallet: () => WalletContextValue;
   useWalletState: () => UseQueryResult<WalletState>;
   preloadProverWorker: () => Promise<void>;
 }
@@ -58,6 +57,7 @@ export function spendFormWalletHooks(): SpendFormWalletHooks {
   return {
     SyncNotice: () => null,
     useSpendableMax: () => undefined,
+    useWallet: () => fakeWalletContext(),
     useWalletState: () => ({ error: null }) as UseQueryResult<WalletState>,
     preloadProverWorker: async () => {},
   };

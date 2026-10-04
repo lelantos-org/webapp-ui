@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fakeWalletApi } from "@/test/fakes/wallet";
 import type { Session } from "./session";
-import { deriveWalletStatus, type WalletStatusInputs } from "./wallet-status";
+import { deriveWalletStatus, isConnectionPending, type WalletStatusInputs } from "./wallet-status";
 
 const connection = (over: Partial<Session> = {}): Session =>
   ({
@@ -19,6 +19,7 @@ const inputs = (over: Partial<WalletStatusInputs> = {}): WalletStatusInputs => (
   wallet: undefined,
   deriveError: undefined,
   hasCachedKey: false,
+  keyResolved: false,
   ...over,
 });
 
@@ -27,6 +28,11 @@ const WALLET = fakeWalletApi();
 describe("deriveWalletStatus", () => {
   it.each<[string, Partial<WalletStatusInputs>, string]>([
     ["disconnected", { session: connection({ isConnected: false }) }, "disconnected"],
+    [
+      "resuming while a stored session is restored",
+      { session: connection({ isConnected: false, isConnecting: true, isRestoring: true }) },
+      "resuming",
+    ],
     [
       "connecting while a connect is in flight",
       { session: connection({ isConnected: false, isConnecting: true }) },
@@ -71,6 +77,7 @@ describe("deriveWalletStatus", () => {
     ["ready once the wallet is built", { wallet: WALLET }, "ready"],
     ["resuming, silently, with a cached key", { hasCachedKey: true }, "resuming"],
     ["deriving, behind a signature prompt, without one", { hasCachedKey: false }, "deriving"],
+    ["preparing, once that prompt is answered", { keyResolved: true }, "preparing"],
     [
       "disconnected over a stale wallet handle",
       { session: connection({ isConnected: false }), wallet: WALLET },
@@ -84,5 +91,16 @@ describe("deriveWalletStatus", () => {
     const session = connection({ kind: "passkey", chainSupported: true });
     expect(deriveWalletStatus(inputs({ session }))).toBe("deriving");
     expect(deriveWalletStatus(inputs({ session, wallet: WALLET }))).toBe("ready");
+  });
+});
+
+describe("isConnectionPending", () => {
+  it("covers every state between starting a connection and its outcome", () => {
+    for (const status of ["connecting", "loading-networks", "deriving", "preparing", "resuming"]) {
+      expect(isConnectionPending(status as never), status).toBe(true);
+    }
+    for (const status of ["disconnected", "unsupported-chain", "ready", "error"]) {
+      expect(isConnectionPending(status as never), status).toBe(false);
+    }
   });
 });

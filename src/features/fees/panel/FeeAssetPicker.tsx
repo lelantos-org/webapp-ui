@@ -8,7 +8,6 @@ import { TokenIcon } from "@/shared/ui/icons/TokenIcon";
 import type { FeeAssetChoice, FeeAssetOption } from "../model/fee-block";
 import "./FeeAssetPicker.css";
 
-/// Props for `FeeAssetPicker`.
 export interface FeeAssetPickerProps {
   choice: FeeAssetChoice;
 }

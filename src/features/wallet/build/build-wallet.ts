@@ -1,20 +1,17 @@
-import { connect, type WalletApi } from "@lelantos-org/sdk";
+import type { WalletApi } from "@lelantos-org/sdk";
 import { requestPersistentStorage } from "@lelantos-org/sdk/advanced";
 import type { Field } from "@lelantos-org/sdk/primitives";
 import { type ChainEntry, chainKey } from "@/config/chains";
-import { env } from "@/config/env";
 import { type ChainLayerSpec, cacheNsk, getCachedNsk, kindAdapter } from "@/features/wallet-kinds";
 import { createLogger } from "@/shared/lib/logger";
 import { accountDigest } from "@/shared/lib/storage/digest";
 import { toast } from "@/shared/lib/toast";
-import { sharedProver } from "../prover/prover-worker";
+import { walletDb } from "../stores/db";
 import { holdNoteStore, IdbNoteStore } from "../stores/note-store";
 import { IdbNullifierPersistence } from "../stores/nullifier-persistence";
 import { IdbTreePersistence } from "../stores/tree-persistence";
-import { resolveSyncStrategy } from "../sync/fmd-subscription";
-import { createScanner, disposeScanner, holdScanner } from "../sync/scanner";
-import { networkPreset } from "./network-preset";
-import { instrumentWallet, timed } from "./perf";
+import { connectWallet } from "./connect-wallet";
+import { timed } from "./perf";
 
 const log = createLogger("wallet:build");
 
@@ -49,6 +46,8 @@ export async function buildWallet(
   layer: ChainLayerSpec,
   chain: ChainEntry,
   accountKey: string,
+  /// Called once the key is in hand: any prompt is answered, and the rest needs nothing of the user.
+  onKey?: () => void,
 ): Promise<WalletApi> {
   const { signer, derive, prompt } = kindAdapter(layer.kind).keySource(layer, chain);
 
@@ -59,15 +58,30 @@ export async function buildWallet(
     })
     .catch((e: unknown) => log.info("storage persistence request failed", e));
 
+  // Open the database while the key and the sync plan resolve; `connect` reads it next.
+  void walletDb().catch(() => {});
+
   const nsk = await resolveNsk(derive, accountKey, prompt);
+  onKey?.();
 
-  const network = networkPreset(chain);
-  const plan = await timed("fmd.resolveSyncStrategy", () =>
-    resolveSyncStrategy(env.fmdUrl, chain.chainId, nsk, accountKey),
-  );
-  const syncStrategy = plan.strategy;
+  const maspAddress = chain.maspAddress;
+  const notes = new IdbNoteStore(storeKey("notes", chain.chainId, maspAddress, accountKey));
+  const { wallet, fullSync } = await connectWallet({
+    chain,
+    nsk,
+    account: accountKey,
+    signer,
+    denominations: true,
+    storage: {
+      notes,
+      tree: new IdbTreePersistence(storeKey("tree", chain.chainId, maspAddress, accountKey)),
+      nullifiers: new IdbNullifierPersistence(
+        storeKey("nullifiers", chain.chainId, maspAddress, accountKey),
+      ),
+    },
+  });
 
-  if (plan.fallback === "unavailable") {
+  if (fullSync === "unavailable") {
     log.error("FMD subscription unavailable; scanning every note in the pool");
     toast.warning("Private sync is degraded", {
       description: "The discovery service is unavailable, so syncing will be much slower.",
@@ -75,43 +89,7 @@ export async function buildWallet(
     });
   }
 
-  const maspAddress = network.maspAddress;
-  const chainOption = signer ? { signer } : { readOnly: true as const };
-
-  // Created outside `connect` so its eagerly spawned workers are disposed if `connect` throws.
-  const scanner = createScanner();
-  const notes = new IdbNoteStore(storeKey("notes", chain.chainId, maspAddress, accountKey));
-  let wallet: WalletApi;
-  try {
-    wallet = await timed("connect", () =>
-      connect({
-        network,
-        rpcUrl: chain.readRpcUrl,
-        nsk,
-        // A privacy setting: change is split against the ladder, so this changes what the chain sees.
-        denominations: true,
-        ...chainOption,
-        // Its 4x6 artifacts must match `connect`'s default shape, or every proof has the wrong arity.
-        prover: sharedProver(),
-        storage: {
-          notes,
-          tree: new IdbTreePersistence(storeKey("tree", chain.chainId, maspAddress, accountKey)),
-          nullifiers: new IdbNullifierPersistence(
-            storeKey("nullifiers", chain.chainId, maspAddress, accountKey),
-          ),
-        },
-        scanner,
-        syncStrategy,
-      }),
-    );
-  } catch (e) {
-    await disposeScanner(scanner);
-    throw e;
-  }
-
-  holdScanner(wallet, scanner);
   holdNoteStore(wallet, notes);
-  instrumentWallet(wallet);
   log.info("ready", wallet.address);
   return wallet;
 }

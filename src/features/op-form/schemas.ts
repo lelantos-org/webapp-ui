@@ -1,5 +1,6 @@
 import { shieldedAddress as brandShieldedAddress } from "@lelantos-org/sdk";
 import { ADDRESS_HRP } from "@lelantos-org/sdk/primitives";
+import { isAddress } from "viem";
 import { z } from "zod";
 import { DEFAULT_ASSET_ID } from "@/features/assets";
 import { isDecimalString, isPositiveIntegerString } from "@/shared/lib/format/number";
@@ -8,7 +9,7 @@ import { isDecimalString, isPositiveIntegerString } from "@/shared/lib/format/nu
 const ADDRESS_DATA_LEN = 160;
 const ADDRESS_LEN = ADDRESS_HRP.length + 1 + ADDRESS_DATA_LEN;
 
-/// Cheap shape check for a shielded address (length, HRP, charset); `decodeAddress` stays definitive.
+/// Shape check for a shielded address (length, HRP, charset); `decodeAddress` is the definitive check.
 export function isShieldedAddress(value: string): boolean {
   if (value.length !== ADDRESS_LEN) return false;
   try {
@@ -21,24 +22,46 @@ export function isShieldedAddress(value: string): boolean {
 
 const EVM_ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 
-/// Shape check for an EVM address.
-export function isEvmAddress(value: string): boolean {
-  return EVM_ADDRESS.test(value);
+/// Why `value` is not an EVM address, or `undefined` when it is one. A mixed-case address must
+/// carry a valid EIP-55 checksum: that is what catches a mistyped character.
+function evmAddressProblem(value: string): string | undefined {
+  if (!EVM_ADDRESS.test(value)) return "That is not a valid public address";
+  return isAddress(value)
+    ? undefined
+    : "That address has a typo: its capital letters don't match its checksum";
 }
 
-/// Field schemas every action form assembles its own schema from.
+export function isEvmAddress(value: string): boolean {
+  return evmAddressProblem(value) === undefined;
+}
+
+/// What a form accepts as its recipient, and what it says about one it does not.
+export interface RecipientRule {
+  /// Why `value` cannot be sent to, or `undefined` when it can.
+  problem(value: string): string | undefined;
+}
+
+export const SHIELDED_RECIPIENT: RecipientRule = {
+  problem: (value) => (isShieldedAddress(value) ? undefined : "That is not a shielded address"),
+};
+
+export const PUBLIC_RECIPIENT: RecipientRule = { problem: evmAddressProblem };
+
+/// A zod string field holding a recipient under `rule`, failing with the rule's own words.
+function recipientField(rule: RecipientRule) {
+  return z.string().superRefine((value, ctx) => {
+    const problem = rule.problem(value);
+    if (problem) ctx.addIssue({ code: "custom", message: problem });
+  });
+}
+
 export const amountField = z.string().refine(isDecimalString, "Enter a positive number");
 export const assetField = z.string().refine(isPositiveIntegerString, "Choose an asset");
 
-/// `assetField`, falling back to the default asset when the form holds none.
 export const defaultAssetField = assetField.default(DEFAULT_ASSET_ID);
-export const evmAddressField = z
-  .string()
-  .refine(isEvmAddress, "That is not a valid public address");
-export const shieldedAddressField = z
-  .string()
-  .refine(isShieldedAddress, `expected bech32 ${ADDRESS_HRP}1… address`);
+export const evmAddressField = recipientField(PUBLIC_RECIPIENT);
+export const shieldedAddressField = recipientField(SHIELDED_RECIPIENT);
 
-/// Withdraw through `MASP.withdrawEth`; valid only for the chain's WETH.
-/// Not `z.coerce.boolean()`: it turns `"false"` into `true` and would move native ETH for an ERC-20.
+/// Withdraws through `MASP.withdrawEth`; valid only for the chain's WETH.
+/// Not `z.coerce.boolean()`, which turns `"false"` into `true` and would move native ETH for an ERC-20.
 export const asEthField = z.boolean().default(false);

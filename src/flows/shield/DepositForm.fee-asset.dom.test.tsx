@@ -62,7 +62,6 @@ vi.mock("@/features/fees", async (importOriginal) => ({
   useAssetFeeBps: () => 0n,
   useFeePreview: () => ({
     data: { inAmt: 100_000_000n, fee: 1_000_000n, total: 101_000_000n, feeBps: 100n },
-    stale: false,
     isError: false,
     refetch: vi.fn(),
   }),

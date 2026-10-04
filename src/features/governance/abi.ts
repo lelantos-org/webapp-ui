@@ -728,9 +728,8 @@ export const govTokenActionAbi = [
   },
 ] as const;
 
-/// `MASP`: the pool, owned by the timelock. Includes the proxy's reserved
-/// admin surface, which the proxy answers itself and which the timelock holds
-/// alongside ownership.
+/// `MASP`: the pool, owned by the timelock. Includes the proxy's reserved admin
+/// functions, which the proxy answers itself and the timelock also holds.
 export const poolActionAbi = [
   {
     type: "function",

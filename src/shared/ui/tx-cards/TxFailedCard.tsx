@@ -1,26 +1,25 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { CrossGlyph } from "@/shared/ui/icons/glyphs";
-import { TxHashRow } from "./TxHashRow";
+import { CopyHash, TxHashRow } from "./TxHashRow";
 import "./txcard.css";
 
 export interface TxFailedCardProps {
-  /// "Couldn't submit".
   title?: string | undefined;
-  /// What went wrong, in the user's terms — `userMessage(error)`.
+  /// User-facing cause, from `userMessage(error)`.
   message?: ReactNode;
-  /// What the failure means for the user's funds. No default: the card cannot know the stage.
+  /// What the failure means for the user's funds. No default: it depends on the stage reached.
   reassurance?: ReactNode;
-  /// Re-submit the same form. The button is withheld without it.
+  /// Re-submits the same form. The button is hidden when omitted.
   onRetry?: (() => void) | undefined;
-  /// A third, quieter way out, such as returning to edit the form.
+  /// Extra exit under the buttons, e.g. a link back to the form.
   secondary?: ReactNode;
-  /// Set when the failure came after broadcast, so the transaction can be found.
+  /// Set when the failure came after broadcast.
   hash?: string | undefined;
   explorerUrl?: string | undefined;
 }
 
-/// The card an action ends on when it fails: what failed, what it means, and the ways forward.
+/// Terminal card for a failed action.
 export function TxFailedCard({
   title = "Couldn't submit",
   message,
@@ -46,7 +45,11 @@ export function TxFailedCard({
         </div>
       </div>
       {reassurance ? <p className="txcard__sub txcard__p">{reassurance}</p> : null}
-      {hash ? <TxHashRow hash={hash} explorerUrl={explorerUrl} /> : null}
+      {hash ? (
+        <TxHashRow hash={hash} explorerUrl={explorerUrl}>
+          <CopyHash hash={hash} />
+        </TxHashRow>
+      ) : null}
       <div className="txcard__actions">
         {onRetry ? (
           <button type="button" className="btn btn--cta btn--sm" onClick={onRetry}>

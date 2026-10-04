@@ -6,7 +6,7 @@ import { ChevronDownGlyph } from "./icons/glyphs";
 import "./DetailsDisclosure.css";
 
 export interface DetailsDisclosureProps {
-  /// The resolved answer, visible whether or not the row is open.
+  /// Shown on the row whether or not it is open.
   summary?: ReactNode;
   children: ReactNode;
   /// `warn` tints the summary and chevron, for a problem stated in the body.
@@ -15,7 +15,7 @@ export interface DetailsDisclosureProps {
   forceOpen?: boolean;
 }
 
-/// The collapsed "Details" row every action screen ends with.
+/// Collapsible "Details" row at the end of an action screen.
 export function DetailsDisclosure({
   summary,
   children,

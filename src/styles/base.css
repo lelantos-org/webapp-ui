@@ -1,25 +1,21 @@
-/* Self-hosted, because webapp-ui's CSP is `default-src 'self'` with no
-   `font-src`, and its COEP is `require-corp` — a cross-origin font would need
-   CORP headers Google does not send. explorer-ui has no CSP and could reach
-   Google Fonts, but ships the same files so the two cannot drift.
-
-   The first three are variable (weight ranges below are the real axes, not a
-   guess); Martian Mono is a static 600 cut, the only weight the wordmark
-   draws. Latin subset only. `swap` because a wallet that renders its balance
-   late is worse than one that renders it in a fallback for 100ms. */
+/* Fonts are self-hosted: the CSP is `default-src 'self'` with no `font-src`,
+   and COEP `require-corp` needs CORP headers that Google Fonts does not send.
+   The first three are variable; Martian Mono is a static 600 cut. Latin subset
+   only. The build hashes the files, and `headPreloads` preloads the first two. */
 
 @layer base {
+  /* The weight axis is cut to 400-600, the range the app sets; see --display. */
   @font-face {
     font-family: "Newsreader";
-    src: url("/fonts/newsreader.woff2") format("woff2-variations");
-    font-weight: 300 700;
+    src: url("../assets/fonts/newsreader.woff2") format("woff2-variations");
+    font-weight: 400 600;
     font-style: normal;
     font-display: swap;
   }
 
   @font-face {
     font-family: "Public Sans";
-    src: url("/fonts/public-sans.woff2") format("woff2-variations");
+    src: url("../assets/fonts/public-sans.woff2") format("woff2-variations");
     font-weight: 300 800;
     font-style: normal;
     font-display: swap;
@@ -27,20 +23,40 @@
 
   @font-face {
     font-family: "Atkinson Hyperlegible Mono";
-    src: url("/fonts/atkinson-hyperlegible-mono.woff2") format("woff2-variations");
+    src: url("../assets/fonts/atkinson-hyperlegible-mono.woff2") format("woff2-variations");
     font-weight: 300 700;
     font-style: normal;
     font-display: swap;
   }
 
-  /* Google Fonts' latin subset of Martian Mono 600 (OFL), fetched once rather
-     than linked, for the CSP and COEP reasons above. See --brand. */
+  /* Google Fonts' latin subset of Martian Mono 600 (OFL). See --brand. */
   @font-face {
     font-family: "Martian Mono";
-    src: url("/fonts/martian-mono.woff2") format("woff2");
+    src: url("../assets/fonts/martian-mono.woff2") format("woff2");
     font-weight: 600;
     font-style: normal;
     font-display: swap;
+  }
+
+  /* What shows until a web font arrives: a local face scaled to the web font's
+     width and line box, so the swap does not move the text. The figures come
+     from each font's own metrics (Public Sans at 400, Newsreader at 600). */
+  @font-face {
+    font-family: "Public Sans Fallback";
+    src: local("Arial");
+    size-adjust: 105.2%;
+    ascent-override: 90.3%;
+    descent-override: 21.39%;
+    line-gap-override: 0%;
+  }
+
+  @font-face {
+    font-family: "Newsreader Fallback";
+    src: local("Georgia");
+    size-adjust: 97.45%;
+    ascent-override: 75.42%;
+    descent-override: 27.19%;
+    line-gap-override: 0%;
   }
 
 
@@ -60,12 +76,10 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
-  /* AMBIENT BACKDROP
-     Three stacked layers, all fixed and inert, all in the accent hue only —
-     mixing hues at this opacity turns to mud behind the opaque cards.
+  /* Ambient backdrop: three stacked layers, fixed and inert, in the accent hue.
      1. body::before  light: a wide wash under the header, a cool floor tint.
      2. .backdrop     canvas: drifting node/link field (see app/shell/chrome/Backdrop).
-     3. body::after   texture: fine lattice + grain, masked away behind content. */
+     3. body::after   texture: fine lattice, masked away behind content. */
   body::before {
     content: "";
     position: fixed;
@@ -112,12 +126,13 @@
   .app {
     position: relative;
     z-index: 1;
+    /* `viewport-fit=cover` runs the page under a notch in landscape: keep content clear of it. */
+    padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    /* Progressive: an engine that does not know dvh drops this and keeps the
-       line above. dvh, not svh — svh sizes to the *smallest* viewport, leaving a
-       permanent gap under the page once mobile Safari's toolbar retracts. */
+    /* An engine without dvh keeps the line above. Not svh, which sizes to the
+       smallest viewport and leaves a gap once mobile Safari's toolbar retracts. */
     min-height: 100dvh;
   }
   .main {
@@ -127,7 +142,9 @@
     width: 100%;
     margin: 0 auto;
   }
-  ::selection { background: rgba(var(--accent-rgb),0.3); color: var(--bg); }
+  /* Focused by script on a route change, for screen readers; no ring around the whole page. */
+  .main:focus { outline: none; }
+  ::selection { background: rgba(var(--accent-rgb),0.3); }
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
   ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: var(--radius); }
@@ -139,7 +156,7 @@
 
   @media (max-width: 480px) {
     .main { padding: 14px 10px 32px; }
-    /* Decorative background overlay is heavy on tiny screens — drop it. */
+    /* The decorative wash is heavy on small screens. */
     body::before { display: none; }
   }
 }

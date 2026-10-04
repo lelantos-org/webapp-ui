@@ -98,6 +98,7 @@ describe("depositSubmitBlock reason with a fee in another token", () => {
     expect(block({ amount: cross, feeBlock: shortfall("DAI") })).toEqual({
       disabled: true,
       reason: "Not enough DAI in your wallet for the relayer fee",
+      setupFirst: false,
     });
   });
 
@@ -110,27 +111,61 @@ describe("depositSubmitBlock reason with a fee in another token", () => {
     );
   });
 
-  it("names every token setup is for", () => {
-    expect(
-      input({ setup: { ...noSetup, needsSetup: true, blocked: true, symbols: ["DAI"] } }),
-    ).toBe("Set up DAI first");
-    expect(
-      input({ setup: { ...noSetup, unknown: true, blocked: true, symbols: ["USDC", "DAI"] } }),
-    ).toBe("Couldn't check approvals for USDC and DAI — run setup");
-    expect(input({ setup: { ...noSetup, unknown: true, blocked: true } })).toBe(
-      "Couldn't check USDC's approval — run setup",
+  it("names every token setup is for, while something else holds the form too", () => {
+    const waiting = amountOf({ validation: pending });
+    const held = (setup: Partial<typeof noSetup>) =>
+      input({ amount: waiting, setup: { ...noSetup, blocked: true, ...setup } });
+    expect(held({ needsSetup: true, symbols: ["DAI"] })).toBe("Set up DAI first");
+    expect(held({ unknown: true, symbols: ["USDC", "DAI"] })).toBe(
+      "Couldn't check approvals for USDC and DAI — run setup",
     );
+    expect(held({ unknown: true })).toBe("Couldn't check USDC's approval — run setup");
+  });
+});
+
+describe("depositSubmitBlock setup first", () => {
+  const needs = { ...noSetup, needsSetup: true, blocked: true };
+
+  it("lets the button run the setup when nothing else is missing", () => {
+    expect(block({ setup: needs })).toEqual({ disabled: false, setupFirst: true });
+    expect(block({ setup: { ...noSetup, unknown: true, blocked: true } }).setupFirst).toBe(true);
+  });
+
+  it("stays an ordinary block while the form is not otherwise ready", () => {
+    const over = { ...ok, insufficient: true, valid: false };
+    expect(block({ setup: needs, amount: amountOf({ validation: over }) })).toMatchObject({
+      disabled: true,
+      setupFirst: false,
+    });
+    expect(block({ setup: needs, amountText: "" })).toMatchObject({
+      disabled: true,
+      setupFirst: false,
+      reason: "Enter an amount you hold",
+    });
+    expect(
+      block({ setup: needs, amount: amountOf({ relayerProblem: "quote-failed" }) }).setupFirst,
+    ).toBe(false);
+  });
+
+  it("waits while the allowances are still being read", () => {
+    expect(block({ setup: { ...noSetup, blocked: true } })).toMatchObject({
+      disabled: true,
+      setupFirst: false,
+    });
   });
 });
 
 describe("depositSubmitBlock disabled", () => {
   it("is live for a form that can go", () => {
-    expect(block()).toEqual({ disabled: false });
+    expect(block()).toEqual({ disabled: false, setupFirst: false });
   });
 
   it("holds an over-balance amount without a second sentence", () => {
     const over = { ...ok, insufficient: true, valid: false };
-    expect(block({ amount: amountOf({ validation: over }) })).toEqual({ disabled: true });
+    expect(block({ amount: amountOf({ validation: over }) })).toEqual({
+      disabled: true,
+      setupFirst: false,
+    });
   });
 
   it("holds on setup and on a relayer that cannot be paid", () => {

@@ -46,7 +46,7 @@ function serverMaxGamma(noteCount: number): number {
 }
 
 describe("maxDetectionGamma", () => {
-  // Deliberately stricter than the server: at γ=1 a subscription leaks more than the firehose.
+  // Stricter than the server: at γ=1 a subscription leaks more than the firehose.
   it("declines below the floor where the server would accept GAMMA_MIN", () => {
     for (const notes of [0, 1, 64, 127]) {
       expect(serverMaxGamma(notes)).toBe(GAMMA_MIN);

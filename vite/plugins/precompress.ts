@@ -4,7 +4,7 @@ import { gzipSync } from "node:zlib";
 import type { Plugin } from "vite";
 
 /// Extensions worth precompressing; the prover `.zkey` and `.wasm` dominate.
-export const COMPRESSIBLE: ReadonlySet<string> = new Set([
+const COMPRESSIBLE: ReadonlySet<string> = new Set([
   ".js",
   ".css",
   ".html",

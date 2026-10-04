@@ -1,5 +1,4 @@
 @layer components {
-  /* ActionForm */
   .action-form {
     display: flex;
     flex-direction: column;
@@ -11,7 +10,6 @@
     .action-form { gap: var(--sp-16); }
   }
 
-  /* Fields */
   .action-form__fields {
     display: flex;
     flex-direction: column;
@@ -19,13 +17,11 @@
     min-width: 0;
   }
 
-  /* Blocked reason */
   .action-form__why {
     margin: calc(var(--sp-4) * -1) 0 0;
     text-align: center;
   }
 
-  /* CTA */
   .action-form__cta {
     display: flex;
     flex-direction: column;
@@ -41,7 +37,6 @@
 
   @media (max-width: 480px) {
     .action-form__fields { gap: var(--sp-14); }
-    /* Sticky CTA */
     .action-form__cta {
       margin: 0 calc(var(--sp-16) * -1) calc(var(--sp-18) * -1);
       padding: var(--sp-12) var(--sp-16) calc(var(--sp-18) + env(safe-area-inset-bottom, 0px));

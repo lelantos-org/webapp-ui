@@ -40,7 +40,6 @@ const writes = (abi: Abi): AbiFunction[] =>
       i.type === "function" && i.stateMutability !== "view" && i.stateMutability !== "pure",
   );
 
-/// The contracts whose calls this app can read and build, for one chain.
 export function knownContracts(
   chain: Pick<ChainEntry, "governorAddress" | "govTokenAddress" | "maspAddress">,
 ) {
@@ -74,7 +73,6 @@ export function functionSignature(fn: AbiFunction): string {
   return toFunctionSignature(fn);
 }
 
-/// One decoded argument, as text.
 export interface DecodedArg {
   name: string;
   type: string;
@@ -218,7 +216,6 @@ export interface BuiltAction {
 /// Draft errors keyed like the form's fields: `target`, `value`, `fn`, `calldata`, `args.<i>`.
 export type DraftErrors = Partial<Record<string, string>>;
 
-/// The function with `signature` on the contract `contractId`, if known.
 export function findFunction(
   contracts: readonly KnownContract[],
   contractId: string,

@@ -18,10 +18,16 @@ function current(): Theme {
   return typeof matchMedia === "function" && matchMedia(LIGHT_QUERY).matches ? "light" : "dark";
 }
 
-/// Keep the browser-chrome colour in step with the ground, as `index.html` asks.
+/// Each theme's ground colour, `--bg` in tokens.css, for the browser chrome. `index.html`,
+/// `public/theme-init.js` and the web manifest repeat them; `vite/theme-ground.test.ts` holds
+/// the copies together.
+const GROUND: Record<Theme, string> = { light: "#F7F4ED", dark: "#14110E" };
+
+/// Sets every `theme-color` meta, the OS-conditional one included, to the chosen theme's ground.
 function paintChrome(theme: Theme): void {
-  const meta = document.querySelector('meta[name="theme-color"]');
-  meta?.setAttribute("content", theme === "light" ? "#F7F4ED" : "#14110E");
+  for (const meta of document.querySelectorAll('meta[name="theme-color"]')) {
+    meta.setAttribute("content", GROUND[theme]);
+  }
 }
 
 function subscribe(onChange: () => void): () => void {
@@ -41,7 +47,7 @@ function choose(next: Theme): void {
   subscribers.notify();
 }
 
-/// The active theme, read from the `data-theme` attribute `public/theme-init.js` stamps, and its toggle.
+/// The active theme and its toggle. Reads the `data-theme` attribute `public/theme-init.js` sets.
 export function useTheme(): { theme: Theme; toggle(): void } {
   const theme = useSyncExternalStore(subscribe, current, () => "dark" as const);
   const toggle = useCallback(() => choose(current() === "dark" ? "light" : "dark"), []);

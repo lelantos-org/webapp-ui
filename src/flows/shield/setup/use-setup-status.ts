@@ -93,7 +93,6 @@ export function useSetupNeedsByToken(assets: readonly RegisteredAsset[]): {
   };
 }
 
-/// Invalidates `token`'s setup probe for the active chain and payer.
 export function useInvalidateSetupStatus(): (token: string) => Promise<void> {
   const wallet = useWalletInstance();
   const { chainId } = useActiveChain();

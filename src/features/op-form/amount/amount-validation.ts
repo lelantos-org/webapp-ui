@@ -4,7 +4,7 @@ import { BPS_DENOMINATOR, feeBreakdown } from "@/shared/domain/fee-math";
 import { type AssetLabel, type AssetUnits, ZERO_BASE } from "@/shared/domain/units";
 import { parseAmountInput } from "@/shared/lib/format/asset";
 
-/// What a form knows about the selected asset: its units, and its label once the registry loads.
+/// The selected asset's units, plus its label once the registry loads.
 export interface AssetMeta extends AssetUnits, Partial<AssetLabel> {}
 
 /// Parses typed input, returning `undefined` instead of throwing on partial input.
@@ -20,7 +20,6 @@ export function parseAmountSafe(
   }
 }
 
-/// The amount field's validity flags.
 export interface AmountValidation {
   /// `parsed * scale` would overflow MASP's `uint48` publicIn cap.
   tooLarge: boolean;
@@ -61,7 +60,7 @@ export function validateDepositAmount(
   return { ...v, insufficient, valid: !insufficient };
 }
 
-/// The amount field's error string; zod errors take precedence.
+/// The amount field's error; a zod error takes precedence.
 export function pickAmountError(
   formErr: string | undefined,
   v: AmountValidation,

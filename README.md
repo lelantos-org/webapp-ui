@@ -68,12 +68,13 @@ a degraded one.
 | `npm run check` | Biome lint, format and import sorting, with autofix |
 | `npm run check:ci` | The same Biome checks, without writing |
 | `npm run check:imports` | The import rules Biome cannot see (`scripts/check-imports.mjs`) |
+| `npm run check:css-tokens` | Every CSS `var()` resolves to a declared token (`scripts/check-css-tokens.mjs`) |
 | `npm run knip` | Unused files, exports and dependencies |
 | `npm run test` | Run the test suite once |
 | `npm run test:unit` / `test:dom` / `test:tooling` | Run one test project (see `src/test/README.md`) |
 | `npm run test:watch` | Run the tests in watch mode |
 | `npm run test:coverage` | Run the test suite under its coverage floor |
-| `npm run verify` | Typecheck, `check:ci`, `check:imports`, `knip` and `test:coverage` (what CI runs, in parallel jobs, alongside the build) |
+| `npm run verify` | Typecheck, `check:ci`, `check:imports`, `check:css-tokens`, `knip` and `test:coverage` (what CI runs, in parallel jobs, alongside the build) |
 
 ## Development
 
@@ -109,7 +110,7 @@ Any production deployment must serve the app with these same headers.
 npm run test
 ```
 
-Tests run with Vitest. The file name picks the environment: `x.test.ts` runs in Node and `x.dom.test.ts(x)` in jsdom, with Testing Library for components. Helpers, fakes and recipes for new tests are in [`src/test/README.md`](src/test/README.md). `npm run verify` runs the full quality gate: typecheck, Biome checks, the import rules, knip, and the tests under their coverage floor.
+Tests run with Vitest. The file name picks the environment: `x.test.ts` runs in Node and `x.dom.test.ts(x)` in jsdom, with Testing Library for components. Helpers, fakes and recipes for new tests are in [`src/test/README.md`](src/test/README.md). `npm run verify` runs the full quality gate: typecheck, Biome checks, the import rules, the CSS token check, knip, and the tests under their coverage floor.
 
 ## Docker
 

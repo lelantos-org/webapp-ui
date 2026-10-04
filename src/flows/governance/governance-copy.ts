@@ -5,7 +5,13 @@ import type {
   VoteEligibility,
   VoteSupport,
 } from "@/features/governance";
+import { shortAddr } from "@/shared/lib/address";
 import { formatDecimalCompact } from "@/shared/lib/format/number";
+
+/// A proposal's title, or its shortened id where the description gave none.
+export function titleOf(proposal: { id: string; title?: string | undefined }): string {
+  return proposal.title || `Proposal ${shortAddr(proposal.id, 6)}`;
+}
 
 export const SUPPORT_LABEL: Record<VoteSupport, string> = {
   0: "Against",

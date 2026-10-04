@@ -1,14 +1,18 @@
-/// One agent wallet this browser funded.
-///
-/// `nsk` is a live spending key. It is here because the operator needs two things
-/// from it after funding — the balance, and the ability to sweep it back — and
-/// neither is possible from the shielded address alone.
+import {
+  isDigitString,
+  isNonEmptyString,
+  isOptionalTimestamp,
+  isTimestamp,
+} from "@/shared/lib/storage/guards";
+
+/// One agent wallet this browser funded. `nsk` is a live spending key, kept so the
+/// operator can read the balance and sweep the funds back.
 export interface StoredAgent {
   /// Random, not derived from the key material.
   id: string;
   /// The operator's name for it. Shown everywhere; never sent anywhere.
   label: string;
-  /// Decimal strings: `bigint` has no JSON representation.
+  /// Decimal string: `bigint` has no JSON representation.
   chainId: string;
   /// Where funds are sent. Not secret.
   address: string;
@@ -21,20 +25,7 @@ export interface StoredAgent {
   copiedAt?: number;
 }
 
-const DECIMAL = /^\d+$/;
 const NSK_HEX = /^0x[0-9a-fA-F]+$/;
-
-function isDigitString(value: unknown): value is string {
-  return typeof value === "string" && DECIMAL.test(value);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0;
-}
-
-function isOptionalTimestamp(value: unknown): boolean {
-  return value === undefined || (typeof value === "number" && Number.isFinite(value));
-}
 
 /// Checked field by field: a `BigInt` throw in render would take down the whole list.
 function isRecord(value: unknown): value is StoredAgent {
@@ -46,7 +37,7 @@ function isRecord(value: unknown): value is StoredAgent {
   if (!isDigitString(r.chainId)) return false;
   if (!isNonEmptyString(r.address)) return false;
   if (typeof r.nsk !== "string" || !NSK_HEX.test(r.nsk)) return false;
-  if (typeof r.createdAt !== "number" || !Number.isFinite(r.createdAt)) return false;
+  if (!isTimestamp(r.createdAt)) return false;
   if (!isOptionalTimestamp(r.revokedAt)) return false;
   return isOptionalTimestamp(r.copiedAt);
 }

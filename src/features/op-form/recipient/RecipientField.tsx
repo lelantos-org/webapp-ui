@@ -13,37 +13,35 @@ import { cx } from "@/shared/lib/cx";
 import { createLogger } from "@/shared/lib/logger";
 import { toast } from "@/shared/lib/toast";
 import { CheckGlyph } from "@/shared/ui/icons/glyphs";
+import type { RecipientRule } from "../schemas";
 import "./RecipientField.css";
 
 const log = createLogger("forms:recipient");
 
 export interface RecipientFieldProps {
   inputProps: UseFormRegisterReturn;
-  /// "To", "To public address".
   label: string;
   placeholder: string;
   value: string;
-  /// The schema's own predicate; a looser one would mark a half-typed address valid.
-  isValid(value: string): boolean;
-  /// Shown once the user leaves a non-empty field failing `isValid`.
-  invalidMessage: string;
+  /// Must be the schema's rule; a looser one marks a half-typed address valid. Its problem is
+  /// shown once the user leaves a non-empty field that has one.
+  rule: RecipientRule;
   /// Writes an address into the field; omit to withhold the paste button.
   onPaste?(text: string): void;
   formError?: string | undefined;
-  /// The quiet line under the field, withheld on phones.
+  /// Line under the field; hidden on phones.
   helper?: ReactNode;
   /// Under the helper, kept on phones.
   extra?: ReactNode;
 }
 
-/// A spend's recipient address as a growing mono textarea, marked invalid only after the user leaves it.
+/// A spend's recipient address in an auto-growing textarea, marked invalid only after the user leaves it.
 export function RecipientField({
   inputProps,
   label,
   placeholder,
   value,
-  isValid,
-  invalidMessage,
+  rule,
   onPaste,
   formError,
   helper,
@@ -55,9 +53,9 @@ export function RecipientField({
   const area = useRef<HTMLTextAreaElement | null>(null);
   const [left, setLeft] = useState(false);
 
-  const valid = !formError && isValid(value);
-  const error =
-    formError ?? (left && value.trim() !== "" && !isValid(value) ? invalidMessage : undefined);
+  const problem = rule.problem(value);
+  const valid = !formError && problem === undefined;
+  const error = formError ?? (left && value.trim() !== "" ? problem : undefined);
 
   const canPaste = !!onPaste && typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
 
@@ -111,6 +109,7 @@ export function RecipientField({
             autoComplete="off"
             autoCapitalize="off"
             autoCorrect="off"
+            enterKeyHint="go"
             spellCheck={false}
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy || undefined}
@@ -152,7 +151,7 @@ export function RecipientField({
   );
 }
 
-/// Read the clipboard into the field, toasting instead of throwing.
+/// Reads the clipboard into the field, toasting instead of throwing.
 async function pasteInto(write: (text: string) => void): Promise<void> {
   try {
     const text = (await navigator.clipboard.readText()).replace(/\s+/g, "");

@@ -79,7 +79,6 @@
   .linkres__again:hover { color: var(--fg); }
   .linkres__again:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* Placeholder */
   .linkres--empty {
     border: 1px dashed var(--line-strong);
     background: transparent;

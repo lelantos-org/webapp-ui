@@ -4,7 +4,6 @@ export function joinHint(...parts: Array<string | undefined>): string | undefine
   return kept.length > 0 ? kept.join(" · ") : undefined;
 }
 
-/// `label` with its first letter capitalised and the rest left alone.
 export function capitalizeFirst(label: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }

@@ -15,7 +15,7 @@ import {
 } from "react-hook-form";
 import type { ZodType, ZodTypeDef } from "zod";
 import type { RegisteredAsset } from "@/config/chains";
-import { findAsset, useRegisteredAssets } from "@/features/assets";
+import { findAsset, useRegisteredAssets, useRememberAsset } from "@/features/assets";
 import type { ActionMutation } from "@/features/ops";
 import type { ProgressView } from "@/features/tx";
 import { parseAmountInput } from "@/shared/lib/format/asset";
@@ -23,11 +23,10 @@ import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("forms:submit");
 
-/// Every action form is an amount, as a string, against a chosen asset.
 export type ActionFormValues = FieldValues & { amount: string };
 
 export interface ActionFormOptions<T extends ActionFormValues, I, R> {
-  /// Input left open: an asset field's `.default()` makes it optional on input only.
+  /// Input type is `unknown`: an asset field's `.default()` makes it optional on input only.
   schema: ZodType<T, ZodTypeDef, unknown>;
   defaultValues: DefaultValues<T>;
   action: ActionMutation<I, R>;
@@ -43,11 +42,11 @@ export interface ActionFormApi<T extends ActionFormValues> {
   errors: FieldErrors<T>;
   /// `undefined` before the registry loads or for an asset the chain lacks.
   selected: RegisteredAsset | undefined;
-  /// Write an amount the user did not type (Max).
+  /// Writes an amount the user did not type (Max).
   setAmount(formatted: string): void;
-  /// Drop the amount, keeping every other field as the user left it.
+  /// Clears the amount and keeps every other field.
   clearAmount(): void;
-  /// Clear a finished op's stepper and result; call from the first control touched after it.
+  /// Clears a finished op's stepper and result; call from the first control touched after it.
   clearFinished(): void;
 }
 
@@ -100,7 +99,7 @@ export function useActionForm<T extends ActionFormValues, I, R>({
   };
 }
 
-/// A callback clearing a finished op's stepper, tx link and error. Gated on `done`, not `!isPending`.
+/// Returns a callback clearing a finished op's stepper, tx link and error. Gated on `done`, not `!isPending`.
 export function useClearFinishedOp<I, R>(
   mutation: ActionMutation<I, R>["mutation"],
   progress: Pick<ProgressView, "done" | "reset">,
@@ -127,7 +126,7 @@ function useSubmitOnce<T>(run: (values: T) => Promise<void>): (values: T) => Pro
     try {
       await latest.current(values);
     } catch (e) {
-      // Already toasted and rendered by `ActionForm`; only kept out of `unhandledrejection`.
+      // Already toasted and rendered by `ActionForm`; caught only to keep it out of `unhandledrejection`.
       log.debug("submit rejected", e);
     } finally {
       busy.current = false;
@@ -141,11 +140,10 @@ export type ActionSend<T> = (
   ctx: { asset: RegisteredAsset; amount: CircuitAmount },
 ) => Promise<unknown>;
 
-/// Options for `useActionSubmit`.
 export interface ActionSubmitOptions {
-  /// Whatever else the send needs is in place; `false` makes the submit a no-op.
+  /// `false` makes the submit a no-op.
   ready?: boolean;
-  /// Report an amount `parseAmountInput` refuses on the field instead of dropping the submit.
+  /// Reports an amount `parseAmountInput` rejects on the field; without it the submit is dropped.
   onParseError?(error: unknown): void;
 }
 
@@ -156,6 +154,7 @@ export function useActionSubmit<T extends ActionFormValues>(
   { ready = true, onParseError }: ActionSubmitOptions = {},
 ): (e?: React.BaseSyntheticEvent) => Promise<void> {
   const { form, selected, clearAmount } = api;
+  const remember = useRememberAsset();
   return form.handleSubmit(
     useSubmitOnce(async (values: T) => {
       if (!selected || !ready) return;
@@ -168,6 +167,7 @@ export function useActionSubmit<T extends ActionFormValues>(
         return;
       }
       if ((await send(values, { asset: selected, amount })) === false) return;
+      remember(selected.id);
       clearAmount();
     }),
   );

@@ -33,8 +33,9 @@ function Harness({
         label="To"
         placeholder="0x…"
         value={value}
-        isValid={isValid}
-        invalidMessage="That is not a valid public address"
+        rule={{
+          problem: (v) => (isValid(v) ? undefined : "That is not a valid public address"),
+        }}
         onPaste={onPaste ?? setValue}
         helper="A public address."
       />

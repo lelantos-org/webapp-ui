@@ -1,7 +1,5 @@
-// The agent store holds long-lived spending keys. What is asserted here is the
-// one property that separates it from the claim-link vault: nothing is dropped
-// because time passed, because the stored key may be the only copy of something
-// still holding funds.
+// The agent store holds long-lived spending keys. No record expires: the stored
+// key may be the only copy of something still holding funds.
 
 import { beforeEach, describe, expect, it } from "vitest";
 import { MAX_RECORDS } from "./policy";
@@ -43,8 +41,7 @@ describe("agent store", () => {
   });
 
   it("keeps an agent however old it is", () => {
-    // A year ago. The claim-link vault would have dropped this; dropping it here
-    // would strand whatever the agent still holds.
+    // A year ago. Dropping the record would strand whatever the agent still holds.
     const ancient = Date.now() - 365 * 24 * 60 * 60 * 1000;
     rememberAgent(INPUT, ancient);
     resetForTest();

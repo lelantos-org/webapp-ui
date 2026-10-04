@@ -1,5 +1,4 @@
 @layer features {
-  /* Tx cards */
   .txcard {
     gap: var(--sp-20);
   }
@@ -43,6 +42,10 @@
   .txcard__ring--err {
     border-color: var(--err);
     color: var(--err);
+  }
+  .txcard__ring--warn {
+    border-color: var(--warn);
+    color: var(--warn);
   }
   .txcard__t {
     font-size: 19px;
@@ -133,11 +136,6 @@
     font-weight: 600;
     color: var(--fg);
   }
-  .txstep--failed .txstep__mark {
-    border: 2px solid var(--err);
-    color: var(--err);
-  }
-  .txstep--failed .txstep__label { color: var(--err-strong); }
   .txcard__foot {
     display: flex;
     align-items: flex-start;

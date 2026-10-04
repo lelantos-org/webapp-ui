@@ -1,39 +1,41 @@
 import type { ReactNode } from "react";
-import { useCopy } from "@/shared/hooks/use-copy";
 import { shortAddr } from "@/shared/lib/address";
-import { CheckGlyph } from "@/shared/ui/icons/glyphs";
-import { TxHashRow } from "./TxHashRow";
+import { cx } from "@/shared/lib/cx";
+import { CheckGlyph, InfoGlyph } from "@/shared/ui/icons/glyphs";
+import { CopyHash, TxHashRow } from "./TxHashRow";
 import "./txcard.css";
 
-/// One operation's place in a bundled transaction.
+/// An operation's position in a bundled transaction.
 export interface TxOperation {
   /// 1-based.
   index: number;
   count: number;
-  /// The commitment naming the operation.
   commitment: string;
 }
 
 export interface TxSettledCardProps {
-  /// What happened, in the op's own words: "Sent privately", "Shielded".
+  /// E.g. "Sent privately", "Shielded".
   title: string;
-  /// The figure moved, "250.00 USDC". Omitted when the caller no longer has it.
+  /// The op was sent but not seen to land: no success mark.
+  unconfirmed?: boolean;
+  /// Formatted amount, e.g. "250.00 USDC".
   amount?: ReactNode;
-  /// The transaction hash. The row is withheld without one.
+  /// The transaction row is hidden when omitted.
   hash?: string | undefined;
-  /// Explorer link for `hash`. Omitted when the chain has none; copy still works.
+  /// Omitted when the chain has no explorer; copy still works.
   explorerUrl?: string | undefined;
-  /// Which operation this was, when the relayer bundled several. Withheld for a lone one.
+  /// Set when the relayer bundled several operations.
   operation?: TxOperation | undefined;
-  /// Anything worth saying after the fact, under the transaction row.
+  /// Shown under the transaction row.
   note?: ReactNode;
-  /// Trailing control, such as "Done" returning to the form.
+  /// Trailing control, e.g. a "Done" button.
   action?: ReactNode;
 }
 
-/// The card an action ends on: a tick, what happened, and the transaction.
+/// Terminal card for a settled action.
 export function TxSettledCard({
   title,
+  unconfirmed = false,
   amount,
   hash,
   explorerUrl,
@@ -41,7 +43,6 @@ export function TxSettledCard({
   note,
   action,
 }: TxSettledCardProps) {
-  const { copy, copied } = useCopy(hash ?? "");
   return (
     <section
       className="surface surface--card txcard txcard--settled"
@@ -49,8 +50,11 @@ export function TxSettledCard({
       aria-label={title}
     >
       <div className="txcard__head">
-        <span className="glyph-ring txcard__ring" aria-hidden="true">
-          <CheckGlyph size={21} />
+        <span
+          className={cx("glyph-ring txcard__ring", unconfirmed && "txcard__ring--warn")}
+          aria-hidden="true"
+        >
+          {unconfirmed ? <InfoGlyph size={21} /> : <CheckGlyph size={21} />}
         </span>
         <div className="txcard__heading">
           <span className="txcard__t txcard__t--sm">{title}</span>
@@ -61,9 +65,7 @@ export function TxSettledCard({
         <>
           <div className="rule" />
           <TxHashRow hash={hash} explorerUrl={explorerUrl}>
-            <button type="button" className="link-btn txcard__link" onClick={() => void copy()}>
-              {copied ? "Copied" : "Copy"}
-            </button>
+            <CopyHash hash={hash} />
           </TxHashRow>
           {operation ? (
             <div className="txcard__tx">

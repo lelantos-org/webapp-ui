@@ -1,4 +1,4 @@
-/// One level of a wallet rejection, as wallets send it in practice.
+/// One level of a wallet rejection.
 interface RpcErrorNode {
   code?: number | string;
   message?: unknown;

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useId } from "react";
 import { Link } from "react-router-dom";
 import { ACTION_PREFETCH } from "@/app/routes/routes";
 import { AssetsCard, PortfolioHero } from "@/features/assets";
@@ -36,12 +36,15 @@ function warmTile(to: string): void {
   void preloadProverWorker();
 }
 
-/// The connected wallet's home: balance, action tiles, assets and account.
 export function Home() {
   const { wallet, status, capabilities } = useWallet();
   const ready = status === "ready" && !!wallet;
   const governed = !!useActiveChainOrUndefined()?.governorAddress;
   const tiles = TILES.filter((t) => !("needsGovernor" in t) || governed);
+  const gateOf = (t: (typeof TILES)[number]) =>
+    "capability" in t ? capabilities[t.capability] : undefined;
+  const offWhyId = useId();
+  const offReason = tiles.map(gateOf).find((g) => g && !g.allowed)?.reason;
 
   useEffect(() => {
     if (!ready) return;
@@ -66,7 +69,7 @@ export function Home() {
             aria-label="What to do"
           >
             {tiles.map((t) => {
-              const gate = "capability" in t ? capabilities[t.capability] : undefined;
+              const gate = gateOf(t);
               const primary = "primary" in t && t.primary;
               if (gate && !gate.allowed) {
                 return (
@@ -74,7 +77,7 @@ export function Home() {
                     key={t.to}
                     className="tile tile--off"
                     aria-disabled="true"
-                    title={gate.reason}
+                    aria-describedby={offWhyId}
                   >
                     <ActionIcon name={t.icon} />
                     {t.label}
@@ -95,6 +98,12 @@ export function Home() {
               );
             })}
           </nav>
+          {/* In the page, not a `title`: a tooltip never shows on touch. */}
+          {offReason ? (
+            <p className="footnote tiles__why" id={offWhyId}>
+              {offReason}
+            </p>
+          ) : null}
           <AssetsCard />
           <AccountCard shielded={wallet.address} />
           <Provenance />

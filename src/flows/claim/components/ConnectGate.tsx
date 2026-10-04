@@ -1,4 +1,4 @@
-import type { WalletStatus } from "@/features/wallet";
+import { isConnectionPending, type WalletStatus } from "@/features/wallet";
 import "./claim-cards.css";
 
 export interface ConnectGateProps {
@@ -10,21 +10,18 @@ const BUTTON_LABEL: Partial<Record<WalletStatus, string>> = {
   connecting: "Connecting…",
   "loading-networks": "Loading networks…",
   deriving: "Waiting for your signature…",
+  preparing: "Preparing your wallet…",
   resuming: "Resuming your session…",
   error: "Try again",
 };
 
-/// The claim page's connect prompt, shown before any amount is known.
+/// The claim page's connect prompt, shown under what the link holds until a wallet is connected.
 export function ConnectGate({ status, onConnect }: ConnectGateProps) {
-  const waiting =
-    status === "connecting" ||
-    status === "loading-networks" ||
-    status === "deriving" ||
-    status === "resuming";
+  const waiting = isConnectionPending(status);
   return (
     <section className="surface surface--card claim-card">
       <div className="claim-card__head">
-        <h2 className="claim-card__t">Waiting for you</h2>
+        <h2 className="claim-card__t">Connect to claim</h2>
         <p className="claim-card__sub claim-card__lead">
           Connect a wallet to derive the shielded address these funds will land in. No funds move to
           connect.

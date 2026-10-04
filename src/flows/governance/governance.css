@@ -1,6 +1,4 @@
-/* Governance */
 @layer features {
-  /* ── cards ───────────────────────────────────────────────────────────── */
   .gov-card { gap: var(--sp-14); }
   .gov-card__hdr {
     display: flex;
@@ -23,7 +21,6 @@
   .gov-ok { color: var(--accent); }
   .gov-new { white-space: nowrap; min-height: 40px; padding: var(--sp-8) var(--sp-14); }
 
-  /* ── badges ──────────────────────────────────────────────────────────── */
   .gov-badges { display: inline-flex; flex-wrap: wrap; gap: var(--sp-6); }
   .gov-badge {
     font-size: var(--fs-12);
@@ -37,7 +34,6 @@
   .gov-badge--err { color: var(--err); background: rgba(var(--err-rgb), 0.12); }
   .gov-badge--neutral { color: var(--fg-dim); border-color: var(--line-strong); }
 
-  /* ── voting power ────────────────────────────────────────────────────── */
   .gov-power__toggle { padding: 0; font-size: var(--fs-14); font-weight: 500; }
   .gov-power__toggle:focus-visible { outline: var(--ring); outline-offset: 2px; }
   .gov-power__none,
@@ -53,7 +49,6 @@
   .gov-stats__item dd { margin: 0; font-size: 24px; overflow-wrap: anywhere; }
   .gov-stats__item .gov-stats__addr { font-size: var(--fs-15); line-height: 1.6; }
 
-  /* ── list ────────────────────────────────────────────────────────────── */
   .gov-list { min-width: 0; }
   .gov-list__hdr {
     display: flex;
@@ -86,26 +81,6 @@
     border: 0;
     min-width: 0;
   }
-  .gov-filter__btn {
-    min-height: 36px;
-    padding: var(--sp-6) var(--sp-14);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius-sm);
-    background: transparent;
-    font: inherit;
-    font-size: var(--fs-14);
-    color: var(--fg-dim);
-    cursor: pointer;
-  }
-  .gov-filter__btn:hover { border-color: var(--fg-mute); color: var(--fg); }
-  .gov-filter__btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
-  .gov-filter__btn--on,
-  .gov-filter__btn--on:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-    background: rgba(var(--accent-rgb), 0.08);
-    font-weight: 600;
-  }
 
   .gov-row { border-bottom: 1px solid var(--line); }
   .gov-row:last-child { border-bottom: 0; }
@@ -136,7 +111,6 @@
   }
   .gov-row__meta { font-size: var(--fs-13); }
 
-  /* ── tally bar ───────────────────────────────────────────────────────── */
   .gov-tally { display: flex; flex-direction: column; gap: var(--sp-10); }
   .gov-tally--compact { gap: var(--sp-6); }
   .gov-tally__bar {
@@ -181,7 +155,6 @@
   .gov-dot--abstain { background: var(--fg-mute); }
   .gov-dot--against { background: var(--err); }
 
-  /* ── detail ──────────────────────────────────────────────────────────── */
   .gov-detail {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
@@ -263,7 +236,6 @@
   .gov-support--against { color: var(--err); }
   .gov-support--abstain { color: var(--fg-mute); }
 
-  /* ── vote panel ──────────────────────────────────────────────────────── */
   .gov-vote { display: flex; flex-direction: column; gap: var(--sp-14); margin: 0; }
   .gov-vote__opts {
     display: grid;
@@ -299,28 +271,9 @@
     opacity: 0.7;
   }
 
-  /* ── fields ──────────────────────────────────────────────────────────── */
   .gov-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
   .gov-field__lbl { font-size: var(--fs-14); color: var(--fg-mute); }
   .gov-field__err { margin-top: calc(var(--sp-6) * -1); font-size: var(--fs-13); color: var(--err); }
-  .gov-input {
-    width: 100%;
-    min-height: 44px;
-    padding: var(--sp-10) var(--sp-12);
-    border: 1px solid var(--line-strong);
-    border-radius: var(--radius);
-    background: var(--bg-2);
-    color: var(--fg);
-    font: inherit;
-    font-size: var(--fs-15);
-  }
-  .gov-input.mono { font-family: var(--mono); font-size: var(--fs-14); }
-  .gov-input:focus {
-    outline: none;
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.16);
-  }
-  .gov-input[aria-invalid="true"] { border-color: var(--err); }
   .gov-input--area { resize: vertical; line-height: 1.5; }
 
   .gov-delegate { display: flex; flex-direction: column; gap: var(--sp-12); }

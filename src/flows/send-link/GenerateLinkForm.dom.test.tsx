@@ -20,13 +20,14 @@ vi.mock("@/features/assets", async (importOriginal) => ({
 }));
 vi.mock("@/features/chain", () => ({
   useChainRegistry: () => [],
+  useRecordAssets: () => () => [],
   useTxExplorerUrl: () => () => undefined,
 }));
 vi.mock("@/features/fees", () => ({
   FeeDetails: () => null,
   feeIncoming: () => false,
   feeLegFor: () => "withdraw",
-  shownFee: () => undefined,
+  relayerFeeCap: () => undefined,
   useFeePreview: () => ({}),
   useFeePanel: () => idleFeePanel(),
   withSymbol: (asset: unknown) => asset,

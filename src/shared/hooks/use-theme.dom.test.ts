@@ -28,4 +28,21 @@ describe("useTheme", () => {
     act(() => result.current.toggle());
     expect(localStorage.getItem("lelantos:theme")).toBe("dark");
   });
+
+  it("paints the browser chrome for an explicit choice, over the OS-conditional tag too", () => {
+    const metas = ["(prefers-color-scheme: light)", ""].map((media) => {
+      const meta = document.createElement("meta");
+      meta.name = "theme-color";
+      if (media) meta.media = media;
+      document.head.append(meta);
+      return meta;
+    });
+    document.documentElement.setAttribute("data-theme", "dark");
+
+    const { result } = renderHook(() => useTheme());
+    act(() => result.current.toggle());
+
+    expect(metas.map((m) => m.content)).toEqual(["#F7F4ED", "#F7F4ED"]);
+    for (const meta of metas) meta.remove();
+  });
 });

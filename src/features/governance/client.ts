@@ -85,7 +85,7 @@ export interface ProposalSummary {
 export interface ProposalAction {
   target: string;
   value: bigint;
-  /// Legacy signature string; empty from OZ Governor v5.
+  /// Function signature string; OZ Governor v5 leaves it empty.
   signature: string;
   calldata: `0x${string}`;
 }

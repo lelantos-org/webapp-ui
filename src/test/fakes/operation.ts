@@ -2,7 +2,6 @@ import type { UseMutationResult } from "@tanstack/react-query";
 import type { ActionMutation } from "@/features/ops";
 import type { ProgressView } from "@/features/tx";
 
-/// A stepper that has not started.
 export function idleProgress(): ProgressView {
   return {
     phase: undefined,
@@ -11,7 +10,9 @@ export function idleProgress(): ProgressView {
     failedAt: undefined,
     endedAs: undefined,
     provingSince: undefined,
+    amount: undefined,
     reset() {},
+    noteAmount() {},
   };
 }
 

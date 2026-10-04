@@ -5,13 +5,16 @@ export {
   depositMaxAmount,
   NO_META,
   parseAmountSafe,
+  pickAmountError,
   validateDepositAmount,
 } from "./amount/amount-validation";
 export { MaxNotice } from "./amount/MaxNotice";
 export { useSpendAmount } from "./amount/use-spend-amount";
 export { ActionForm } from "./frame/ActionForm";
 export { BoundaryLine } from "./frame/BoundaryLine";
+export { SpendNotices } from "./frame/SpendNotices";
 export { useActionForm, useActionSubmit } from "./frame/use-action-form";
+export { useAskedAsset, useHeldAssetDefault } from "./frame/use-opening-asset";
 export { RecipientField } from "./recipient/RecipientField";
 export { ReviewPanel } from "./review/ReviewPanel";
 export { headlineLabel, leavesBalanceLabel } from "./review/review";
@@ -23,7 +26,8 @@ export {
   defaultAssetField,
   evmAddressField,
   isEvmAddress,
-  isShieldedAddress,
+  PUBLIC_RECIPIENT,
+  SHIELDED_RECIPIENT,
   shieldedAddressField,
 } from "./schemas";
 export type {
@@ -34,11 +38,12 @@ export type {
 } from "./submit/submit-block";
 export {
   amountBlock,
+  amountTextReason,
   blockedBy,
-  ENTER_AMOUNT_REASON,
   feeBlockTail,
   feePendingBlock,
   feeProblemBlock,
+  NO_ASSETS_REASON,
   SUBMIT_OPEN,
   walletReadinessBlock,
 } from "./submit/submit-block";

@@ -1,3 +1,10 @@
+import {
+  isDigitString,
+  isNonEmptyString,
+  isOptionalTimestamp,
+  isTimestamp,
+} from "@/shared/lib/storage/guards";
+
 export interface StoredClaimLink {
   /// Random, not derived from the key material.
   id: string;
@@ -13,21 +20,9 @@ export interface StoredClaimLink {
   txHash?: string;
   /// When the link last left this browser via a copy or share. Absent: possibly the only copy.
   copiedAt?: number;
-}
-
-const DECIMAL = /^\d+$/;
-
-/// A stored `bigint` field. Checked: a `BigInt` throw in render takes down the vault.
-function isDigitString(value: unknown): value is string {
-  return typeof value === "string" && DECIMAL.test(value);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0;
-}
-
-function isOptionalTimestamp(value: unknown): boolean {
-  return value === undefined || (typeof value === "number" && Number.isFinite(value));
+  /// The key derives from the sender's wallet, so the wallet can find the link again while it is
+  /// unclaimed. Absent on a link made with a random key: its record is the only copy.
+  derived?: true;
 }
 
 function isRecord(value: unknown): value is StoredClaimLink {
@@ -39,8 +34,9 @@ function isRecord(value: unknown): value is StoredClaimLink {
   if (!isDigitString(r.chainId)) return false;
   if (!isDigitString(r.assetId)) return false;
   if (!isDigitString(r.amount)) return false;
-  if (typeof r.createdAt !== "number" || !Number.isFinite(r.createdAt)) return false;
+  if (!isTimestamp(r.createdAt)) return false;
   if (!isOptionalTimestamp(r.copiedAt)) return false;
+  if (r.derived !== undefined && r.derived !== true) return false;
   return r.txHash === undefined || typeof r.txHash === "string";
 }
 

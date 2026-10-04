@@ -6,7 +6,6 @@ import type { LadderVerdict } from "../denominations/ladder";
 
 const DENIED = "The bars are what an observer is denied — never your own figures from you.";
 
-/// What `observerOutro` reads.
 export interface ObserverOutroInputs {
   verdict: LadderVerdict;
   /// The amount as the chain will publish it, without a symbol.
@@ -45,7 +44,6 @@ export interface ObserverFacts {
   figure: string | undefined;
 }
 
-/// What the chain will publish about a withdrawal: the destination and the gross.
 export function observerFacts({
   to,
   asset,

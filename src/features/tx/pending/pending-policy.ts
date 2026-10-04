@@ -2,7 +2,6 @@ import type { DepositResult, SwapResult, TransferResult, WithdrawResult } from "
 import type { OpKind } from "@/shared/domain/op-kind";
 import type { PendingShape } from "./pending-store";
 
-/// Caller-supplied data per op kind.
 export type PendingContext =
   | { kind: "deposit"; result: DepositResult }
   | { kind: "transfer"; result: TransferResult; isSelfTransfer: boolean }

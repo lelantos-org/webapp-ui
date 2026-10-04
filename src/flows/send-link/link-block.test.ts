@@ -8,7 +8,7 @@ const ready: LinkBlockInput = {
   balancesLoading: false,
   hasAsset: true,
   amountValid: true,
-  amountEntered: true,
+  amountReason: undefined,
   vaultFull: false,
   feeBlock: undefined,
   feePending: false,
@@ -39,7 +39,7 @@ describe("linkSubmitBlock", () => {
   });
 
   it("holds the button on an entered amount the field flags, without a second sentence", () => {
-    expect(linkSubmitBlock({ ...ready, amountValid: false, amountEntered: true })).toEqual({
+    expect(linkSubmitBlock({ ...ready, amountValid: false, amountReason: undefined })).toEqual({
       disabled: true,
     });
   });

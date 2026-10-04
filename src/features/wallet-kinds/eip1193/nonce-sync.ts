@@ -21,7 +21,7 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 const STALE_NONCE =
   /nonce too low|nonce has already been used|replacement transaction underpriced/i;
 
-/// Did the wallet sign a nonce the chain has already moved past? Checks every wrapping depth.
+/// Whether the wallet signed a nonce the chain has already moved past. Checks every wrapping depth.
 export function isStaleNonce(err: unknown): boolean {
   return rpcErrorChain(err).some(
     (node) => typeof node.message === "string" && STALE_NONCE.test(node.message),

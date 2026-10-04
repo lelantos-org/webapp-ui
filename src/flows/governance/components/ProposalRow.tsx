@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { type ProposalListItem, votingPhase } from "@/features/governance";
 import { shortAddr } from "@/shared/lib/address";
-import { phaseLine } from "../governance-copy";
+import { phaseLine, titleOf } from "../governance-copy";
 import { StateBadge } from "./StateBadge";
 import { TallyBar } from "./TallyBar";
 
@@ -23,7 +23,7 @@ export function ProposalRow({ proposal: p, now, decimals, symbol }: ProposalRowP
           <StateBadge state={state} phase={phase} />
           {line ? <span className="gov-row__when">{line}</span> : null}
         </span>
-        <span className="gov-row__title">{p.title || `Proposal ${shortAddr(p.id, 6)}`}</span>
+        <span className="gov-row__title">{titleOf(p)}</span>
         <span className="gov-row__meta muted">
           by <span className="mono">{shortAddr(p.proposer, 4)}</span> · {p.voteCount}{" "}
           {p.voteCount === 1 ? "vote" : "votes"}

@@ -25,7 +25,6 @@ export function runningCopy(p: SetupProgress, symbolOf: (t: string) => string): 
     : "Submitted. Waiting for block confirmation…";
 }
 
-/// The cost of a run: one prompt per approval plus the signature and transaction.
 export function setupCostLine(approvals: number): string {
   const a = approvals > 0 ? `${plural(approvals, "approval")}, ` : "";
   return `${a}1 signature, 1 transaction`;
@@ -41,7 +40,6 @@ export function initialProgress(toApprove: readonly RegisteredAsset[]): SetupPro
 
 const approvalStepId = (t: { token: string }) => `approving:${tokenKey(t)}`;
 
-/// One approval row per token that needs one, then the shared steps.
 export function setupSteps(toApprove: readonly RegisteredAsset[]): StepperItem[] {
   return [
     ...toApprove.map((a) => ({ id: approvalStepId(a), label: `authorize ${a.symbol}` })),
@@ -49,7 +47,6 @@ export function setupSteps(toApprove: readonly RegisteredAsset[]): StepperItem[]
   ];
 }
 
-/// The row the run is on.
 export function currentStepId(progress: SetupProgress): string {
   return progress.step === "approving" ? approvalStepId(progress) : progress.step;
 }
@@ -67,7 +64,6 @@ export function joinNames(names: readonly string[]): string {
   return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }
 
-/// "Couldn't check USDC's approval", "Couldn't check approvals for USDC and DAI".
 export function uncheckedApprovalsLine(names: readonly string[]): string {
   return names.length > 1
     ? `Couldn't check approvals for ${joinNames(names)}`

@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { SyncNotice } from "./SyncNotice";
 
 const state = vi.hoisted(() => ({ error: null as unknown, isPending: false }));
@@ -26,5 +26,21 @@ describe("SyncNotice", () => {
     expect(screen.getByText(/Balances could not be synced/).textContent).toContain(
       "Note discovery is unreachable",
     );
+  });
+});
+
+describe("SyncNotice on a page limited to one thread", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("warns that proofs will be slow, and says nothing where threads are available", () => {
+    state.error = null;
+    vi.stubGlobal("crossOriginIsolated", false);
+    const { unmount } = render(<SyncNotice />);
+    expect(screen.getByText(/Proofs will be slow here/)).toBeInTheDocument();
+    unmount();
+
+    vi.stubGlobal("crossOriginIsolated", true);
+    render(<SyncNotice />);
+    expect(screen.queryByText(/Proofs will be slow here/)).not.toBeInTheDocument();
   });
 });

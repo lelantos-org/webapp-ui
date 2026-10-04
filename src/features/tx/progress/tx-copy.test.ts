@@ -3,7 +3,7 @@ import {
   failureReassurance,
   handedOff,
   retrySafe,
-  settledNote,
+  settledCopy,
   type TxStage,
   walkAwayNote,
 } from "./tx-copy";
@@ -34,6 +34,21 @@ describe("walkAwayNote", () => {
     expect(walkAwayNote(deposit("mined"))).toMatch(/won't stop it/);
   });
 
+  it("does not say nothing was spent once the funds were being merged", () => {
+    const merging: TxStage = {
+      steps: [
+        ...stepsFor("transfer").slice(0, 1),
+        { id: "consolidating" },
+        ...stepsFor("transfer").slice(1),
+      ],
+      phase: "proving",
+      hash: false,
+    };
+    expect(walkAwayNote(merging)).toMatch(/merge of your funds, and its fee, may already/);
+    expect(walkAwayNote(merging)).not.toMatch(/nothing is spent/);
+    expect(failureReassurance(merging)).toMatch(/merging them may have gone through/);
+  });
+
   it("never promises to notify anyone", () => {
     const all = [spend("proving"), spend("mined", true), deposit("mined")].map(walkAwayNote);
     for (const note of all) expect(note).not.toMatch(/tell you|notify|let you know/i);
@@ -50,6 +65,12 @@ describe("failureReassurance", () => {
     const line = String(failureReassurance(spend("submitting", true)));
     expect(line).not.toMatch(/nothing was|never left/i);
     expect(line).toMatch(/explorer/);
+  });
+
+  it("warns against a second send when the relayer never said whether it took the spend", () => {
+    const line = failureReassurance({ ...spend("submitting"), outcomeUnknown: true });
+    expect(line).not.toMatch(/safe|nothing was|never left/i);
+    expect(line).toMatch(/pay twice/);
   });
 
   it("names the approval that did land on a deposit failing at the permit", () => {
@@ -72,6 +93,7 @@ describe("retrySafe", () => {
     expect(retrySafe(spend("submitting", true))).toBe(false);
     expect(retrySafe(deposit("submitting"))).toBe(true);
     expect(retrySafe(deposit("broadcast"))).toBe(false);
+    expect(retrySafe({ ...spend("submitting"), outcomeUnknown: true })).toBe(false);
   });
 
   it("reads a deposit's broadcast from the steps even without a hash", () => {
@@ -80,9 +102,26 @@ describe("retrySafe", () => {
   });
 });
 
-describe("settledNote", () => {
+describe("settledCopy", () => {
+  const DEPOSIT = stepsFor("deposit", { needsApproval: false });
+
+  it("keeps the op's own title and adds nothing once the outcome was observed", () => {
+    expect(settledCopy("flushed", DEPOSIT, "Shielded")).toEqual({
+      title: "Shielded",
+      unconfirmed: false,
+      note: undefined,
+    });
+  });
+
   it("admits an outcome that was never observed", () => {
-    expect(settledNote("unknown")).toMatch(/explorer/);
-    expect(settledNote("flushed")).toBeUndefined();
+    const copy = settledCopy("unknown", stepsFor("transfer"), "Sent privately");
+    expect(copy).toMatchObject({ title: "Sent, not confirmed yet", unconfirmed: true });
+    expect(copy.note).toMatch(/explorer/);
+  });
+
+  it("does not call an unflushed deposit shielded", () => {
+    const copy = settledCopy("unknown", DEPOSIT, "Shielded");
+    expect(copy.title).not.toBe("Shielded");
+    expect(copy.note).toMatch(/had not added it to the pool/);
   });
 });

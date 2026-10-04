@@ -7,21 +7,22 @@ export const LOCAL_KEYS = {
   debug: "lelantos:debug",
   /// Claim links this browser generated, each carrying its bearer spending key.
   claimLinks: "lelantos:claim-links:v1",
-  /// Agent wallets this browser funded, each holding a long-lived spending key.
-  ///
-  /// Unlike `claimLinks` these never expire: the stored `nsk` is the browser's
-  /// only copy, and dropping a record would strand whatever the agent still
-  /// holds. See `features/agents/policy.ts`.
+  /// Prefix of the next claim-link index to try, one per (chain, account). A hint only: the index
+  /// taken is always checked against the chain.
+  claimLinkNextPrefix: "lelantos:claim-link-next:v1:",
+  /// Agent wallets this browser funded, each holding a long-lived spending key. Never expired:
+  /// the stored `nsk` is the only copy, and dropping a record strands the agent's funds.
   agents: "lelantos:agents:v1",
+  /// Prefix of the asset last sent, one per chain: what a spend form opens on.
+  lastAssetPrefix: "lelantos:last-asset:v1:",
   /// Recent proving durations, for the progress card's estimate.
   proveDurations: "lelantos:prove-durations",
   /// The injected wallet to reattach to on load.
   walletRdns: "lelantos:wallet:rdns",
   /// The injected wallet the picker offers first.
   preferredRdns: "lelantos:wallet:preferred-rdns",
-  /// The enrolled passkey credential.
   passkeyCredential: "lelantos:passkey:v1:credential",
-  /// Whether this device is attached to that credential.
+  /// Whether this device is attached to the enrolled credential.
   passkeyAttached: "lelantos:passkey:v1:attached",
   /// The chain a passkey session selected.
   passkeyChain: "lelantos:passkey:v1:chain",
@@ -35,6 +36,10 @@ export const LOCAL_KEYS = {
 } as const;
 
 export const SESSION_KEYS = {
+  /// The transactions running in this tab, rewritten as they progress.
+  opsRunning: "lelantos:ops:running",
+  /// Transactions a reload cut short, until the user dismisses the notice.
+  opsInterrupted: "lelantos:ops:interrupted",
   /// Prefix of the per-account nsk cache.
   nskPrefix: "lelantos:nsk:v1:",
   /// A reload was already attempted for a stale route chunk.

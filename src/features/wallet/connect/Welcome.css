@@ -1,5 +1,4 @@
 @layer features {
-  /* Welcome */
   .welcome {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 400px;
@@ -85,7 +84,6 @@
   .welcome__points li > span { font-size: var(--fs-14); color: var(--fg-mute); }
   .welcome__point-mark { margin-right: 6px; }
 
-  /* Wallet card */
   .welcome__card {
     display: flex;
     flex-direction: column;
@@ -95,15 +93,8 @@
     box-shadow: var(--shadow-card);
   }
   .welcome__card-hdr { display: flex; flex-direction: column; gap: 3px; }
-  .welcome__card-t {
-    margin: 0;
-    font-family: var(--display);
-    font-size: 20px;
-    font-weight: 600;
-    color: var(--fg);
-  }
+  .welcome__card-t { font-size: 20px; }
 
-  /* Card title tones */
   .welcome__card-t--warn { color: var(--warn); }
   .welcome__card-t--err { color: var(--err); }
   .welcome__card-sub {
@@ -123,6 +114,7 @@
     gap: var(--sp-14);
   }
   .welcome__busy .spinner { flex: none; margin-top: 4px; }
+  .welcome__cancel { align-self: flex-start; }
 
   @media (max-width: 900px) {
     .welcome {

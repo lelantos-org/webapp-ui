@@ -30,7 +30,6 @@ export function SetupNotice({
   );
 }
 
-/// The setup card's leading mark: rays in `Notice`'s accent tile.
 export function SetupTile() {
   return (
     <span className="notice__tile">

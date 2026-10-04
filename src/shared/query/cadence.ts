@@ -1,6 +1,5 @@
 import { useIsIdle } from "@/shared/lib/idle";
 
-/// Multiplier applied to a poll interval while idle.
 export const IDLE_POLL_FACTOR = 4;
 
 const JITTER_FRAC = 0.2;
@@ -19,7 +18,6 @@ interface PolledQuery {
   state: { dataUpdatedAt: number; errorUpdatedAt: number };
 }
 
-/// The `useQuery` options that make a query poll correctly.
 export interface PollingOptions {
   refetchInterval: (query: PolledQuery) => number;
   refetchIntervalInBackground: false;

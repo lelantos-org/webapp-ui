@@ -2,8 +2,13 @@ import { useRef } from "react";
 import { useAssetSelectOptions } from "@/features/assets";
 import { daysLabel, EvictionBlock, VaultSummary } from "@/features/claim-links";
 import { FeeDetails } from "@/features/fees";
-import { ActionForm, AmountHero, AssetSelectPill, spendHeroProps } from "@/features/op-form";
-import { SyncNotice } from "@/features/wallet";
+import {
+  ActionForm,
+  AmountHero,
+  AssetSelectPill,
+  SpendNotices,
+  spendHeroProps,
+} from "@/features/op-form";
 import { CheckGlyph } from "@/shared/ui/icons/glyphs";
 import { Notice } from "@/shared/ui/Notice";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
@@ -44,10 +49,14 @@ export function GenerateLinkForm() {
               submitDisabled={c.block.disabled}
               blockedReason={c.block.reason}
               onReset={c.dismissResult}
-              tx={{ progressTitle: "Creating your link", failedTitle: "Couldn't create the link" }}
+              tx={{
+                progressTitle: "Creating your link",
+                failedTitle: "Couldn't create the link",
+                amount: c.amountLabel || undefined,
+              }}
               details={<FeeDetails fees={spend.fees} />}
             >
-              <SyncNotice />
+              <SpendNotices />
               <AmountHero
                 {...spendHeroProps(form, spend, c.amountText)}
                 size="md"

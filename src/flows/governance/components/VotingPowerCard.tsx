@@ -1,6 +1,12 @@
 import type { EvmAddress } from "@lelantos-org/sdk";
 import { useId, useState } from "react";
-import { isZeroAddress, useDelegate, useGovernance, useVotingPower } from "@/features/governance";
+import {
+  GOV_TOKEN_DEFAULT,
+  isZeroAddress,
+  useDelegate,
+  useGovernance,
+  useVotingPower,
+} from "@/features/governance";
 import { useWallet } from "@/features/wallet";
 import { formatVotes } from "../governance-copy";
 import { useGovTx } from "../use-gov-tx";
@@ -52,7 +58,7 @@ export function VotingPowerCard() {
       ) : (
         <dl className="gov-stats">
           <div className="gov-stats__item">
-            <dt>Transparent {p?.symbol ?? "LNT"}</dt>
+            <dt>Transparent {p?.symbol ?? GOV_TOKEN_DEFAULT.symbol}</dt>
             <dd className="figure">{p ? formatVotes(p.balance, p.decimals) : "…"}</dd>
           </div>
           <div className="gov-stats__item">

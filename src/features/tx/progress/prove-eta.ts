@@ -24,7 +24,6 @@ export function recordProveDuration(ms: number): void {
   writeJson(localStore, KEY, appendSample(readProveSamples(), ms));
 }
 
-/// `samples` with `ms` appended, keeping the newest `MAX_SAMPLES`.
 export function appendSample(samples: readonly number[], ms: number): number[] {
   return [...samples, Math.round(ms)].slice(-MAX_SAMPLES);
 }

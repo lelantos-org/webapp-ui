@@ -13,8 +13,7 @@ const AGENT: StoredAgent = {
 
 describe("credential", () => {
   it("renders the three fields an agent needs to connect", () => {
-    // `connect({ nsk, network, rpcUrl })` is what the agent runs, so the chain
-    // and the key are the credential; the address is what gets topped up.
+    // The agent runs `connect({ nsk, network, rpcUrl })`; the address is what gets topped up.
     const json = JSON.parse(render(AGENT, "json", { reveal: true }));
     expect(json).toEqual({
       chainId: "31337",
@@ -31,16 +30,14 @@ describe("credential", () => {
   });
 
   it("masks the key unless asked for", () => {
-    // The panel appears the moment an agent is funded, which is exactly when
-    // someone may be looking at the screen.
+    // The panel appears right after funding, possibly on a shared screen.
     for (const format of ["json", "env"] as const) {
       expect(render(AGENT, format)).not.toContain("0xdeadbeef");
     }
   });
 
   it("masks without leaking a fragment of the key", () => {
-    // Not a truncation: a few leading hex characters are still a few characters
-    // of a spending key.
+    // A truncated key would still display characters of a spending key.
     const masked = render(AGENT, "json");
     for (const fragment of ["0xdead", "dead", "beef"]) {
       expect(masked).not.toContain(fragment);
@@ -48,8 +45,7 @@ describe("credential", () => {
   });
 
   it("still shows what is not secret while masked", () => {
-    // The address is how an operator tells one agent from another, and it is
-    // public anyway.
+    // The address is public and tells one agent from another.
     const masked = JSON.parse(render(AGENT, "json"));
     expect(masked.address).toBe("lelantos1example");
     expect(masked.chainId).toBe("31337");
@@ -64,7 +60,7 @@ describe("credential", () => {
   });
 
   it("leaves the label out of the machine-readable form", () => {
-    // It is the operator's word for it, not something the agent should key off.
+    // The label is for the operator, not the agent.
     expect(render(AGENT, "json", { reveal: true })).not.toContain("research bot");
   });
 });

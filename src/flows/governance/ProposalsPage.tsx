@@ -1,6 +1,11 @@
 import { useId, useState } from "react";
 import { Link } from "react-router-dom";
-import { useNowSeconds, useProposalList, useVotingPower } from "@/features/governance";
+import {
+  GOV_TOKEN_DEFAULT,
+  useNowSeconds,
+  useProposalList,
+  useVotingPower,
+} from "@/features/governance";
 import { cx } from "@/shared/lib/cx";
 import { Notice } from "@/shared/ui/Notice";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
@@ -26,8 +31,7 @@ function Proposals() {
   const list = useProposalList();
   const power = useVotingPower();
   const now = useNowSeconds(5_000);
-  const decimals = power.data?.decimals ?? 18;
-  const symbol = power.data?.symbol ?? "LNT";
+  const { decimals, symbol } = power.data ?? GOV_TOKEN_DEFAULT;
 
   const shown =
     filter === "all" ? list.items : list.items.filter((p) => p.chain?.state === "Active");
@@ -60,7 +64,7 @@ function Proposals() {
               <button
                 key={f}
                 type="button"
-                className={cx("gov-filter__btn", filter === f && "gov-filter__btn--on")}
+                className={cx("choice", filter === f && "choice--on")}
                 aria-pressed={filter === f}
                 onClick={() => setFilter(f)}
               >

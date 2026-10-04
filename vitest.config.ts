@@ -23,7 +23,6 @@ export default defineConfig({
     onConsoleLog: (log, type) => !(type === "stderr" && /^\[[\w:-]+\] /.test(log)),
     css: false,
     pool: "threads",
-    // unit: src/**/*.test.ts (node); dom: src/**/*.dom.test.* (jsdom); tooling: vite/**/*.test.ts (node).
     projects: [
       {
         extends: true,
@@ -55,7 +54,6 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
-      // A floor, not a target.
       thresholds: {
         statements: 65,
         lines: 65,

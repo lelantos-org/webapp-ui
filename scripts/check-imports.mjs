@@ -123,10 +123,9 @@ for (const file of sourceFiles(SRC)) {
   }
 }
 
-// 5. an in-app `<a href="/...">` is a full page reload: the app remounts, the
-// wallet reconnects, and only then does the route render. Every internal
-// destination must go through react-router's `<Link to>` / `navigate()`.
-// External links (`http:`, `mailto:`) and `#` anchors are untouched.
+// 5. an in-app `<a href="/...">` is a full page reload that remounts the app and
+// reconnects the wallet. Internal destinations go through react-router's
+// `<Link to>` / `navigate()`. External links and `#` anchors are not matched.
 for (const file of sourceFiles(SRC)) {
   if (/\.(test|dom\.test)\.tsx?$/.test(file)) continue;
   const text = readFileSync(file, "utf8");

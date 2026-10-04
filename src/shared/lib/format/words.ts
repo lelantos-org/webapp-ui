@@ -1,4 +1,5 @@
 import { formatAmount, normalizeNumericInput } from "@/shared/lib/format/number";
+import { capitalizeFirst } from "@/shared/lib/format/text";
 
 const ONES = [
   "zero",
@@ -52,7 +53,6 @@ const SCALES = [
   "decillion",
 ] as const;
 
-/// Largest count `numberWord` spells.
 const SPELLED_UP_TO = 10;
 
 /// A small count as a word ("four"), or digits past ten.
@@ -105,7 +105,6 @@ export function amountInWords(value: string, symbol: string): string {
   const numerator = frac.padEnd(digits, "0");
   const denominator = `1${"0".repeat(digits)}`;
   const words = integerInWords(whole) ?? formatAmount(whole);
-  const lead = words.charAt(0).toUpperCase() + words.slice(1);
   const unit = symbol.trim();
-  return `${lead} and ${numerator}/${denominator}${unit ? ` ${unit}` : ""}`;
+  return `${capitalizeFirst(words)} and ${numerator}/${denominator}${unit ? ` ${unit}` : ""}`;
 }

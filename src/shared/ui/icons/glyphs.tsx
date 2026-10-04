@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/// Props every line glyph takes; glyphs are `currentColor` and `aria-hidden`.
+/// Glyphs draw in `currentColor` and are `aria-hidden`.
 export interface GlyphProps {
   size?: number | undefined;
   className?: string | undefined;
@@ -40,7 +40,7 @@ function Svg({
   );
 }
 
-/// A glyph component drawing `paths`; only `size` is caller-overridable.
+/// Builds a glyph component from `paths`. Of the options, callers can override only `size`.
 function glyph(
   paths: ReactNode,
   {
@@ -57,7 +57,6 @@ function glyph(
   };
 }
 
-/// Warning triangle, as on every warn and err box.
 export const WarnGlyph = glyph(
   <>
     <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
@@ -65,7 +64,6 @@ export const WarnGlyph = glyph(
   </>,
 );
 
-/// Circled "i", for neutral notes.
 export const InfoGlyph = glyph(
   <>
     <circle cx="12" cy="12" r="9" />
@@ -76,7 +74,6 @@ export const InfoGlyph = glyph(
 
 export const ChevronDownGlyph = glyph(<path d="m6 9 6 6 6-6" />);
 
-/// The small chevron on the fee asset picker's trigger, on its own 12-unit grid.
 export const ChevronDownSmallGlyph = glyph(<path d="M2.5 4.5 6 8l3.5-3.5" />, {
   size: 10,
   viewBox: "0 0 12 12",
@@ -87,7 +84,6 @@ export const ChevronRightGlyph = glyph(<path d="m9 18 6-6-6-6" />);
 
 export const ChevronLeftGlyph = glyph(<path d="m15 18-6-6 6-6" />);
 
-/// The boundary arrow: a shaft and a head, pointing right.
 export const ArrowRightGlyph = glyph(
   <>
     <path d="M5 12h13" />
@@ -95,7 +91,7 @@ export const ArrowRightGlyph = glyph(
   </>,
 );
 
-/// Straight down, for Swap's flip button. Drawn, since a typed arrow will not centre.
+/// An SVG, because a text arrow character does not centre.
 export const ArrowDownGlyph = glyph(
   <>
     <path d="M12 5v14" />
@@ -103,7 +99,7 @@ export const ArrowDownGlyph = glyph(
   </>,
 );
 
-/// The only glyph whose weight a caller sets: the step marks draw it heavier.
+/// The only glyph with a caller-set `strokeWidth`.
 export function CheckGlyph(p: GlyphProps & { strokeWidth?: number }) {
   return (
     <Svg {...p} strokeWidth={p.strokeWidth ?? 2.6}>
@@ -114,7 +110,6 @@ export function CheckGlyph(p: GlyphProps & { strokeWidth?: number }) {
 
 export const CrossGlyph = glyph(<path d="M18 6 6 18M6 6l12 12" />, { strokeWidth: 2.4 });
 
-/// A padlock, on the Welcome passkey row: the key stays on the device.
 export const LockGlyph = glyph(
   <>
     <rect x="4" y="10" width="16" height="11" rx="2" />
@@ -123,7 +118,6 @@ export const LockGlyph = glyph(
   { strokeWidth: 1.9 },
 );
 
-/// The disconnect button's mark.
 export const PowerGlyph = glyph(
   <>
     <path d="M18.36 6.64A9 9 0 1 1 5.64 6.64" />
@@ -132,7 +126,6 @@ export const PowerGlyph = glyph(
   { round: "cap" },
 );
 
-/// Two overlapping sheets, square-cornered.
 export const CopyGlyph = glyph(
   <>
     <rect x="9" y="9" width="12" height="12" rx="2" />
@@ -151,7 +144,6 @@ export const QrGlyph = glyph(
   { strokeWidth: 1.8, round: "none" },
 );
 
-/// The theme toggle's sun: a disc and its rays, the rays alone rounded.
 export const SunGlyph = glyph(
   <>
     <circle cx="12" cy="12" r="4" />
@@ -168,11 +160,10 @@ export const MoonGlyph = glyph(
   { strokeWidth: 1.8, round: "none" },
 );
 
-/// A burst of rays: the setup card's invitation.
 export const RaysGlyph = glyph(
   <path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4M4.9 19.1l2.9-2.9M16.2 7.8l2.9-2.9" />,
   { strokeWidth: 1.9 },
 );
 
-/// An open arc for the in-flight tile, spun by CSS.
+/// Open arc, spun by CSS.
 export const ArcGlyph = glyph(<path d="M21 12a9 9 0 1 1-6.2-8.6" />);

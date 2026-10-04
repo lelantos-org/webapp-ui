@@ -1,4 +1,5 @@
 import { useId } from "react";
+import { cx } from "@/shared/lib/cx";
 import {
   healthLabel,
   SERVICE_NAMES,
@@ -22,11 +23,11 @@ export function HealthIndicator() {
   const color = dotColor(overall);
 
   return (
-    <span className="health" aria-live="polite">
+    <span className={cx("health", overall === "down" && "health--down")}>
       <button
         type="button"
         className="pill health__hit"
-        aria-label={services.map((s) => `${s.name}: ${s.state}`).join(", ")}
+        aria-label={services.map((s) => `${serviceDisplayName(s.name)}: ${s.state}`).join(", ")}
         aria-describedby={tooltipId}
       >
         <span
@@ -40,6 +41,10 @@ export function HealthIndicator() {
           {healthLabel(services)}
         </span>
       </button>
+      {/* Announced only when a service goes down: the probes repeat, the news does not. */}
+      <span className="sr-only" role="status">
+        {overall === "down" ? healthLabel(services) : ""}
+      </span>
       <span className="health__tooltip" id={tooltipId} role="tooltip">
         {services.map((s) => (
           <Row key={s.name} label={serviceDisplayName(s.name)} state={s.state} />

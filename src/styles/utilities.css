@@ -4,10 +4,7 @@
   .row--wrap { flex-wrap: wrap; justify-content: center; }
   /* Undoes `row--wrap`'s centring, for a wrapping row inside left-aligned copy. */
   .row--start { justify-content: flex-start; }
-  .txt-sm { font-size: var(--fs-12); }
-  /* Named for the value, not an index: an index reads as a scale it is not,
-     and then nobody can reach for a utility without looking it up. */
-  .mt-8 { margin-top: var(--sp-8); }
+  /* Named for the value, not a scale index. */
   .mb-8 { margin-bottom: var(--sp-8); }
 
   .muted { color: var(--fg-mute); }
@@ -15,10 +12,9 @@
   .accent { color: var(--accent); }
   .warn { color: var(--warn); }
 
-  /* Reachable by a screen reader, invisible on screen. For live regions that
-     narrate a control the sighted user is already watching — see `Stepper`.
-     `clip-path` plus a 1px box rather than `display: none`, which removes the
-     node from the accessibility tree along with the layout. */
+  /* Read by screen readers, invisible on screen; used for live regions such as
+     `Stepper`'s. Clipped, because `display: none` removes the node from the
+     accessibility tree. */
   .sr-only {
     position: absolute;
     width: 1px;
@@ -31,9 +27,8 @@
     border: 0;
   }
 
-  /* Skip link: hidden the same way as `.sr-only` until focused, then unclipped
-     into a real control at the top-left. `main` carries `tabIndex={-1}` so the
-     jump moves focus rather than only scrolling. */
+  /* Skip link: clipped like `.sr-only` until focused. `main` carries
+     `tabIndex={-1}` so the jump moves focus as well as scrolling. */
   .skip {
     position: absolute;
     left: var(--sp-8);
@@ -61,8 +56,7 @@
   .brk { overflow-wrap: anywhere; }
 
   /* A native input kept in the tab order and the accessibility tree while a
-     drawn control beside it paints the state: a 1px transparent box, taken out
-     of flow. The drawn control carries the focus ring. */
+     drawn control beside it paints the state and carries the focus ring. */
   .input-hidden {
     position: absolute;
     width: 1px;
@@ -71,8 +65,8 @@
     opacity: 0;
   }
 
-  /* The same string at two lengths: the full one wherever there is room, the
-     short one on a phone. Each pair is written side by side in the markup. */
+  /* One string at two lengths, written side by side in the markup: the full one
+     above 480px, the short one at or below it. */
   .only-narrow { display: none; }
   @media (max-width: 480px) {
     .only-wide { display: none; }

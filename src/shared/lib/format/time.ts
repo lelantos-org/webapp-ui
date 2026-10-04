@@ -1,4 +1,3 @@
-/// One day in milliseconds.
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
 const RTF = new Intl.RelativeTimeFormat("en", { numeric: "auto", style: "short" });

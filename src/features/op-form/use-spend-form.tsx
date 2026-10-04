@@ -3,6 +3,7 @@ import type { Path, PathValue } from "react-hook-form";
 import { allPriced, crossAssetNote, FeeDetails, FeeLineSummary } from "@/features/fees";
 import type { ActionMutation } from "@/features/ops";
 import { type OperationResult, operationOf } from "@/features/tx";
+import type { RelayerFeeTerms } from "@/shared/domain/relayer-fee";
 import { formatAssetAmount, formatAssetFixed } from "@/shared/lib/format/asset";
 import type { AmountHeroProps } from "./amount/AmountHero";
 import type { AssetMeta } from "./amount/amount-validation";
@@ -17,24 +18,25 @@ import {
   type ActionFormValues,
   useActionSubmit,
 } from "./frame/use-action-form";
+import { useHeldAssetDefault } from "./frame/use-opening-asset";
 import type { TxCopy } from "./frame/use-tx-view";
 import type { ReviewPanelProps } from "./review/ReviewPanel";
 import { reviewFigure } from "./review/review";
 import { type Review, useReview } from "./review/use-review";
-import { type SpendBlockInput, spendSubmitBlock } from "./submit/spend-block";
+import type { RecipientRule } from "./schemas";
+import { spendSubmitBlock } from "./submit/spend-block";
+import { reviewBlockReason } from "./submit/submit-block";
 
-/// A spend's fields: an amount of an asset, to a recipient.
 export type SpendFormValues = ActionFormValues & { to: string; asset: string };
 
 export interface SpendFormOptions<T>
   extends Omit<SpendAmountInputs, "selected" | "amountText" | "setAmount"> {
-  /// The recipient's shape check, and which kind of address it names.
-  recipient: Pick<SpendBlockInput, "recipientValid" | "recipientKind">;
+  recipient: RecipientRule;
   titles: Pick<TxCopy, "progressTitle" | "settledTitle">;
   /// Sends validated values, with the amount in circuit units.
   send(
     values: T,
-    ctx: { amount: CircuitAmount; asset: bigint; feeAsset: bigint | undefined },
+    ctx: { amount: CircuitAmount; asset: bigint; relayerFee: RelayerFeeTerms },
   ): Promise<unknown>;
 }
 
@@ -49,13 +51,16 @@ export interface SpendForm {
   onPasteTo(next: string): void;
   frame: Omit<ActionFormProps, "header" | "review" | "children">;
   hero: Omit<AmountHeroProps, "label" | "asset">;
-  /// `ReviewPanel`'s props while the review is open with figures to show.
+  /// `ReviewPanel`'s props; `undefined` unless the review is open with figures to show.
   reviewPanel:
-    | Pick<ReviewPanelProps, "busy" | "onCancel" | "figure" | "symbol" | "words" | "confirmBlocked">
+    | Pick<
+        ReviewPanelProps,
+        "busy" | "onCancel" | "figure" | "symbol" | "words" | "confirmBlocked" | "mergeFirst"
+      >
     | undefined;
 }
 
-/// The two-stage spend Send and Unshield share: first press reviews, second sends.
+/// The two-stage spend shared by Send and Unshield: the first submit opens the review, the second sends.
 export function useSpendForm<T extends SpendFormValues, I, R extends OperationResult>(
   form: ActionFormApi<T>,
   { mutation: m, progress }: ActionMutation<I, R>,
@@ -65,6 +70,7 @@ export function useSpendForm<T extends SpendFormValues, I, R extends OperationRe
   const amountText = form.watch("amount" as Path<T>) as string;
   const to = form.watch("to" as Path<T>) as string;
   const asset = form.watch("asset" as Path<T>) as string;
+  useHeldAssetDefault(form);
 
   const spend = useSpendAmount({
     ...amountInputs,
@@ -75,19 +81,27 @@ export function useSpendForm<T extends SpendFormValues, I, R extends OperationRe
   const { parsed, fees, display } = spend;
   const symbol = display?.symbol ?? "";
 
-  const block = spendSubmitBlock({ ...spend.readiness, recipient: to, ...recipient });
+  const block = spendSubmitBlock({ ...spend.readiness, recipient: to, recipientRule: recipient });
 
-  const onSubmit = useActionSubmit<T>(form, (values, ctx) =>
-    send(values, { amount: ctx.amount, asset: ctx.asset.id, feeAsset: spend.feeAsset }),
+  const onSubmit = useActionSubmit<T>(
+    form,
+    (values, ctx) =>
+      send(values, { amount: ctx.amount, asset: ctx.asset.id, relayerFee: spend.relayerFee }),
+    { ready: !block.disabled },
   );
 
-  // Every field that changes what gets sent, so an edit closes the review before stale figures are confirmed.
+  // Covers every field that changes what is sent, so an edit closes the review before stale figures are confirmed.
   const review = useReview([asset, amountText, to, spend.feeAsset].map((p) => p ?? "").join("|"));
   const figures =
     selected && parsed !== undefined ? reviewFigure(parsed, selected, symbol) : undefined;
 
-  // Waiting on `figures` stops a registry reload mid-review from sending off the bare form.
+  // `figures` is required too: a registry reload mid-review shows the bare form, whose submit must not send.
   const onFormSubmit = (e: React.FormEvent) => {
+    // `requestSubmit` (Enter in a field, "Try again") does not go through the disabled button.
+    if (block.disabled) {
+      e.preventDefault();
+      return;
+    }
     if (!review.open || !figures) {
       e.preventDefault();
       review.enter();
@@ -150,8 +164,8 @@ export function useSpendForm<T extends SpendFormValues, I, R extends OperationRe
             figure: figures.figure,
             symbol,
             words: figures.words,
-            confirmBlocked:
-              block.reason ?? (allPriced(fees.model) ? undefined : "Working out the fee…"),
+            mergeFirst: spend.needsMerge,
+            confirmBlocked: reviewBlockReason(block, allPriced(fees.model)),
           }
         : undefined,
   };

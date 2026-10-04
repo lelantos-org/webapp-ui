@@ -5,7 +5,6 @@ import { governorAbi } from "./abi";
 
 const log = createLogger("governance:tx");
 
-/// A governance write: target, calldata and optional value.
 export interface GovTxRequest {
   to: EvmAddress;
   data: `0x${string}`;
@@ -14,7 +13,6 @@ export interface GovTxRequest {
   onSent?: ((hash: `0x${string}`) => void) | undefined;
 }
 
-/// What `sendGovernanceTx` needs: a signer, a read client and the sending account.
 export interface GovTxDeps {
   signer: Pick<EthSigner, "sendTransaction">;
   client: Pick<PublicClient, "call" | "waitForTransactionReceipt">;

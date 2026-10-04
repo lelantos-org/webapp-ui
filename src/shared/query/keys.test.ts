@@ -12,15 +12,8 @@ describe("queryKeys", () => {
     expect(queryKeys.syncHead(CHAIN)).toEqual(["sync-head", "31337"]);
     expect(queryKeys.syncHead()).toEqual(["sync-head", null]);
     expect(queryKeys.walletState(CHAIN, ME)).toEqual(["wallet-state", "31337", ME]);
-    expect(queryKeys.feePreview(CHAIN, "deposit", 1n, 5n)).toEqual([
-      "fee-preview",
-      "31337",
-      "deposit",
-      "1",
-      "5",
-    ]);
-    expect(queryKeys.feeBps(CHAIN, undefined, "withdraw")).toEqual([
-      "fee-bps",
+    expect(queryKeys.feeInputs(CHAIN, undefined, "withdraw")).toEqual([
+      "fee-inputs",
       "31337",
       null,
       "withdraw",
@@ -67,7 +60,6 @@ describe("queryKeys", () => {
       "0xtoken",
     ]);
     expect(queryKeys.setupStatus(CHAIN, ME)).toEqual(["permit2-setup-status", "31337", ME, null]);
-    expect(queryKeys.setupStatusOf(CHAIN, ME)).toEqual(["permit2-setup-status", "31337", ME]);
 
     const gov = queryKeys.governance(CHAIN);
     expect(gov).toEqual(["governance", "31337"]);

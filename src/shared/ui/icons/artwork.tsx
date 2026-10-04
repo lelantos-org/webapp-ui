@@ -2,7 +2,7 @@
 
 import type { ReactElement } from "react";
 
-/// Token artwork by uppercased symbol. WETH shares ether's mark.
+/// Keyed by uppercased symbol.
 export const TOKEN_ART = {
   ETH: (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
@@ -71,7 +71,7 @@ export const TOKEN_ART = {
   ),
 } satisfies Readonly<Record<string, ReactElement>>;
 
-/// Network artwork by the key `registry.ts` maps a chain id to.
+/// Keyed by the name `registry.ts` maps a chain id to.
 export const CHAIN_ART = {
   ethereum: (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">

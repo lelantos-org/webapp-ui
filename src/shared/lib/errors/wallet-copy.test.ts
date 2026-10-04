@@ -24,7 +24,7 @@ import {
   WalletConfigError,
 } from "@lelantos-org/sdk";
 import { describe, expect, it } from "vitest";
-import { isDuplicateSpend, walletErrorText } from "./wallet-copy";
+import { isDuplicateSpend, isFeeMoved, walletErrorText } from "./wallet-copy";
 
 const rejected = (reason: RelayerRejectReason, status = 409) =>
   new RelayerRejectedError({ status, reason, body: `${reason}: chain 1` });
@@ -69,7 +69,7 @@ describe("walletErrorText", () => {
     ],
     [new NetworkError("FMD_TIMEOUT", "/f", "x"), /FMD\) timed out/],
     [new NetworkError("FMD_FAILED", "/f", "x"), /FMD\) request failed/],
-    [new ProverError("x"), /Proof generation failed/],
+    [new ProverError("x"), /Building the proof failed.*restarts the prover/],
     [new ProverUnavailableError("snarkjs missing"), /Proving isn't available/],
     [new UserRejectedError("sign-permit"), /Signature rejected/],
     [new UserRejectedError("send-tx"), /Transaction rejected/],
@@ -100,25 +100,30 @@ describe("walletErrorText", () => {
 });
 
 describe("insufficient cover", () => {
-  it("names the notes to consolidate", () => {
+  it("says the funds are in too many pieces, with something the user can do", () => {
     const msg = walletErrorText(cover({ consolidate: 2 })).text;
-    expect(msg).toMatch(/Insufficient cover/);
-    expect(msg).toMatch(/Consolidate 2 smallest notes/);
+    expect(msg).toMatch(/too many small pieces.*Send a smaller amount first/);
   });
 
-  it("stops suggesting consolidation once it has run", () => {
+  it("says so when combining them did not help", () => {
     const msg = walletErrorText(cover({ consolidate: 2, consolidationAttempted: true })).text;
-    expect(msg).toMatch(/Merging notes didn't free up enough/);
+    expect(msg).toMatch(/even after combining them/);
   });
 
   it("points a fee with no slot left at the asset being sent", () => {
     expect(walletErrorText(cover({ consolidate: 2, reason: "fee-slot" })).text).toMatch(
-      /Pay the relayer in the asset you're sending/,
+      /Pay the fee in the asset you're sending/,
     );
   });
 
-  it("asks for a top-up when there is nothing to consolidate", () => {
-    expect(walletErrorText(cover({})).text).toMatch(/Top up/);
+  it("says the asset is short when there is nothing to combine", () => {
+    expect(walletErrorText(cover({})).text).toMatch(/Not enough of this asset/);
+  });
+
+  it("never asks the user to act on notes", () => {
+    for (const c of [cover({ consolidate: 2 }), cover({}), cover({ reason: "fee-slot" })]) {
+      expect(walletErrorText(c).text).not.toMatch(/note|consolidat/i);
+    }
   });
 });
 
@@ -126,7 +131,7 @@ describe("notes held back", () => {
   it("reads notes tied up in an earlier spend as a wait, not as an empty wallet", () => {
     const err = held({ reserved: 2 });
     expect(err.retryable).toBe(true);
-    expect(walletErrorText(err).text).toMatch(/2 notes are still tied up in an earlier spend/);
+    expect(walletErrorText(err).text).toMatch(/still tied up in an earlier send/);
   });
 
   it("reads notes still cooling down as a short wait", () => {
@@ -217,7 +222,7 @@ describe("duplicate spend", () => {
   it("is not a duplicate spend for any other refusal", () => {
     const fee = rejected("fee-too-low", 402);
     expect(isDuplicateSpend(fee)).toBe(false);
-    expect(walletErrorText(fee).text).toMatch(/Relayer rejected/);
+    expect(walletErrorText(fee).text).toMatch(/relayer's fee changed/);
     expect(isDuplicateSpend(rejected("stale-estimate"))).toBe(false);
     expect(
       isDuplicateSpend(
@@ -228,7 +233,31 @@ describe("duplicate spend", () => {
   });
 
   it("suggests a retry only when the refusal can clear up", () => {
-    expect(walletErrorText(rejected("internal", 500)).text).toMatch(/Retry shortly/);
-    expect(walletErrorText(rejected("bad-request", 400)).text).toMatch(/Check the relayer logs/);
+    expect(walletErrorText(rejected("internal", 500)).text).toMatch(/Try again shortly/);
+    expect(walletErrorText(rejected("unavailable", 503)).text).toMatch(/Try again shortly/);
+    expect(walletErrorText(rejected("unknown-chain", 400)).text).not.toMatch(/try again/i);
+  });
+
+  it("words every reason the relayer gives, and never sends the user to its logs", () => {
+    const reasons = [
+      "idempotency-key-reused",
+      "stale-estimate",
+      "fee-missing",
+      "fee-too-low",
+      "fee-asset-rejected",
+      "contract-rejected",
+      "reverted",
+      "bad-request",
+      "unknown-chain",
+      "unavailable",
+      "internal",
+      "unknown",
+    ] as const;
+    const lines = reasons.map((r) => walletErrorText(rejected(r)).text);
+    for (const line of lines) expect(line).not.toMatch(/logs|rejected the request/i);
+    // A swap past its slippage arrives as a revert: the line has to say so.
+    expect(walletErrorText(rejected("reverted")).text).toMatch(/slippage/);
+    expect(isFeeMoved(rejected("fee-too-low", 402))).toBe(true);
+    expect(isFeeMoved(rejected("internal", 500))).toBe(false);
   });
 });

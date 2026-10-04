@@ -3,28 +3,26 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <!-- Matches --bg in src/styles/tokens.css. Keep these in step: the browser
-         paints its chrome with this before any CSS loads, so a stale value
-         shows as a band of the wrong colour above the app on every cold start.
-         Dark is the default; theme-init.js rewrites this to the light ground
-         when that theme is active. -->
+    <!-- Must match --bg in src/styles/tokens.css: the browser paints its chrome
+         with this before any CSS loads. The first matching tag wins, so the
+         light one comes first and follows the OS, as the CSS does; theme-init.js
+         sets both to an explicitly chosen theme's ground. -->
+    <meta name="theme-color" content="#F7F4ED" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#14110E" />
     <meta name="referrer" content="no-referrer" />
     <!--
-      CSP via meta is partial: `frame-ancestors`, `sandbox`, `report-uri` are ignored here
-      and must be set as HTTP response headers in production (see security-headers.conf).
+      A meta CSP ignores `frame-ancestors`, `sandbox` and `report-uri`; those are set as
+      HTTP response headers (see security-headers.conf).
 
-      This is the *development* policy. `@vitejs/plugin-react` injects an inline Fast
-      Refresh preamble, which needs 'unsafe-inline' in dev only. `tightenCsp` in
-      vite.config.ts rewrites `script-src` and `connect-src` for the built app and adds
-      Trusted Types there — a production build emits no inline script, so do not add one
-      without revisiting that plugin. Those rewrites throw if they stop matching, so
-      rewording this tag fails the build rather than shipping the dev policy.
+      This is the development policy: the inline Fast Refresh preamble from
+      `@vitejs/plugin-react` needs 'unsafe-inline'. The `tightenCsp` plugin rewrites
+      `script-src` and `connect-src` for the built app and adds Trusted Types. Its
+      rewrites throw if this tag stops matching. A production build emits no inline
+      script; adding one requires changing that plugin.
 
-      No 'unsafe-eval': nothing here reaches `eval` or the `Function` constructor. The
-      wasm prover instantiates through WebAssembly, which 'wasm-unsafe-eval' covers, and
-      the snarkjs fallback does not eval either. Verify before re-adding it — on a page
-      that derives a spending key, 'unsafe-eval' hands any injection a code path.
+      No 'unsafe-eval': the wasm prover instantiates through WebAssembly, which
+      'wasm-unsafe-eval' covers, and the snarkjs fallback does not eval. On a page that
+      derives a spending key, 'unsafe-eval' hands any injection a code path.
     -->
     <meta
       http-equiv="Content-Security-Policy"
@@ -32,7 +30,7 @@
     />
     <script src="/theme-init.js"></script>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
-    <!-- No hand-written `<link rel="manifest">`: VitePWA injects one at build. -->
+    <!-- VitePWA injects the `<link rel="manifest">` at build. -->
     <title>Lelantos Wallet</title>
   </head>
   <body>

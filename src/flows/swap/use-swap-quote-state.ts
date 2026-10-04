@@ -1,5 +1,7 @@
 import type { SwapQuote } from "@lelantos-org/sdk";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
+import { usePageVisible } from "@/shared/hooks/use-page-visible";
+import { useIsIdle } from "@/shared/lib/idle";
 import { type QuoteRequestInput, quoteRequest } from "./quote-request";
 import { useQuoteAge } from "./use-quote-age";
 import { useSwapQuote } from "./use-swap-quote";
@@ -19,7 +21,6 @@ export interface SwapQuoteState {
   refresh(): void;
 }
 
-/// The quote the swap form trades against, with its age and status flags.
 export function useSwapQuoteState(input: QuoteRequestInput): SwapQuoteState {
   const request = quoteRequest(input);
   const quoteQ = useSwapQuote(request);
@@ -29,6 +30,15 @@ export function useSwapQuoteState(input: QuoteRequestInput): SwapQuoteState {
   const quoting = quoteQ.isFetching || (request !== undefined && quoteQ.stale);
   const { refetch } = quoteQ;
   const refresh = useCallback(() => void refetch(), [refetch]);
+
+  // An expired quote re-prices itself while someone is at the page. Polling is paused in a hidden
+  // tab and widened when idle, so there the refresh waits for them to come back.
+  const visible = usePageVisible();
+  const idle = useIsIdle();
+  const attended = visible && !idle;
+  useEffect(() => {
+    if (stale && attended) refresh();
+  }, [stale, attended, refresh]);
 
   return {
     quote,

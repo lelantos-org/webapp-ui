@@ -44,21 +44,21 @@ describe("rawMessage", () => {
 describe("prover faults keep their own diagnosis", () => {
   it("a missing artifact is not reported as a failed proof", () => {
     const msg = userMessage(new ProverArtifactsMissingError(["opts.cdn"], "3x3"));
-    expect(msg).toMatch(/artifacts missing/i);
-    expect(msg).not.toMatch(/Proof generation failed/);
+    expect(msg).toMatch(/files are missing/);
+    expect(msg).not.toMatch(/Building the proof failed/);
   });
 
   it("an artifact that failed to download points at the connection", () => {
     const msg = userMessage(
       new ProverArtifactsFailedError("/3x3_final.zkey", "HTTP 404", { retryable: false }),
     );
-    expect(msg).toMatch(/failed to load/i);
-    expect(msg).not.toMatch(/Proof generation failed/);
+    expect(msg).toMatch(/failed to download.*connection/);
+    expect(msg).not.toMatch(/Building the proof failed/);
   });
 
   it("a real prover failure still reads as one", () => {
     expect(userMessage(new ProverError("witness calculation failed"))).toMatch(
-      /Proof generation failed/,
+      /Building the proof failed/,
     );
   });
 });
@@ -98,7 +98,7 @@ describe("classifyError", () => {
 
   it("does not read the relayer's own refusal as a user cancellation", () => {
     const serverFault = new RelayerRejectedError({ status: 500, reason: "internal", body: "" });
-    expect(rawMessage(serverFault)).toMatch(/rejected the request/);
+    expect(rawMessage(serverFault)).toMatch(/relayer hit an error/);
     expect(classifyError(serverFault).kind).toBe("failed");
   });
 });

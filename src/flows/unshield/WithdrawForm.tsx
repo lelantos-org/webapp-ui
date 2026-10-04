@@ -16,17 +16,18 @@ import {
   defaultAssetField,
   evmAddressField,
   headlineLabel,
-  isEvmAddress,
   leavesBalanceLabel,
   MaxNotice,
   NO_META,
+  PUBLIC_RECIPIENT,
   RecipientField,
   ReviewPanel,
+  SpendNotices,
   SpendScreenHeader,
   useActionForm,
   useSpendForm,
 } from "@/features/op-form";
-import { SyncNotice, useWallet } from "@/features/wallet";
+import { useWallet } from "@/features/wallet";
 import { Notice } from "@/shared/ui/Notice";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
 import { DenominationField } from "./denominations/DenominationField";
@@ -35,7 +36,6 @@ import { ObserverPanel } from "./observer/ObserverPanel";
 import { isSelfWithdraw, observerFacts, observerOutro } from "./observer/observer";
 import { useWithdraw } from "./use-withdraw";
 
-/// The Unshield form's schema.
 export const withdrawSchema = z.object({
   to: evmAddressField,
   amount: amountField,
@@ -66,7 +66,7 @@ export function WithdrawForm() {
       protocolFee: true,
       spendSymbol: nativeEthView(selected, eth.asEth).spendSymbol,
       native: eth.asEth,
-      recipient: { recipientValid: isEvmAddress, recipientKind: "public" },
+      recipient: PUBLIC_RECIPIENT,
       titles: { progressTitle: "Unshielding", settledTitle: "Unshielded" },
       send: (values, ctx) =>
         m.mutateAsync({
@@ -74,7 +74,7 @@ export function WithdrawForm() {
           asset: ctx.asset,
           recipient: values.to,
           native: values.asEth,
-          feeAsset: ctx.feeAsset,
+          ...ctx.relayerFee,
         }),
     },
   );
@@ -154,7 +154,7 @@ export function WithdrawForm() {
         ) : undefined
       }
     >
-      <SyncNotice />
+      <SpendNotices />
       <input type="hidden" {...register("asset")} />
       <input type="hidden" {...register("asEth")} />
       <AmountHero
@@ -180,8 +180,7 @@ export function WithdrawForm() {
         label="To public address"
         placeholder="0x…"
         value={to}
-        isValid={isEvmAddress}
-        invalidMessage="That is not a valid public address"
+        rule={PUBLIC_RECIPIENT}
         onPaste={onPasteTo}
         formError={errors.to?.message}
       />

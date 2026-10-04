@@ -1,9 +1,24 @@
 import { userMessage } from "@/shared/lib/errors";
+import { hasWasmThreads } from "@/shared/lib/platform";
 import { useSyncProgress } from "./sync-progress-store";
 import { useWalletState } from "./use-wallet-state";
 
-/// Banner in the action forms while balances are not yet synced or the sync failed.
+/// Banners at the top of the spend forms: the wallet's sync state, and a prover that will be slow.
 export function SyncNotice() {
+  return (
+    <>
+      <SyncState />
+      {hasWasmThreads() ? null : (
+        <div className="muted mb-8">
+          Proofs will be slow here: this browser limits the page to one thread. Opening the site in
+          a regular browser window, outside a wallet app, lifts that.
+        </div>
+      )}
+    </>
+  );
+}
+
+function SyncState() {
   const { error, isPending } = useWalletState();
   const progress = useSyncProgress();
 

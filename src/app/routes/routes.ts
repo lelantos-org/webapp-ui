@@ -11,7 +11,6 @@ import {
   loadUnshield,
 } from "@/flows/loaders";
 
-/// `lazy()` over a module's named export.
 export function lazyNamed<K extends string, P extends object>(
   load: () => Promise<Record<K, ComponentType<P>>>,
   name: K,
@@ -21,7 +20,9 @@ export function lazyNamed<K extends string, P extends object>(
 
 interface ActionRoute {
   path: string;
-  width: NonNullable<ActionScreenProps["width"]>;
+  /// Names the screen in the document title.
+  title: string;
+  width: ActionScreenProps["width"];
   load: () => Promise<unknown>;
   prefetch: boolean;
   Screen: LazyExoticComponent<ComponentType>;
@@ -29,27 +30,28 @@ interface ActionRoute {
 
 function action<K extends string>(
   path: string,
+  title: string,
   width: ActionRoute["width"],
   load: () => Promise<Record<K, ComponentType>>,
   screen: K,
   prefetch: boolean,
 ): ActionRoute {
-  return { path, width, load, prefetch, Screen: lazyNamed(load, screen) };
+  return { path, title, width, load, prefetch, Screen: lazyNamed(load, screen) };
 }
 
 /// The action routes, each rendered inside `ActionScreen`.
 export const ACTIONS: readonly ActionRoute[] = [
-  action("/shield", "narrow", loadShield, "DepositForm", true),
-  action("/send", "narrow", loadSend, "TransferForm", true),
-  action("/send/link", "wide", loadSendLink, "GenerateLinkForm", true),
-  action("/unshield", "narrow", loadUnshield, "WithdrawForm", true),
-  action("/swap", "narrow", loadSwap, "SwapForm", true),
-  action("/links", "vault", loadLinks, "LinksPage", false),
-  action("/governance", "vault", loadGovernance, "ProposalsPage", true),
-  action("/governance/new", "wide", loadGovernance, "CreateProposalPage", false),
-  action("/governance/:id", "vault", loadGovernance, "ProposalDetailPage", false),
-  action("/agents", "vault", loadAgents, "AgentsPage", true),
-  action("/agents/new", "narrow", loadAgents, "NewAgentForm", false),
+  action("/shield", "Shield", "narrow", loadShield, "DepositForm", true),
+  action("/send", "Send", "narrow", loadSend, "TransferForm", true),
+  action("/send/link", "Send by link", "wide", loadSendLink, "GenerateLinkForm", true),
+  action("/unshield", "Unshield", "narrow", loadUnshield, "WithdrawForm", true),
+  action("/swap", "Swap", "narrow", loadSwap, "SwapForm", true),
+  action("/links", "Links", "vault", loadLinks, "LinksPage", false),
+  action("/governance", "Governance", "vault", loadGovernance, "ProposalsPage", true),
+  action("/governance/new", "New proposal", "wide", loadGovernance, "CreateProposalPage", false),
+  action("/governance/:id", "Proposal", "vault", loadGovernance, "ProposalDetailPage", false),
+  action("/agents", "Agents", "vault", loadAgents, "AgentsPage", true),
+  action("/agents/new", "Fund an agent", "narrow", loadAgents, "NewAgentForm", false),
 ];
 
 /// Route chunks behind each Home tile, keyed by path.

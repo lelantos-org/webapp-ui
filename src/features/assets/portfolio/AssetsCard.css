@@ -1,5 +1,4 @@
 @layer features {
-  /* Assets section */
   .pf-assets {
     display: flex;
     flex-direction: column;
@@ -12,13 +11,7 @@
     justify-content: space-between;
     gap: var(--sp-16);
   }
-  .pf-assets__t {
-    margin: 0;
-    font-family: var(--display);
-    font-size: 19px;
-    font-weight: 600;
-    color: var(--fg);
-  }
+  .pf-assets__t { font-size: 19px; }
   .pf-assets__manage {
     margin: -12px 0;
     padding: 0;
@@ -28,7 +21,6 @@
   .pf-assets__manage:hover { color: var(--accent); }
   .pf-assets__manage:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* Skeleton rows */
   .pf-skel-row {
     display: flex;
     align-items: center;
@@ -51,7 +43,6 @@
   }
   .pf-skel-row__bar { display: block; }
 
-  /* Empty */
   .pf-empty__head {
     padding: 30px var(--sp-22);
     text-align: center;
@@ -59,10 +50,7 @@
   }
   .pf-empty__t {
     margin: 0 0 var(--sp-6);
-    font-family: var(--display);
     font-size: 22px;
-    font-weight: 600;
-    color: var(--fg);
   }
   .pf-empty__sub {
     margin: 0;

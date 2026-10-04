@@ -1,5 +1,4 @@
 @layer components {
-  /* Account pill */
   .account {
     gap: var(--sp-10);
     padding: 7px var(--sp-8) 7px var(--sp-14);
@@ -28,7 +27,6 @@
   .account__power:hover { color: var(--err); }
   .account__power:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* Avatar menu */
   .account-menu {
     position: relative;
     display: none;
@@ -89,13 +87,11 @@
   .account-menu__item:focus-visible { outline: var(--ring); outline-offset: -2px; }
   .account-menu__item--danger { color: var(--err); }
 
-  /* Phones */
   @media (max-width: 480px) {
     .account { display: none; }
     .account-menu { display: inline-flex; }
   }
 
-  /* Coarse pointers */
   @media (pointer: coarse) {
     .account__power { position: relative; }
     .account__power::after { content: ""; position: absolute; inset: -9px; }

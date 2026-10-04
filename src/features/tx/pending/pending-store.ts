@@ -6,7 +6,6 @@ import { createStore, useStore } from "@/shared/lib/external-store";
 import type { PendingOp } from "./operation";
 
 export interface PendingShape {
-  /// Asset id this entry credits.
   asset: bigint;
   /// Amount expected back once the scanner indexes the own outputs.
   pendingIn: bigint;
@@ -19,7 +18,6 @@ export interface PendingShape {
 export interface PendingEntry extends PendingShape, PendingOp {
   /// Composite key `${chainId}:${opId}:${asset}`.
   id: string;
-  /// Chain the tx was submitted on.
   chainId: bigint;
   /// Deadline, set only on watermark-bound entries.
   expiresAt?: number | undefined;
@@ -92,7 +90,6 @@ export function pruneExpired(now: number = Date.now()): void {
   if (removed) bump();
 }
 
-/// React hook returning the live map of pending entries.
 export function usePending(): ReadonlyMap<string, PendingEntry> {
   return useStore(store);
 }

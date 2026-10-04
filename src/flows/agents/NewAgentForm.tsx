@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import { z } from "zod";
 import { agentsSnapshot, useAgents } from "@/features/agents";
@@ -10,12 +9,13 @@ import {
   AssetSelectPill,
   amountField,
   defaultAssetField,
+  SpendNotices,
   spendHeroProps,
   useActionForm,
   useActionSubmit,
+  useHeldAssetDefault,
   useSpendAmount,
 } from "@/features/op-form";
-import { SyncNotice } from "@/features/wallet";
 import { userMessage } from "@/shared/lib/errors";
 import { Notice } from "@/shared/ui/Notice";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
@@ -36,7 +36,6 @@ export function NewAgentForm() {
   const action = useCreateAgent();
   const { mutation } = action;
   const { full } = useAgents();
-  const [createdId, setCreatedId] = useState<string | undefined>(undefined);
   const options = useAssetSelectOptions({ rateTag: false });
 
   const form = useActionForm({
@@ -45,6 +44,7 @@ export function NewAgentForm() {
     action,
   });
   const { register, watch, setValue, errors, selected } = form;
+  useHeldAssetDefault(form);
   const amountText = watch("amount");
 
   const spend = useSpendAmount({
@@ -64,13 +64,12 @@ export function NewAgentForm() {
   const onSubmit = useActionSubmit<NewAgentInput>(
     form,
     async (values, { asset, amount }) => {
-      const result = await mutation.mutateAsync({
+      await mutation.mutateAsync({
         label: values.label.trim(),
         amount,
         asset: asset.id,
-        feeAsset: spend.feeAsset,
+        ...spend.relayerFee,
       });
-      setCreatedId(result.recordId);
     },
     {
       ready: !block.disabled,
@@ -78,6 +77,8 @@ export function NewAgentForm() {
     },
   );
 
+  // Read from the op, so the key is still on screen for a user who left and came back.
+  const createdId = mutation.data?.recordId;
   const created = createdId ? agentsSnapshot().find((a) => a.id === createdId) : undefined;
 
   return (
@@ -93,7 +94,7 @@ export function NewAgentForm() {
         <div className="surface surface--card">
           <h2 className="agents__done">{created.label} is funded</h2>
           <CredentialPanel agent={created} />
-          <Link className="btn btn--cta agents__new" to="/agents">
+          <Link className="btn btn--cta agents__new" to="/agents" onClick={() => mutation.reset()}>
             Done
           </Link>
         </div>
@@ -108,11 +109,11 @@ export function NewAgentForm() {
           tx={{ progressTitle: "Funding the agent", failedTitle: "Couldn't fund the agent" }}
           details={<FeeDetails fees={spend.fees} />}
         >
-          <SyncNotice />
+          <SpendNotices />
           <label className="agent-field">
             <span className="agent-field__lbl">Name</span>
             <input
-              className="agent-input"
+              className="text-input"
               placeholder="research bot"
               aria-invalid={!!errors.label}
               {...register("label")}

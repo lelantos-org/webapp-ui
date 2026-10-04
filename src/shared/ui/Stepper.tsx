@@ -10,9 +10,8 @@ export interface StepperProps {
   steps: StepperItem[];
   /// Id of the step in progress: earlier steps are `done`, later ones `pending`.
   current?: string | undefined;
-  /// Mark the current step as failed (renders `×`).
   failed?: boolean;
-  /// Treat `current` as the last completed step, after a terminal phase.
+  /// Marks `current` done, for a terminal phase.
   done?: boolean;
 }
 
@@ -23,7 +22,7 @@ interface Flags {
   done?: boolean;
 }
 
-/// Each step's state around `currentIdx` (`-1` before any); a failure before any step marks the first.
+/// Per-step state. `currentIdx` is `-1` before any step starts; a failure then marks the first.
 export function stepStates(
   count: number,
   currentIdx: number,

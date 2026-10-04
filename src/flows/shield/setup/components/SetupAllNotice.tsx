@@ -10,7 +10,6 @@ import { SetupAllModal } from "./SetupAllModal";
 import { SetupTile } from "./SetupNotice";
 
 export interface SetupAllNoticeProps {
-  /// The selected asset, when its own deposit needs no setup.
   current?: SetupCurrentAsset | undefined;
 }
 

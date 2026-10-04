@@ -1,5 +1,4 @@
 @layer components {
-  /* Success check */
   .success-check {
     display: flex;
     flex-direction: column;

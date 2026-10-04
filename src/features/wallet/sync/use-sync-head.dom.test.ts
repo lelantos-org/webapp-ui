@@ -1,15 +1,14 @@
 import { waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { jsonResponse, stubFetch } from "@/test/http";
 import { renderQueryHook } from "@/test/render";
 import { useSyncHead } from "./use-sync-head";
 
 vi.mock("@/config/env", () => ({ env: { fmdUrl: "https://fmd.test/" } }));
 
-const chainId = vi.hoisted(() => ({ value: 31337n as bigint | undefined }));
 vi.mock("@/features/chain", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/chain")>()),
-  useActiveChain: () => ({ chainId: chainId.value }),
+  useActiveChain: () => ({ chainId: 31337n }),
 }));
 
 function respond(body: unknown, ok = true) {
@@ -17,10 +16,6 @@ function respond(body: unknown, ok = true) {
 }
 
 describe("useSyncHead", () => {
-  beforeEach(() => {
-    chainId.value = 31337n;
-  });
-
   it("collapses both watermarks into one comparable token", async () => {
     respond({ chainId: 31337, maxNoteId: 12, maxNullifierSeq: 4 });
     const { result } = renderQueryHook(() => useSyncHead());
@@ -50,13 +45,5 @@ describe("useSyncHead", () => {
     const { result } = renderQueryHook(() => useSyncHead());
     await waitFor(() => expect(result.current).toBe("1:0"));
     expect(vi.mocked(fetch).mock.calls[0]?.[0]).toBe("https://fmd.test/v1/head?chainId=31337");
-  });
-
-  it("stays idle until a chain is selected", async () => {
-    chainId.value = undefined;
-    respond({ chainId: 31337, maxNoteId: 9, maxNullifierSeq: 9 });
-    const { result } = renderQueryHook(() => useSyncHead());
-    await waitFor(() => expect(result.current).toBeNull());
-    expect(fetch).not.toHaveBeenCalled();
   });
 });

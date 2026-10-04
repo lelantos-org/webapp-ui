@@ -15,7 +15,6 @@ export interface FeeExtraRow {
   strong?: boolean;
 }
 
-/// Props for `FeeSummary`.
 export interface FeeSummaryProps {
   model: FeeSummaryModel | undefined;
   variant: "details" | "review";

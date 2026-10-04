@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 
 const fromRoot = (p: string) => fileURLToPath(new URL(`../${p}`, import.meta.url));
 
-/// Module aliases shared by the app build and the test runner.
 export const alias: Record<string, string> = {
   "@": fromRoot("src"),
   // circomlibjs needs `assert` at runtime; Vite would externalize it as empty.
@@ -13,7 +12,7 @@ export const alias: Record<string, string> = {
 };
 
 /// Short commit for the footer: `VITE_COMMIT` (CI has no .git), else git, else `"dev"`.
-export function commitRef(): string {
+function commitRef(): string {
   const fromEnv = process.env.VITE_COMMIT?.trim();
   if (fromEnv) return fromEnv;
   try {

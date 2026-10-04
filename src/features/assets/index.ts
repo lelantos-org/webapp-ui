@@ -13,6 +13,12 @@ export { PortfolioHero } from "./portfolio/PortfolioHero";
 export { assetUsd, priceOf } from "./prices/prices";
 export { usePrices } from "./prices/use-prices";
 export {
+  askedAsset,
+  heldAsset,
+  useLastUsedAsset,
+  useRememberAsset,
+} from "./registry/opening-asset";
+export {
   DEFAULT_ASSET_ID,
   findAsset,
   useRegisteredAssets,

@@ -1,29 +1,21 @@
-// Creating and topping up an agent wallet.
+// Creating and topping up an agent wallet: an ephemeral shielded wallet whose key
+// is handed to a process and whose record outlives the funding.
 //
-// An agent wallet is an ephemeral shielded wallet whose key the agent holds
-// rather than a human claiming it once. The mechanics are the claim-link ones —
-// mint a key, derive its address, send it funds — so the ephemeral wallet
-// machinery is shared; what differs is that the key is handed to a process, the
-// wallet is topped up rather than swept on first use, and the record outlives
-// the funding.
-//
-// The record is written **before** the transfer, for the same reason it is on the
-// claim-link path: once funds move, React state holding the only copy of the key
-// is one remount away from losing them.
+// The record is written before the transfer: once funds move, React state must
+// not hold the only copy of the key.
 
 import type { CircuitAmount, SpendPhase, TransferResult, WalletApi } from "@lelantos-org/sdk";
 import { randomFr } from "@lelantos-org/sdk/primitives";
 import { deriveEphemeralAddress } from "@/features/claim-links";
 import { nskHexFromField } from "@/features/wallet-kinds";
-import { rememberAgent } from "./store";
+import type { RelayerFeeTerms } from "@/shared/domain/relayer-fee";
+import { forgetAgent, rememberAgent } from "./store";
 
-export interface FundAgentArgs {
+export interface FundAgentArgs extends RelayerFeeTerms {
   label: string;
   amount: CircuitAmount;
   /// Required: the record is written before the transfer and must name the asset that moves.
   asset: bigint;
-  /// Asset to pay the relayer in; defaults to `asset`.
-  feeAsset?: bigint;
   /// Stamped into the record so the agent knows which pool holds its notes.
   chainId: bigint;
   onPhase?: (phase: SpendPhase) => void;
@@ -55,8 +47,22 @@ export async function createAgent(
     nsk: nskHex,
   });
 
-  const tx = await send(funder, address, args);
-  return { recordId, address, nskHex, txHash: tx.txHash, tx };
+  // The record is dropped only if the spend never reached the relayer. Past that point the
+  // transfer may land, and the record holds the only copy of the key.
+  let handedToRelayer = false;
+  try {
+    const tx = await send(funder, address, {
+      ...args,
+      onPhase: (phase) => {
+        if (phase === "submitting" || phase === "confirmed") handedToRelayer = true;
+        args.onPhase?.(phase);
+      },
+    });
+    return { recordId, address, nskHex, txHash: tx.txHash, tx };
+  } catch (e) {
+    if (!handedToRelayer) forgetAgent(recordId);
+    throw e;
+  }
 }
 
 export interface TopUpAgentArgs extends Omit<FundAgentArgs, "label"> {
@@ -72,8 +78,6 @@ export async function topUpAgent(
   const tx = await send(funder, args.address, args);
   return { txHash: tx.txHash, tx };
 }
-
-/// Marking an agent revoked is the store's job; the sweep itself is in `use-agent-wallet`.
 
 async function send(
   funder: WalletApi,
@@ -92,6 +96,7 @@ async function send(
     amount: args.amount,
     asset: args.asset,
     feeAsset: args.feeAsset,
+    maxFee: args.maxFee,
     autoConsolidate: true,
     onPhase: args.onPhase,
   });

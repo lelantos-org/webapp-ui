@@ -10,7 +10,10 @@ import {
   type WalletApi,
   type WithdrawResult,
 } from "@lelantos-org/sdk";
-import type { TxPhase } from "@/features/tx";
+import { type Step, stepsFor, type TxPhase } from "@/features/tx";
+import { isProverLoaded, whenProverLoaded } from "@/features/wallet";
+import type { OpKind } from "@/shared/domain/op-kind";
+import type { RelayerFeeTerms } from "@/shared/domain/relayer-fee";
 
 /// Pre-parsed deposit inputs: amounts in circuit units, assets as bigint ids.
 export interface DepositCall {
@@ -23,17 +26,15 @@ export interface DepositCall {
   feeAsset?: bigint | undefined;
 }
 
-export interface TransferCall {
+export interface TransferCall extends RelayerFeeTerms {
   /// Shielded address receiving the note.
   recipient: string;
   /// The recipient note's value.
   amount: CircuitAmount;
   asset: bigint;
-  /// Asset to pay the relayer in, which the relayer must have quoted. Defaults to the moved asset.
-  feeAsset?: bigint | undefined;
 }
 
-export interface WithdrawCall {
+export interface WithdrawCall extends RelayerFeeTerms {
   /// EVM account the funds are paid out to.
   recipient: string;
   /// The `publicOut` leaving the pool. The protocol fee comes out of it; the relayer fee is on top.
@@ -41,18 +42,14 @@ export interface WithdrawCall {
   asset: bigint;
   /// Pay out native coin via `NativeAdapter`; `asset` must be the wrapped coin's id.
   native: boolean;
-  /// Asset to pay the relayer in; see `TransferCall.feeAsset`.
-  feeAsset?: bigint | undefined;
 }
 
 /// A claim link: a transfer to a generated ephemeral address.
 export type GenerateLinkCall = Pick<TransferCall, "amount" | "asset">;
 
 /// Atomic shielded swap. The quote fixes assets and route; a quote that has moved is rejected.
-export interface SwapCall {
+export interface SwapCall extends RelayerFeeTerms {
   quote: SwapQuote;
-  /// Asset to pay the relayer in; see `TransferCall.feeAsset`.
-  feeAsset?: bigint | undefined;
 }
 
 type WithPhase<C> = C & { onPhase?: ((phase: TxPhase) => void) | undefined };
@@ -68,7 +65,7 @@ export function createSdkActions(wallet: WalletApi) {
         asset: r.asset,
         native: r.native,
         ...(!r.native && r.feeAsset !== undefined ? { feeAsset: r.feeAsset } : {}),
-        onPhase: forward(r.onPhase, depositStep),
+        onPhase: forwardDeposit(r.onPhase),
       }),
     transfer: (r: WithPhase<TransferCall>): Promise<TransferResult> =>
       wallet.transfer({
@@ -76,8 +73,9 @@ export function createSdkActions(wallet: WalletApi) {
         amount: r.amount,
         asset: r.asset,
         feeAsset: r.feeAsset,
+        maxFee: r.maxFee,
         autoConsolidate: true,
-        onPhase: forward(r.onPhase, spendStep),
+        onPhase: r.onPhase && spendPhases(r.onPhase),
       }),
     withdraw: (r: WithPhase<WithdrawCall>): Promise<WithdrawResult> =>
       wallet.withdraw({
@@ -86,26 +84,27 @@ export function createSdkActions(wallet: WalletApi) {
         asset: r.asset,
         native: r.native,
         feeAsset: r.feeAsset,
+        maxFee: r.maxFee,
         autoConsolidate: true,
-        onPhase: forward(r.onPhase, spendStep),
+        onPhase: r.onPhase && spendPhases(r.onPhase),
       }),
     swap: (r: WithPhase<SwapCall>): Promise<SwapResult> =>
       wallet.swap({
         quote: r.quote,
         feeAsset: r.feeAsset,
+        maxFee: r.maxFee,
         autoConsolidate: true,
-        onPhase: forward(r.onPhase, spendStep),
+        onPhase: r.onPhase && spendPhases(r.onPhase),
       }),
   };
 }
 
-/// The stepper phase for a spend's SDK phase. `confirmed` is left to the lifecycle,
-/// since reaching `mined` before the mutation resolves would finish the form with no tx.
+/// `confirmed` is left to the lifecycle: reaching `mined` before the mutation resolves would
+/// finish the form with no tx.
 export function spendStep(phase: SpendPhase): TxPhase | undefined {
   switch (phase) {
     case "preparing":
     case "consolidating":
-      return "preparing";
     case "proving":
     case "submitting":
       return phase;
@@ -114,7 +113,31 @@ export function spendStep(phase: SpendPhase): TxPhase | undefined {
   }
 }
 
-/// The stepper phase for a deposit's SDK phase.
+/// A spend's steps, with the prover download where the prover has not been fetched yet.
+export function spendSteps(kind: Exclude<OpKind, "deposit">): Step[] {
+  return stepsFor(kind, { coldProver: !isProverLoaded() });
+}
+
+/// The SDK's spend phases as stepper phases, for `onPhase`. The SDK reports `proving` when it
+/// calls the prover; while the prover is still being fetched, that wait is its own step, so it is
+/// neither shown nor timed as proving.
+export function spendPhases(onPhase: (phase: TxPhase) => void): (phase: SpendPhase) => void {
+  let merged = false;
+  return (phase) => {
+    const step = spendStep(phase);
+    if (step === undefined) return;
+    // After a merge the SDK picks funds again; the stepper stays on the merge until the proof.
+    if (step === "consolidating") merged = true;
+    else if (step === "preparing" && merged) return;
+    if (step !== "proving" || isProverLoaded()) {
+      onPhase(step);
+      return;
+    }
+    onPhase("fetching-prover");
+    void whenProverLoaded().then(() => onPhase("proving"));
+  };
+}
+
 export function depositStep(phase: DepositPhase): TxPhase | undefined {
   switch (phase) {
     case "preparing":
@@ -128,13 +151,12 @@ export function depositStep(phase: DepositPhase): TxPhase | undefined {
   }
 }
 
-function forward<P>(
+function forwardDeposit(
   onPhase: ((phase: TxPhase) => void) | undefined,
-  step: (phase: P) => TxPhase | undefined,
-): ((phase: P) => void) | undefined {
+): ((phase: DepositPhase) => void) | undefined {
   if (!onPhase) return undefined;
   return (phase) => {
-    const s = step(phase);
-    if (s !== undefined) onPhase(s);
+    const step = depositStep(phase);
+    if (step !== undefined) onPhase(step);
   };
 }

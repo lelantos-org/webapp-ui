@@ -1,5 +1,4 @@
 @layer components {
-  /* Fee asset picker */
   .feepick {
     position: relative;
     display: inline-flex;
@@ -36,7 +35,6 @@
     transform: rotate(180deg);
   }
 
-  /* Popover */
   .feepick__pop {
     position: fixed;
     z-index: var(--z-popover);

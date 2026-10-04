@@ -1,5 +1,4 @@
 @layer components {
-  /* RecipientField */
   .rcpt {
     display: flex;
     flex-direction: column;
@@ -15,7 +14,7 @@
     align-items: center;
     gap: var(--sp-12);
     padding: var(--sp-14) var(--sp-16);
-    border: 1px solid var(--line-strong);
+    border: 1px solid var(--line-field);
     border-radius: var(--radius);
     background: var(--bg-2);
     transition: border-color var(--dur-120) var(--ease-soft), box-shadow var(--dur-120) var(--ease-soft);
@@ -32,7 +31,6 @@
     min-width: 0;
   }
 
-  /* Input */
   .rcpt__inp {
     display: block;
     width: 100%;
@@ -55,7 +53,6 @@
   }
   .rcpt__inp::placeholder { color: var(--fg-mute); opacity: 1; }
 
-  /* Grouped display (phones) */
   .rcpt__grouped { display: none; }
   .rcpt__ok {
     flex: none;
@@ -68,7 +65,6 @@
     color: var(--accent);
   }
 
-  /* Paste */
   .rcpt__paste {
     flex: none;
     min-height: 44px;
@@ -110,7 +106,6 @@
     .rcpt__inp { font-size: var(--fs-14); line-height: 1.7; }
     .rcpt__helper,
     .rcpt__ok { display: none; }
-    /* Grouped display */
     .rcpt--valid .rcpt__grouped {
       display: block;
       font-size: var(--fs-14);
@@ -125,5 +120,12 @@
       opacity: 0;
     }
     .rcpt--valid:focus-within .rcpt__grouped { display: none; }
+  }
+
+  /* iOS zooms the page on focusing a field under 16px and does not zoom back. The grouped
+     overlay matches, so the address does not resize between focus and blur. */
+  @media (pointer: coarse) {
+    .rcpt__inp,
+    .rcpt--valid .rcpt__grouped { font-size: var(--fs-16); }
   }
 }

@@ -43,7 +43,7 @@ describe("AmountHero", () => {
     const onSetMax = vi.fn();
     render(<AmountHero {...props({ onSetMax })} />);
     press("Max");
-    expect(onSetMax).toHaveBeenCalledWith("3,180");
+    expect(onSetMax).toHaveBeenCalledWith("3180");
   });
 
   it("withholds Max without a ceiling", () => {

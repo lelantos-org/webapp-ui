@@ -1,5 +1,4 @@
 @layer features {
-  /* DenominationField */
   .den {
     display: flex;
     flex-direction: column;
@@ -65,7 +64,6 @@
     font-weight: 600;
   }
 
-  /* Suggested */
   .den__opt--suggested {
     border-style: dashed;
     border-color: var(--warn);
@@ -77,7 +75,6 @@
     color: var(--fg-mute);
   }
 
-  /* Phones */
   @media (max-width: 480px) {
     .den { gap: 9px; }
     .den__tag { padding: 3px 9px; font-size: var(--fs-12); }

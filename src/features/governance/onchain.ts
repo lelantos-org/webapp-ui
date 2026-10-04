@@ -5,6 +5,9 @@ import { governorAbi, govTokenAbi } from "./abi";
 import type { Tallies } from "./client";
 import { type ProposalState, proposalStateOf } from "./model";
 
+/// The governance token's label and scale where the token does not report them, or is not read yet.
+export const GOV_TOKEN_DEFAULT = { symbol: "LNT", decimals: 18 } as const;
+
 const clients = new Map<string, PublicClient>();
 
 /// One client per read endpoint, shared by every read and receipt wait on it.
@@ -42,7 +45,6 @@ export async function readChainClock(client: GovReader, governor: EvmAddress): P
   return Number(clock);
 }
 
-/// A listed proposal's live state and quorum.
 export interface ListProposalChain {
   state: ProposalState | undefined;
   /// Undefined while the snapshot is still in the future.
@@ -85,7 +87,6 @@ export async function readListChain(
   return new Map(rows);
 }
 
-/// One proposal's live figures, and `account`'s vote status when given.
 export interface ProposalChain {
   state: ProposalState | undefined;
   tallies: Tallies;
@@ -147,7 +148,6 @@ export async function readProposalChain(
   };
 }
 
-/// An account's LNT holdings, delegate and voting power against the proposal threshold.
 export interface VotingPower {
   token: EvmAddress;
   symbol: string;
@@ -176,7 +176,6 @@ export async function resolveToken(
   })) as EvmAddress;
 }
 
-/// Read `account`'s voting power on `token` and the governor's proposal threshold.
 export async function readVotingPower(
   client: GovReader,
   governor: EvmAddress,
@@ -201,8 +200,8 @@ export async function readVotingPower(
       : 0n;
   return {
     token,
-    symbol: symbol ?? "LNT",
-    decimals: decimals ?? 18,
+    symbol: symbol ?? GOV_TOKEN_DEFAULT.symbol,
+    decimals: decimals ?? GOV_TOKEN_DEFAULT.decimals,
     balance,
     delegate: delegate as EvmAddress,
     votes,

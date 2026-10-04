@@ -22,6 +22,7 @@ export {
   votingPhase,
 } from "./model";
 export { useCastVote, useDelegate, usePropose } from "./mutations";
+export { GOV_TOKEN_DEFAULT } from "./onchain";
 export type { ProposalListItem } from "./queries";
 export {
   useGovernance,

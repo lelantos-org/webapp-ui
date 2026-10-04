@@ -1,0 +1,33 @@
+@layer components {
+  .inflight {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-10);
+    min-height: 44px;
+    padding: var(--sp-8) var(--sp-24);
+    border-bottom: 1px solid var(--accent-dim);
+    background: rgba(var(--accent-rgb), 0.1);
+    color: var(--fg);
+    font-size: var(--fs-13);
+    line-height: 1.45;
+    text-decoration: none;
+  }
+  /* A notice that is not itself a link: its actions are. */
+  .inflight--warn {
+    flex-wrap: wrap;
+    border-bottom-color: var(--warn-dim);
+    background: var(--warn-bg);
+    color: var(--warn-ink);
+  }
+  .inflight:hover .inflight__go { text-decoration: underline; }
+  .inflight:focus-visible { outline: var(--ring); outline-offset: -2px; }
+  .inflight__go {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  @media (max-width: 720px) {
+    .inflight { padding-inline: var(--sp-14); }
+  }
+}

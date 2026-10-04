@@ -19,7 +19,6 @@ export interface FeeRow {
   rate?: string;
 }
 
-/// Rows, total and headline for a spend's fee panel.
 export interface FeeSummaryModel {
   rows: FeeRow[];
   /// Sum of the fee rows; absent when they span assets.
@@ -32,7 +31,7 @@ export interface FeeSummaryModel {
   crossAsset: boolean;
 }
 
-/// Inputs to `feeSummary`: amount in circuit units, fees as they arrive.
+/// `amount` is in circuit units.
 export interface FeeSummaryInput {
   kind: FeeKind;
   amount: bigint | undefined;
@@ -184,7 +183,7 @@ export function feeSummary({
   return { rows, total, headline, headlineExtra, crossAsset };
 }
 
-/// The fee rows of a model: every row but the amount being moved.
+/// Every row but the amount being moved.
 export function feeRowsOf(model: Pick<FeeSummaryModel, "rows">): FeeRow[] {
   return model.rows.filter((r) => r.key !== "amount");
 }

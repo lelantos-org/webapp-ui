@@ -8,10 +8,11 @@ const ok = (over: Partial<SpendBlockInput> = {}): SpendBlockInput => ({
   syncErrored: false,
   balancesLoading: false,
   amountValid: true,
-  amountEntered: true,
+  amountReason: undefined,
   recipient: "lel1validaddress",
-  recipientValid: (v: string) => v.startsWith("lel1"),
-  recipientKind: "shielded",
+  recipientRule: {
+    problem: (v: string) => (v.startsWith("lel1") ? undefined : "That is not a shielded address"),
+  },
   feePending: false,
   feeBlock: undefined,
   ...over,
@@ -35,12 +36,15 @@ describe("spendSubmitBlock", () => {
   it("names the kind of address a malformed recipient is not", () => {
     expect(reason({ recipient: "0xdeadbeef" })).toBe("That is not a shielded address");
     expect(
-      reason({ recipient: "lel1abc", recipientValid: () => false, recipientKind: "public" }),
+      reason({
+        recipient: "lel1abc",
+        recipientRule: { problem: () => "That is not a valid public address" },
+      }),
     ).toBe("That is not a valid public address");
   });
 
   it("holds an amount the field flags without a second sentence", () => {
-    expect(spendSubmitBlock(ok({ amountValid: false, amountEntered: true }))).toEqual({
+    expect(spendSubmitBlock(ok({ amountValid: false, amountReason: undefined }))).toEqual({
       disabled: true,
     });
   });
@@ -48,12 +52,17 @@ describe("spendSubmitBlock", () => {
   it.each<[string, Partial<SpendBlockInput>, string]>([
     [
       "the sync before anything the user could otherwise fix",
-      { balancesLoading: true, recipient: "", amountValid: false, amountEntered: false },
+      {
+        balancesLoading: true,
+        recipient: "",
+        amountValid: false,
+        amountReason: "Enter an amount you hold",
+      },
       "Still adding up your balance",
     ],
     [
       "the amount before the recipient",
-      { amountValid: false, amountEntered: false, recipient: "" },
+      { amountValid: false, amountReason: "Enter an amount you hold", recipient: "" },
       "Enter an amount you hold",
     ],
     [

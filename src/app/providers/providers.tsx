@@ -5,9 +5,9 @@ import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/app/errors/ErrorBoundary";
 import { ChainProvider } from "@/features/chain";
 import { WalletProvider } from "@/features/wallet";
+import { useMediaQuery } from "@/shared/hooks/use-media-query";
 import { PwaUpdatePrompt } from "./PwaUpdatePrompt";
 import { ROUTER_FUTURE } from "./router-future";
-// Unlayered on purpose, unlike every other stylesheet.
 import "./toast.css";
 
 const queryClient = new QueryClient({
@@ -27,9 +27,27 @@ export function AppProviders({ children }: { children: ReactNode }) {
             <WalletProvider>{children}</WalletProvider>
           </ChainProvider>
         </BrowserRouter>
+        {/* Inside the query client: it holds back while a transaction is being made. */}
+        <PwaUpdatePrompt />
       </QueryClientProvider>
-      <Toaster position="bottom-right" theme="light" richColors closeButton />
-      <PwaUpdatePrompt />
+      <Toasts />
     </ErrorBoundary>
+  );
+}
+
+/// Sonner's own breakpoint: below it a toast spans the viewport.
+const PHONE = "(max-width: 600px)";
+
+/// On a phone the bottom edge holds the pinned submit button, so toasts go to the top.
+function Toasts() {
+  const phone = useMediaQuery(PHONE);
+  return (
+    <Toaster
+      position={phone ? "top-center" : "bottom-right"}
+      mobileOffset={{ top: "calc(12px + env(safe-area-inset-top))" }}
+      theme="light"
+      richColors
+      closeButton
+    />
   );
 }

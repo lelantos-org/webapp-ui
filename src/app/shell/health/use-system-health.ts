@@ -7,7 +7,6 @@ const POLL_MS = 15_000;
 
 const PROBE_TIMEOUT_MS = 3_000;
 
-/// Polls every monitored backend service for reachability.
 export function useSystemHealth() {
   return useQuery<SystemHealth>({
     queryKey: queryKeys.systemHealth(),

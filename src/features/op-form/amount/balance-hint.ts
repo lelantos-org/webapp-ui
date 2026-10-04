@@ -20,7 +20,7 @@ export function settlingHint(
   return undefined;
 }
 
-/// The largest value the balance counts but a spend cannot reach, and why. The slot cap is `MaxNotice`'s.
+/// The largest amount the balance counts but a spend cannot reach, and its cause. The slot cap is reported by `MaxNotice`.
 export function withheldHint(
   spendable: SpendableMax | undefined,
   meta: AssetMeta,
@@ -38,16 +38,38 @@ export function withheldHint(
   return `${formatAssetAmount(worst.value, meta)} ${worst.why}`;
 }
 
+/// How an amount sits against what one spend can reach now: within it, within it once the funds
+/// are merged (the slot cap), or beyond it until something else settles.
+export type SpendReach = "direct" | "merge" | "held";
+
+export function spendReach(
+  parsed: bigint | undefined,
+  spendable: SpendableMax | undefined,
+): SpendReach {
+  if (parsed === undefined || !spendable || parsed <= spendable.max) return "direct";
+  return parsed <= spendable.max + spendable.withheld.slots ? "merge" : "held";
+}
+
+export const MERGE_HINT =
+  "More than one transaction can move at once: your funds are combined first, which takes one extra proof and one extra relayer fee";
+
+/// Why an amount the balance covers still cannot be sent now.
+export function heldReason(spendable: SpendableMax, meta: AssetMeta): string {
+  const reachable = spendable.max + spendable.withheld.slots;
+  const cause = withheldHint(spendable, meta);
+  const most = `${formatAssetAmount(reachable, meta)} is the most you can send right now`;
+  return cause ? `${most}: ${cause}` : most;
+}
+
 /// `MaxNotice`'s copy when the circuit's input cap holds Max below the balance.
 export interface MaxNoticeCopy {
-  /// The ceiling, as "3,180.00": two places, no symbol.
+  /// The ceiling, as "3,180.00": two to six places, no symbol.
   max: string;
   /// Everything after the figure in the first sentence.
   tail: string;
   follow: string;
 }
 
-/// What `maxNoticeCopy` reads.
 export interface MaxNoticeInputs {
   spendable: SpendableMax | undefined;
   meta: AssetMeta;

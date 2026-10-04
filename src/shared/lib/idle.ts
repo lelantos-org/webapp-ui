@@ -1,10 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { createSubscribers } from "@/shared/lib/external-store";
 
-/// Events treated as evidence the user is present.
 const ACTIVITY_EVENTS = ["pointerdown", "keydown", "scroll", "focus"] as const;
 
-/// Quiet period before the page counts as unattended.
 const IDLE_AFTER_MS = 2 * 60_000;
 
 const activity = createSubscribers({

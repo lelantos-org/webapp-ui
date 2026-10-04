@@ -111,7 +111,6 @@
     color: var(--fg-dim);
   }
 
-  /* Network hop */
   .claim-hop {
     display: flex;
     flex-wrap: wrap;

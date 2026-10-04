@@ -50,7 +50,6 @@ function useChainClockOffset(): number {
   return q.data ?? 0;
 }
 
-/// The active chain's governor and connected EVM account.
 export interface GovernanceContext {
   chain: ChainEntry;
   /// Absent on a chain whose deployment runs no governance.
@@ -156,7 +155,6 @@ export function useProposalVotes(proposalId: string) {
   };
 }
 
-/// The connected account's LNT balance, delegate and voting power.
 export function useVotingPower() {
   const { chain, governor, account } = useGovernance();
   return useQuery({

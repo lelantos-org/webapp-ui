@@ -1,5 +1,4 @@
 @layer components {
-  /* BoundaryLine */
   .boundary {
     margin: 0;
     font-size: var(--fs-14);
@@ -20,7 +19,6 @@
   .boundary--sentence { color: var(--accent); }
   .boundary__shield { flex: none; }
 
-  /* Phone copy */
   .boundary__short { display: none; }
 
   @media (max-width: 480px) {

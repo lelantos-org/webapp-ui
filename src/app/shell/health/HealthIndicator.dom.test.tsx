@@ -20,7 +20,7 @@ describe("HealthIndicator", () => {
     render(<HealthIndicator />);
     const dot = dotInside(
       screen.getByRole("button", {
-        name: "registry: unknown, relayer: unknown, fmd: unknown",
+        name: "Registry: unknown, Relayer: unknown, Note feed: unknown",
       }),
     );
 
@@ -36,7 +36,7 @@ describe("HealthIndicator", () => {
     render(<HealthIndicator />);
     const dot = dotInside(
       screen.getByRole("button", {
-        name: `registry: ${state}, relayer: ${state}, fmd: ${state}`,
+        name: `Registry: ${state}, Relayer: ${state}, Note feed: ${state}`,
       }),
     );
 
@@ -48,7 +48,7 @@ describe("HealthIndicator", () => {
 
     render(<HealthIndicator />);
     const trigger = screen.getByRole("button", {
-      name: "registry: up, relayer: up, fmd: down",
+      name: "Registry: up, Relayer: up, Note feed: down",
     });
     trigger.focus();
 
@@ -65,6 +65,21 @@ describe("HealthIndicator", () => {
 
     render(<HealthIndicator />);
 
-    expect(screen.getByText("Relayer unreachable")).toBeInTheDocument();
+    // In the pill for sighted users, and in the status line for screen readers.
+    expect(screen.getAllByText("Relayer unreachable")).toHaveLength(2);
+  });
+
+  it("announces an outage, and nothing while services are up or still being checked", () => {
+    health.mockReturnValue({ data: { registry: "up", relayer: "up", fmd: "up" } });
+    const { rerender } = render(<HealthIndicator />);
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
+
+    health.mockReturnValue({ data: { registry: "up", relayer: "down", fmd: "up" } });
+    rerender(<HealthIndicator />);
+    expect(screen.getByRole("status")).toHaveTextContent("Relayer unreachable");
+
+    health.mockReturnValue({ data: undefined });
+    rerender(<HealthIndicator />);
+    expect(screen.getByRole("status")).toBeEmptyDOMElement();
   });
 });

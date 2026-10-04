@@ -8,7 +8,6 @@ import { useWalletInstance } from "@/features/wallet";
 import { queryKeys } from "@/shared/query/keys";
 import { type LadderModel, ladderModel } from "./ladder";
 
-/// What `useLadder` reads.
 export interface LadderPanelInputs {
   selected: RegisteredAsset | undefined;
   /// The entered gross, in circuit units.
@@ -16,7 +15,6 @@ export interface LadderPanelInputs {
   max: bigint | undefined;
 }
 
-/// The denomination picker's model for the selected asset.
 export function useLadder({ selected, amount, max }: LadderPanelInputs): LadderModel {
   const ladder = useAssetLadder(selected?.id);
   return useMemo(

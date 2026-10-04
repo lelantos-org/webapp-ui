@@ -13,6 +13,10 @@
     transition: background var(--dur-120) var(--ease-soft), border-color var(--dur-120) var(--ease-soft), box-shadow var(--dur-120) var(--ease-soft), transform var(--dur-80) var(--ease-soft);
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
+  /* A finger needs 44px, whatever the button's visual size. */
+  @media (pointer: coarse) {
+    .btn { min-height: 44px; }
+  }
   .btn:hover:not(:disabled) {
     background: var(--accent-2);
     border-color: var(--accent-2);
@@ -20,13 +24,15 @@
   }
   .btn:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
 
-  /* After `:active` deliberately: an outline is independent of the press
-     transform, so the ring travels with the button rather than fighting it. */
+  /* An outline is independent of the press transform, so the ring moves with
+     the button. */
   .btn:focus-visible {
     outline: var(--ring);
     outline-offset: 2px;
   }
-  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  /* 0.7, not lower: a disabled button often carries what is happening ("Retrying…"), and its
+     label stays above 3:1 on both themes. */
+  .btn:disabled { opacity: 0.7; cursor: not-allowed; }
   .btn--ghost {
     background: transparent;
     color: var(--fg);
@@ -41,7 +47,7 @@
     box-shadow: none;
   }
 
-  /* Destructive: a wipe-and-rescan must not read as an ordinary link. */
+  /* Destructive actions, such as wipe-and-rescan. */
   .btn--danger {
     background: var(--err);
     border-color: var(--err);
@@ -54,13 +60,9 @@
   }
   .btn--danger:focus-visible { outline: 2px solid var(--err); outline-offset: 2px; }
 
-  /* The call to action: the one filled, full-width button a screen ends on. Sentence case, set at
-     the call site ("Review", "Shield 1.5 ETH"); nothing here transforms case.
-
-     Disabled is a different surface, not a faded one. At half opacity the ember
-     fill still reads as pressable, and the reason under the button is what
-     explains the dead state — so the button itself steps back to --bg-3 and
-     --fg-mute. */
+  /* The call to action: the one filled, full-width button a screen ends on.
+     Case is set at the call site. Disabled swaps to --bg-3 and --fg-mute at full
+     opacity, because a faded accent fill still reads as pressable. */
   .btn--cta {
     display: flex;
     align-items: center;
@@ -92,8 +94,7 @@
     box-shadow: none;
   }
 
-  /* The secondary button beside or under a CTA: "Back", "Back home", "Retry now".
-     A 1px line and the foreground ink, at the CTA's height. */
+  /* The secondary button beside or under a CTA, at the CTA's height. */
   .btn--outline {
     display: inline-flex;
     align-items: center;
@@ -118,9 +119,8 @@
     box-shadow: none;
   }
 
-  /* The smaller button inside a card, filled or outlined — "Try again" and
-     "Back home" on the failed card, "Create link" beside "Share…". No lift.
-     After the CTA and the outline, so it sizes either. */
+  /* The smaller button inside a card, filled or outlined. Declared after the
+     CTA and the outline so it sizes either. */
   .btn--sm {
     padding: 13px;
     font-size: var(--fs-15);
@@ -128,8 +128,7 @@
   }
   .btn--sm:hover:not(:disabled) { box-shadow: none; }
 
-  /* Toned outlines, for the action inside a notice of that tone: "Set up" on
-     the accent setup card, "Pay the fee in ETH" on a warn box. */
+  /* Toned outlines, for the action inside a notice of that tone. */
   .btn--outline-accent,
   .btn--outline-accent:hover:not(:disabled) {
     border-color: var(--accent);
@@ -150,8 +149,8 @@
   .btn--outline-err:hover:not(:disabled) { background: rgba(var(--err-rgb), 0.08); }
 
   @media (max-width: 480px) {
-    /* Grown rather than shrunk. `.row > .btn` already goes full-width at this
-       breakpoint, so the height a thumb needs costs no horizontal room. */
+    /* Taller for touch. `.row > .btn` is full-width at this breakpoint, so the
+       height costs no horizontal room. */
     .btn--ghost {
       padding: var(--sp-12) var(--sp-14);
       font-size: var(--fs-12);

@@ -1,19 +1,13 @@
-/* Surfaces: the panels the page is built from.
- *
- * Each primitive carries only what its members share exactly; the component
- * class beside it keeps what makes that panel itself (gap, tone, padding on a
- * phone). A component rule wins over these by layer, so no selector here needs
- * to be outranked. */
+/* Surfaces: the panels the page is built from. Each primitive carries only what
+   its members share; a component rule overrides these by layer. */
 @layer primitives {
-  /* A raised panel on the page ground: the action card, the progress and
-     result cards, the claim cards, the vault, the Welcome wallet card. */
+  /* A raised panel on the page ground. */
   .surface {
     border: 1px solid var(--line-strong);
     border-radius: var(--radius);
     background: var(--bg-1);
   }
 
-  /* The card body: one column, padded 26/24/24. */
   .surface--card {
     display: flex;
     flex-direction: column;
@@ -21,15 +15,14 @@
     min-width: 0;
   }
 
-  /* A recessed block inside a surface: the fee stepper, the provenance band,
-     the observer's rows, the asset picker's footnote. */
+  /* A recessed block inside a surface. */
   .inset {
     border: 1px solid var(--line);
     background: var(--bg-2);
   }
 
-  /* The hairline between sections. Margin and border reset so an `<hr>` and a
-     `<div>` draw the same line. */
+  /* The hairline between sections. Margin and border are reset so an `<hr>` and
+     a `<div>` draw the same line. */
   .rule {
     height: 1px;
     border: 0;

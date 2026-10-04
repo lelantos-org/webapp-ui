@@ -12,6 +12,8 @@ export type WalletStatus =
   | "unsupported-chain"
   /// Awaiting the key derivation prompt (EIP-712 signature or passkey unlock).
   | "deriving"
+  /// The key is derived and the wallet is being built from it; nothing is asked of the user.
+  | "preparing"
   /// Rebuilding from a cached nsk, without a prompt.
   | "resuming"
   | "ready"

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { type FeeBlock, feeBlockReason } from "@/features/fees";
-import { amountBlock, blockedBy, feeBlockTail, walletReadinessBlock } from "./submit-block";
+import { FEE_PENDING_REASON, type FeeBlock, feeBlockReason } from "@/features/fees";
+import {
+  amountBlock,
+  amountTextReason,
+  blockedBy,
+  ENTER_AMOUNT_REASON,
+  feeBlockTail,
+  reviewBlockReason,
+  SUBMIT_OPEN,
+  walletReadinessBlock,
+} from "./submit-block";
 
 const QUOTE_FAILED: FeeBlock = { kind: "quote-failed", error: new Error("x"), retry: () => {} };
 
@@ -33,17 +42,19 @@ describe("walletReadinessBlock", () => {
 
 describe("amountBlock", () => {
   it("passes a valid amount", () => {
-    expect(amountBlock({ amountValid: true, amountEntered: true })).toBeUndefined();
+    expect(amountBlock({ amountValid: true, amountReason: undefined })).toBeUndefined();
   });
 
   it("asks for an amount nobody has typed", () => {
-    expect(amountBlock({ amountValid: false, amountEntered: false })).toEqual(
+    expect(amountBlock({ amountValid: false, amountReason: "Enter an amount you hold" })).toEqual(
       blockedBy("Enter an amount you hold"),
     );
   });
 
   it("holds an entered amount the field already flags, without a second sentence", () => {
-    expect(amountBlock({ amountValid: false, amountEntered: true })).toEqual({ disabled: true });
+    expect(amountBlock({ amountValid: false, amountReason: undefined })).toEqual({
+      disabled: true,
+    });
   });
 });
 
@@ -62,5 +73,39 @@ describe("feeBlockTail", () => {
     expect(feeBlockTail({ feeBlock: undefined, feePending: true })).toEqual(
       blockedBy("Working out the fee…"),
     );
+  });
+});
+
+describe("amountTextReason", () => {
+  it("asks for an amount that is missing, zero or still being typed", () => {
+    expect(amountTextReason("", undefined, "USDC")).toBe(ENTER_AMOUNT_REASON);
+    expect(amountTextReason("0", 0n, "USDC")).toBe(ENTER_AMOUNT_REASON);
+    expect(amountTextReason("12.", undefined, "USDC")).toBe(ENTER_AMOUNT_REASON);
+  });
+
+  it("names input the field cannot flag", () => {
+    expect(amountTextReason("0.0000001", undefined, "USDC")).toBe(
+      "USDC can't be split that finely",
+    );
+    expect(amountTextReason("abc", undefined, "USDC")).toBe("Enter the amount as a number");
+    expect(amountTextReason("1e3", undefined, "USDC")).toBe("Enter the amount as a number");
+  });
+
+  it("is silent for an amount that parses", () => {
+    expect(amountTextReason("1.5", 1_500_000n, "USDC")).toBeUndefined();
+  });
+});
+
+describe("reviewBlockReason", () => {
+  it("lets a clear review confirm once its fees are priced", () => {
+    expect(reviewBlockReason(SUBMIT_OPEN, true)).toBeUndefined();
+    expect(reviewBlockReason(SUBMIT_OPEN, false)).toBe(FEE_PENDING_REASON);
+  });
+
+  it("holds the confirm under any block, with or without a reason of its own", () => {
+    expect(reviewBlockReason(blockedBy("Enter a recipient address"), true)).toBe(
+      "Enter a recipient address",
+    );
+    expect(reviewBlockReason(blockedBy(), true)).toMatch(/no longer be sent/);
   });
 });

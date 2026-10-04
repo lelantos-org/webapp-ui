@@ -7,7 +7,7 @@ describe("keywordAdvice", () => {
   });
 
   it("reads an expired permit as an expired quote, not a missing approval", () => {
-    expect(keywordAdvice("permit expired")).toMatch(/Quote expired/);
+    expect(keywordAdvice("permit expired")).toMatch(/quote expired/);
   });
 
   it("words a wallet that does not know the chain", () => {

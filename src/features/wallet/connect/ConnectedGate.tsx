@@ -1,6 +1,7 @@
 import type { WalletApi } from "@lelantos-org/sdk";
 import { type ReactNode, useEffect, useState } from "react";
 import { useWallet } from "../session/context";
+import { useSpendWarmup } from "../sync/use-spend-warmup";
 import { Welcome } from "./Welcome";
 import "./ConnectedGate.css";
 
@@ -17,7 +18,12 @@ export function ConnectedGate({ children }: { children(view: ConnectedView): Rea
 
   return (
     <div className="home-wrap">
-      {ready && wallet ? children({ wallet, welcomeMounted }) : null}
+      {ready && wallet ? (
+        <>
+          <SpendWarmup />
+          {children({ wallet, welcomeMounted })}
+        </>
+      ) : null}
 
       {welcomeMounted ? (
         <div className={`welcome-fade${ready ? " welcome-fade--out" : ""}`}>
@@ -26,6 +32,12 @@ export function ConnectedGate({ children }: { children(view: ConnectedView): Rea
       ) : null}
     </div>
   );
+}
+
+/// A component, so the warm-up's wallet-state read mounts only once a wallet is ready.
+function SpendWarmup() {
+  useSpendWarmup();
+  return null;
 }
 
 /// Must equal the `.welcome-fade` transition in `ConnectedGate.css`, or the fade pops.

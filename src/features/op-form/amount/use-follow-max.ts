@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { formatAmountForAsset } from "@/shared/lib/format/asset";
+import { formatAmountForInput } from "@/shared/lib/format/asset";
 import type { AssetMeta } from "./amount-validation";
 
 interface FollowMax {
@@ -24,7 +24,7 @@ export function useFollowMax(
     if (max === undefined || !selected) return;
     if (written.current === undefined || current !== written.current) return;
 
-    const next = formatAmountForAsset(max, selected);
+    const next = formatAmountForInput(max, selected);
     if (next === written.current) return;
     written.current = next;
     setAmount(next);

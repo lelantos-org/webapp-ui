@@ -79,7 +79,7 @@ describe("createAndProvePasskey", () => {
     stubWebAuthn({ create: async () => credential({ prf: { enabled: true } }), get });
     const { createAndProvePasskey } = await import("./prf");
 
-    const { credentialId } = await createAndProvePasskey("test");
+    const { credentialId } = await createAndProvePasskey();
 
     expect(credentialId).toBeTruthy();
     expect(get).toHaveBeenCalledOnce();

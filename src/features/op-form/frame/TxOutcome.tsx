@@ -4,11 +4,13 @@ import {
   failureReassurance,
   type ProgressView,
   retrySafe,
-  settledNote,
+  settledCopy,
   useProveEta,
   walkAwayNote,
 } from "@/features/tx";
-import { userMessage } from "@/shared/lib/errors";
+import { disposeProverWorker } from "@/features/wallet";
+import { isProverFault, userMessage } from "@/shared/lib/errors";
+import { joinHint } from "@/shared/lib/format/text";
 import { TxFailedCard } from "@/shared/ui/tx-cards/TxFailedCard";
 import { TxProgressCard } from "@/shared/ui/tx-cards/TxProgressCard";
 import { type TxOperation, TxSettledCard } from "@/shared/ui/tx-cards/TxSettledCard";
@@ -19,7 +21,6 @@ export interface TxOutcomeProps {
   busy: boolean;
   error: unknown;
   progress: ProgressView | undefined;
-  txHash: string | undefined;
   operation?: TxOperation | undefined;
   tx: TxCopy | undefined;
   onRetry(): void;
@@ -31,14 +32,13 @@ export function TxOutcome({
   busy,
   error,
   progress,
-  txHash,
   operation,
   tx,
   onRetry,
 }: TxOutcomeProps) {
-  const { view, amount } = state;
+  const { view, amount, hash } = state;
   const explorerUrl = useTxExplorerUrl();
-  const explorer = txHash ? explorerUrl(txHash) : undefined;
+  const explorer = hash ? explorerUrl(hash) : undefined;
   const eta = useProveEta(view === "progress" ? progress?.provingSince : undefined);
 
   switch (view) {
@@ -49,18 +49,17 @@ export function TxOutcome({
           busy={busy}
           progress={progress}
           tx={tx}
-          subtitle={[amount, eta].filter(Boolean).join(" · ") || undefined}
+          subtitle={joinHint(amount, eta)}
         />
       );
     case "settled":
       return (
         <TxSettledCard
-          title={tx?.settledTitle ?? "Done"}
+          {...settledCopy(progress?.endedAs, progress?.steps ?? [], tx?.settledTitle ?? "Done")}
           amount={amount}
-          hash={txHash}
+          hash={hash}
           explorerUrl={explorer}
           operation={operation}
-          note={settledNote(progress?.endedAs)}
           action={
             <button type="button" className="btn btn--outline btn--sm" onClick={state.leave}>
               Done
@@ -73,10 +72,14 @@ export function TxOutcome({
         <TxFailedCard
           title={tx?.failedTitle}
           message={error ? userMessage(error) : "The transaction didn't go through."}
-          reassurance={state.hasSteps ? failureReassurance(state.stage) : undefined}
+          reassurance={
+            state.hasSteps || state.stage.outcomeUnknown
+              ? failureReassurance(state.stage)
+              : undefined
+          }
           // Withheld once the op may be on-chain, where a retry could repeat it.
-          onRetry={!state.hasSteps || retrySafe(state.stage) ? onRetry : undefined}
-          hash={txHash}
+          onRetry={retrySafe(state.stage) ? () => retry(error, onRetry) : undefined}
+          hash={hash}
           explorerUrl={explorer}
           secondary={
             <button
@@ -92,6 +95,12 @@ export function TxOutcome({
     default:
       return null;
   }
+}
+
+/// Run the form's retry; after a prover fault, with a fresh prover, as the failure copy promises.
+function retry(error: unknown, resubmit: () => void): void {
+  if (isProverFault(error)) disposeProverWorker();
+  resubmit();
 }
 
 function ProgressOutcome({

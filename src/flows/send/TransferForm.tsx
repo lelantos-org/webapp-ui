@@ -10,22 +10,21 @@ import {
   amountField,
   BoundaryLine,
   defaultAssetField,
-  isShieldedAddress,
   leavesBalanceLabel,
   MaxNotice,
   NO_META,
   RecipientField,
   ReviewPanel,
+  SHIELDED_RECIPIENT,
+  SpendNotices,
   SpendScreenHeader,
   shieldedAddressField,
   useActionForm,
   useSpendForm,
 } from "@/features/op-form";
-import { SyncNotice } from "@/features/wallet";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
 import { useTransfer } from "./use-transfer";
 
-/// The Send form's schema.
 export const transferSchema = z.object({
   to: shieldedAddressField,
   amount: amountField,
@@ -45,14 +44,14 @@ export function TransferForm() {
   const options = useAssetSelectOptions();
   const { spend, to, review, onPasteTo, frame, hero, reviewPanel } = useSpendForm(form, action, {
     kind: "transfer",
-    recipient: { recipientValid: isShieldedAddress, recipientKind: "shielded" },
+    recipient: SHIELDED_RECIPIENT,
     titles: { progressTitle: "Sending privately", settledTitle: "Sent privately" },
     send: (values, ctx) =>
       action.mutation.mutateAsync({
         amount: ctx.amount,
         asset: ctx.asset,
         recipient: values.to,
-        feeAsset: ctx.feeAsset,
+        ...ctx.relayerFee,
       }),
   });
 
@@ -101,7 +100,7 @@ export function TransferForm() {
         ) : undefined
       }
     >
-      <SyncNotice />
+      <SpendNotices />
       <AmountHero
         {...hero}
         maxInfo={
@@ -128,8 +127,7 @@ export function TransferForm() {
         label="To"
         placeholder={`${ADDRESS_HRP}1…`}
         value={to}
-        isValid={isShieldedAddress}
-        invalidMessage="That is not a shielded address"
+        rule={SHIELDED_RECIPIENT}
         onPaste={onPasteTo}
         formError={errors.to?.message}
         helper="A shielded address. Ask the recipient for theirs — it never appears on-chain."

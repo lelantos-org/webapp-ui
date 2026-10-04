@@ -1,14 +1,6 @@
-// Inspecting and sweeping one agent's wallet, on demand.
-//
-// Reading an agent's balance means connecting a wallet over its key and scanning
-// — a scanner, a note store, a sync. That is far too much to do for every row of
-// a list on mount, so it happens only when the operator asks, and the wallet is
-// held open afterwards because sweeping needs the same one.
-//
-// Sweeping is what revoking *is*. The agent keeps its copy of the key and can be
-// funded again by anyone who knows the address; what the sweep takes away is the
-// balance, which is the only control an operator has over a key someone else
-// holds.
+// Inspects and sweeps one agent's wallet on demand. A balance read connects a
+// wallet over the agent's key and scans; the sweep reuses that wallet.
+// Sweeping is the only revocation: the agent keeps its key and can be funded again.
 
 import type { WalletApi } from "@lelantos-org/sdk";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -18,7 +10,7 @@ import { useChainRegistry } from "@/features/chain";
 import {
   buildEphemeralWallet,
   type EphemeralBalance,
-  summarizeEphemeralNotes,
+  scanEphemeralBalances,
   sweepEphemeral,
 } from "@/features/claim-links";
 import { useSession, useWallet } from "@/features/wallet";
@@ -28,9 +20,6 @@ import { createLogger } from "@/shared/lib/logger";
 
 const log = createLogger("agents:wallet");
 
-/// Cap on one scan, mirroring the claim flow's.
-const SCAN_LIMIT = 500;
-
 export interface SweepFailure {
   asset: bigint;
   message: string;
@@ -39,7 +28,7 @@ export interface SweepFailure {
 export type AgentWalletState =
   | { kind: "idle" }
   | { kind: "busy"; what: "inspecting" }
-  /// One transfer per asset, so the operator can see how far along a multi-asset sweep is.
+  /// `done` of `total` per-asset transfers.
   | { kind: "busy"; what: "sweeping"; done: number; total: number }
   | { kind: "ready"; balances: EphemeralBalance[] }
   | { kind: "swept"; txHashes: string[]; failed: SweepFailure[]; emptied: boolean }
@@ -63,8 +52,7 @@ export function useAgentWallet(agent: StoredAgent): AgentWallet {
   const mounted = useIsMounted();
   const eph = useRef<WalletApi | undefined>(undefined);
 
-  // The scanner this holds is a worker; leaving one per inspected agent behind
-  // would outlive the screen.
+  // The wallet's scanner is a worker; dispose it on unmount.
   useEffect(() => {
     return () => {
       void eph.current?.dispose().catch((err) => log.warn("disposing agent wallet failed", err));
@@ -87,8 +75,7 @@ export function useAgentWallet(agent: StoredAgent): AgentWallet {
     setState({ kind: "busy", what: "inspecting" });
     try {
       const w = await open();
-      await w.sync({ scope: "notes", pageSize: SCAN_LIMIT });
-      const balances = await summarizeEphemeralNotes(w);
+      const balances = await scanEphemeralBalances(w);
       if (mounted()) setState({ kind: "ready", balances });
     } catch (err) {
       if (mounted())
@@ -113,8 +100,7 @@ export function useAgentWallet(agent: StoredAgent): AgentWallet {
         try {
           txHashes.push(await sweepEphemeral(await open(), wallet.address, asset));
         } catch (err) {
-          // One asset failing must not abandon the rest: each is its own
-          // transfer, and the others are still recoverable.
+          // A failed asset does not stop the rest; each is its own transfer.
           failed.push({ asset, message: reportError("agents:sweep", err).message });
         }
         if (mounted()) {
@@ -122,14 +108,11 @@ export function useAgentWallet(agent: StoredAgent): AgentWallet {
         }
       }
 
-      // Read the balance back rather than inferring it. Marking an agent revoked
-      // while it still holds a second asset would misreport what it can spend —
-      // and a sweep of one asset says nothing about the others.
+      // Rescan before marking the agent revoked: it may still hold other assets.
       let emptied = false;
       try {
         const w = await open();
-        await w.sync({ scope: "notes", pageSize: SCAN_LIMIT });
-        emptied = (await summarizeEphemeralNotes(w)).every((b) => b.amount === 0n);
+        emptied = (await scanEphemeralBalances(w)).every((b) => b.amount === 0n);
       } catch (err) {
         log.warn("could not confirm the agent is empty", err);
       }

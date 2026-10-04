@@ -1,10 +1,10 @@
 import type { KeyboardEvent } from "react";
 
-/// Everything Tab can reach; shared with the dialog's mount focus so both agree on "first".
+/// Tab-reachable elements. Modal's mount focus uses it too, so both agree on the first element.
 export const FOCUSABLE_SELECTOR =
   "button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])";
 
-/// Cycle Tab within `root`, for `onKeyDown`. The caller must focus something inside on mount.
+/// Cycles Tab within `root`, for `onKeyDown`. The caller focuses an element inside on mount.
 export function trapFocus(e: KeyboardEvent, root: HTMLElement | null): void {
   if (e.key !== "Tab" || !root) return;
   const focusables = root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);

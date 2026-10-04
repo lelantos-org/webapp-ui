@@ -1,6 +1,7 @@
 import type { MerkleNode, TreePersistence, TreeStoreState } from "@lelantos-org/sdk/advanced";
 import type { IDBPDatabase, IDBPObjectStore } from "idb";
-import { TREE_STORE, type WalletSchema, walletDb } from "./db";
+import { enc, TREE_STORE, type WalletSchema, walletDb } from "./db";
+import { contiguous, prefixRange, readRange } from "./ranges";
 
 /// Leaves per stored record; matches the server's chunk size.
 const LEAF_CHUNK = 1024;
@@ -28,40 +29,6 @@ function pacer(): () => Promise<void> {
   };
 }
 
-/// Key range covering every record under `prefix`.
-function prefixRange(prefix: string): IDBKeyRange {
-  return IDBKeyRange.bound(prefix, `${prefix}\uffff`);
-}
-
-/// Every record under `prefix` as `[suffix, value]`, in one transaction so keys and values line up.
-/// Lexicographic order (`:10` before `:2`).
-async function readRange<T>(
-  db: IDBPDatabase<WalletSchema>,
-  prefix: string,
-): Promise<[string, T][]> {
-  const range = prefixRange(prefix);
-  const tx = db.transaction(TREE_STORE, "readonly");
-  const [keys, values] = await Promise.all([
-    tx.store.getAllKeys(range),
-    tx.store.getAll(range),
-    tx.done,
-  ]);
-  return keys.map((k, i) => [String(k).slice(prefix.length), values[i] as T]);
-}
-
-/// Records under `key(0)`, `key(1)`, … up to the first missing one; a hole ends the run.
-function* contiguous<T>(
-  records: ReadonlyMap<string, T>,
-  key: (index: number) => string,
-  limit = Number.POSITIVE_INFINITY,
-): Generator<T> {
-  for (let i = 0; i < limit; i++) {
-    const rec = records.get(key(i));
-    if (rec === undefined) return;
-    yield rec;
-  }
-}
-
 /// Header record: everything needed to find the chunks belonging to a key.
 interface Header {
   syncedCount: number;
@@ -75,10 +42,7 @@ type StoredNode = [number, string];
 
 type TreeWriteStore = IDBPObjectStore<WalletSchema, ["tree"], "tree", "readwrite">;
 
-/// bigint as `0x` hex. The prefix is required: `BigInt` reads bare all-digit hex as decimal.
-const enc = (v: bigint): string => `0x${v.toString(16)}`;
-
-/// Chunked, append-only IndexedDB Merkle tree persistence for `connect`'s `treePersistence` option.
+/// Chunked, append-only IndexedDB Merkle tree persistence for `connect`'s `storage.tree` option.
 export class IdbTreePersistence implements TreePersistence {
   /// `syncedCount` as of the last write; records below it are final.
   private persistedCount = 0;
@@ -112,7 +76,7 @@ export class IdbTreePersistence implements TreePersistence {
     db: IDBPDatabase<WalletSchema>,
     leafCount: number,
   ): Promise<bigint[] | null> {
-    const chunks = new Map(await readRange<string[]>(db, `${this.key}:leaves:`));
+    const chunks = new Map(await readRange<string[]>(db, TREE_STORE, `${this.key}:leaves:`));
     const pace = pacer();
 
     const out: bigint[] = [];
@@ -124,7 +88,7 @@ export class IdbTreePersistence implements TreePersistence {
   }
 
   private async loadNodes(db: IDBPDatabase<WalletSchema>, depth: number): Promise<MerkleNode[]> {
-    const buckets = new Map(await readRange<StoredNode[]>(db, `${this.key}:nodes:`));
+    const buckets = new Map(await readRange<StoredNode[]>(db, TREE_STORE, `${this.key}:nodes:`));
     const pace = pacer();
 
     const out: MerkleNode[] = [];
@@ -181,22 +145,25 @@ export class IdbTreePersistence implements TreePersistence {
     nodes: MerkleNode[],
     firstDirtyLeaf: number,
   ): Promise<void> {
-    // Records are replaced whole, so bucket every node, then write only buckets holding a dirty one.
-    const byBucket = new Map<string, { entries: StoredNode[]; dirty: boolean }>();
+    // Records are replaced whole, so bucket every node, then encode and write only the buckets
+    // holding a dirty one: most of the tree is below the first dirty leaf.
+    const byBucket = new Map<string, { nodes: MerkleNode[]; dirty: boolean }>();
 
-    for (const { level, index, value } of nodes) {
-      const key = this.nodeKey(level, Math.floor(index / NODE_BUCKET));
+    for (const node of nodes) {
+      const key = this.nodeKey(node.level, Math.floor(node.index / NODE_BUCKET));
       let rec = byBucket.get(key);
       if (!rec) {
-        rec = { entries: [], dirty: false };
+        rec = { nodes: [], dirty: false };
         byBucket.set(key, rec);
       }
-      rec.entries.push([index, enc(value)]);
-      if (index >= Math.floor(firstDirtyLeaf / ARITY ** level)) rec.dirty = true;
+      rec.nodes.push(node);
+      if (node.index >= Math.floor(firstDirtyLeaf / ARITY ** node.level)) rec.dirty = true;
     }
 
     for (const [key, rec] of byBucket) {
-      if (rec.dirty) await store.put(rec.entries, key);
+      if (!rec.dirty) continue;
+      const entries: StoredNode[] = rec.nodes.map((n) => [n.index, enc(n.value)]);
+      await store.put(entries, key);
     }
   }
 }

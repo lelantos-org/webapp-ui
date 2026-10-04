@@ -35,6 +35,7 @@ const pressure = (over: Partial<ClaimLinkPressure> = {}): ClaimLinkPressure => (
   oldestExpiresIn: undefined,
   roomLeft: 38,
   nextEvicted: undefined,
+  unrecoverable: 12,
   ...over,
 });
 
@@ -85,6 +86,14 @@ describe("capacity copy", () => {
     );
   });
 
+  it("warns of loss only while a record's key exists nowhere else", () => {
+    const full = { count: 50, roomLeft: 0 };
+    expect(capacityBody(pressure({ ...full, unrecoverable: 1 }))).toContain("cannot be recovered");
+    expect(capacityBody(pressure({ ...full, unrecoverable: 0 }))).toContain(
+      "your wallet can still find the link",
+    );
+  });
+
   it("derives the window from ttlMs, not a literal", () => {
     expect(capacityBody(pressure({ ttlMs: 30 * DAY_MS }))).toContain("after 30 days");
     expect(retentionSentence(30 * DAY_MS)).toBe(
@@ -113,6 +122,13 @@ describe("small helpers", () => {
     const now = link().createdAt + 6 * DAY_MS;
     expect(evictionSentence(link(), [USDC], now)).toBe(
       "This browser is full. Creating this link drops your oldest record — 2.5 USDC, made 6 days ago — and its key cannot be recovered.",
+    );
+  });
+
+  it("says a derived link can be found again", () => {
+    const now = link().createdAt + 6 * DAY_MS;
+    expect(evictionSentence(link({ derived: true }), [USDC], now)).toBe(
+      "This browser is full. Creating this link drops your oldest record — 2.5 USDC, made 6 days ago. Your wallet can find it again while it is unclaimed.",
     );
   });
 });

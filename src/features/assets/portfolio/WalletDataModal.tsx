@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { useCompactNotes, useHardRefresh } from "@/features/wallet";
 import { useExitTransition } from "@/shared/hooks/use-exit-transition";
+import { plural } from "@/shared/lib/format/text";
 import { MODAL_EXIT_MS } from "@/shared/lib/motion";
 import { toastError, toastInfo } from "@/shared/lib/toast";
 import { Modal } from "@/shared/ui/Modal";
@@ -23,9 +24,7 @@ export function WalletDataModal({ onClose, syncing }: { onClose(): void; syncing
     try {
       const removed = await compact.run();
       toastInfo(
-        removed > 0
-          ? `Cleared ${removed} spent note${removed === 1 ? "" : "s"}`
-          : "No spent notes to clear",
+        removed > 0 ? `Cleared ${plural(removed, "spent note")}` : "No spent notes to clear",
       );
     } catch (e) {
       toastError("Couldn't clear spent notes", e);

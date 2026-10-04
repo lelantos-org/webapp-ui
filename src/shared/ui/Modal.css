@@ -1,5 +1,4 @@
 @layer components {
-  /* Modal */
   .modal-overlay {
     position: fixed;
     inset: 0;
@@ -15,6 +14,11 @@
   @keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
   .modal-panel {
     width: min(440px, 100%);
+    /* Taller content scrolls inside the panel: the overlay is fixed and cannot. */
+    max-height: calc(100vh - 2 * var(--sp-16));
+    max-height: calc(100dvh - 2 * var(--sp-16));
+    overflow-y: auto;
+    overscroll-behavior: contain;
     padding: var(--sp-22) var(--sp-22) var(--sp-18);
     background: var(--bg-1);
     border: 1px solid var(--line-strong);

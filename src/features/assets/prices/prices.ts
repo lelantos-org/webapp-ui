@@ -26,7 +26,6 @@ declare const priceKeyBrand: unique symbol;
 /// A token address normalised for lookup. Build it only with `priceKey`.
 export type PriceKey = string & { readonly [priceKeyBrand]: true };
 
-/// Normalise a token address into a `PriceKey`.
 export function priceKey(token: string): PriceKey {
   return token.toLowerCase() as PriceKey;
 }

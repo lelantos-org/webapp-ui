@@ -23,7 +23,6 @@ export interface SetupRun {
   run(): Promise<void>;
 }
 
-/// Runs a Permit2 setup batch and tracks its screen, progress and error.
 export function useSetupRun(
   assets: RegisteredAsset[],
   willApproveErc20: (asset: RegisteredAsset) => boolean,

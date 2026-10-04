@@ -1,7 +1,6 @@
 import { ArrowDownGlyph } from "@/shared/ui/icons/glyphs";
 import "../swap.css";
 
-/// Reverses the pair.
 export function FlipButton({ onFlip, disabled }: { onFlip(): void; disabled: boolean }) {
   return (
     <div className="swap-flip-row">

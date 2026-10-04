@@ -1,5 +1,4 @@
 @layer components {
-  /* Header */
   .hdr {
     display: flex;
     align-items: center;
@@ -33,11 +32,14 @@
     .hdr { padding: var(--sp-12) var(--sp-18); gap: var(--sp-10); }
   }
 
-  /* Phones */
   @media (max-width: 480px) {
     .hdr { padding: var(--sp-14) var(--sp-18); --hdr-pill-h: 32px; }
     .hdr__health,
     .hdr__theme--folds { display: none; }
+    /* An outage is shown on phones too, as the dot alone: a failed submit should not be the
+       first sign of it. */
+    .hdr__health:has(.health--down) { display: inline-flex; }
+    .hdr__health:has(.health--down) .health__txt { display: none; }
   }
 
   .ftr {
@@ -68,7 +70,6 @@
   .ftr__link:hover { color: var(--accent); }
   .ftr__link:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* Footer */
   @media (max-width: 560px) {
     .ftr {
       gap: 6px 12px;
@@ -85,11 +86,7 @@
     }
   }
 
-  /* Build id */
-  .ftr__ver {
-    font-size: var(--fs-12);
-    opacity: 0.7;
-  }
+  .ftr__ver { font-size: var(--fs-12); }
 
   @media (max-width: 560px) {
     .ftr__ver { display: none; }

@@ -1,5 +1,4 @@
 @layer components {
-  /* Fee rows */
   .fees {
     position: relative;
     border-radius: var(--radius);
@@ -59,7 +58,6 @@
     white-space: nowrap;
   }
 
-  /* Placeholder */
   .fees__pending {
     display: inline-flex;
     justify-content: flex-end;
@@ -83,7 +81,6 @@
     font-weight: 500;
   }
 
-  /* Headline */
   .fees__headline {
     display: flex;
     align-items: baseline;
@@ -112,7 +109,6 @@
     color: var(--fg-dim);
   }
 
-  /* Note */
   .fees__note {
     margin: 0;
     font-size: var(--fs-12);
@@ -122,7 +118,6 @@
 
   .fees .fees__note { font-size: var(--fs-13); }
 
-  /* Review */
   .fees-review {
     display: flex;
     flex-direction: column;

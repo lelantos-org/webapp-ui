@@ -1,5 +1,4 @@
 @layer components {
-  /* ReviewPanel */
   .action-form__card > .spend-review {
     margin: -26px calc(var(--sp-24) * -1) calc(var(--sp-24) * -1);
   }
@@ -22,7 +21,6 @@
     padding-bottom: 0;
   }
 
-  /* CTA */
   .spend-review__cta {
     display: flex;
     flex-direction: column;
@@ -34,7 +32,6 @@
   }
   .spend-review__sec--lead .spend-review__cap { margin-bottom: 11px; }
 
-  /* Amount */
   .spend-review__amt {
     font-size: 46px;
     color: var(--fg);
@@ -70,7 +67,6 @@
   }
   .spend-review__actions .btn--outline { padding: var(--sp-16) 26px; }
 
-  /* Confirm */
   .spend-review__confirm {
     padding: var(--sp-16);
     box-shadow: none;
@@ -89,7 +85,6 @@
     .spend-review__sec { padding: var(--sp-16); }
     .spend-review__sec--lead { padding: var(--sp-20) var(--sp-16) var(--sp-18); }
     .spend-review__end { padding-bottom: 0; }
-    /* Sticky CTA */
     .spend-review__cta {
       padding: var(--sp-12) var(--sp-16) calc(var(--sp-16) + env(safe-area-inset-bottom, 0px));
     }

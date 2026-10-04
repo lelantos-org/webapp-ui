@@ -12,7 +12,7 @@ export function exportFileName(now = Date.now()): string {
   return `lelantos-claim-links-${new Date(now).toISOString().slice(0, 10)}.json`;
 }
 
-/// The file "Export all links" downloads. It carries its own warning.
+/// The file "Export all links" downloads.
 export interface ClaimLinkExport {
   kind: "lelantos-claim-links";
   version: 1;
@@ -58,7 +58,7 @@ export function claimLinksExport(
 
 /// Download every live link as JSON and return the count. The object URL is revoked a task
 /// later: some engines cancel a download whose URL is already gone.
-export function downloadClaimLinks(now = Date.now()): number {
+function downloadClaimLinks(now = Date.now()): number {
   const doc = claimLinksExport(claimLinksSnapshot(), now);
   const blob = new Blob([`${JSON.stringify(doc, null, 2)}\n`], { type: "application/json" });
   const href = URL.createObjectURL(blob);
@@ -75,7 +75,7 @@ export function downloadClaimLinks(now = Date.now()): number {
   return doc.links.length;
 }
 
-/// Export with the confirmation toast, shared by the capacity box and the eviction block.
+/// Export with the confirmation toast.
 export function exportAllClaimLinks(): number {
   const n = downloadClaimLinks();
   toast.success(`Saved ${plural(n, "link")} to a file`, {

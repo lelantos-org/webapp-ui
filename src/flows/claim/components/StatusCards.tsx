@@ -108,9 +108,18 @@ export interface DoneCardProps {
   amount: bigint;
   assets?: readonly RegisteredAsset[];
   destinationAddress?: string | undefined;
+  /// Set while the link still holds other assets.
+  onClaimRest?: (() => void) | undefined;
 }
 
-export function DoneCard({ txHash, asset, amount, assets, destinationAddress }: DoneCardProps) {
+export function DoneCard({
+  txHash,
+  asset,
+  amount,
+  assets,
+  destinationAddress,
+  onClaimRest,
+}: DoneCardProps) {
   const a = findAsset(assets, asset);
   const symbol = a?.symbol ?? `asset#${asset.toString()}`;
   const formatted = a ? formatAmountForAsset(amount, a) : amount.toString();
@@ -127,9 +136,15 @@ export function DoneCard({ txHash, asset, amount, assets, destinationAddress }: 
           : "Now in your shielded wallet."
       }
       action={
-        <Link to="/" className="btn btn--outline btn--sm">
-          Go to your wallet
-        </Link>
+        onClaimRest ? (
+          <button type="button" className="btn btn--outline btn--sm" onClick={onClaimRest}>
+            Claim what's left at this link
+          </button>
+        ) : (
+          <Link to="/" className="btn btn--outline btn--sm">
+            Go to your wallet
+          </Link>
+        )
       }
     />
   );

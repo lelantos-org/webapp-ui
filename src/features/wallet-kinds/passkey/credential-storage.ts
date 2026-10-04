@@ -3,7 +3,7 @@
 import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
 import { localStore, readJson, writeJson } from "@/shared/lib/storage/safe";
 
-/// The credential this device knows. Survives a disconnect.
+/// The credential this device knows.
 const CREDENTIAL_KEY = LOCAL_KEYS.passkeyCredential;
 /// Whether that credential currently holds the session. Released on disconnect.
 const ATTACHED_KEY = LOCAL_KEYS.passkeyAttached;
@@ -11,7 +11,6 @@ const CHAIN_KEY = LOCAL_KEYS.passkeyChain;
 
 export interface StoredCredential {
   id: string;
-  label?: string;
   createdAt?: number;
 }
 
@@ -39,7 +38,7 @@ export function markAttached(): void {
   localStore.set(ATTACHED_KEY, "1");
 }
 
-/// Sign out, keeping the credential: deleting it would strand every note its key owns.
+/// Sign out, keeping the credential.
 export function releaseAttachment(): void {
   localStore.set(ATTACHED_KEY, "0");
 }

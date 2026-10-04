@@ -2,7 +2,6 @@ import { useWallet } from "@/features/wallet";
 import { kindAdapter } from "@/features/wallet-kinds";
 import "./DepositUnavailable.css";
 
-/// Shown in place of the deposit form when this wallet cannot deposit.
 export function DepositUnavailable({ reason }: { reason?: string | undefined }) {
   const { connect, kind } = useWallet();
   const advice = (kind && kindAdapter(kind).copy.noDepositAdvice) || [];

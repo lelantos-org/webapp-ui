@@ -11,7 +11,7 @@ export function kindAdapter(kind: WalletKind): WalletKindAdapter {
   return found;
 }
 
-/// Hand the session to `kind`, detaching every other: the one-session invariant lives here.
+/// Hand the session to `kind`, detaching every other. Enforces the one-session invariant.
 export function selectKind(kind: WalletKind, id?: string): void {
   for (const adapter of WALLET_KINDS) {
     if (adapter.kind !== kind) adapter.disconnect();

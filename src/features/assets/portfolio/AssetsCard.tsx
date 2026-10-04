@@ -21,7 +21,7 @@ export function AssetsCard() {
   return (
     <section className="pf-assets" aria-labelledby={titleId}>
       <div className="pf-assets__hdr">
-        <h2 className="pf-assets__t" id={titleId}>
+        <h2 className="card-title pf-assets__t" id={titleId}>
           Your assets
         </h2>
         <ManageWalletData className="pf-assets__manage" />
@@ -75,7 +75,7 @@ function EmptyAssets({ assets }: { assets: readonly RegisteredAsset[] }) {
   return (
     <div className="pf-list pf-empty">
       <div className="pf-empty__head">
-        <p className="pf-empty__t">Nothing shielded yet</p>
+        <p className="card-title pf-empty__t">Nothing shielded yet</p>
         <p className="pf-empty__sub">{supportedLine(assets.length, chain.chainName)}</p>
       </div>
       {assets.length > 0 ? (

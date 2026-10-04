@@ -30,7 +30,6 @@ const NO_GOVERNANCE_REASON = "This network runs no on-chain governance.";
 const NO_SIGNER_GOVERN_REASON =
   "Voting, delegating and proposing are transactions from a public account. Connect a browser wallet to take part; proposals stay readable here.";
 
-/// Derive the capability record for a wallet.
 export function deriveCapabilities(
   wallet: WalletApi | undefined,
   kind: WalletKind | undefined,

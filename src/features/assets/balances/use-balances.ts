@@ -21,12 +21,11 @@ export interface BalancesState extends Omit<WalletState, "balances" | "notes"> {
   balances: AssetBalanceView[];
 }
 
-/// What a balance consumer reads. Named fields, not the query result: spreading that
-/// subscribes to `isFetching` and re-renders every mounted form on each poll.
+/// Named fields only: spreading the query result re-renders every form on each `isFetching` flip.
 export interface BalancesResult {
   /// `undefined` until the first sync succeeds.
   data: BalancesState | undefined;
-  /// The last sync failure, surfaced by `SyncNotice`.
+  /// The last sync failure.
   error: Error | null;
   /// First load only, not a background refetch.
   isLoading: boolean;
@@ -65,8 +64,8 @@ export function useBalances(): BalancesResult {
   return useMemo(() => ({ data: merged, error, isLoading }), [merged, error, isLoading]);
 }
 
-/// The display row for one asset: `undefined` only until a sync succeeds, then zero for an unheld
-/// asset, since `undefined` would skip the amount validation's balance check.
+/// `undefined` only until a sync succeeds. An unheld asset is a zero row, since `undefined`
+/// would skip the amount validation's balance check.
 export function useAssetBalance(assetId: bigint | undefined): AssetBalanceView | undefined {
   const data = useBalances().data;
   if (assetId === undefined || !data) return undefined;

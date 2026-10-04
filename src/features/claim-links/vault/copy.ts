@@ -30,7 +30,7 @@ export function daysLabel(ms: number): string {
 
 export type VaultTone = "neutral" | "err";
 
-/// How full the vault is, as the width of its meter: 0–100.
+/// Meter width, 0–100.
 export function vaultFillPct(p: ClaimLinkPressure): number {
   return p.capacity > 0 ? Math.min(100, (p.count / p.capacity) * 100) : 0;
 }
@@ -46,8 +46,11 @@ export function capacityHeadline(p: ClaimLinkPressure): string {
 
 export function capacityBody(p: ClaimLinkPressure): string {
   const ttl = daysLabel(p.ttlMs);
+  // A record whose key derives from the wallet can be found again; one with a random key cannot.
   const loss =
-    "a dropped record cannot be recovered — the funds would sit at an address whose key nobody holds";
+    p.unrecoverable === 0
+      ? "a dropped record leaves this list — your wallet can still find the link while it is unclaimed"
+      : "a dropped record cannot be recovered — the funds would sit at an address whose key nobody holds";
   if (p.roomLeft === 0) {
     return `The next link you create drops the oldest record to make room, and ${loss}. Records also drop on their own after ${ttl}.`;
   }
@@ -76,5 +79,8 @@ export function evictionSentence(
   assets: readonly RegisteredAsset[],
   now = Date.now(),
 ): string {
-  return `This browser is full. Creating this link drops your oldest record — ${describeStoredAmount(record, assets)}, made ${relativeTime(record.createdAt, now)} — and its key cannot be recovered.`;
+  const dropped = `${describeStoredAmount(record, assets)}, made ${relativeTime(record.createdAt, now)}`;
+  return record.derived
+    ? `This browser is full. Creating this link drops your oldest record — ${dropped}. Your wallet can find it again while it is unclaimed.`
+    : `This browser is full. Creating this link drops your oldest record — ${dropped} — and its key cannot be recovered.`;
 }

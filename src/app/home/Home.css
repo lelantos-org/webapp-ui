@@ -1,5 +1,4 @@
 @layer features {
-  /* Connected column */
   .home {
     display: flex;
     flex-direction: column;
@@ -10,16 +9,15 @@
     padding: 12px 8px 0;
   }
 
-  /* Tiles */
   .tiles {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--sp-12);
     margin-top: -6px;
   }
-  /* Five tiles: the governance or agents tile joins the four core actions. */
+  /* Five tiles: the core actions. */
   .tiles--five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  /* Six: both join, and the row splits evenly rather than leaving one stranded. */
+  /* Six tiles: the governance tile joins. */
   .tiles--six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .tile {
     display: flex;
@@ -65,6 +63,7 @@
     color: var(--fg-mute);
     cursor: not-allowed;
   }
+  .tiles__why { margin: 0; text-align: center; }
   .tile:focus-visible {
     outline: var(--ring);
     outline-offset: 2px;
@@ -74,7 +73,6 @@
     flex: none;
   }
 
-  /* Provenance */
   .provenance {
     display: flex;
     flex-direction: column;
@@ -108,7 +106,7 @@
       grid-column: 1 / -1;
       flex-direction: row;
     }
-    /* Two rows of three, so neither row leaves a gap. */
+    /* Two rows of three. */
     .tiles--six { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .provenance { padding: var(--sp-14) var(--sp-16); margin-top: -8px; }
     .provenance__facts,

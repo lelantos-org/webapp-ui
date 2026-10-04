@@ -26,6 +26,7 @@ export function ConnectButton() {
       <span className="muted">{deriving ? `${deriving.title} — ${deriving.body}` : null}</span>
     );
   }
+  if (status === "preparing") return <span className="muted">Preparing your wallet…</span>;
   if (status === "resuming") {
     return <span className="muted">Resuming…</span>;
   }

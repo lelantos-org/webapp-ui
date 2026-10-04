@@ -1,5 +1,4 @@
-// The panel shows a masked credential and copies an unmasked one. That gap is
-// the whole point, so it is what these assert.
+// The panel shows a masked credential and copies an unmasked one.
 
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";

@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
+import { useCopy } from "@/shared/hooks/use-copy";
 import { shortAddr } from "@/shared/lib/address";
 import "./txcard.css";
 
-/// A tx card's transaction row: truncated hash, the card's controls, and the explorer link.
+/// Transaction row of a tx card: truncated hash, `children` controls, explorer link.
 export function TxHashRow({
   hash,
   explorerUrl,
@@ -30,5 +31,15 @@ export function TxHashRow({
         </a>
       ) : null}
     </div>
+  );
+}
+
+/// Copies the full hash: the row shows only its ends.
+export function CopyHash({ hash }: { hash: string }) {
+  const { copy, copied } = useCopy(hash);
+  return (
+    <button type="button" className="link-btn txcard__link" onClick={() => void copy()}>
+      {copied ? "Copied" : "Copy"}
+    </button>
   );
 }

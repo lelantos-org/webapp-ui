@@ -1,6 +1,5 @@
 import { type Mock, vi } from "vitest";
 
-/// A real `Response` carrying `body` as JSON.
 export function jsonResponse(body: unknown, init: { status?: number } = {}): Response {
   return new Response(JSON.stringify(body), {
     status: init.status ?? 200,
@@ -11,7 +10,6 @@ export function jsonResponse(body: unknown, init: { status?: number } = {}): Res
 type Handler = (url: string, init?: RequestInit) => unknown;
 
 /// Stub `fetch` with `handler` (a non-`Response` return is a 200 JSON body) or a fixed value.
-/// Returns the spy.
 export function stubFetch(
   handler: Handler | object,
 ): Mock<(url: string, init?: RequestInit) => Promise<Response>> {

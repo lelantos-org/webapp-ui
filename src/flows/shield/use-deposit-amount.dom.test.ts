@@ -71,7 +71,6 @@ function deposit({
   };
   stubs.preview = {
     data: { inAmt: 100n, fee: 0n, total: 100n, feeBps: FEE_BPS, leg: "deposit" },
-    stale: false,
     isError: false,
     refetch: vi.fn(),
     ...preview,
@@ -92,8 +91,8 @@ describe("useDepositAmount", () => {
     expect(deposit({ balance: 1_000n, feeBps: undefined }).maxAmount).toBeUndefined();
   });
 
-  it("withholds a preview that describes an earlier keystroke", () => {
-    const d = deposit({ balance: 10_000n, preview: { stale: true } });
+  it("holds the submit until the asset's fee rate is read", () => {
+    const d = deposit({ balance: 10_000n, preview: { data: undefined } });
 
     expect(d.fee).toBeUndefined();
     expect(d.pulls[0]?.amount).toBeUndefined();
@@ -102,7 +101,7 @@ describe("useDepositAmount", () => {
   });
 
   it("separates a failed fee read from one that has not settled", () => {
-    const settling = deposit({ balance: 10_000n, preview: { stale: true } });
+    const settling = deposit({ balance: 10_000n, preview: { data: undefined } });
     const failed = deposit({ balance: 10_000n, preview: { isError: true, data: undefined } });
 
     expect(settling.feeFailed).toBe(false);
@@ -202,12 +201,6 @@ describe("relayer fee that cannot be known", () => {
     });
     expect(r.relayerFee).toBeUndefined();
   });
-
-  it("hands back a way to re-run the quote", () => {
-    const refetch = vi.fn();
-    withQuote({ data: undefined, isError: true, refetch }).retryRelayerFee();
-    expect(refetch).toHaveBeenCalledOnce();
-  });
 });
 
 describe("relayer fee in another token", () => {
@@ -238,7 +231,6 @@ describe("relayer fee in another token", () => {
     };
     stubs.preview = {
       data: { inAmt: 100n, fee: 1n, total: 101n, feeBps: 100n, leg: "deposit" },
-      stale: false,
       isError: false,
       refetch: vi.fn(),
     };

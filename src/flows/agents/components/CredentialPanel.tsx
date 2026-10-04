@@ -9,20 +9,15 @@ import { copyWithToast } from "@/shared/hooks/use-copy";
 import { Notice } from "@/shared/ui/Notice";
 import "../agents.css";
 
-/// The credential, in the two shapes an agent process consumes.
-///
-/// Copy, never download: a spending key in the downloads folder is one nobody
-/// remembers deleting. The key stays masked until asked for — handing it over
-/// does not require reading it, and this panel appears the moment an agent is
-/// funded, which is exactly when someone may be watching the screen.
+/// The agent credential as JSON or `.env`. Copy only, never a download, so the
+/// spending key is not left on disk; the key is masked until revealed.
 export function CredentialPanel({ agent }: { agent: StoredAgent }) {
   const [format, setFormat] = useState<CredentialFormat>("json");
   const [revealed, setRevealed] = useState(false);
   const shown = render(agent, format, { reveal: revealed });
 
   const copy = () => {
-    // Always the real credential, whatever is on screen. `render` masks by
-    // default, so the copy path has to ask for the key explicitly.
+    // Copies the unmasked credential whatever is shown; `render` masks by default.
     void copyWithToast(render(agent, format, { reveal: true }), "Credential copied");
     markAgentCopied(agent.id);
   };
@@ -37,7 +32,7 @@ export function CredentialPanel({ agent }: { agent: StoredAgent }) {
               type="button"
               role="tab"
               aria-selected={format === f}
-              className={`agentcred__tab${format === f ? " agentcred__tab--on" : ""}`}
+              className={`choice${format === f ? " choice--on" : ""}`}
               onClick={() => setFormat(f)}
             >
               {f === "json" ? "JSON" : ".env"}

@@ -19,7 +19,6 @@ export type FeeAssetFunding =
   /// Not read yet: selectable, and shown as unknown rather than zero.
   | { balance: undefined; affordable: true };
 
-/// The fee asset picker's options and selection.
 export interface FeeAssetChoice {
   options: FeeAssetOption[];
   value: bigint | undefined;
@@ -45,7 +44,6 @@ export type FeeBlock =
   | { kind: "quote-failed"; error: unknown; retry(): void; alternative?: undefined }
   | { kind: "not-accepted"; symbol: string | undefined; alternative: FeeAlternative | undefined };
 
-/// Inputs to `feeBlockFor`.
 export interface FeeBlockInputs {
   /// `undefined` when there is no asset to pay with yet.
   payingWith: bigint | undefined;

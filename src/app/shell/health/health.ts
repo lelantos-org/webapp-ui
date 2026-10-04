@@ -39,7 +39,6 @@ const DISPLAY: Record<ServiceName, string> = {
   fmd: "Note feed",
 };
 
-/// User-facing name of a service.
 export function serviceDisplayName(name: ServiceName): string {
   return DISPLAY[name];
 }

@@ -3,10 +3,12 @@ import { type FeeSummaryModel, feeRowsOf, sumByAsset } from "./fee-summary";
 
 const LINE_FRAC = 6;
 
-/// Fraction digits for review fee figures, matching the review's fee rows.
+/// Fraction digits for review fee figures.
 export const REVIEW_FRAC = 8;
 
-/// Options for `feeLine`.
+/// Shown while a fee the op needs is still being quoted.
+export const FEE_PENDING_REASON = "Working out the fee…";
+
 export interface FeeLineOptions {
   /// The mobile form: "Fees 0.25 USDC · in USDC".
   short?: boolean | undefined;
@@ -20,7 +22,7 @@ export function feeLine(
   if (!model) return "—";
   const fees = feeRowsOf(model);
   if (fees.length === 0) return "No fees";
-  if (fees.some((r) => r.amount === undefined)) return short ? "Fees…" : "Working out the fee…";
+  if (fees.some((r) => r.amount === undefined)) return short ? "Fees…" : FEE_PENDING_REASON;
 
   const groups = sumByAsset(fees);
   const figures = groups.map((g) => formatBaseFixed(g.amount, g.asset, LINE_FRAC)).join(" + ");

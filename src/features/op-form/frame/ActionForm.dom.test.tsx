@@ -1,3 +1,4 @@
+import { SpendOutcomeUnknownError } from "@lelantos-org/sdk";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { Step, TxPhase } from "@/features/tx";
@@ -23,7 +24,9 @@ const progress = (phase: TxPhase | undefined, done = false) => ({
   failedAt: undefined,
   endedAs: undefined,
   provingSince: undefined,
+  amount: undefined,
   reset: () => {},
+  noteAmount: () => {},
 });
 
 function renderForm(over: Partial<ActionFormProps> = {}) {
@@ -93,6 +96,26 @@ describe("ActionForm", () => {
     expect(screen.getByLabelText("amount").closest("[hidden]")).not.toBeNull();
   });
 
+  it("hands the amount to the op, and shows the op's when its own fields are empty", () => {
+    const noteAmount = vi.fn();
+    const sending = { progressTitle: "Sending privately" };
+    const first = renderForm({
+      busy: true,
+      progress: { ...progress("proving"), noteAmount },
+      tx: { ...sending, amount: "250 USDC" },
+    });
+    expect(noteAmount).toHaveBeenCalledWith("250 USDC");
+    first.unmount();
+
+    // The form as it remounts mid-op: nothing typed, the amount only on the op.
+    renderForm({
+      busy: true,
+      progress: { ...progress("proving"), amount: "250 USDC" },
+      tx: { ...sending, amount: undefined },
+    });
+    expect(screen.getByText(/250 USDC/)).toBeInTheDocument();
+  });
+
   it("stays in flight after broadcast until the terminal step, keeping the amount", () => {
     const { rerenderWith } = renderForm({
       busy: true,
@@ -158,6 +181,38 @@ describe("ActionForm", () => {
     press("Try again");
     expect(onSubmit).toHaveBeenCalledOnce();
     expect(screen.getByRole("link", { name: "Back home" })).toHaveAttribute("href", "/");
+  });
+
+  it("shows a blocked form, with its reason, where Try again could not submit it", () => {
+    const { onSubmit } = renderForm({
+      error: new Error("relayer unreachable"),
+      submitDisabled: true,
+      blockedReason: "More than you hold",
+    });
+
+    press("Try again");
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+    expect(screen.getByText("More than you hold")).toBeVisible();
+  });
+
+  it("withholds Try again when the spend may have been sent, with or without steps", () => {
+    const error = new SpendOutcomeUnknownError({
+      reservedNoteIds: [],
+      reservedUntil: new Date(0),
+      txHash: `0x${"cd".repeat(32)}`,
+    });
+    for (const props of [{ error, progress: progress("failed", true) }, { error }]) {
+      const { unmount } = renderForm(props);
+      expect(screen.getByRole("alert")).toHaveTextContent(/could pay twice/);
+      expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /explorer/i })).toHaveAttribute(
+        "href",
+        `https://explorer.test/tx/0x${"cd".repeat(32)}`,
+      );
+      unmount();
+    }
   });
 
   it("claims nothing about the funds unless the form can vouch for it", () => {

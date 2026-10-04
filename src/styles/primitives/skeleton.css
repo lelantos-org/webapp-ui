@@ -1,17 +1,18 @@
 @layer primitives {
-  /* Pulses `opacity` rather than `background-position`, which is paint-bound and
-     repaints the element every frame. This is the Suspense fallback for every
-     lazy route, so several instances animate concurrently during a cold load. */
+  /* The Suspense fallback for every lazy route, so several animate at once.
+     Pulses `opacity`, which runs on the compositor without repainting. */
   .skel { background: var(--bg-2);
     animation: shimmer 1.4s ease-in-out infinite;
     border-radius: var(--radius);
   }
+  /* A route's placeholder, held to Home's column so it does not span a wide window and then
+     collapse into the screen that replaces it. */
+  .skel-page { max-width: 880px; margin-inline: auto; }
   .skel--hero { height: 120px; margin-bottom: 18px; }
   .skel--card { height: 160px; }
   .skel--row { height: 36px; margin-bottom: 8px; }
 
-  /* Shared by `.skel` and `.skel-bar`. Animates `opacity` only, so it runs on the
-     compositor and triggers no repaint. */
+  /* Shared by `.skel` and `.skel-bar`. */
   @keyframes shimmer {
     0%, 100% { opacity: 0.5; }
     50% { opacity: 0.8; }
@@ -22,8 +23,6 @@
     height: 12px;
     border-radius: var(--radius-sm);
     background: var(--bg-2);
-    /* Compositor-only, as `.skel`: the asset list's skeleton animates eight at
-       once. */
     animation: shimmer 1.4s ease-in-out infinite;
     vertical-align: middle;
   }

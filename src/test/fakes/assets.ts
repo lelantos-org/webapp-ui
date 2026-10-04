@@ -22,6 +22,8 @@ export function assetReads(config: () => AssetReadsConfig) {
       outflow: 0n,
     }),
     useBalances: () => ({ isLoading: false }),
+    useLastUsedAsset: () => undefined,
+    useRememberAsset: () => () => {},
     useAssetSelectOptions: (): AssetSelectOption[] => {
       const { assets, options } = config();
       return (

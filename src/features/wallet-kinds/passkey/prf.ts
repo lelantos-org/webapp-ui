@@ -16,7 +16,7 @@ const RP_NAME = "Lelantos";
 
 const DEFAULT_LABEL = "Lelantos wallet";
 
-/// Whether this browser could run the ceremony at all.
+/// Whether this browser can run the ceremony: a secure context with WebAuthn.
 export function passkeysAvailable(): boolean {
   return (
     typeof window !== "undefined" &&
@@ -70,7 +70,7 @@ function prfResults(cred: PublicKeyCredential): PrfExtensionResults["prf"] {
 }
 
 /// Enrol a discoverable credential. User verification required: the credential is the spending key.
-async function createPasskey(label = DEFAULT_LABEL): Promise<{ credentialId: string }> {
+async function createPasskey(): Promise<{ credentialId: string }> {
   if (!passkeysAvailable()) throw new Error("passkeys are not available in this browser");
 
   const userId = crypto.getRandomValues(new Uint8Array(16));
@@ -79,7 +79,7 @@ async function createPasskey(label = DEFAULT_LABEL): Promise<{ credentialId: str
     publicKey: {
       challenge: randomChallenge(),
       rp: { id: window.location.hostname, name: RP_NAME },
-      user: { id: userId, name: label, displayName: label },
+      user: { id: userId, name: DEFAULT_LABEL, displayName: DEFAULT_LABEL },
       pubKeyCredParams: [
         { alg: -7, type: "public-key" },
         { alg: -257, type: "public-key" },
@@ -134,10 +134,11 @@ export function prfEvaluator(credentialId: string): PrfEvaluator {
 }
 
 /// Enrol, then prove PRF with a real assertion. Returns its output so the build skips a prompt.
-export async function createAndProvePasskey(
-  label?: string,
-): Promise<{ credentialId: string; prf: Uint8Array }> {
-  const { credentialId } = await createPasskey(label);
+export async function createAndProvePasskey(): Promise<{
+  credentialId: string;
+  prf: Uint8Array;
+}> {
+  const { credentialId } = await createPasskey();
   const prf = await evaluatePrf(credentialId, LELANTOS_PRF_SALT);
   return { credentialId, prf };
 }

@@ -6,7 +6,6 @@ import { TxOutcome } from "./TxOutcome";
 import { type TxCopy, type TxView, useTxView } from "./use-tx-view";
 import "./ActionForm.css";
 
-/// A submit button's label while its op is being sent.
 export const SUBMITTING_LABEL = "Submitting…";
 
 export interface ActionFormProps {
@@ -21,7 +20,7 @@ export interface ActionFormProps {
   submitDisabled?: boolean;
   /// Why `submitDisabled` is set, shown under the CTA in place of `footnote`.
   blockedReason?: string | undefined;
-  /// The quiet line under an enabled CTA.
+  /// Line under an enabled CTA.
   footnote?: ReactNode;
   /// Between the fields and the CTA: the collapsed Details row.
   details?: ReactNode;
@@ -32,7 +31,7 @@ export interface ActionFormProps {
   txHash?: string | undefined;
   /// This op's place in a bundled tx: `operationOf(m.data)`.
   operation?: TxOperation | undefined;
-  /// The summary shown instead of the fields once the user asks to send.
+  /// Summary shown in place of the fields while set.
   review?: ReactNode;
   tx?: TxCopy;
   /// Clears a finished op when the user leaves its outcome card.
@@ -73,10 +72,10 @@ export function ActionForm({
         busy={busy}
         error={error}
         progress={progress}
-        txHash={txHash}
         operation={operation}
         tx={tx}
-        onRetry={() => formRef.current?.requestSubmit()}
+        // A blocked form drops the submit, so show it instead: the reason is under its button.
+        onRetry={() => (submitDisabled ? state.leave() : formRef.current?.requestSubmit())}
       />
 
       <div

@@ -3,25 +3,23 @@ import { cx } from "@/shared/lib/cx";
 import { InfoGlyph, WarnGlyph } from "./icons/glyphs";
 import "./Notice.css";
 
-/// What a box is telling you, which decides its colour: `warn`, `err`, `accent` (invitation), `neutral`.
+/// Sets the box colour. `accent` is an invitation to act.
 export type NoticeTone = "accent" | "warn" | "err" | "neutral";
 
 export interface NoticeProps {
-  /// Defaults to `warn`.
   tone?: NoticeTone;
-  /// Bold first line.
   title?: ReactNode;
   children?: ReactNode;
   /// Leading glyph; defaults per tone (none for `accent`). `false` draws nothing.
   icon?: ReactNode | false;
-  /// A control of the caller's own — a link, or a button with its own handler.
+  /// Caller-supplied control, e.g. a link.
   action?: ReactNode;
-  /// Shorthand for an outline button in the notice's tone. Ignored when `action` is given.
+  /// With `onAction`, renders an outline button in the tone. Ignored when `action` is given.
   actionLabel?: string;
   onAction?(): void;
-  /// `end` for the trailing edge, `below` under the text. Phones always stack it below.
+  /// `end` is the trailing edge, `below` under the text. Narrow viewports always stack it below.
   actionPlacement?: "end" | "below";
-  /// Live-region role; `status` by default, `false` for static page content.
+  /// Live-region role. `false` for static page content.
   announce?: "status" | "alert" | false;
   className?: string;
 }
@@ -38,7 +36,7 @@ function defaultIcon(tone: NoticeTone): ReactNode {
   }
 }
 
-/// A tinted box with an optional glyph, title, body and action: every warning, setup and note box.
+/// Tinted box with an optional glyph, title, body and action.
 export function Notice({
   tone = "warn",
   title,

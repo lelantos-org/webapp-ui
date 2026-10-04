@@ -3,6 +3,7 @@ import { useActiveChainOrUndefined } from "@/features/chain";
 import { clearAllCachedNsk, clearCachedNsk, eip1193Store } from "@/features/wallet-kinds";
 import { toastInfo } from "@/shared/lib/toast";
 import { useBuildWallet } from "../build/use-build-wallet";
+import { useConnectErrorToast } from "../connect/use-connect-error-toast";
 import { useConnectFlow } from "../connect/use-connect-flow";
 import { WalletPicker } from "../connect/WalletPicker";
 import { disposeProverWorker } from "../prover/prover-worker";
@@ -14,14 +15,16 @@ import { deriveWalletStatus } from "./wallet-status";
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const session = useSession();
-  const { wallet, error: deriveError, hasCachedKey } = useBuildWallet(session);
+  const { wallet, error: deriveError, hasCachedKey, keyResolved } = useBuildWallet(session);
   const flow = useConnectFlow();
+  useConnectErrorToast(session.connectError);
 
   const status = deriveWalletStatus({
     session,
     wallet,
     deriveError,
     hasCachedKey,
+    keyResolved,
   });
   const registryFailure = session.registry.status === "failed" ? session.registry : undefined;
   const error = registryFailure?.message ?? deriveError ?? session.connectError;
@@ -71,9 +74,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const instance = useMemo(() => ({ wallet }), [wallet]);
 
-  // Boot the wallet store once: EIP-6963 discovery and a silent reconnect.
+  // Boot the wallet store once: the silent reconnect starts EIP-6963 discovery itself.
   useEffect(() => {
-    eip1193Store.startDiscovery();
     void eip1193Store.resumeFromStorage();
   }, []);
 

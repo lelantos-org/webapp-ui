@@ -1,13 +1,14 @@
 import { useId, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useActiveChain } from "@/features/chain";
+import { useActiveChain, useRecordAssets, useRecordChain } from "@/features/chain";
 import { plural } from "@/shared/lib/format/text";
 import { Notice } from "@/shared/ui/Notice";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
 import { daysLabel, describeStoredAmount } from "../copy";
 import { selectVaultLinks } from "../policy";
 import type { StoredClaimLink } from "../record";
-import { useLinkAssetsFor, useLinkChainFor, useLinkVault } from "../use-link-vault";
+import { useLinkVault } from "../use-link-vault";
+import { RecoverLinks } from "./RecoverLinks";
 import { VaultCapacity } from "./VaultCapacity";
 import { VaultRow } from "./VaultRow";
 import "./vault.css";
@@ -19,9 +20,9 @@ const FIRST_ROWS = 5;
 export function ClaimLinkVault() {
   const listTitleId = useId();
   const { stored, pressure, memoryOnly, now } = useLinkVault();
-  const chainFor = useLinkChainFor();
+  const chainFor = useRecordChain();
   const active = useActiveChain();
-  const assetsFor = useLinkAssetsFor();
+  const assetsFor = useRecordAssets();
   const links = useMemo(() => selectVaultLinks(stored, now), [stored, now]);
   const [showAll, setShowAll] = useState(false);
 
@@ -36,7 +37,7 @@ export function ClaimLinkVault() {
     <>
       <ScreenHeader
         title="Links you have not seen claimed"
-        subtitle="Each row holds a spending key. Whoever opens the link takes the funds — so this list is the only copy you have, and it lives in this browser alone."
+        subtitle="Each row holds a spending key. Whoever opens the link takes the funds. This list lives in this browser alone, but links this wallet derived can be found again from the wallet."
         backTo="/send/link"
         backLabel="Back to Send by link"
       />
@@ -50,9 +51,11 @@ export function ClaimLinkVault() {
 
       <VaultCapacity pressure={pressure} links={links} />
 
+      <RecoverLinks />
+
       <section className="surface vault-list" aria-labelledby={listTitleId}>
         <div className="vault-list__hdr">
-          <h2 className="vault-list__t" id={listTitleId}>
+          <h2 className="card-title vault-list__t" id={listTitleId}>
             Oldest first — these go first
           </h2>
           <span className="vault-list__count">

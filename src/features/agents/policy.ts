@@ -1,21 +1,14 @@
 import type { StoredAgent } from "./record";
 
-/// Cap on retained agents, newest kept.
-///
-/// There is deliberately **no TTL here**, which is the one place this store
-/// departs from the claim-link vault. A claim link expires because its key is a
-/// liability that should stop existing; an agent's key is the only copy of
-/// something still holding funds, so dropping the record would strand them.
-///
-/// The cap is a different thing from a TTL: it refuses to grow without bound,
-/// and `atCapacity` lets the UI say so before a new agent pushes an old one out.
+/// Cap on retained agents, newest kept. Records have no TTL: an agent's key may be
+/// the only copy of something still holding funds.
 const MAX_RECORDS = 25;
 
 export function newestFirst(a: StoredAgent, b: StoredAgent): number {
   return b.createdAt - a.createdAt;
 }
 
-/// The canonical stored form: newest first, capped.
+/// The stored form: newest first, capped.
 export function normalize(records: readonly StoredAgent[]): StoredAgent[] {
   return [...records].sort(newestFirst).slice(0, MAX_RECORDS);
 }

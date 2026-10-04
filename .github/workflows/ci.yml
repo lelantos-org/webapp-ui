@@ -16,21 +16,18 @@ permissions:
 env:
   # The service URLs `config/env.ts` requires, matching `.env.example` and the
   # values vitest pins. Per-chain values come from protocol-webserver's
-  # /v1/chains at runtime, so a build no longer needs a chain described to it —
-  # which is what the zero-address placeholders here used to fake.
+  # /v1/chains at runtime.
   VITE_REGISTRY_URL: "/registry"
   VITE_RELAYER_URL: "/relayer"
   VITE_FMD_URL: "/fmd"
-  # Kept in step with the Dockerfile's defaults so the CI build exercises the
-  # same configuration the published image ships with.
+  # Matches the Dockerfile's defaults, so CI builds the configuration the
+  # published image ships.
   VITE_METAQUOTER_URL: "/metaquoter"
 
 # Together the three jobs are a local `npm run verify` plus the build, run in
-# parallel rather than one after another. Each pays its own `npm ci`, which the
-# npm cache keeps short next to the test run and the build.
+# parallel.
 jobs:
-  # Typecheck, Biome, the import rules and knip (unused files, exports and
-  # dependencies).
+  # Typecheck, Biome, the import rules, the CSS tokens and knip.
   checks:
     runs-on: ubuntu-latest
     steps:
@@ -47,9 +44,9 @@ jobs:
       - run: npm run typecheck
       - run: npm run check:ci
       - run: npm run check:imports
+      - run: npm run check:css-tokens
       - run: npm run knip
 
-  # The test suite under its coverage floor.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -78,8 +75,7 @@ jobs:
       - run: npm ci
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # `vite build` rather than `npm run build`, whose `tsc -b` is the
-      # `checks` job's typecheck run a second time. Prover artifacts ship in the
-      # @lelantos-org/circuits package and are resolved through Vite `?url`
-      # imports, so `npm ci` is all the build needs.
+      # `vite build`, not `npm run build`: its `tsc -b` repeats the `checks`
+      # job's typecheck. Prover artifacts ship in @lelantos-org/circuits and
+      # resolve through Vite `?url` imports, so `npm ci` is all the build needs.
       - run: npx vite build

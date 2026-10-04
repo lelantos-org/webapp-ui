@@ -1,15 +1,14 @@
 import { useCallback, useState } from "react";
 
-/// The review step's state.
 export interface Review {
-  /// Showing the summary rather than the fields.
+  /// The summary is showing in place of the fields.
   open: boolean;
   /// Call from the form's submit handler.
   enter(): void;
   cancel(): void;
 }
 
-/// The pause before an irreversible spend; closes whenever `fingerprint` changes, even back to a reviewed value.
+/// The review step before an irreversible spend; closes whenever `fingerprint` changes, even back to a reviewed value.
 export function useReview(fingerprint: string): Review {
   const [open, setOpen] = useState(false);
   const [seen, setSeen] = useState(fingerprint);

@@ -75,17 +75,11 @@ export interface CreateProposalFormProps {
   contracts: readonly KnownContract[];
   /// Why the account may not propose; disables submit only.
   blocked?: string | undefined;
-  submitting?: boolean;
   onSubmit(actions: BuiltAction[], description: string): void;
 }
 
 /// Title, description and actions; the encoded preview; the submit.
-export function CreateProposalForm({
-  contracts,
-  blocked,
-  submitting = false,
-  onSubmit,
-}: CreateProposalFormProps) {
+export function CreateProposalForm({ contracts, blocked, onSubmit }: CreateProposalFormProps) {
   const schema = useMemo(() => formSchema(contracts), [contracts]);
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -112,7 +106,7 @@ export function CreateProposalForm({
           <span className="gov-field__lbl">Title</span>
           <input
             id={titleId}
-            className="gov-input"
+            className="text-input"
             maxLength={PROPOSAL_TITLE_MAX}
             aria-invalid={errors.title ? true : undefined}
             {...form.register("title")}
@@ -123,7 +117,7 @@ export function CreateProposalForm({
           <span className="gov-field__lbl">Description</span>
           <textarea
             id={descId}
-            className="gov-input gov-input--area"
+            className="text-input gov-input--area"
             rows={8}
             {...form.register("description")}
           />
@@ -187,8 +181,8 @@ export function CreateProposalForm({
       </section>
 
       <div className="gov-form__cta">
-        <button type="submit" className="btn btn--cta" disabled={!!blocked || submitting}>
-          {submitting ? "Submitting…" : "Submit proposal"}
+        <button type="submit" className="btn btn--cta" disabled={!!blocked}>
+          Submit proposal
         </button>
         {blocked ? <p className="gov-form__why">{blocked}</p> : null}
       </div>
@@ -242,7 +236,7 @@ function ActionRow({ index: i, form, contracts, draft, errors, onRemove }: Actio
           <button
             key={m}
             type="button"
-            className={cx("gov-filter__btn", mode === m && "gov-filter__btn--on")}
+            className={cx("choice", mode === m && "choice--on")}
             aria-pressed={mode === m}
             onClick={() => form.setValue(`${base}.mode`, m)}
           >
@@ -257,7 +251,7 @@ function ActionRow({ index: i, form, contracts, draft, errors, onRemove }: Actio
             <span className="gov-field__lbl">Contract</span>
             <select
               id={`${ids}-contract`}
-              className="gov-input"
+              className="text-input"
               {...form.register(`${base}.contract`, {
                 onChange: (e: { target: { value: string } }) => {
                   const next = contracts.find((c) => c.id === e.target.value);
@@ -282,7 +276,7 @@ function ActionRow({ index: i, form, contracts, draft, errors, onRemove }: Actio
             <span className="gov-field__lbl">Function</span>
             <select
               id={`${ids}-fn`}
-              className="gov-input mono"
+              className="text-input mono"
               aria-invalid={errors?.fn ? true : undefined}
               {...form.register(`${base}.fn`, {
                 onChange: () => form.setValue(`${base}.args`, []),
@@ -307,7 +301,7 @@ function ActionRow({ index: i, form, contracts, draft, errors, onRemove }: Actio
         <span className="gov-field__lbl">Target contract</span>
         <input
           id={`${ids}-target`}
-          className="gov-input mono"
+          className="text-input mono"
           placeholder="0x…"
           autoComplete="off"
           spellCheck={false}
@@ -321,7 +315,7 @@ function ActionRow({ index: i, form, contracts, draft, errors, onRemove }: Actio
         <span className="gov-field__lbl">ETH sent with the call</span>
         <input
           id={`${ids}-value`}
-          className="gov-input mono"
+          className="text-input mono"
           inputMode="decimal"
           placeholder="0"
           aria-invalid={errors?.value ? true : undefined}
@@ -339,7 +333,7 @@ function ActionRow({ index: i, form, contracts, draft, errors, onRemove }: Actio
                 </span>
                 <input
                   id={`${ids}-arg-${j}`}
-                  className="gov-input mono"
+                  className="text-input mono"
                   autoComplete="off"
                   spellCheck={false}
                   placeholder={p.type.endsWith("]") ? "comma-separated" : undefined}
@@ -358,7 +352,7 @@ function ActionRow({ index: i, form, contracts, draft, errors, onRemove }: Actio
             <span className="gov-field__lbl">Calldata</span>
             <textarea
               id={`${ids}-calldata`}
-              className="gov-input gov-input--area mono"
+              className="text-input gov-input--area mono"
               rows={3}
               placeholder="0x"
               spellCheck={false}

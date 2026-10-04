@@ -24,16 +24,14 @@ export const queryKeys = {
   /// The chains this deployment serves, from protocol-webserver and the relayer.
   chainRegistry: () => ["chain-registry"] as const,
 
-  /// USD prices for every served chain, so deliberately not chain-scoped.
+  /// USD prices for every served chain; not chain-scoped.
   prices: () => ["asset-prices"] as const,
 
-  /// Reachability of the backing services.
   systemHealth: () => ["system-health"] as const,
 
   /// The note feed's watermark on one chain.
   syncHead: (chainId?: bigint) => ["sync-head", chain(chainId)] as const,
 
-  /// A wallet's synced holdings on one chain.
   walletState: (chainId?: bigint, address?: string) =>
     ["wallet-state", chain(chainId), address ?? null] as const,
 
@@ -43,13 +41,9 @@ export const queryKeys = {
     return kind === undefined ? prefix : [...prefix, kind];
   },
 
-  /// The protocol fee on one amount of one asset, for one leg.
-  feePreview: (chainId: bigint, leg: string, asset?: bigint, amount?: bigint) =>
-    ["fee-preview", chain(chainId), leg, big(asset), big(amount)] as const,
-
-  /// One asset's protocol rate for one leg, independent of the amount.
-  feeBps: (chainId: bigint, asset: bigint | undefined, leg: string) =>
-    ["fee-bps", chain(chainId), big(asset), leg] as const,
+  /// What one asset's protocol fee on one leg is computed from; independent of the amount.
+  feeInputs: (chainId: bigint, asset: bigint | undefined, leg: string) =>
+    ["fee-inputs", chain(chainId), big(asset), leg] as const,
 
   /// The most a wallet can spend of one asset; `holdings` fingerprints the notes it depends on.
   spendableMax: (
@@ -85,17 +79,13 @@ export const queryKeys = {
     asEth: boolean,
   ) => [...transparentBalances(chainId, account), asEth ? "native" : big(asset)] as const,
 
-  /// Permit2 setup state for one (chain, payer, token), keyed by lowercased token rather than asset id.
+  /// Permit2 setup state for one (chain, payer, token); keyed by lowercased token, not asset id.
   setupStatus: (chainId?: bigint, payer?: string, token?: string) =>
     [...setupStatusOf(chainId, payer), token?.toLowerCase() ?? null] as const,
-
-  /// The prefix of `setupStatus` covering every token of one payer.
-  setupStatusOf,
 
   /// A swap route, keyed by the flattened request.
   swapQuote: (request: string) => ["swap-quote", request] as const,
 
-  /// One asset's denomination ladder.
   assetLadder: (chainId: bigint, asset: bigint | undefined) =>
     ["asset-ladder", chain(chainId), big(asset)] as const,
 

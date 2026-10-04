@@ -23,7 +23,6 @@ export interface SafeStorage {
   remove(key: string): void;
   /// Every key starting with `prefix`, snapshotted so the caller may remove while iterating.
   keys(prefix: string): string[];
-  /// Remove every key starting with `prefix`.
   removePrefix(prefix: string): void;
 }
 

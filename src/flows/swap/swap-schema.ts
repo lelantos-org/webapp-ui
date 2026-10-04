@@ -4,7 +4,6 @@ import type { RegisteredAsset } from "@/config/chains";
 import { DEFAULT_ASSET_ID } from "@/features/assets";
 import { amountField as amount, assetField as asset } from "@/features/op-form";
 
-/// The slippage the form opens on, in basis points.
 export const DEFAULT_SLIPPAGE_BPS = 50;
 
 export const swapSchema = z
@@ -34,13 +33,12 @@ export const swapSchema = z
 
 export type SwapInput = z.infer<typeof swapSchema>;
 
-/// The asset the "to" side starts on: the first that is not the "from" default.
 export function defaultSwapOut(assets: readonly RegisteredAsset[]): string {
   const other = assets.find((a) => a.id.toString() !== DEFAULT_ASSET_ID);
   return other ? other.id.toString() : DEFAULT_ASSET_ID;
 }
 
-/// Write the pair swapped, then revalidate both sides together (per-write validation latches a stale error).
+/// Swaps the pair, then revalidates both sides together: per-write validation latches a stale error.
 export function flipPair(
   form: Pick<UseFormReturn<SwapInput>, "setValue" | "trigger">,
   pair: Pick<SwapInput, "assetIn" | "assetOut">,

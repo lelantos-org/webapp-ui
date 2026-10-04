@@ -1,5 +1,4 @@
 @layer features {
-  /* ObserverPanel */
   .observer--full {
     border: 1px solid var(--line-strong);
     background: var(--bg-1);

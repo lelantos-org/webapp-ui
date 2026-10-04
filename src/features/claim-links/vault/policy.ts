@@ -8,7 +8,6 @@ const TTL_MS = 7 * DAY_MS;
 /// Cap on retained records, newest kept.
 const MAX_RECORDS = 50;
 
-/// Within the retention window. Sole site of the TTL comparison.
 function isLive(record: StoredClaimLink, now: number): boolean {
   return now - record.createdAt < TTL_MS;
 }
@@ -32,25 +31,24 @@ export function claimLinkExpiresIn(record: StoredClaimLink, now = Date.now()): n
 
 /// How close the vault is to dropping a record, from the same limits as `normalize`. Browser-wide.
 export interface ClaimLinkPressure {
-  /// Live records held right now, across every chain.
+  /// Live records across every chain.
   count: number;
-  /// `MAX_RECORDS`, surfaced so the UI never hardcodes a second copy.
   capacity: number;
-  /// `TTL_MS`, for the same reason.
   ttlMs: number;
   /// Records that will age out within `soonMs`.
   expiringSoon: number;
   /// Milliseconds until the oldest live record ages out. Absent when empty.
   oldestExpiresIn: number | undefined;
-  /// Creating this many more links would evict the oldest on the cap alone.
+  /// Free slots under the cap; one link beyond this evicts the oldest.
   roomLeft: number;
   /// The record the next `rememberClaimLink` would drop; absent while there is room.
   nextEvicted: StoredClaimLink | undefined;
+  /// Live records whose key is random rather than derived from the wallet: dropping one loses it.
+  unrecoverable: number;
 }
 
 const EXPIRING_SOON_MS = DAY_MS;
 
-/// The pressure on a snapshot of `records` the caller already holds.
 export function claimLinkPressureOf(
   records: readonly StoredClaimLink[],
   now = Date.now(),
@@ -67,6 +65,7 @@ export function claimLinkPressureOf(
     oldestExpiresIn: ages.length > 0 ? Math.min(...ages) : undefined,
     roomLeft,
     nextEvicted: roomLeft === 0 ? live.at(-1) : undefined,
+    unrecoverable: live.filter((r) => !r.derived).length,
   };
 }
 

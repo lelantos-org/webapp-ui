@@ -12,10 +12,31 @@ export {
   usePending,
   usePendingByAsset,
 } from "./pending/pending-store";
+export type { InterruptedOp } from "./progress/interrupted-ops";
+export {
+  dismissInterrupted,
+  reloadInterruptedForTest,
+  useInterruptedOps,
+} from "./progress/interrupted-ops";
+export type { OpRecord } from "./progress/op-store";
+export {
+  beginOp,
+  clearOpOutcome,
+  failOp,
+  isOpObserved,
+  localOpKey,
+  opKey,
+  opScope,
+  resetOpsForTest,
+  settleOp,
+  useOp,
+  useOpNeedsTab,
+  useOpsInFlight,
+} from "./progress/op-store";
 export type { TxStage } from "./progress/tx-copy";
-export { failureReassurance, retrySafe, settledNote, walkAwayNote } from "./progress/tx-copy";
+export { failureReassurance, retrySafe, settledCopy, walkAwayNote } from "./progress/tx-copy";
 export type { Step, TxPhase } from "./progress/tx-progress";
-export { stepsFor } from "./progress/tx-progress";
+export { opInFlight, stepsFor } from "./progress/tx-progress";
 export { useProveEta } from "./progress/use-prove-eta";
 export type { ProgressView, TxProgressApi } from "./progress/use-tx-progress";
 export { useTxProgress } from "./progress/use-tx-progress";

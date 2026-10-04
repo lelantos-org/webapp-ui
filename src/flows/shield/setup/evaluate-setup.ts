@@ -7,7 +7,7 @@ export interface SetupNeeds {
   willApproveErc20: boolean;
   /// Permit2 → MASP window is missing, too small, or about to expire.
   needsAllowancePermit: boolean;
-  /// Either of the above: the deposit cannot proceed until setup runs.
+  /// `needsErc20Approve` or `needsAllowancePermit`: the deposit cannot proceed until setup runs.
   needsSetup: boolean;
 }
 

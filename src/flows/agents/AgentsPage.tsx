@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import { useAgentAssetsFor, useAgentChainFor, useAgents } from "@/features/agents";
-import { useActiveChain } from "@/features/chain";
+import { useAgents } from "@/features/agents";
+import { useActiveChain, useRecordAssets, useRecordChain } from "@/features/chain";
 import { Notice } from "@/shared/ui/Notice";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
 import { AgentRow } from "./components/AgentRow";
@@ -9,8 +9,8 @@ import "./agents.css";
 /// The agents this browser has funded, and their keys.
 export function AgentsPage() {
   const { stored, memoryOnly, full } = useAgents();
-  const assetsFor = useAgentAssetsFor();
-  const chainFor = useAgentChainFor();
+  const assetsFor = useRecordAssets();
+  const chainFor = useRecordChain();
   const active = useActiveChain();
   const now = Date.now();
 

@@ -48,6 +48,24 @@ describe("resumeFromStorage", () => {
     expect(eip1193Store.getState().address).toBeUndefined();
   });
 
+  it("reads as restoring while the stored wallet is asked, with nothing put to the user", async () => {
+    const { d, release } = handshakeProvider();
+    eip1193Store.startDiscovery();
+    announce(d);
+
+    const resume = eip1193Store.resumeFromStorage();
+    expect(eip1193Store.getState()).toMatchObject({ status: "connecting", resuming: true });
+
+    release();
+    await resume;
+    expect(eip1193Store.getState()).toMatchObject({ status: "connected", resuming: false });
+  });
+
+  it("falls back to logged out when the stored wallet never announces itself", async () => {
+    await eip1193Store.resumeFromStorage();
+    expect(eip1193Store.getState()).toMatchObject({ status: "idle", resuming: false });
+  });
+
   it("attaches when nothing interrupts it", async () => {
     const { d, release } = handshakeProvider();
     eip1193Store.startDiscovery();
@@ -72,6 +90,25 @@ function rejectingWallet(rejection: unknown) {
 }
 
 describe("eip1193Store.connect failure", () => {
+  it.each([
+    [
+      "an extension on a desktop",
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      /Install MetaMask/,
+    ],
+    [
+      "the wallet app's browser on a phone",
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0)",
+      /built-in browser/,
+    ],
+  ])("points at %s when no wallet announces itself", async (_label, userAgent, advice) => {
+    vi.stubGlobal("navigator", { userAgent, maxTouchPoints: 0 });
+    await eip1193Store.connect();
+
+    expect(eip1193Store.getState().status).toBe("error");
+    expect(eip1193Store.getState().error).toMatch(advice);
+  });
+
   it("reports a dismissed prompt as a cancellation", async () => {
     rejectingWallet({ code: 4001, message: "User rejected the request." });
     await eip1193Store.connect(RDNS);

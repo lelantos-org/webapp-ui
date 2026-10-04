@@ -1,16 +1,14 @@
-import { type FeeBlock, feeBlockReason } from "@/features/fees";
+import { FEE_PENDING_REASON, type FeeBlock, feeBlockReason } from "@/features/fees";
+import { normalizeNumericInput } from "@/shared/lib/format/number";
 
-/// Whether a submit is dead, and the sentence shown under the button.
 export interface SubmitBlock {
   disabled: boolean;
-  /// Absent when nothing blocks, or the reason is already shown beside its field.
+  /// Shown under the button. Absent when nothing blocks or the field already shows the reason.
   reason?: string | undefined;
 }
 
-/// Nothing stops the submit.
 export const SUBMIT_OPEN: SubmitBlock = Object.freeze({ disabled: false });
 
-/// A dead button, with the sentence under it where there is one to say.
 export function blockedBy(reason?: string): SubmitBlock {
   return reason === undefined ? { disabled: true } : { disabled: true, reason };
 }
@@ -18,7 +16,7 @@ export function blockedBy(reason?: string): SubmitBlock {
 export interface WalletReadiness {
   /// The last sync failed; a spend against stale balances can pick already-spent notes.
   syncErrored: boolean;
-  /// First sync still running, so there are no balances to validate against.
+  /// The first sync is still running; there are no balances to validate against.
   balancesLoading: boolean;
 }
 
@@ -36,29 +34,45 @@ export function walletReadinessBlock(
   return undefined;
 }
 
-/// The reason shown for an empty amount.
 export const ENTER_AMOUNT_REASON = "Enter an amount you hold";
+
+/// The active chain registers nothing to spend.
+export const NO_ASSETS_REASON = "No assets on this network";
+
+/// Why typed text is not an amount to send, or `undefined` when it parses to a positive one.
+/// `parsed` is the text in circuit units, `undefined` when it does not parse.
+export function amountTextReason(
+  amountText: string,
+  parsed: bigint | undefined,
+  symbol: string | undefined,
+): string | undefined {
+  const text = normalizeNumericInput(amountText);
+  if (text === "") return ENTER_AMOUNT_REASON;
+  if (parsed !== undefined) return parsed > 0n ? undefined : ENTER_AMOUNT_REASON;
+  // A number still being typed ("12.").
+  if (/^\d*\.?$/.test(text)) return ENTER_AMOUNT_REASON;
+  return /^\d+\.\d+$/.test(text)
+    ? `${symbol ?? "This asset"} can't be split that finely`
+    : "Enter the amount as a number";
+}
 
 export interface AmountReadiness {
   amountValid: boolean;
-  /// Distinguishes "not filled in" from "filled in wrongly".
-  amountEntered: boolean;
+  /// From `amountTextReason`. An amount over a limit has none: the field reports that itself.
+  amountReason: string | undefined;
 }
 
-/// Blocks an invalid amount, with a reason only when it is empty.
+/// Blocks an invalid amount, saying why unless the field already does.
 export function amountBlock(s: AmountReadiness): SubmitBlock | undefined {
-  if (s.amountValid) return undefined;
-  return s.amountEntered ? blockedBy() : blockedBy(ENTER_AMOUNT_REASON);
+  return s.amountValid ? undefined : blockedBy(s.amountReason);
 }
 
-/// Blocks a relayer fee that cannot be paid.
 export function feeProblemBlock(feeBlock: FeeBlock | undefined): SubmitBlock | undefined {
   return feeBlock ? blockedBy(feeBlockReason(feeBlock)) : undefined;
 }
 
-/// Blocks while the relayer fee is still being quoted.
 export function feePendingBlock(feePending: boolean): SubmitBlock | undefined {
-  return feePending ? blockedBy("Working out the fee…") : undefined;
+  return feePending ? blockedBy(FEE_PENDING_REASON) : undefined;
 }
 
 export interface FeeReadiness {
@@ -68,7 +82,15 @@ export interface FeeReadiness {
   feePending: boolean;
 }
 
-/// Fee problem, then fee pending.
 export function feeBlockTail(s: FeeReadiness): SubmitBlock | undefined {
   return feeProblemBlock(s.feeBlock) ?? feePendingBlock(s.feePending);
+}
+
+const REVIEW_STALE_REASON = "This can no longer be sent as entered. Go back and check it.";
+
+/// Why an open review's Confirm is held, or `undefined` when it may send. A block with no reason
+/// of its own (the balance moved under the review) still holds it.
+export function reviewBlockReason(block: SubmitBlock, feesPriced: boolean): string | undefined {
+  if (block.disabled) return block.reason ?? REVIEW_STALE_REASON;
+  return feesPriced ? undefined : FEE_PENDING_REASON;
 }

@@ -23,7 +23,6 @@ export interface RegisteredAsset {
   vaultName?: string;
 }
 
-/// A measured annual rate and the span behind it.
 export interface VenueRate {
   /// A fraction — `0.0418` for 4.18%.
   rate: number;
@@ -52,7 +51,6 @@ export interface ChainEntry {
   govTokenAddress?: EvmAddress | undefined;
   timelockAddress?: EvmAddress | undefined;
   treeDepth: number;
-  /// Block-explorer base, for tx links.
   explorerUrl?: string | undefined;
   /// Registered assets; empty means not indexed yet. Shared, so never mutate.
   readonly tokens: readonly RegisteredAsset[];
@@ -63,7 +61,6 @@ export function chainKey(chainId: bigint): string {
   return chainId.toString(16);
 }
 
-/// The registry entry for `chainId`, if any.
 export function findChain(
   registry: readonly ChainEntry[],
   chainId: bigint,

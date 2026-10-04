@@ -4,7 +4,6 @@ interface Deferred<T> {
   reject(reason: unknown): void;
 }
 
-/// A promise plus the handles to settle it.
 export function deferred<T>(): Deferred<T> {
   let resolve!: (value: T) => void;
   let reject!: (reason: unknown) => void;

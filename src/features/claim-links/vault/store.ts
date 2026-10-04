@@ -1,97 +1,34 @@
 // Claim links hold bearer spending keys: persist before broadcast, or a remount loses funds.
 
-import { createSubscribers } from "@/shared/lib/external-store";
 import { createLogger } from "@/shared/lib/logger";
 import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
-import { localStore, readJson, writeJson } from "@/shared/lib/storage/safe";
+import { createRecordStore } from "@/shared/lib/storage/record-store";
 import { newestFirst, normalize } from "./policy";
 import { isRecordArray, type StoredClaimLink } from "./record";
 
 /// Never log a record's `url`: that string is the bearer secret.
 const log = createLogger("claim-links");
 
-const KEY = LOCAL_KEYS.claimLinks;
+const store = createRecordStore<StoredClaimLink>({
+  key: LOCAL_KEYS.claimLinks,
+  noun: "claim links",
+  log,
+  isRecordArray,
+  order: newestFirst,
+});
 
-/// Parse the stored payload, newest first. A pure read, safe in render; one bad entry discards all.
-function parse(): StoredClaimLink[] {
-  const stored = readJson(localStore, KEY, isRecordArray);
-  if (!stored) {
-    if (localStore.get(KEY) !== undefined) {
-      log.warn("stored claim links failed validation; treating the store as empty");
-    }
-    return [];
-  }
-  return [...stored].sort(newestFirst);
-}
-
-interface Cache {
-  /// The raw string `records` was parsed from, keeping snapshot identity for any writer.
-  raw: string | undefined;
-  /// Stable identity between changes; handed straight to React.
-  records: StoredClaimLink[];
-  /// A write failed: `records` is then the only copy, so storage is not re-read until one lands.
-  mirrorOnly: boolean;
-}
-
-const cache: Cache = { raw: undefined, records: [], mirrorOnly: false };
-
-const subscribers = createSubscribers();
-
-export function subscribeClaimLinks(listener: () => void): () => void {
-  return subscribers.subscribe(listener);
-}
-
-// Another tab may add a link whose key exists nowhere else.
-if (typeof window !== "undefined") {
-  window.addEventListener("storage", (e) => {
-    if (e.key === KEY || e.key === null) subscribers.notify();
-  });
-}
-
-/// Normalize, store and publish: the only mutation of `cache` or `localStorage`.
-function persist(records: readonly StoredClaimLink[], now: number): void {
-  const kept = normalize(records, now);
-
-  // Set before writing, so the snapshot stays correct if storage refuses the write.
-  cache.records = kept;
-
-  if (writeJson(localStore, KEY, kept)) {
-    cache.raw = localStore.get(KEY);
-    if (cache.mirrorOnly) log.info("localStorage writable again; claim links persist once more");
-    cache.mirrorOnly = false;
-  } else if (!cache.mirrorOnly) {
-    log.warn(
-      `localStorage refused the write — ${kept.length} claim link(s) are held in memory only ` +
-        "and will not survive this tab",
-    );
-    cache.mirrorOnly = true;
-  }
-
-  subscribers.notify();
-}
+export const subscribeClaimLinks = store.subscribe;
 
 /// Every stored record, newest first, with a stable identity between changes.
-export function claimLinksSnapshot(): StoredClaimLink[] {
-  if (cache.mirrorOnly) return cache.records;
-
-  const raw = localStore.get(KEY);
-  if (raw !== cache.raw) {
-    cache.raw = raw;
-    cache.records = parse();
-  }
-  return cache.records;
-}
-
-/// Test seam: reset the parsed snapshot and write-refused latch. Pair with `localStorage.clear()`.
-export function resetForTest(): void {
-  cache.raw = undefined;
-  cache.records = [];
-  cache.mirrorOnly = false;
-}
+export const claimLinksSnapshot = store.snapshot;
 
 /// The last write did not reach `localStorage`, so every record lives only as long as this tab.
-export function claimLinksMemoryOnly(): boolean {
-  return cache.mirrorOnly;
+export const claimLinksMemoryOnly = store.memoryOnly;
+
+export const resetForTest = store.resetForTest;
+
+function persist(records: readonly StoredClaimLink[], now: number): void {
+  store.persist(normalize(records, now));
 }
 
 export interface RememberClaimLinkInput {
@@ -99,9 +36,11 @@ export interface RememberClaimLinkInput {
   chainId: bigint;
   assetId: bigint;
   amount: bigint;
+  /// See `StoredClaimLink.derived`.
+  derived?: boolean;
 }
 
-/// Persist a link and return its id. Call **before** broadcasting.
+/// Persist a link and return its id. Call before broadcasting.
 /// At capacity this drops the oldest record: callers check `nextEvicted` first.
 export function rememberClaimLink(input: RememberClaimLinkInput, now = Date.now()): string {
   const record: StoredClaimLink = {
@@ -111,6 +50,7 @@ export function rememberClaimLink(input: RememberClaimLinkInput, now = Date.now(
     assetId: input.assetId.toString(),
     amount: input.amount.toString(),
     createdAt: now,
+    ...(input.derived ? { derived: true as const } : {}),
   };
 
   persist([record, ...claimLinksSnapshot()], now);
@@ -118,7 +58,6 @@ export function rememberClaimLink(input: RememberClaimLinkInput, now = Date.now(
   return record.id;
 }
 
-/// Attach the tx hash once the transfer is out.
 export function markClaimLinkBroadcast(id: string, txHash: string, now = Date.now()): void {
   const records = claimLinksSnapshot();
   if (!records.some((r) => r.id === id)) {

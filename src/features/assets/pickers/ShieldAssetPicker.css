@@ -1,5 +1,4 @@
 @layer features {
-  /* Shield asset picker */
   .apick {
     display: flex;
     flex-direction: column;

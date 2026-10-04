@@ -4,21 +4,19 @@ import { ChevronLeftGlyph } from "./icons/glyphs";
 import "./ScreenHeader.css";
 
 export interface ScreenHeaderProps {
-  /// The screen's name, in sentence case: "Send privately", "Review".
+  /// Sentence case, e.g. "Send privately".
   title: string;
-  /// One line under the title.
   subtitle?: ReactNode;
-  /// Trailing slot, for a step counter such as "STEP 2 OF 2".
+  /// Trailing slot, e.g. a step counter.
   right?: ReactNode;
-  /// Where the back button goes. Defaults to Home.
   backTo?: string;
-  /// A handler instead of navigation; takes precedence over `backTo`.
+  /// Takes precedence over `backTo`.
   onBack?(): void;
-  /// Accessible name for the back control, which is otherwise a bare chevron.
+  /// Accessible name for the back control, which has no text.
   backLabel?: string;
 }
 
-/// The head of every action screen: back control, the page's `h1`, one subtitle line.
+/// Action-screen header: back control, the page's `h1`, and a subtitle.
 export function ScreenHeader({
   title,
   subtitle,

@@ -2,9 +2,10 @@ import { useState } from "react";
 import type { RegisteredAsset } from "@/config/chains";
 import type { StoredAgent } from "@/features/agents";
 import { forgetAgent } from "@/features/agents";
+import { findAsset } from "@/features/assets";
 import { formatAssetAmount } from "@/shared/lib/format/asset";
 import { relativeTime } from "@/shared/lib/format/time";
-import { useAgentWallet } from "../use-agent-wallet";
+import { type AgentWalletState, useAgentWallet } from "../use-agent-wallet";
 import { CredentialPanel } from "./CredentialPanel";
 import { TopUpPanel } from "./TopUpPanel";
 import "../agents.css";
@@ -46,7 +47,6 @@ export function AgentRow({ agent, assets, chainName, now }: AgentRowProps) {
 
       {open ? (
         <div className="agent-row__body">
-          {/* What the agent holds, and how to give it more. */}
           <section className="agent-sect" aria-label="Funds">
             <h3 className="agent-sect__t">Funds</h3>
             <code className="agent-row__addr" title="Where to send top-ups">
@@ -71,7 +71,6 @@ export function AgentRow({ agent, assets, chainName, now }: AgentRowProps) {
 
           <hr className="rule" />
 
-          {/* The key itself, and forgetting this browser's copy of it. */}
           <section className="agent-sect" aria-label="Credential">
             <h3 className="agent-sect__t">Credential</h3>
             <CredentialPanel agent={agent} />
@@ -117,13 +116,13 @@ function Balances({
   onSweep,
   onSweepAll,
 }: {
-  state: ReturnType<typeof useAgentWallet>["state"];
+  state: AgentWalletState;
   assets: readonly RegisteredAsset[];
   onSweep(asset: bigint): Promise<void>;
   onSweepAll(assets: readonly bigint[]): Promise<void>;
 }) {
   const label = (amount: bigint, asset: bigint) => {
-    const token = assets.find((a) => a.id === asset);
+    const token = findAsset(assets, asset);
     return token ? formatAssetAmount(amount, token) : `${amount} of asset ${asset}`;
   };
 
@@ -132,7 +131,7 @@ function Balances({
   }
   if (state.kind === "busy") {
     if (state.what === "inspecting") return <p className="agent-row__note">Scanning…</p>;
-    // One proof per asset, so a multi-asset sweep is worth counting out loud.
+    // Each asset is a separate proof, so progress is counted per asset.
     return (
       <p className="agent-row__note">
         Sweeping {state.done + 1} of {state.total}…
@@ -179,13 +178,12 @@ function Balances({
   );
 }
 
-/// What a sweep actually managed. Partial success is the interesting case: one
-/// asset failing leaves the others swept and the agent still holding something.
+/// Sweep outcome. A failed asset leaves the others swept and the agent non-empty.
 function SweepReport({
   state,
   label,
 }: {
-  state: Extract<ReturnType<typeof useAgentWallet>["state"], { kind: "swept" }>;
+  state: Extract<AgentWalletState, { kind: "swept" }>;
   label(amount: bigint, asset: bigint): string;
 }) {
   return (

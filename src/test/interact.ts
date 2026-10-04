@@ -9,7 +9,6 @@ export function fill(field: Name | HTMLElement, value: string): HTMLElement {
   return el;
 }
 
-/// Click the button named `button` (or the element given).
 export function press(button: Name | HTMLElement): HTMLElement {
   const el = button instanceof HTMLElement ? button : screen.getByRole("button", { name: button });
   fireEvent.click(el);

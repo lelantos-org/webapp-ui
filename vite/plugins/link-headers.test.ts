@@ -11,18 +11,23 @@ const BUILT = `<!doctype html>
     <script type="module" crossorigin src="/assets/index-abc.js"></script>
     <link rel="modulepreload" crossorigin href="/assets/vendor-react-def.js">
     <link rel="stylesheet" crossorigin href="/assets/index-123.css">
+    <link rel="preload" as="font" type="font/woff2" crossorigin href="/assets/public-sans-456.woff2">
+    <link rel="preload" as="style" crossorigin href="/assets/Home-789.css">
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="manifest" href="/manifest.webmanifest">
   </head>
 </html>`;
 
 describe("preloadLinks", () => {
-  it("hints entry scripts, module preloads and stylesheets, in that order", () => {
+  it("hints entry scripts, module preloads, stylesheets and the page's own preloads, in that order", () => {
     expect(preloadLinks(BUILT)).toEqual([
-      "</theme-init.js>; rel=preload; as=script; crossorigin",
+      // Loaded without `crossorigin`, so hinted without it.
+      "</theme-init.js>; rel=preload; as=script",
       "</assets/index-abc.js>; rel=preload; as=script; crossorigin",
       "</assets/vendor-react-def.js>; rel=preload; as=script; crossorigin",
       "</assets/index-123.css>; rel=preload; as=style; crossorigin",
+      "</assets/public-sans-456.woff2>; rel=preload; as=font; crossorigin",
+      "</assets/Home-789.css>; rel=preload; as=style; crossorigin",
     ]);
   });
 
@@ -69,7 +74,7 @@ describe("linkHeaders plugin", () => {
   it("writes the snippet beside the project, outside what is served", () => {
     const { ctx, snippet } = run(BUILT);
     expect(snippet).toBe(linkHeaderSnippet(preloadLinks(BUILT)));
-    expect(ctx.info).toHaveBeenCalledWith("link-headers: hinted 4 assets");
+    expect(ctx.info).toHaveBeenCalledWith("link-headers: hinted 6 assets");
   });
 
   it("warns when the document stopped matching", () => {

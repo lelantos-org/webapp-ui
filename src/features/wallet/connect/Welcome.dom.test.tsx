@@ -11,7 +11,9 @@ const h = vi.hoisted(() => ({
   status: "disconnected" as WalletStatus,
   kind: undefined as WalletKind | undefined,
   choices: [] as WalletChoice[],
+  metamaskLink: undefined as string | undefined,
   connect: vi.fn(),
+  disconnect: vi.fn(),
   selectKind: vi.fn(),
 }));
 
@@ -23,12 +25,21 @@ vi.mock("@/features/wallet-kinds", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/wallet-kinds")>()),
   selectKind: h.selectKind,
 }));
+vi.mock("./mobile-wallet-link", () => ({
+  metamaskDappLink: () => h.metamaskLink,
+}));
 vi.mock("./use-connect-flow", () => ({
   useWalletChoices: () => h.choices,
 }));
 vi.mock("../session/context", () => ({
   useWallet: () =>
-    fakeWalletContext({ status: h.status, kind: h.kind, error: "rejected", connect: h.connect }),
+    fakeWalletContext({
+      status: h.status,
+      kind: h.kind,
+      error: "rejected",
+      connect: h.connect,
+      disconnect: h.disconnect,
+    }),
 }));
 
 const METAMASK: WalletChoice = { kind: "eip1193", id: "mm", name: "MetaMask", icon: "" };
@@ -38,6 +49,7 @@ beforeEach(() => {
   h.status = "disconnected";
   h.kind = undefined;
   h.choices = [];
+  h.metamaskLink = undefined;
 });
 
 function card(title: string) {
@@ -74,6 +86,19 @@ describe("Welcome", () => {
     expect(h.connect).toHaveBeenCalledTimes(1);
   });
 
+  it("offers MetaMask's own browser on a phone, where no wallet can announce itself", () => {
+    h.metamaskLink = "https://metamask.app.link/dapp/app.example.org/";
+    h.choices = [PASSKEY];
+    const link = within(card("Choose a wallet")).getByRole("link", { name: "Open in MetaMask" });
+    expect(link).toHaveAttribute("href", h.metamaskLink);
+  });
+
+  it("does not send the user to MetaMask from inside a wallet's browser", () => {
+    h.metamaskLink = "https://metamask.app.link/dapp/app.example.org/";
+    h.choices = [METAMASK];
+    expect(within(card("Choose a wallet")).queryByRole("link")).toBeNull();
+  });
+
   it("says a connection failed, why, and retries", () => {
     h.status = "error";
     const failed = card("Connection failed");
@@ -81,6 +106,28 @@ describe("Welcome", () => {
     fireEvent.click(within(failed).getByRole("button", { name: "Try again" }));
     expect(h.connect).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("button", { name: "Connect wallet" })).toBeNull();
+  });
+
+  it("says the wallet is being prepared once the key is derived, with nothing to sign", () => {
+    h.status = "preparing";
+    h.kind = "eip1193";
+    const region = card("Preparing your wallet…");
+    expect(region).not.toHaveTextContent(/sign/i);
+  });
+
+  it.each<WalletStatus>([
+    "connecting",
+    "loading-networks",
+    "deriving",
+    "preparing",
+    "resuming",
+  ])("offers a way out while %s", (status) => {
+    h.status = status;
+    h.kind = "eip1193";
+    h.disconnect.mockClear();
+    render(<Welcome />);
+    press("Cancel");
+    expect(h.disconnect).toHaveBeenCalledOnce();
   });
 
   it("names an unsupported network", () => {

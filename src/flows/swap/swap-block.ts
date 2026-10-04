@@ -4,6 +4,7 @@ import {
   blockedBy,
   type FeeReadiness,
   feeBlockTail,
+  NO_ASSETS_REASON,
   SUBMIT_OPEN,
   type SubmitBlock,
   type WalletReadiness,
@@ -23,7 +24,7 @@ export interface SwapSubmitState extends WalletReadiness, AmountReadiness, FeeRe
 export function swapSubmitBlock(s: SwapSubmitState): SubmitBlock {
   return (
     walletReadinessBlock("swapping", s) ??
-    (s.hasPair ? undefined : blockedBy("No assets on this network")) ??
+    (s.hasPair ? undefined : blockedBy(NO_ASSETS_REASON)) ??
     amountBlock(s) ??
     quoteBlock(s) ??
     feeBlockTail(s) ??
@@ -32,8 +33,11 @@ export function swapSubmitBlock(s: SwapSubmitState): SubmitBlock {
 }
 
 function quoteBlock(s: SwapSubmitState): SubmitBlock | undefined {
-  if (s.quoting) return blockedBy("Fetching a quote…");
-  if (s.quoteStale) return blockedBy("The quote expired — refresh it");
+  // A refresh behind a quote that still stands does not hold the swap.
+  if (s.quoting && !s.hasQuote) return blockedBy("Fetching a quote…");
+  if (s.quoteStale) {
+    return blockedBy(s.quoting ? "Refreshing the quote…" : "The quote expired — refresh it");
+  }
   if (s.quoteFailed) return blockedBy("Couldn't get a quote — try again");
   if (!s.hasQuote) return blockedBy("Waiting for a quote");
   return undefined;

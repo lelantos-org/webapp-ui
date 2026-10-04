@@ -4,6 +4,8 @@ import { kindAdapter, selectKind } from "@/features/wallet-kinds";
 import { cx } from "@/shared/lib/cx";
 import { capitalizeFirst } from "@/shared/lib/format/text";
 import { useWallet } from "../session/context";
+import { isConnectionPending } from "../session/wallet-status";
+import { metamaskDappLink } from "./mobile-wallet-link";
 import { PICKER_COPY, WalletChoiceList } from "./WalletPicker";
 import type { WalletChoice } from "./wallet-offerings";
 import "./Welcome.css";
@@ -16,16 +18,18 @@ export function WalletCard({
   choices: WalletChoice[];
   firstRef: RefObject<HTMLButtonElement>;
 }) {
-  const { status, kind, connect, error } = useWallet();
+  const { status, kind, connect, disconnect, error } = useWallet();
   const titleId = useId();
   const deriving = kind ? kindAdapter(kind).copy.deriving : undefined;
+  // Only without an injected wallet: inside a wallet's own browser the link would lead back here.
+  const metamaskLink = choices.some((c) => c.kind === "eip1193") ? undefined : metamaskDappLink();
 
   return (
     <section className="surface welcome__card" aria-live="polite" aria-labelledby={titleId}>
       {status === "disconnected" ? (
         <>
           <header className="welcome__card-hdr">
-            <h2 className="welcome__card-t" id={titleId}>
+            <h2 className="card-title welcome__card-t" id={titleId}>
               Choose a wallet
             </h2>
             <p className="welcome__card-sub">{PICKER_COPY.subtitle}</p>
@@ -42,6 +46,11 @@ export function WalletCard({
               Look for a wallet again
             </button>
           )}
+          {metamaskLink ? (
+            <a className="btn btn--outline" href={metamaskLink} rel="noreferrer">
+              Open in MetaMask
+            </a>
+          ) : null}
           <p className="footnote">{PICKER_COPY.notListed}</p>
         </>
       ) : null}
@@ -55,7 +64,7 @@ export function WalletCard({
             Your wallet is on a network this deployment does not serve. Switch it to continue — your
             shielded address is the same on every chain.
           </p>
-          <ChainSwitchButtons align="start" />
+          <ChainSwitchButtons />
         </>
       ) : null}
 
@@ -89,8 +98,24 @@ export function WalletCard({
         </>
       ) : null}
 
+      {status === "preparing" ? (
+        <Busy
+          id={titleId}
+          title="Preparing your wallet…"
+          body="Your key is ready. Finding your shielded notes."
+        />
+      ) : null}
+
       {status === "resuming" ? (
         <Busy id={titleId} title="Resuming your session…" body="Unlocking your shielded wallet." />
+      ) : null}
+
+      {/* Every waiting state has a way out: a hidden wallet popup or a stalled service would
+          otherwise leave only a reload. */}
+      {isConnectionPending(status) ? (
+        <button type="button" className="link-btn welcome__cancel" onClick={disconnect}>
+          Cancel
+        </button>
       ) : null}
 
       {status === "error" ? (
@@ -118,7 +143,7 @@ function CardTitle({
   tone?: "warn" | "err";
 }) {
   return (
-    <h2 className={cx("welcome__card-t", tone && `welcome__card-t--${tone}`)} id={id}>
+    <h2 className={cx("card-title welcome__card-t", tone && `welcome__card-t--${tone}`)} id={id}>
       {children}
     </h2>
   );

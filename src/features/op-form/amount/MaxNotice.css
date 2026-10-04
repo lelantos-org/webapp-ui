@@ -1,5 +1,4 @@
 @layer components {
-  /* MaxNotice */
   .maxnote__btn {
     flex: none;
     display: inline-grid;
@@ -21,7 +20,6 @@
   }
   .maxnote__btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
-  /* Popover */
   .maxnote__pop {
     position: fixed;
     z-index: var(--z-popover);

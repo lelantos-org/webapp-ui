@@ -198,7 +198,7 @@ describe("useNowSeconds", () => {
       c.functionName === "clock" ? 250 : answer(c),
     );
     const { result } = renderQueryHook(() => useNowSeconds(1_000));
-    // The chain is 240s ahead: a For button must close on its time, not ours.
+    // The chain is 240s ahead; voting windows close on the chain's time, not the browser's.
     await waitFor(() => expect(result.current).toBe(250));
   });
 });

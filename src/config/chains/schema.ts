@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { httpUrl } from "@/config/url";
 
-// ── protocol-webserver: /v1/chains ──────────────────────────────────────────
+// protocol-webserver: /v1/chains
 
 /// An http(s) URL, or `undefined` when absent or invalid, so one bad field cannot fail every chain.
 const optionalHttpUrl = httpUrl.optional().catch(undefined);
@@ -16,9 +16,8 @@ const registryChainRow = z.object({
   readRpcUrl: optionalHttpUrl,
   explorerUrl: optionalHttpUrl,
   permit2Address: z.string().optional(),
-  /// Cross-checked against the relayer's in `parse.ts`.
+  /// `maspAddress` and `treeDepth` are cross-checked against the relayer's.
   maspAddress: z.string().optional(),
-  /// Cross-checked against the relayer's in `parse.ts`.
   treeDepth: z.number().optional(),
   nativeAdapterAddress: z.string().optional(),
   swapWrapperAddress: z.string().optional(),
@@ -31,7 +30,7 @@ const registryChainRow = z.object({
 const registryChainsResponse = z.object({ chains: z.array(registryChainRow) });
 export type RegistryChainRow = z.infer<typeof registryChainRow>;
 
-// ── protocol-webserver: /v1/assets ──────────────────────────────────────────
+// protocol-webserver: /v1/assets
 
 /// Yield state, present iff the pool routes the asset to a venue. Figures are decimal strings.
 export const yieldStateRow = z.object({
@@ -60,7 +59,7 @@ const assetRow = z.object({
 const assetsResponse = z.array(assetRow);
 export type AssetRow = z.infer<typeof assetRow>;
 
-// ── relayer: /chains ────────────────────────────────────────────────────────
+// relayer: /chains
 
 /// What one relayer reports about itself; `maspAddress` and `treeDepth` are what a wallet cross-checks.
 const relayerChainRow = z.object({
@@ -72,8 +71,6 @@ const relayerChainRow = z.object({
 
 const relayerChainsResponse = z.object({ chains: z.array(relayerChainRow) });
 export type RelayerChainRow = z.infer<typeof relayerChainRow>;
-
-// ── the three together ──────────────────────────────────────────────────────
 
 /// The three bodies the registry is built from, as fetched and as cached.
 export const registryBundle = z.object({

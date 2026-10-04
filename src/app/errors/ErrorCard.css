@@ -1,5 +1,4 @@
 @layer components {
-  /* Card */
   .card {
     border: 1px solid var(--line);
     background: var(--bg-1);

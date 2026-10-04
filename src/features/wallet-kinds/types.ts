@@ -13,10 +13,12 @@ export type ChainLayerSpec =
   | { kind: "eip1193"; provider: Eip1193Provider; address: `0x${string}` }
   | { kind: "passkey"; credentialId: string };
 
-/// One kind's view of the world, read from whichever store owns it.
+/// One kind's session state, read from the store that owns it.
 export interface KindSnapshot {
   connected: boolean;
   connecting: boolean;
+  /// `connecting` without asking anything of the user: a stored session being restored.
+  silent?: boolean | undefined;
   error?: string | undefined;
   /// Opaque, stable account identity; namespaces the nsk cache and note stores.
   accountKey?: string | undefined;
@@ -27,16 +29,16 @@ export interface KindSnapshot {
   layer?: ChainLayerSpec | undefined;
 }
 
-/// How a kind produces a shielded spending key, and what it costs the user.
+/// How a kind produces a shielded spending key, and the prompt it shows the user.
 export interface KeySourcePlan {
   /// The EVM signer, if any. Absent means a read-only layer: can spend, cannot shield.
   signer?: EthSigner;
   derive(): Promise<Field>;
-  /// Names the prompt in logs. The user-facing wording is `deriving` below.
+  /// Names the prompt in logs. The user-facing wording is `KindCopy.deriving`.
   prompt: string;
 }
 
-/// The per-kind copy that would otherwise be a ternary in a component.
+/// Per-kind UI copy.
 export interface KindCopy {
   /// Row label in the wallet picker.
   label(): string;
@@ -55,7 +57,7 @@ export interface WalletKindAdapter {
   /// `"wallet"`: the wallet owns the network. `"app"`: the app selects one.
   readonly chainSource: "wallet" | "app";
   readonly copy: KindCopy;
-  /// Whether this kind can be offered on this device at all.
+  /// Whether this kind can be offered on this device.
   available(): boolean;
   useSnapshot(): KindSnapshot;
   /// Begin a session; `id` picks the instance (extension rdns). Call via `selectKind`, never directly.

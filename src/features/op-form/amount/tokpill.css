@@ -1,5 +1,4 @@
 @layer components {
-  /* AssetPill */
   .tokpill {
     flex: none;
     display: inline-flex;
@@ -27,7 +26,6 @@
   }
   .tokpill--open .tokpill__chev { transform: rotate(180deg); }
 
-  /* AssetSelectPill */
   .tokpill--select { position: relative; }
   .tokpill--select:focus-within { outline: var(--ring); outline-offset: 2px; }
   .tokpill--invalid { border-color: var(--err); }

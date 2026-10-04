@@ -1,9 +1,5 @@
-// Every `var(--token)` must resolve to a declared custom property.
-//
-// A missing token is silent: the declaration is simply dropped, so an element
-// keeps the inherited font, no background and a square corner, and nothing in
-// the build says a word. That is indistinguishable from "the design is off",
-// which is the only way it ever gets reported.
+// Every `var(--token)` must resolve to a declared custom property. The browser
+// drops a declaration with an undeclared token without any build error.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -24,8 +20,7 @@ function* cssFiles(dir) {
 
 const files = [...cssFiles(SRC)];
 
-// Declared anywhere: tokens.css holds the palette, but a component may define its
-// own locals, and those are just as valid.
+// A declaration in any stylesheet counts, so component-local properties are valid.
 const declared = new Set(SET_IN_JS);
 for (const file of files) {
   for (const match of readFileSync(file, "utf8").matchAll(/(--[a-z0-9-]+)\s*:/gi)) {

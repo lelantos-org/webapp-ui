@@ -20,8 +20,10 @@ interface ChainContextValue {
 const ChainContext = createContext<ChainContextValue | undefined>(undefined);
 
 export function ChainProvider({ children }: { children: ReactNode }) {
-  const { active: activeKind } = useWalletKinds();
-  const registryQuery = useChainRegistryQuery(activeKind !== undefined);
+  const { active: activeKind, snapshots } = useWalletKinds();
+  // Fetched from the moment a connection starts, so the registry is not waited on after it lands.
+  const connecting = snapshots.some((s) => s.snapshot.connecting);
+  const registryQuery = useChainRegistryQuery(activeKind !== undefined || connecting);
   const chainSource = activeKind?.adapter.chainSource;
   const reportedChainId = activeKind?.snapshot.chainId;
 
@@ -72,7 +74,6 @@ export function useChainRegistry(): ChainEntry[] {
   return useChainContext().registry;
 }
 
-/// Where the registry fetch stands; see `ChainRegistryState`.
 export function useChainRegistryState(): ChainRegistryState {
   return useChainContext().registryState;
 }
@@ -91,7 +92,6 @@ export function useActiveChain(): ChainEntry {
   return active;
 }
 
-/// Builds explorer links for the active chain.
 export function useTxExplorerUrl(): (txHash: string) => string | undefined {
   const explorerUrl = useActiveChainOrUndefined()?.explorerUrl;
   return useCallback((txHash: string) => txExplorerUrl(explorerUrl, txHash), [explorerUrl]);

@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { QUOTE_STALE_SECS } from "./use-swap-quote";
 
 export interface QuoteAge {
-  /// Seconds since the quote was issued.
   ageSecs: number | undefined;
   /// Past `QUOTE_STALE_SECS`; blocks the submit.
   stale: boolean;

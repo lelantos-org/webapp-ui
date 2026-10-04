@@ -1,17 +1,15 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  // The app entry (`index.html` -> `src/app/main.tsx`), the vite/vitest configs
-  // and every test file come from knip's Vite and Vitest plugins. The two
-  // workers are SDK modules (`@lelantos-org/sdk/workers/{prover,scanner}`), so
-  // nothing in this repo is a worker entry.
+  // The app entry, the vite/vitest configs and every test file come from knip's
+  // Vite and Vitest plugins. The workers are SDK modules, not entries here.
   "entry": ["scripts/*.mjs"],
   "project": ["src/**/*.{ts,tsx}", "vite/**/*.ts", "scripts/**/*.mjs", "*.ts"],
   // A symbol exported for its own file's tests or props, and used there, is not
-  // dead. Barrels still have to earn each re-export.
+  // dead.
   "ignoreExportsUsedInFile": true,
   "ignoreDependencies": [
-    // Reached through the `assert` alias in `vite/shared.ts` (circomlibjs needs
-    // it at runtime), never by an import knip can follow.
+    // Resolved through the `assert` alias in `vite/shared.ts` (circomlibjs needs
+    // it at runtime); knip cannot follow it.
     "assert",
     // The npm polyfills `src/app/boot/polyfills.ts` installs. knip reads the bare
     // specifiers as the Node builtins of the same name.

@@ -13,7 +13,7 @@ export interface AssetPillProps extends Omit<ButtonHTMLAttributes<HTMLButtonElem
   open?: boolean;
 }
 
-/// The asset trigger beside an `AmountHero` figure, opening the caller's own picker.
+/// The asset trigger beside an `AmountHero` figure; the caller supplies the picker it opens.
 export const AssetPill = forwardRef<HTMLButtonElement, AssetPillProps>(function AssetPill(
   { symbol, address, open = false, className, ...rest },
   ref,

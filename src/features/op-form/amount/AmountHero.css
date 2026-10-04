@@ -1,5 +1,4 @@
 @layer components {
-  /* AmountHero */
   .amt-hero {
     display: flex;
     flex-direction: column;
@@ -42,7 +41,6 @@
     transition: background var(--dur-160) var(--ease-soft);
   }
 
-  /* Focus */
   .amt-hero__row:focus-within + .amt-hero__words .amt-hero__rule { background: var(--accent); }
   .amt-hero__bal {
     display: flex;

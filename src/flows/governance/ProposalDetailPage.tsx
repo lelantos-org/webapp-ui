@@ -1,5 +1,6 @@
 import { useParams } from "react-router-dom";
 import {
+  GOV_TOKEN_DEFAULT,
   GovernanceNotFound,
   isProposalId,
   proposalBody,
@@ -23,7 +24,7 @@ import { StateBadge } from "./components/StateBadge";
 import { TallyBar } from "./components/TallyBar";
 import { VotePanel } from "./components/VotePanel";
 import { VotesList } from "./components/VotesList";
-import { DESCRIPTION_NOTE } from "./governance-copy";
+import { DESCRIPTION_NOTE, titleOf } from "./governance-copy";
 import { useGovTx } from "./use-gov-tx";
 import "./governance.css";
 
@@ -48,8 +49,7 @@ function ProposalDetail({ id }: { id: string }) {
 
   const d = detail.data;
   const l = live.data;
-  const decimals = power.data?.decimals ?? 18;
-  const symbol = power.data?.symbol ?? "LNT";
+  const { decimals, symbol } = power.data ?? GOV_TOKEN_DEFAULT;
 
   if (detail.error instanceof GovernanceNotFound && (live.isError || !isProposalId(id))) {
     return (
@@ -91,7 +91,7 @@ function ProposalDetail({ id }: { id: string }) {
     vote.mutate({ support, reason, onSent });
   };
 
-  const title = d?.title || `Proposal ${shortAddr(id, 6)}`;
+  const title = titleOf({ id, title: d?.title });
   const body = d ? proposalBody(d.description) : "";
 
   return (

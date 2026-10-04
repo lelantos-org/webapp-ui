@@ -4,7 +4,13 @@ export type TxPhase =
   | "wrapping"
   | "approving"
   | "signing"
+  /// A claim link's address is being reserved, before the spend starts.
+  | "reserving"
   | "preparing"
+  /// The funds are spread over more pieces than one spend takes, and are being merged first.
+  | "consolidating"
+  /// The prover and its proving key are being fetched: the first proof on a device.
+  | "fetching-prover"
   | "proving"
   | "submitting"
   | "broadcast"
@@ -32,6 +38,8 @@ export interface StepsOpts {
   needsApproval?: boolean;
   /// AllowanceTransfer-mode deposit: no per-deposit Permit2 signature, so no `signing` step.
   allowanceTransfer?: boolean;
+  /// A spend whose prover is not loaded yet: adds the step that fetches it.
+  coldProver?: boolean;
 }
 
 type StepCopy = Omit<Step, "id">;
@@ -43,6 +51,12 @@ const SPEND = {
     activeLabel: "Picking the funds to spend",
     doneLabel: "Picked the funds to spend",
   },
+  "fetching-prover": {
+    label: "Download the prover",
+    activeLabel: "Downloading the prover",
+    doneLabel: "Downloaded the prover",
+    detail: "A one-time download of about 20 MB. Later transactions on this device skip it.",
+  },
   proving: {
     label: "Build the zero-knowledge proof",
     activeLabel: "Building the zero-knowledge proof",
@@ -50,20 +64,38 @@ const SPEND = {
     detail:
       "This is the slow part. Your device is proving you own the funds without revealing which ones.",
   },
+  // The relayer answers only once the transaction is mined, so this step lasts until the block.
   submitting: {
     label: "Hand to the relayer",
-    activeLabel: "Handing to the relayer",
+    activeLabel: "The relayer is putting it on-chain",
     doneLabel: "Handed to the relayer",
-    detail: "The relayer puts it on-chain, so it is not sent from your public account.",
+    detail:
+      "The relayer sends it, so it does not come from your public account. This lasts until it is in a block.",
   },
   mined: {
     label: "Confirmed on-chain",
-    activeLabel: "Waiting for the block",
+    activeLabel: "Confirming on-chain",
     doneLabel: "Confirmed on-chain",
   },
 } satisfies Partial<Record<TxPhase, StepCopy>>;
 
-/// Copy for a deposit.
+/// Shown only when it happens: most spends need no merge.
+const CONSOLIDATING: Step = {
+  id: "consolidating",
+  label: "Combine your funds",
+  activeLabel: "Combining your funds first",
+  doneLabel: "Combined your funds",
+  detail:
+    "This amount is spread over more pieces than one transaction can spend, so they are merged first. That is one extra proof and one extra relayer fee.",
+};
+
+/// `steps` with the merge step after picking the funds, where it is not there already.
+export function withConsolidation(steps: Step[]): Step[] {
+  if (steps.some((s) => s.id === CONSOLIDATING.id)) return steps;
+  const at = steps.findIndex((s) => s.id === "preparing");
+  return [...steps.slice(0, at + 1), CONSOLIDATING, ...steps.slice(at + 1)];
+}
+
 const DEPOSIT = {
   approving: {
     label: "Approve the token once",
@@ -98,10 +130,10 @@ const DEPOSIT = {
 
 export function stepsFor(kind: OpKind, opts: StepsOpts = {}): Step[] {
   if (kind !== "deposit") {
-    return (["preparing", "proving", "submitting", "mined"] as const).map((id) => ({
-      id,
-      ...SPEND[id],
-    }));
+    const ids = opts.coldProver
+      ? (["preparing", "fetching-prover", "proving", "submitting", "mined"] as const)
+      : (["preparing", "proving", "submitting", "mined"] as const);
+    return ids.map((id) => ({ id, ...SPEND[id] }));
   }
   const tail = (["submitting", "broadcast", "mined"] as const).map((id) => ({
     id,
@@ -121,6 +153,20 @@ export function isDepositSteps(steps: readonly Pick<Step, "id">[]): boolean {
 
 export function isTerminal(phase: TxPhase | undefined): boolean {
   return phase === "flushed" || phase === "settled" || phase === "failed" || phase === "unknown";
+}
+
+/// Whether an op is still under way: its mutation is running, or it was sent and the tracker is
+/// still walking its steps.
+export function opInFlight(op: {
+  running: boolean;
+  /// The op was broadcast: its mutation resolved with a tx.
+  sent: boolean;
+  steps: readonly Pick<Step, "id">[];
+  done: boolean;
+  phase: TxPhase | undefined;
+}): boolean {
+  if (op.running) return true;
+  return op.sent && op.steps.length > 0 && !op.done && op.phase !== "failed";
 }
 
 /// Phase that closes the stepper: `flushed` for a deposit, else the last step.

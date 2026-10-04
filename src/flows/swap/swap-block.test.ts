@@ -7,7 +7,7 @@ const ready: SwapSubmitState = {
   balancesLoading: false,
   hasPair: true,
   amountValid: true,
-  amountEntered: true,
+  amountReason: undefined,
   hasQuote: true,
   quoteStale: false,
   quoting: false,
@@ -32,11 +32,20 @@ describe("swapSubmitBlock", () => {
     ["a network with nothing to trade", { hasPair: false }, "No assets on this network"],
     ["a quote in flight", { hasQuote: false, quoting: true }, "Fetching a quote…"],
     ["an expired quote", { quoteStale: true }, "The quote expired — refresh it"],
+    [
+      "an expired quote being re-priced",
+      { quoteStale: true, quoting: true },
+      "Refreshing the quote…",
+    ],
     ["a failed quote", { hasQuote: false, quoteFailed: true }, "Couldn't get a quote — try again"],
     ["no quote yet", { hasQuote: false }, "Waiting for a quote"],
     ["a fee still pricing", { feePending: true }, "Working out the fee…"],
   ])("explains %s", (_label, over, reason) => {
     expect(swapSubmitBlock({ ...ready, ...over })).toEqual({ disabled: true, reason });
+  });
+
+  it("does not hold the swap for a refresh behind a quote that still stands", () => {
+    expect(swapSubmitBlock({ ...ready, quoting: true })).toEqual({ disabled: false });
   });
 
   it("stays quiet about an amount that is already flagged under the field", () => {
@@ -54,7 +63,7 @@ describe("swapSubmitBlock", () => {
       const block = swapSubmitBlock({
         ...ready,
         amountValid: false,
-        amountEntered: false,
+        amountReason: "Enter an amount you hold",
         hasQuote: false,
       });
 

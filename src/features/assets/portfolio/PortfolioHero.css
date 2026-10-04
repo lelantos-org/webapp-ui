@@ -1,6 +1,8 @@
 @layer features {
-  /* Hero */
   .pf-hero {
+    /* The figure's size, shared with its placeholder so the two take the same height. */
+    --pf-fig: 60px;
+    --pf-fig-lh: 1.05;
     display: flex;
     flex-direction: column;
     gap: var(--sp-6);
@@ -18,9 +20,9 @@
   .pf-hero__val {
     margin: 0;
     font-family: var(--display);
-    font-size: 60px;
+    font-size: var(--pf-fig);
     font-weight: 600;
-    line-height: 1.05;
+    line-height: var(--pf-fig-lh);
     letter-spacing: -0.025em;
     color: var(--fg);
     font-variant-numeric: tabular-nums;
@@ -46,7 +48,6 @@
   .pf-hero__partial { color: var(--warn); }
   .pf-hero__scan { color: var(--fg-dim); }
 
-  /* Stale */
   .pf-hero__stale {
     display: inline-flex;
     align-items: center;
@@ -59,12 +60,13 @@
     font-size: var(--fs-14);
   }
 
-  /* Skeleton */
+  /* As tall as the figure's line box: the action tiles below must not move when it lands. */
   .pf-hero__skel {
     display: flex;
     flex-direction: column;
+    justify-content: center;
     gap: var(--sp-8);
-    padding: var(--sp-12) 0 var(--sp-10);
+    height: calc(var(--pf-fig) * var(--pf-fig-lh));
     max-width: 420px;
   }
   .pf-hero__skel-bar {
@@ -80,14 +82,14 @@
   }
 
   @media (max-width: 720px) {
-    .pf-hero__val { font-size: 48px; }
+    .pf-hero { --pf-fig: 48px; }
+    .pf-hero__skel-bar { height: 20px; }
   }
 
   @media (max-width: 480px) {
-    .pf-hero { gap: 5px; }
+    .pf-hero { gap: 5px; --pf-fig: 42px; }
     .pf-hero__label { gap: 7px; font-size: var(--fs-14); }
     .pf-hero__shield { width: 14px; height: 14px; }
-    .pf-hero__val { font-size: 42px; }
     .pf-hero__sub { font-size: var(--fs-13); }
     .pf-hero__skel-bar { height: 18px; }
   }

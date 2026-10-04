@@ -1,7 +1,6 @@
 /* Type patterns more than one surface sets the same way. */
 @layer primitives {
-  /* A section label: small, spaced capitals in the muted ink ("You are
-     sending", "What an observer sees", "Where these figures come from"). */
+  /* A section label: small, spaced capitals in the muted ink. */
   .caps {
     font-size: var(--fs-12);
     font-weight: 600;
@@ -19,8 +18,16 @@
     color: var(--fg-mute);
   }
 
-  /* A figure set large in the display face, tabular so digits do not shift as they change (the amount field, the review's
-     amount, the swap's receive leg). Size is the caller's. */
+  /* A card's heading in the display face. Size is the caller's. */
+  .card-title {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 600;
+    color: var(--fg);
+  }
+
+  /* A figure in the display face, tabular so digits do not shift as they change.
+     Size is the caller's. */
   .figure {
     font-family: var(--display);
     font-weight: 600;

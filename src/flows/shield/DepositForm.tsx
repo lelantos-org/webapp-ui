@@ -1,4 +1,5 @@
 import { supportsAllowanceTransfer } from "@lelantos-org/sdk/advanced";
+import { useCallback } from "react";
 import { z } from "zod";
 import {
   DEFAULT_ASSET_ID,
@@ -18,6 +19,7 @@ import {
   defaultAssetField,
   useActionForm,
   useActionSubmit,
+  useAskedAsset,
 } from "@/features/op-form";
 import { useWallet, useWalletInstance } from "@/features/wallet";
 import { Notice } from "@/shared/ui/Notice";
@@ -34,6 +36,7 @@ import {
   walletBalance,
 } from "./deposit-copy";
 import { SetupFlow } from "./setup/components/SetupFlow";
+import { useContinueAfterSetup } from "./setup/use-continue-after-setup";
 import { useDeposit } from "./use-deposit";
 import { useDepositAmount } from "./use-deposit-amount";
 import { useDepositSetup } from "./use-deposit-setup";
@@ -46,7 +49,6 @@ export const depositSchema = z.object({
 });
 export type DepositInput = z.infer<typeof depositSchema>;
 
-/// Shield screen, behind the wallet's deposit capability gate.
 export function DepositForm() {
   const { capabilities } = useWallet();
   const verdict = capabilities.deposit;
@@ -80,6 +82,7 @@ function DepositFormInner() {
     action,
   });
   const { register, watch, errors, selected, setAmount, clearFinished } = form;
+  useAskedAsset(form);
   const assets = useRegisteredAssets();
   const eth = useEthAssetField(form);
   const amountText = watch("amount");
@@ -91,7 +94,7 @@ function DepositFormInner() {
     kind: "deposit",
     selected,
     amount: amount.parsed,
-    protocol: amount.feeShown,
+    protocol: amount.fee,
     protocolPending: amount.feePending,
     feeAsset: amount.feeAsset,
     onFeeAsset: eth.asEth ? undefined : amount.onFeeAsset,
@@ -115,26 +118,47 @@ function DepositFormInner() {
     feeBlock: fees.block,
   });
 
-  const onSubmit = useActionSubmit<DepositInput>(form, (values, ctx) =>
-    m.mutateAsync({
-      amount: ctx.amount,
-      asset: ctx.asset.id,
-      native: values.asEth,
-      feeAsset: amount.feeAsset,
-    }),
+  const onSubmit = useActionSubmit<DepositInput>(
+    form,
+    (values, ctx) =>
+      m.mutateAsync({
+        amount: ctx.amount,
+        asset: ctx.asset.id,
+        native: values.asEth,
+        feeAsset: amount.feeAsset,
+      }),
+    { ready: !block.disabled && !block.setupFirst },
   );
 
+  const submit = useCallback(() => void onSubmit(), [onSubmit]);
+  const afterSetup = useContinueAfterSetup({
+    entered: `${selected?.id}|${eth.asEth}|${amountText}`,
+    setupOpen: setup.open,
+    ready: !block.disabled && !block.setupFirst,
+    submit,
+  });
+  const onFormSubmit = (e: React.FormEvent) => {
+    if (!block.setupFirst) {
+      void onSubmit(e);
+      return;
+    }
+    e.preventDefault();
+    afterSetup.arm();
+    setup.show();
+  };
+
   const figure = shieldFigure(selected, amount.parsed, symbol);
+  const verb = block.setupFirst ? "Set up and shield" : "Shield";
 
   return (
     <>
       <div hidden={picker.open}>
         <ActionForm
           header={HEADER}
-          submitLabel={figure ? `Shield ${figure}` : "Shield"}
+          submitLabel={figure ? `${verb} ${figure}` : verb}
           busy={m.isPending}
           error={m.error}
-          onSubmit={onSubmit}
+          onSubmit={onFormSubmit}
           submitDisabled={block.disabled}
           blockedReason={block.reason}
           footnote={depositFootnote(
@@ -217,7 +241,10 @@ function DepositFormInner() {
           assets={setup.assets}
           willApproveErc20={setup.willApproveErc20}
           onSuccess={setup.complete}
-          onCancel={setup.dismiss}
+          onCancel={() => {
+            afterSetup.disarm();
+            setup.dismiss();
+          }}
         />
       ) : null}
     </>

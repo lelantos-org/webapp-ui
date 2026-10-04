@@ -5,19 +5,20 @@
   --normal-border: var(--line-strong);
   --normal-text: var(--fg);
 
-  --success-bg: rgba(var(--accent-rgb), 0.07);
+  /* Opaque: a toast sits over the form, and a see-through one lets its text show through. */
+  --success-bg: var(--bg-1);
   --success-border: var(--accent-dim);
   --success-text: var(--accent);
 
-  --info-bg: rgba(var(--accent-rgb), 0.07);
+  --info-bg: var(--bg-1);
   --info-border: var(--accent-dim);
   --info-text: var(--accent);
 
-  --warning-bg: rgba(var(--warn-rgb), 0.07);
+  --warning-bg: var(--bg-1);
   --warning-border: var(--warn-dim);
   --warning-text: var(--warn);
 
-  --error-bg: rgba(var(--err-rgb), 0.07);
+  --error-bg: var(--bg-1);
   --error-border: rgba(var(--err-rgb), 0.25);
   --error-text: var(--err);
 
@@ -28,6 +29,16 @@
   --gray12: var(--fg-mute);
 
   --border-radius: var(--radius);
+}
+
+/* The same tints as before, mixed into the ground instead of laid over what is behind. */
+@supports (background: color-mix(in srgb, red 50%, blue)) {
+  :root [data-sonner-toaster][data-theme="light"] {
+    --success-bg: color-mix(in srgb, var(--accent) 7%, var(--bg-1));
+    --info-bg: color-mix(in srgb, var(--accent) 7%, var(--bg-1));
+    --warning-bg: color-mix(in srgb, var(--warn) 7%, var(--bg-1));
+    --error-bg: color-mix(in srgb, var(--err) 7%, var(--bg-1));
+  }
 }
 
 [data-sonner-toaster] {
@@ -43,10 +54,8 @@
 [data-sonner-toast] [data-description] {
   font-size: var(--fs-12);
   line-height: 1.5;
-  opacity: 0.85;
 }
 
-/* Action button */
 :root [data-sonner-toaster] [data-sonner-toast] [data-button] {
   background: transparent;
   border: 1px solid currentColor;
@@ -59,4 +68,16 @@
 }
 :root [data-sonner-toaster] [data-sonner-toast] [data-button]:hover {
   background: rgba(0, 0, 0, 0.05);
+}
+
+/* Touch targets: sonner's action and close buttons are 24px and 20px. */
+@media (pointer: coarse) {
+  :root [data-sonner-toaster] [data-sonner-toast] [data-button] {
+    min-height: 44px;
+    padding-inline: var(--sp-14);
+  }
+  :root [data-sonner-toaster] [data-sonner-toast] [data-close-button] {
+    width: 32px;
+    height: 32px;
+  }
 }

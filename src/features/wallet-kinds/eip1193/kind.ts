@@ -17,7 +17,7 @@ export const eip1193Kind: WalletKindAdapter = {
 
   copy: {
     label: () => "Browser wallet",
-    // The signature IS the spending key and has no origin binding, so that risk goes in `warn`.
+    // The signature is the spending key and has no origin binding, so that risk goes in `warn`.
     deriving: {
       title: "check your wallet",
       body: "sign the EIP-712 message to derive your shielded key.",
@@ -37,12 +37,14 @@ export const eip1193Kind: WalletKindAdapter = {
     const chainId = useStore(eip1193Store, (s) => s.chainId);
     const provider = useStore(eip1193Store, (s) => s.provider);
     const error = useStore(eip1193Store, (s) => s.error);
+    const resuming = useStore(eip1193Store, (s) => s.resuming);
 
     return useMemo<KindSnapshot>(() => {
       const connected = status === "connected" && !!address;
       return {
         connected,
         connecting: status === "connecting",
+        silent: status === "connecting" && !!resuming,
         error: status === "error" ? error : undefined,
         accountKey: connected ? address : undefined,
         ethAddress: connected ? address : undefined,
@@ -52,7 +54,7 @@ export const eip1193Kind: WalletKindAdapter = {
             ? { kind: "eip1193", provider, address }
             : undefined,
       };
-    }, [status, address, chainId, provider, error]);
+    }, [status, address, chainId, provider, error, resuming]);
   },
 
   attach: (rdns) => void eip1193Store.connect(rdns),

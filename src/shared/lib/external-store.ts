@@ -1,10 +1,8 @@
 import { useSyncExternalStore } from "react";
 
-/// A listener set that can be told something changed.
 export interface Subscribers {
   /// Add `listener`; returns the function that removes it.
   subscribe(listener: () => void): () => void;
-  /// Call every current listener.
   notify(): void;
 }
 

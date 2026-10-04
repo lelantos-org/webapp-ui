@@ -14,7 +14,6 @@
     color: var(--fg-mute);
   }
 
-  /* Row */
   .pf-row { border-bottom: 1px solid var(--line); }
   .pf-row:last-child { border-bottom: 0; }
   .pf-row__btn {
@@ -81,7 +80,6 @@
   .pf-row__earned--down,
   .pf-row__earned--paused { color: var(--warn); }
 
-  /* In-flight legs */
   .bal__flow {
     display: inline-flex;
     align-items: center;
@@ -109,7 +107,6 @@
     animation: spin 800ms linear infinite;
   }
 
-  /* Row detail */
   .pf-detail {
     border-top: 1px solid var(--line);
     background: var(--bg-1);

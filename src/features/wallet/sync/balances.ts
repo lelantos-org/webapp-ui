@@ -14,7 +14,6 @@ export interface HeldNote {
   firstSeenBlock?: number | undefined;
 }
 
-/// The plain view of the wallet's unspent notes.
 export function heldNotes(notes: readonly WalletNote[]): HeldNote[] {
   return notes.map((n) => ({
     asset: n.asset,

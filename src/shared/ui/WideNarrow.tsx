@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/// The same text at two lengths, switched by CSS so the first render is already right.
+/// Text at two lengths, switched by CSS so the first render is correct.
 export function WideNarrow({ wide, narrow }: { wide: ReactNode; narrow: ReactNode }) {
   return (
     <>

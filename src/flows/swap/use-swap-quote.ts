@@ -44,7 +44,7 @@ export function useSwapQuote(request: QuoteSwapOptions | undefined): QuoteResult
 /// `request`, stable by value; a fresh object each render would loop the debounce and buy quotes.
 function usePinnedRequest(request: QuoteSwapOptions | undefined): QuoteSwapOptions | undefined {
   const key = requestKey(request);
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `key` is `request` flattened; depending on the object reintroduces the loop described above
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `key` is `request` flattened
   return useMemo(() => request, [key]);
 }
 
@@ -57,8 +57,7 @@ function requestKey(r: QuoteSwapOptions | undefined): string {
   return [String(r.assetIn), String(r.assetOut), side, figure, String(r.slippageBps)].join("|");
 }
 
-/// The quote's cache key: the trade, on this chain, for this wallet.
-export function swapQuoteKey(
+function swapQuoteKey(
   chainId: bigint,
   account: string | undefined,
   request: QuoteSwapOptions | undefined,

@@ -6,22 +6,28 @@ import {
   type FeePanel,
   feeIncoming,
   feeLegFor,
-  shownFee,
+  relayerFeeCap,
   useFeePanel,
   useFeePreview,
   withSymbol,
 } from "@/features/fees";
 import { useSpendableMax, useWalletState } from "@/features/wallet";
 import type { FeeKind } from "@/shared/domain/op-kind";
+import type { RelayerFeeTerms } from "@/shared/domain/relayer-fee";
 import { joinHint } from "@/shared/lib/format/text";
-import type { AmountReadiness, FeeReadiness, WalletReadiness } from "../submit/submit-block";
+import {
+  type AmountReadiness,
+  amountTextReason,
+  type FeeReadiness,
+  type WalletReadiness,
+} from "../submit/submit-block";
 import {
   type AmountValidation,
   NO_META,
   parseAmountSafe,
   validateAmount,
 } from "./amount-validation";
-import { settlingHint, withheldHint } from "./balance-hint";
+import { heldReason, MERGE_HINT, settlingHint, spendReach, withheldHint } from "./balance-hint";
 import { useFollowMax } from "./use-follow-max";
 
 export interface SpendAmountInputs {
@@ -29,7 +35,7 @@ export interface SpendAmountInputs {
   selected: RegisteredAsset | undefined;
   amountText: string;
   setAmount(formatted: string): void;
-  /// Show the protocol fee; only a withdraw has a transparent leg to charge.
+  /// Shows the protocol fee; only a withdraw has a transparent leg to charge.
   protocolFee?: boolean;
   /// The screen's name for the asset where it differs from the registry's ("ETH" for WETH).
   spendSymbol?: string | undefined;
@@ -45,17 +51,21 @@ export interface SpendAmount {
   validation: AmountValidation;
   /// The chosen fee asset, or `undefined` for the asset being spent.
   feeAsset: bigint | undefined;
+  /// What the spend passes on: the fee asset, and the fee on screen as its cap.
+  relayerFee: RelayerFeeTerms;
   fees: FeePanel;
   spendable: SpendableMax | undefined;
   onSetMax(formatted: string): void;
-  /// What is still settling or held back.
+  /// What is still settling or held back, and whether the amount needs the funds merged first.
   hint: string | undefined;
+  /// The amount needs the funds merged before it can be sent: an extra proof and relayer fee.
+  needsMerge: boolean;
   /// `selected`, relabelled by `spendSymbol`.
   display: RegisteredAsset | undefined;
   readiness: WalletReadiness & AmountReadiness & FeeReadiness;
 }
 
-/// A shielded spend's amount, balance, fees and max, derived together so they agree.
+/// A shielded spend's amount, balance, fees and max, derived in one place so they agree.
 export function useSpendAmount({
   kind,
   selected,
@@ -81,14 +91,15 @@ export function useSpendAmount({
     kind,
     selected,
     amount: parsed,
-    protocol: protocolFee ? shownFee(preview) : undefined,
+    protocol: protocolFee ? preview.data : undefined,
     protocolPending: protocolFee && feeIncoming(preview),
     feeAsset,
     onFeeAsset: setFeeAsset,
     spendSymbol,
+    native,
   });
 
-  // Not the balance: a max from the balance would write an amount the note selector rejects.
+  // Max comes from the spendable max, not the balance: the note selector rejects a max taken from the balance.
   const spendable = useSpendableMax(selected?.id, {
     kind,
     feeAsset,
@@ -99,26 +110,36 @@ export function useSpendAmount({
   const { onSetMax } = useFollowMax(spendable?.max, selected, amountText, setAmount);
 
   const meta = display ?? NO_META;
+  // Judged only for an amount the balance covers: the field reports the rest itself.
+  const reach = validation.valid ? spendReach(parsed, spendable) : "direct";
   const hint = joinHint(
     settlingHint(balance, row?.pending ?? 0n, row?.outflow ?? 0n, meta),
     withheldHint(spendable, meta),
+    reach === "merge" ? MERGE_HINT : undefined,
   );
+  const held = reach === "held" && spendable ? heldReason(spendable, meta) : undefined;
 
   return {
     balance,
     parsed,
     validation,
     feeAsset,
+    relayerFee: { feeAsset, maxFee: relayerFeeCap(fees) },
     fees,
     spendable,
     onSetMax,
     hint,
+    needsMerge: reach === "merge",
     display,
     readiness: {
       syncErrored: !!syncError,
       balancesLoading,
-      amountValid: validation.valid,
-      amountEntered: amountText.trim() !== "",
+      // An amount held back by something still settling would fail after the review.
+      amountValid: validation.valid && held === undefined,
+      amountReason:
+        validation.tooLarge || validation.insufficient
+          ? undefined
+          : (held ?? amountTextReason(amountText, parsed, display?.symbol)),
       feeBlock: fees.block,
       feePending: fees.pending,
     },

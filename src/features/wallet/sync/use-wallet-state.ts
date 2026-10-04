@@ -1,5 +1,5 @@
 import { skipToken, type UseQueryResult, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { useActiveChain } from "@/features/chain";
 import { BALANCE_POLL_MS, BALANCE_STALE_MS, usePolling } from "@/shared/query/cadence";
 import { queryKeys } from "@/shared/query/keys";
@@ -17,25 +17,29 @@ export interface WalletState {
 
 const SYNC_LIMIT = 500;
 
+/// The last watermark acted on per account. Shared by every `useWalletState` caller, so a new
+/// head costs one sync however many of them are mounted.
+const seenHead = new Map<string, string>();
+
 // Invalidate on a watermark change. Not in the query key: a new key blanks `data` and flickers balances.
-function useRefetchOnNewHead(): void {
+function useRefetchOnNewHead(chainId: bigint, address: string | undefined): void {
   const head = useSyncHead();
   const invalidate = useInvalidateWalletState();
-  const seen = useRef<string | null>(null);
   useEffect(() => {
-    if (head === null) return;
-    const previous = seen.current;
-    seen.current = head;
-    if (previous === null || previous === head) return;
+    if (head === null || address === undefined) return;
+    const account = `${chainId}:${address}`;
+    const previous = seenHead.get(account);
+    seenHead.set(account, head);
+    if (previous === undefined || previous === head) return;
     void invalidate();
-  }, [head, invalidate]);
+  }, [head, invalidate, chainId, address]);
 }
 
 /// Sync the wallet and derive confirmed balances, polling while the tab is visible.
 export function useWalletState(): UseQueryResult<WalletState> {
   const wallet = useWalletInstance();
   const { chainId } = useActiveChain();
-  useRefetchOnNewHead();
+  useRefetchOnNewHead(chainId, wallet?.address);
   return useQuery<WalletState>({
     queryKey: queryKeys.walletState(chainId, wallet?.address),
     queryFn: !wallet

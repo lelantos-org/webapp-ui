@@ -5,18 +5,17 @@ import { whenIdle } from "@/shared/lib/when-idle";
 
 const log = createLogger("wasm");
 
-let booted: Promise<void> | undefined;
+let registered = false;
 
 /// Register the SDK's jubjub WASM loader. Idempotent.
-export function ensureWasm(): Promise<void> {
-  if (booted) return booted;
+export function ensureWasm(): void {
+  if (registered) return;
+  registered = true;
   log.debug("registering jubjub loader");
   configureJubjubWasm({
     loadModule: () => import("@lelantos-org/sdk/wasm/jubjub") as Promise<never>,
     wasm: jubjubWasmUrl,
   });
-  booted = Promise.resolve();
-  return booted;
 }
 
 /// Warm the WASM bytes in the HTTP cache during idle time.

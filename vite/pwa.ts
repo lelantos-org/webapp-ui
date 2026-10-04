@@ -30,7 +30,16 @@ export function pwa(): PluginOption {
     devOptions: { enabled: false, type: "module" },
     workbox: {
       globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
-      globIgnores: ["**/wasm-bindgen-rayon-*/**", "**/pkg/snippets/**", "**/snarkjs*"],
+      // Fallbacks, fetched only when the wasm they stand in for fails: the snarkjs prover, the
+      // ffjavascript chunk it pulls in (named after the package's `browser.esm.js`), and the
+      // per-arity `poseidon-lite` tables.
+      globIgnores: [
+        "**/wasm-bindgen-rayon-*/**",
+        "**/pkg/snippets/**",
+        "**/snarkjs*",
+        "**/browser.esm-*",
+        "**/poseidon[1-6]-*",
+      ],
       navigateFallbackDenylist: Object.keys(devProxy()).map((prefix) => new RegExp(`^${prefix}`)),
     },
   });

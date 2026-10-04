@@ -37,9 +37,7 @@ export interface AssetEthForm {
 }
 
 export interface EthAssetField {
-  /// The `asset` field's value.
   asset: string;
-  /// The `asEth` field's value.
   asEth: boolean;
   pickerValue: string;
   /// Pass to the picker's `onChange`; updates `asset` and `asEth` in lockstep.

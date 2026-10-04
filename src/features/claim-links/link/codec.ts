@@ -35,7 +35,6 @@ export function parseClaimFragment(hash: string): Result<ClaimPayload, ClaimPars
   return ok({ chainId, nskHex });
 }
 
-/// Map a parse error to a user-facing string.
 export function describeClaimError(e: ClaimParseError): string {
   switch (e) {
     case "invalid-length":

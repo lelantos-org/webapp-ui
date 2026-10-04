@@ -15,7 +15,6 @@
   .vault-cap--err .vault-meter__fill,
   .vault-sum--err .vault-meter__fill { background: var(--err); }
 
-  /* Capacity box */
   .vault-cap {
     display: flex;
     flex-direction: column;
@@ -78,12 +77,7 @@
     padding: 17px 22px;
     border-bottom: 1px solid var(--line);
   }
-  .vault-list__t {
-    margin: 0;
-    font-family: var(--display);
-    font-size: 19px;
-    font-weight: 600;
-  }
+  .vault-list__t { font-size: 19px; }
   .vault-list__count {
     font-size: var(--fs-14);
     color: var(--fg-mute);
@@ -150,7 +144,6 @@
     white-space: nowrap;
   }
 
-  /* Row actions */
   .vault-row__actions {
     display: flex;
     justify-content: flex-end;
@@ -192,7 +185,6 @@
   .vault-tag--warn { border-color: var(--warn); color: var(--warn); }
   .vault-tag--err { border-color: var(--err); color: var(--err); }
 
-  /* Summary panel */
   .vault-sum {
     display: flex;
     flex-direction: column;

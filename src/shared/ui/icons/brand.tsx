@@ -1,4 +1,4 @@
-/// The GitHub mark for the footer link, named by its own `<title>`.
+/// GitHub mark. Its `<title>` is the accessible name.
 export function GithubIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" role="img">

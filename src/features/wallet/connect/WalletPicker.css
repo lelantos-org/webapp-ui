@@ -1,5 +1,4 @@
 @layer features {
-  /* Wallet rows */
   .wallet-list {
     list-style: none;
     margin: 0;
@@ -30,7 +29,6 @@
     border-color: var(--accent);
   }
 
-  /* Lead row */
   .wallet-choice--lead {
     border-color: var(--accent);
     background: rgba(var(--accent-rgb), 0.08);
@@ -48,7 +46,6 @@
     background: var(--bg-2);
   }
 
-  /* Icon fallback */
   .wallet-choice__icon--mono,
   .wallet-choice__icon--glyph {
     display: inline-flex;

@@ -130,3 +130,17 @@ describe("BackdropField.draw", () => {
     expect(calls.stroke).toBe(0);
   });
 });
+
+describe("BackdropField palette", () => {
+  it("draws in the new colours after a theme change, keeping its nodes", () => {
+    const f = field();
+    const nodes = f.size;
+    const next = buildPalette([200, 100, 50]);
+    f.setPalette(next);
+
+    const { ctx } = recordingContext();
+    f.draw(ctx);
+    expect(ctx.fillStyle).toBe(next.node);
+    expect(f.size).toBe(nodes);
+  });
+});

@@ -5,7 +5,7 @@ interface SuccessCheckProps {
   caption?: ReactNode;
 }
 
-/// The animated success tick, with an optional caption.
+/// Animated success tick.
 export function SuccessCheck({ caption }: SuccessCheckProps) {
   return (
     <div className="success-check" role="status" aria-live="polite">

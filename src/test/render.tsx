@@ -6,7 +6,6 @@ import { ROUTER_FUTURE } from "@/app/providers/router-future";
 
 type WrapperProps = { children: ReactNode };
 
-/// A fresh `QueryClient` with retries off and no cache retention.
 export function createTestQueryClient(): QueryClient {
   return new QueryClient({
     defaultOptions: {
@@ -28,7 +27,6 @@ export function queryWrapper({ children }: WrapperProps) {
   return <QueryClientProvider client={createTestQueryClient()}>{children}</QueryClientProvider>;
 }
 
-/// Wrapper providing an in-memory router with the app's future flags.
 export function routerWrapper({ children }: WrapperProps) {
   return <MemoryRouter future={ROUTER_FUTURE}>{children}</MemoryRouter>;
 }

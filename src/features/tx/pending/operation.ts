@@ -7,7 +7,7 @@ export interface OperationResult {
   operation?: { index: number; count: number } | undefined;
 }
 
-/// The operation a pending entry belongs to. See `pendingOpOf`.
+/// The operation a pending entry belongs to.
 export interface PendingOp {
   /// Originating tx hash. Several operations may share one when bundled.
   txHash: string;
@@ -15,7 +15,6 @@ export interface PendingOp {
   opId: string;
 }
 
-/// The operation a result describes: its tx hash, and its first commitment as the id.
 export function pendingOpOf(result: OperationResult): PendingOp {
   return { txHash: result.txHash, opId: result.commitments[0] ?? result.txHash };
 }

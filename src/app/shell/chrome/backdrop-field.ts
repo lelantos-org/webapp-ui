@@ -76,9 +76,14 @@ export class BackdropField {
   private linkCount = 0;
 
   constructor(
-    private readonly palette: FieldPalette,
+    private palette: FieldPalette,
     private readonly random: () => number = Math.random,
   ) {}
+
+  /// Recolour without reseeding: the theme changed under a field already drawn.
+  setPalette(palette: FieldPalette): void {
+    this.palette = palette;
+  }
 
   get size(): number {
     return this.nodes.length;
@@ -118,7 +123,6 @@ export class BackdropField {
     this.targetY = (clientY / this.h - 0.5) * -2 * PARALLAX;
   }
 
-  /// Advance by `dtMs`, clamped to `MAX_DT`.
   advance(dtMs: number): void {
     const dt = Math.min(MAX_DT, dtMs);
     if (dt <= 0) return;
@@ -151,7 +155,7 @@ export class BackdropField {
     }
   }
 
-  /// Paint the current state. Allocates nothing.
+  /// Allocates nothing.
   draw(ctx: FieldContext): void {
     ctx.clearRect(0, 0, this.w, this.h);
     ctx.save();

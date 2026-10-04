@@ -5,7 +5,6 @@ export function asBaseUnits(value: bigint): TokenAmount {
   return value as TokenAmount;
 }
 
-/// Zero, in token base units.
 export const ZERO_BASE: TokenAmount = asBaseUnits(0n);
 
 /// The fields every circuit/token conversion needs; `index` is required so it is never stale.
@@ -16,7 +15,6 @@ export interface AssetUnits {
   index: bigint;
 }
 
-/// What names an asset on screen and prices it.
 export interface AssetLabel {
   symbol: string;
   /// Backing ERC-20 address for USD pricing; absent means no dollar figure.

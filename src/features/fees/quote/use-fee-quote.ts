@@ -6,16 +6,16 @@ import type { FeeKind } from "@/shared/domain/op-kind";
 import type { AssetLabel, AssetUnits } from "@/shared/domain/units";
 import { queryKeys } from "@/shared/query/keys";
 
-export type { FeeOption, FeeQuote };
-
 /// The relayer's amount-independent fee quote for `kind`, one option per accepted asset.
-export function useFeeQuote(kind: FeeKind): UseQueryResult<FeeQuote> {
+///
+/// `native` is a native-coin withdrawal, which the relayer prices separately.
+export function useFeeQuote(kind: FeeKind, native = false): UseQueryResult<FeeQuote> {
   const wallet = useWalletInstance();
   const { chainId } = useActiveChain();
 
   return useQuery<FeeQuote>({
-    queryKey: queryKeys.feeQuote(chainId, wallet?.address, kind),
-    queryFn: wallet ? () => wallet.quoteFee(kind) : skipToken,
+    queryKey: queryKeys.feeQuote(chainId, wallet?.address, native ? `${kind}:native` : kind),
+    queryFn: wallet ? () => wallet.quoteFee(kind, { native }) : skipToken,
     staleTime: 30_000,
     placeholderData: keepPreviousData,
   });

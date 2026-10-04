@@ -31,7 +31,6 @@
     color: var(--fg-mute);
   }
 
-  /* Phones */
   @media (max-width: 480px) {
     .brand__mark { width: 21px; height: 21px; }
     .brand__name { font-size: var(--fs-12); }

@@ -8,6 +8,7 @@ const session = vi.hoisted(() => ({ value: undefined as unknown }));
 
 vi.mock("../session/context", () => ({ useWallet: () => session.value }));
 vi.mock("./Welcome", () => ({ Welcome: () => <p>welcome</p> }));
+vi.mock("../sync/use-spend-warmup", () => ({ useSpendWarmup: () => {} }));
 
 beforeEach(() => {
   session.value = fakeWalletContext();

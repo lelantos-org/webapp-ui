@@ -133,4 +133,33 @@ describe("Modal", () => {
     expect(dialog).toHaveAccessibleName("One-time setup");
     expect(dialog).toHaveAccessibleDescription("what this does");
   });
+
+  it("gives focus back to what opened it, and holds the page still meanwhile", () => {
+    const opener = document.createElement("button");
+    document.body.append(opener);
+    opener.focus();
+
+    const { unmount } = render(
+      <Modal title="Confirm">
+        <button type="button">ok</button>
+      </Modal>,
+    );
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "ok" }));
+    expect(document.documentElement.style.overflow).toBe("hidden");
+
+    unmount();
+    expect(document.activeElement).toBe(opener);
+    expect(document.documentElement.style.overflow).toBe("");
+    opener.remove();
+  });
+
+  it("keeps the page still until the last of two modals closes", () => {
+    const first = render(<Modal title="One">a</Modal>);
+    const second = render(<Modal title="Two">b</Modal>);
+
+    second.unmount();
+    expect(document.documentElement.style.overflow).toBe("hidden");
+    first.unmount();
+    expect(document.documentElement.style.overflow).toBe("");
+  });
 });

@@ -1,7 +1,6 @@
 /// Hex long enough to be a selector or longer; short values like a chain id stay readable.
 const HEX_BLOB = /0x[0-9a-fA-F]{8,}/;
 
-/// Does the message contain any of these?
 const anyOf =
   (...words: string[]) =>
   (lower: string) =>
@@ -14,16 +13,19 @@ const both = (a: (s: string) => boolean, b: (s: string) => boolean) => (lower: s
 const KEYWORD_ADVICE: ReadonlyArray<{ when(lower: string): boolean; text: string }> = [
   {
     when: anyOf("slippage", "min out", "minout"),
-    text: "Price moved past your slippage limit. Refresh quote and retry.",
+    text: "The price moved past your slippage limit. Check the new quote and try again.",
   },
-  { when: anyOf("expired", "deadline"), text: "Quote expired. Refresh and retry." },
+  {
+    when: anyOf("expired", "deadline"),
+    text: "The quote expired. Check the new one and try again.",
+  },
   {
     when: anyOf("nonce too low", "replacement transaction"),
-    text: "Wallet nonce conflict. Reset pending txs and retry.",
+    text: "Your wallet has another transaction pending. Let it finish, or cancel it in the wallet, then try again.",
   },
   {
     when: anyOf("allowance", "permit"),
-    text: "Token approval missing or expired. Re-run setup.",
+    text: "The token approval is missing or has expired. Shielding again offers the setup.",
   },
   {
     when: anyOf("unrecognized chain", "unrecognized network"),
@@ -31,11 +33,11 @@ const KEYWORD_ADVICE: ReadonlyArray<{ when(lower: string): boolean; text: string
   },
   {
     when: both(anyOf("network"), anyOf("changed", "disconnect")),
-    text: "Network changed mid-flight. Reconnect wallet and retry.",
+    text: "The wallet changed network while this was running. Switch back and try again.",
   },
   {
     when: anyOf("execution reverted", "revert"),
-    text: "Transaction reverted on-chain. Check balance and slippage, then retry.",
+    text: "The transaction reverted, so nothing moved. Check your balance, and your slippage on a swap, then try again.",
   },
 ];
 

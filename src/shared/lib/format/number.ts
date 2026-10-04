@@ -3,22 +3,47 @@ const AMOUNT_FORMATTER = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
-/// Typed decimal text with user grouping stripped: `"1,234_5 "` becomes `"12345"`.
-export function normalizeNumericInput(input: string): string {
-  return input.replaceAll(",", "").replaceAll("_", "").trim();
+let localeDecimalComma: boolean | undefined;
+
+/// Whether the runtime locale writes the decimal point as a comma.
+function usesDecimalComma(): boolean {
+  localeDecimalComma ??=
+    new Intl.NumberFormat().formatToParts(1.1).find((p) => p.type === "decimal")?.value === ",";
+  return localeDecimalComma;
 }
 
-/// `value` split at `decimals` (> 0) places: grouped `whole`, zero-padded `digits` or `undefined`.
+/// Typed decimal text as plain `1234.5`: grouping stripped, a decimal comma turned into a dot.
+///
+/// With both separators the last one is the decimal point. A lone comma is the decimal point
+/// unless the text has the shape of a grouped thousand (`1,234`), which follows `decimalComma`.
+export function normalizeNumericInput(input: string, decimalComma = usesDecimalComma()): string {
+  const text = input.replaceAll("_", "").trim();
+  const comma = text.lastIndexOf(",");
+  if (comma === -1) return text;
+
+  const dot = text.lastIndexOf(".");
+  if (dot !== -1) {
+    return comma > dot ? text.replaceAll(".", "").replace(",", ".") : text.replaceAll(",", "");
+  }
+  if (text.indexOf(",") !== comma) return text.replaceAll(",", "");
+
+  const groupedThousand = /^[1-9]\d{0,2},\d{3}$/.test(text);
+  return groupedThousand && !decimalComma ? text.replace(",", "") : text.replace(",", ".");
+}
+
+/// `value` split at `decimals` (> 0) places: `whole`, zero-padded `digits` or `undefined`.
 function splitDecimal(
   value: bigint,
   decimals: number,
+  grouped = true,
 ): { sign: string; whole: string; digits: string | undefined } {
   const abs = value < 0n ? -value : value;
   const base = 10n ** BigInt(decimals);
   const frac = abs % base;
+  const whole = abs / base;
   return {
     sign: value < 0n ? "-" : "",
-    whole: AMOUNT_FORMATTER.format(abs / base),
+    whole: grouped ? AMOUNT_FORMATTER.format(whole) : whole.toString(),
     digits: frac === 0n ? undefined : frac.toString().padStart(decimals, "0"),
   };
 }
@@ -28,10 +53,11 @@ export function formatAmount(v: bigint): string {
   return AMOUNT_FORMATTER.format(v);
 }
 
-/// `value` as grouped decimal text with `decimals` places, trailing zeros stripped.
-export function formatDecimal(value: bigint, decimals: number): string {
-  if (decimals <= 0) return formatAmount(value);
-  const { sign, whole, digits } = splitDecimal(value, decimals);
+/// `value` as decimal text with `decimals` places, trailing zeros stripped. `grouped` adds
+/// thousand separators.
+export function formatDecimal(value: bigint, decimals: number, grouped = true): string {
+  if (decimals <= 0) return grouped ? formatAmount(value) : value.toString();
+  const { sign, whole, digits } = splitDecimal(value, decimals, grouped);
   if (digits === undefined) return `${sign}${whole}`;
   return `${sign}${whole}.${digits.replace(/0+$/, "")}`;
 }

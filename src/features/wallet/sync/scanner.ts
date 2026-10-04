@@ -15,7 +15,6 @@ function scannerWorker(): Worker {
 
 const scanners = new WeakMap<WalletApi, Scanner>();
 
-/// Record that `wallet` holds `scanner`, for `releaseScanner`.
 export function holdScanner(wallet: WalletApi, scanner: Scanner): void {
   scanners.set(wallet, scanner);
 }

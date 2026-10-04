@@ -1,18 +1,12 @@
-import { circuitAmount, connect, type WalletApi } from "@lelantos-org/sdk";
+import { circuitAmount, type SpendPhase, type WalletApi } from "@lelantos-org/sdk";
 import { deriveKeysFromNsk, type Field } from "@lelantos-org/sdk/primitives";
 import { type ChainEntry, chainKey } from "@/config/chains";
-import { env } from "@/config/env";
 import {
   clearCachedSubscription,
   computeBalances,
-  createScanner,
+  connectWallet,
   heldNotes,
-  holdScanner,
   IdbNoteStore,
-  instrumentWallet,
-  networkPreset,
-  resolveSyncStrategy,
-  sharedProver,
 } from "@/features/wallet";
 import { type ChainLayerSpec, kindAdapter, nskFieldFromHex } from "@/features/wallet-kinds";
 import { storageDigest } from "@/shared/lib/storage/digest";
@@ -29,43 +23,27 @@ function ephNoteStoreKey(chainId: bigint, nskEphHex: string): string {
 }
 
 /// A throwaway wallet over the link's notes; it persists no tree. Callers must `releaseScanner` it.
+///
+/// `layer` lends the session's signer. Without one the wallet is read-only, which reading and
+/// sweeping its notes do not need: both go through the relayer.
 export async function buildEphemeralWallet(
   nskEphHex: string,
-  layer: ChainLayerSpec,
+  layer: ChainLayerSpec | undefined,
   chain: ChainEntry,
 ): Promise<WalletApi> {
   const nsk = nskFieldFromHex(nskEphHex);
   if (!nsk.ok) throw new Error(describeClaimError(nsk.error));
 
-  // Strategy and scanner are both required, or `connect` scans the whole pool on the main thread.
-  const ephAddress = await deriveEphemeralAddress(nsk.value);
-  const plan = await resolveSyncStrategy(env.fmdUrl, chain.chainId, nsk.value, ephAddress);
-
-  // Borrow only the session's signer: `derive` is never called, so no key prompt is raised.
-  const { signer } = kindAdapter(layer.kind).keySource(layer, chain);
-  const chainLayer = signer ? { signer } : { readOnly: true as const };
-
-  // Created outside `connect` so a failed build still frees it.
-  const scanner = createScanner(2);
-  let w: WalletApi;
-  try {
-    w = await connect({
-      network: networkPreset(chain),
-      rpcUrl: chain.readRpcUrl,
-      nsk: nsk.value,
-      ...chainLayer,
-      prover: sharedProver(),
-      storage: { notes: new IdbNoteStore(ephNoteStoreKey(chain.chainId, nskEphHex)) },
-      scanner,
-      syncStrategy: plan.strategy,
-    });
-  } catch (e) {
-    await scanner.dispose();
-    throw e;
-  }
-  holdScanner(w, scanner);
-  instrumentWallet(w);
-  return w;
+  const { wallet } = await connectWallet({
+    chain,
+    nsk: nsk.value,
+    account: await deriveEphemeralAddress(nsk.value),
+    // Borrow only the signer: `derive` is never called, so no key prompt is raised.
+    signer: layer ? kindAdapter(layer.kind).keySource(layer, chain).signer : undefined,
+    storage: { notes: new IdbNoteStore(ephNoteStoreKey(chain.chainId, nskEphHex)) },
+    scannerSize: 2,
+  });
+  return wallet;
 }
 
 export interface EphemeralBalance {
@@ -84,10 +62,20 @@ export async function summarizeEphemeralNotes(eph: WalletApi): Promise<Ephemeral
   }));
 }
 
+/// Notes fetched per page when scanning an ephemeral wallet.
+export const EPHEMERAL_SCAN_PAGE = 500;
+
+/// Sync the wallet's notes, then `summarizeEphemeralNotes`.
+export async function scanEphemeralBalances(eph: WalletApi): Promise<EphemeralBalance[]> {
+  await eph.sync({ scope: "notes", pageSize: EPHEMERAL_SCAN_PAGE });
+  return summarizeEphemeralNotes(eph);
+}
+
 export async function sweepEphemeral(
   eph: WalletApi,
   destAddress: string,
   asset: bigint,
+  onPhase?: (phase: SpendPhase) => void,
 ): Promise<string> {
   const balances = await summarizeEphemeralNotes(eph);
   const row = balances.find((b) => b.asset === asset);
@@ -97,6 +85,7 @@ export async function sweepEphemeral(
     amount: circuitAmount(row.amount),
     asset,
     autoConsolidate: true,
+    onPhase,
   });
   return txHash;
 }

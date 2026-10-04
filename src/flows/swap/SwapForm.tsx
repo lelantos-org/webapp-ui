@@ -10,13 +10,13 @@ import {
   ActionForm,
   AssetSelectPill,
   BoundaryLine,
+  SpendNotices,
   spendHeroProps,
   useActionForm,
   useActionSubmit,
   useSpendAmount,
 } from "@/features/op-form";
 import { operationOf } from "@/features/tx";
-import { SyncNotice } from "@/features/wallet";
 import { formatAssetAmount } from "@/shared/lib/format/asset";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
 import { FlipButton } from "./components/FlipButton";
@@ -36,7 +36,6 @@ import { useSwap } from "./use-swap";
 import { useSwapQuoteState } from "./use-swap-quote-state";
 import "./swap.css";
 
-/// The swap screen: pay and receive legs, Details row, and Swap.
 export function SwapForm() {
   const action = useSwap();
   const { mutation: m, progress } = action;
@@ -80,11 +79,15 @@ export function SwapForm() {
     slippageBps: wSlippage,
   });
   const { quote } = q;
+  // A swap refused because prices moved goes back to the form, where the fresh quote is shown;
+  // the toast has said why.
   const staleQuote = isWalletError(m.error, "QUOTE_STALE");
   const { refresh } = q;
   useEffect(() => {
-    if (staleQuote) refresh();
-  }, [staleQuote, refresh]);
+    if (!staleQuote) return;
+    refresh();
+    clearFinished();
+  }, [staleQuote, refresh, clearFinished]);
 
   const block = swapSubmitBlock({
     ...spend.readiness,
@@ -102,10 +105,14 @@ export function SwapForm() {
     clearAmount();
   };
 
-  const onSubmit = useActionSubmit<SwapInput>(form, async (_values, ctx) => {
-    if (!outAsset || !quote || quote.gross.amount !== ctx.amount) return false;
-    return m.mutateAsync({ quote, feeAsset: spend.feeAsset });
-  });
+  const onSubmit = useActionSubmit<SwapInput>(
+    form,
+    async (_values, ctx) => {
+      if (!outAsset || !quote || quote.gross.amount !== ctx.amount) return false;
+      return m.mutateAsync({ quote, ...spend.relayerFee });
+    },
+    { ready: !block.disabled },
+  );
 
   const pick = (field: "assetIn" | "assetOut") => (next: string) => {
     clearFinished();
@@ -153,7 +160,7 @@ export function SwapForm() {
         />
       }
     >
-      <SyncNotice />
+      <SpendNotices />
       <div className="swap-pair">
         <PayLeg
           hero={spendHeroProps(form, spend, wAmount)}

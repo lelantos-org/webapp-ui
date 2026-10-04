@@ -1,3 +1,4 @@
+import type { RecipientRule } from "../schemas";
 import {
   type AmountReadiness,
   amountBlock,
@@ -10,15 +11,12 @@ import {
   walletReadinessBlock,
 } from "./submit-block";
 
-/// What a Send or Unshield submit block is judged from.
 export interface SpendBlockInput extends WalletReadiness, AmountReadiness, FeeReadiness {
   recipient: string;
-  recipientValid: (value: string) => boolean;
-  /// Which kind of address the recipient must be, for the message naming it.
-  recipientKind: "shielded" | "public";
+  recipientRule: RecipientRule;
 }
 
-/// Why a spend's submit is dead: wallet, amount, recipient, then fee.
+/// The first block on a spend's submit, checked in order: wallet, amount, recipient, fee.
 export function spendSubmitBlock(input: SpendBlockInput): SubmitBlock {
   return (
     walletReadinessBlock("sending", input) ??
@@ -31,10 +29,6 @@ export function spendSubmitBlock(input: SpendBlockInput): SubmitBlock {
 
 function recipientBlock(input: SpendBlockInput): SubmitBlock | undefined {
   if (input.recipient.trim() === "") return blockedBy("Enter a recipient address");
-  if (input.recipientValid(input.recipient)) return undefined;
-  return blockedBy(
-    input.recipientKind === "shielded"
-      ? "That is not a shielded address"
-      : "That is not a valid public address",
-  );
+  const problem = input.recipientRule.problem(input.recipient);
+  return problem === undefined ? undefined : blockedBy(problem);
 }

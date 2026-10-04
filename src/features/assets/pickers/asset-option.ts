@@ -11,7 +11,7 @@ import { ethOption } from "./eth-option";
 export type AssetBalanceLabel = (asset: RegisteredAsset) => string | undefined;
 
 /// Confirmed shielded balance per asset, formatted for pickers. `undefined` until a sync succeeds.
-export function useAssetBalanceLabel(): AssetBalanceLabel {
+function useAssetBalanceLabel(): AssetBalanceLabel {
   const { data } = useBalances();
   return useMemo((): AssetBalanceLabel => {
     if (!data) return () => undefined;
@@ -46,7 +46,7 @@ export interface AssetSelectOptionsInputs {
   showEth?: boolean;
   /// The chain has a `NativeAdapter` deployed.
   nativeEthSupported?: boolean;
-  /// Balance to show beside each symbol. See `AssetBalanceLabel`.
+  /// Balance shown beside each symbol.
   balanceOf?: AssetBalanceLabel | undefined;
   /// Tag each entry with its rate.
   rateTag?: boolean;

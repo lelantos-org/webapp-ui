@@ -1,4 +1,9 @@
-import type { FeeOption, TokenAmount } from "@lelantos-org/sdk";
+import {
+  type CircuitAmount,
+  circuitAmount,
+  type FeeOption,
+  type TokenAmount,
+} from "@lelantos-org/sdk";
 import { depositFeeAssetRefusal } from "@lelantos-org/sdk/protocol";
 import { useMemo } from "react";
 import type { RegisteredAsset } from "@/config/chains";
@@ -16,13 +21,12 @@ import { type FeeSummaryModel, feeLegFor, feeSummary } from "../model/fee-summar
 import { useAssetFeeBps } from "../quote/use-fee-preview";
 import { feeOptionFor, resolveFeeOption, useFeeQuote } from "../quote/use-fee-quote";
 
-/// Inputs to `useFeePanel`.
 export interface FeePanelInputs {
   kind: FeeKind;
   selected: RegisteredAsset | undefined;
   /// The typed amount, in circuit units.
   amount: bigint | undefined;
-  /// Display figure (`shownFee`), not the submit-gating `settledFee`.
+  /// The protocol fee on the typed amount.
   protocol: FeeBreakdown | undefined;
   /// A protocol-fee read is in flight, so the row opens before it lands.
   protocolPending?: boolean;
@@ -32,6 +36,8 @@ export interface FeePanelInputs {
   onFeeAsset?: ((asset: bigint) => void) | undefined;
   /// Deposit only: what its relayer fee is funded from.
   deposit?: DepositFeeSource | undefined;
+  /// A native-coin withdrawal, quoted at its own relayer fee.
+  native?: boolean;
   /// Display name for the moved asset (ETH over WETH), applied consistently to every row and option.
   spendSymbol?: string | undefined;
 }
@@ -43,7 +49,7 @@ export type DepositFeeSource =
 
 const NO_IDS: readonly bigint[] = [];
 
-/// Everything `FeeSummary` and a form's submit gate need about fees.
+/// Fee state for `FeeSummary` and a form's submit gate.
 export interface FeePanel {
   model: FeeSummaryModel | undefined;
   /// A figure on screen is being re-priced.
@@ -55,6 +61,14 @@ export interface FeePanel {
   block: FeeBlock | undefined;
   /// The relayer's charge is not known yet; a submit gates on it.
   pending: boolean;
+}
+
+/// The relayer fee on screen, as a spend's fee cap. `undefined` while it is unknown or unpayable,
+/// where a submit is blocked anyway.
+export function relayerFeeCap(
+  fees: Pick<FeePanel, "pending" | "block" | "relayerAmount">,
+): CircuitAmount | undefined {
+  return fees.pending || fees.block ? undefined : circuitAmount(fees.relayerAmount);
 }
 
 /// `asset` renamed to `spendSymbol` when one is given.
@@ -85,19 +99,22 @@ export function useFeePanel({
   onFeeAsset,
   deposit,
   spendSymbol,
+  native = false,
 }: FeePanelInputs): FeePanel {
   const registry = useRegisteredAssets();
   const selectedId = selected?.id;
   const spendAsset = useMemo(() => withSymbol(selected, spendSymbol), [selected, spendSymbol]);
-  const quote = useFeeQuote(kind);
+  const quote = useFeeQuote(kind, native);
   const feeBps = useAssetFeeBps(selected?.id, feeLegFor(kind));
 
   const payingWith = feeAsset ?? selected?.id;
-  const resolved = resolveFeeOption(feeOptionFor(quote.data, payingWith), registry);
-  const relayer =
-    resolved && spendSymbol !== undefined && payingWith === selectedId
+  // Memoised: `model` below depends on it, and a fresh object every render would recompute it.
+  const relayer = useMemo(() => {
+    const resolved = resolveFeeOption(feeOptionFor(quote.data, payingWith), registry);
+    return resolved && spendSymbol !== undefined && payingWith === selectedId
       ? { ...resolved, asset: { ...resolved.asset, symbol: spendSymbol } }
       : resolved;
+  }, [quote.data, payingWith, registry, spendSymbol, selectedId]);
 
   const paying = registry.find((a) => a.id === payingWith);
   const subsidised = quote.data?.charged === false;
@@ -200,7 +217,7 @@ export function useFeePanel({
   };
 }
 
-/// Withholds a shortfall on an empty amount, or one that says nothing true about a deposit.
+/// Withholds a shortfall while the amount is empty, or on a deposit whose funding cannot back the verdict.
 function reportedBlock(
   found: FeeBlock | undefined,
   amount: bigint | undefined,

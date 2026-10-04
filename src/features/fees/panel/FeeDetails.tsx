@@ -7,7 +7,6 @@ import { feeLine } from "../model/fee-copy";
 import { FeeSummary } from "./FeeSummary";
 import type { FeePanel } from "./use-fee-panel";
 
-/// Props for `FeeDetails`.
 export interface FeeDetailsProps {
   fees: FeePanel;
   /// Replaces the computed summary line.

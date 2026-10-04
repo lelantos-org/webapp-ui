@@ -1,14 +1,13 @@
 import { isDenomination, type Ladder, nearest, PUBLIC_IN_MAX } from "@lelantos-org/sdk/protocol";
 import type { AssetMeta } from "@/features/op-form";
 import {
-  formatAmountForAsset,
   formatAmountForDisplay,
+  formatAmountForInput,
   formatAssetAmount,
 } from "@/shared/lib/format/asset";
 
 type DenominationState = "plain" | "chosen" | "suggested";
 
-/// One denomination chip.
 export interface DenominationOption {
   /// Circuit units: exactly the gross a withdrawal for this chip publishes.
   value: bigint;
@@ -35,7 +34,6 @@ interface LadderNotice {
   text: string;
 }
 
-/// The denomination picker's chips, notice and verdict.
 export interface LadderModel {
   /// Ascending; empty when none is within reach.
   options: DenominationOption[];
@@ -45,10 +43,8 @@ export interface LadderModel {
   verdict: LadderVerdict;
 }
 
-/// `on`, `off`, or nothing to judge.
 export type LadderVerdict = "on" | "off" | undefined;
 
-/// What `ladderModel` reads.
 export interface LadderInputs {
   /// Ascending; empty for an asset without a ladder and while the read is in flight.
   ladder: Ladder;
@@ -73,7 +69,7 @@ export function ladderModel({ ladder, meta, amount, max }: LadderInputs): Ladder
   return {
     options: offerable.map((value) => ({
       value,
-      text: formatAmountForAsset(value, meta),
+      text: formatAmountForInput(value, meta),
       label: formatAmountForDisplay(value, meta),
       state: stateOf(value, entered, suggestion),
     })),

@@ -1,18 +1,17 @@
-/* Keyframes more than one component plays. */
+/* Keyframes shared by more than one component. */
 
 @layer base {
-  /* A spinner's turn: `.spinner`, the portfolio's in-flight marks, the progress
-     card's arc. */
+  /* `.spinner`, the portfolio's in-flight marks and the progress card's arc. */
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* A popover arriving under its trigger (the account menu, the fee-asset list). */
+  /* A popover arriving under its trigger. */
   @keyframes drop-in {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: none; }
   }
 
-  /* Global motion opt-out. Transitions collapse to near-zero rather than 0 so
-     state changes still fire transitionend handlers. */
+  /* Global motion opt-out. Durations are near-zero, not 0, so `transitionend`
+     handlers still fire. */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;

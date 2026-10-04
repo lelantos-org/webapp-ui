@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { OpKind } from "@/shared/domain/op-kind";
-import { isDepositSteps, isTerminal, stepsFor, terminalOf } from "./tx-progress";
+import { isDepositSteps, isTerminal, opInFlight, stepsFor, terminalOf } from "./tx-progress";
 
 const ids = (kind: OpKind, opts?: Parameters<typeof stepsFor>[1]) =>
   stepsFor(kind, opts).map((s) => s.id);
@@ -91,5 +91,22 @@ describe("isTerminal", () => {
       expect(isTerminal(phase)).toBe(false);
     }
     expect(isTerminal(undefined)).toBe(false);
+  });
+});
+
+describe("opInFlight", () => {
+  const idle = { running: false, sent: false, steps: [], done: false, phase: undefined };
+  const steps = stepsFor("transfer");
+
+  it("covers a running op, and one sent but not yet seen to land", () => {
+    expect(opInFlight(idle)).toBe(false);
+    expect(opInFlight({ ...idle, running: true })).toBe(true);
+    expect(opInFlight({ ...idle, sent: true, steps, phase: "submitting" })).toBe(true);
+  });
+
+  it("ends with the steps, a failure, or a result with nothing to track", () => {
+    expect(opInFlight({ ...idle, sent: true, steps, done: true, phase: "mined" })).toBe(false);
+    expect(opInFlight({ ...idle, sent: true, steps, phase: "failed" })).toBe(false);
+    expect(opInFlight({ ...idle, sent: true })).toBe(false);
   });
 });

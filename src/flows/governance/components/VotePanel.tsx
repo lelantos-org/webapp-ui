@@ -12,7 +12,7 @@ import { Countdowns } from "./Countdowns";
 import { type GovTxState, GovTxStatus } from "./GovTxStatus";
 
 /// The longest vote reason accepted; every character is calldata the voter pays for.
-export const MAX_REASON = 1_000;
+const MAX_REASON = 1_000;
 
 export interface VotePanelProps {
   /// Undefined while the live reads are loading.
@@ -119,7 +119,7 @@ export function VotePanel({
           <span className="gov-field__lbl">Reason (optional, public)</span>
           <textarea
             id={reasonId}
-            className="gov-input gov-input--area"
+            className="text-input gov-input--area"
             rows={3}
             maxLength={MAX_REASON}
             value={reason}

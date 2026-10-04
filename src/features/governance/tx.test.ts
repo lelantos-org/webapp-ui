@@ -21,7 +21,7 @@ const quorumVoteClosed = encodeErrorResult({
   args: [7n, 1_240n],
 });
 
-/// How viem reports a reverted `eth_call`: the data two causes down.
+/// How viem reports a reverted `eth_call`: the data sits on a nested cause.
 const viemRevert = (data: string) => ({
   name: "CallExecutionError",
   cause: { name: "RawContractError", data },

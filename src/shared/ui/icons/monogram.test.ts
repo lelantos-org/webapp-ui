@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { monogramStyle, monogramText } from "./monogram";
 
-const vars = (seed: string, brand?: [number, number, number]) =>
-  monogramStyle(seed, brand) as unknown as Record<string, string>;
+const vars = (seed: string) => monogramStyle(seed) as unknown as Record<string, string>;
 
 const hue = (seed: string) => Number(vars(seed)["--mono-h"]);
 
@@ -47,14 +46,6 @@ describe("monogramStyle", () => {
       expect(h).toBeGreaterThanOrEqual(0);
       expect(h).toBeLessThan(360);
     }
-  });
-
-  it("lets a brand colour override the derived hue", () => {
-    const derived = vars("0xabc");
-    const branded = vars("0xabc", [211, 82, 47]);
-
-    expect(branded).toEqual({ "--mono-h": "211", "--mono-s": "82%", "--mono-l": "47%" });
-    expect(branded).not.toEqual(derived);
   });
 
   it("holds saturation and lightness fixed across derived marks", () => {

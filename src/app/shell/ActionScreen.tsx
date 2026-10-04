@@ -10,11 +10,11 @@ import "./ActionScreen.css";
 
 export interface ActionScreenProps {
   children: ReactNode;
-  width?: "narrow" | "wide" | "vault";
+  width: "narrow" | "wide" | "vault";
 }
 
 /// Shell for every action route: connection gate, chain-keyed remount with its notice, and Suspense.
-export function ActionScreen({ children, width = "narrow" }: ActionScreenProps) {
+export function ActionScreen({ children, width }: ActionScreenProps) {
   const chain = useActiveChainOrUndefined();
   const chainId = chain?.chainId;
 

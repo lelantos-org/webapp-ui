@@ -1,7 +1,8 @@
 import type { SpendableMax } from "@lelantos-org/sdk";
-import { useEffect, useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { createPortal } from "react-dom";
 import { useAnchoredPopover } from "@/shared/hooks/use-anchored-popover";
+import { useEscapeKey } from "@/shared/hooks/use-escape-key";
 import { cx } from "@/shared/lib/cx";
 import { InfoGlyph } from "@/shared/ui/icons/glyphs";
 import type { AssetMeta } from "./amount-validation";
@@ -25,16 +26,11 @@ export function MaxNotice({ spendable, meta, verb }: MaxNoticeProps) {
     style,
   } = useAnchoredPopover<HTMLButtonElement, HTMLDivElement>(open, () => setOpen(false));
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      buttonRef.current?.focus();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, buttonRef]);
+  const closeAndRefocus = useCallback(() => {
+    setOpen(false);
+    buttonRef.current?.focus();
+  }, [buttonRef]);
+  useEscapeKey(open ? closeAndRefocus : undefined);
 
   if (!copy) return null;
   return (

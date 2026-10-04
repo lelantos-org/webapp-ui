@@ -17,7 +17,7 @@ export interface WalletChoiceListProps {
   /// In display order.
   wallets: WalletChoice[];
   onChoose(choice: WalletChoice): void;
-  /// Draw the first row as the one to reach for.
+  /// Highlight the first row.
   lead?: boolean;
 }
 

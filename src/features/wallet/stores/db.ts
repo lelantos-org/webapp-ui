@@ -13,6 +13,9 @@ export const NULLIFIER_STORE = "nullifiers";
 
 const STORES = [NOTE_STORE, TREE_STORE, NULLIFIER_STORE] as const;
 
+/// bigint as `0x` hex. The prefix is required: `BigInt` reads bare all-digit hex as decimal.
+export const enc = (v: bigint): string => `0x${v.toString(16)}`;
+
 /// Values are per-store; each store casts what it reads.
 export interface WalletSchema {
   notes: { key: string; value: unknown };
@@ -32,7 +35,11 @@ class DatabaseBlockedError extends Error {
 /// The shared connection, opened once per tab.
 export function walletDb(): Promise<IDBPDatabase<WalletSchema>> {
   if (dbp) return dbp;
-  const opening = openDB<WalletSchema>(DB_NAME, VERSION, {
+  // `blocked` fires on the request while it stays pending, so the open is settled by hand: a
+  // throw inside the callback would reach nobody.
+  let giveUp: (e: Error) => void = () => {};
+  let gaveUp = false;
+  const request = openDB<WalletSchema>(DB_NAME, VERSION, {
     // Another tab needs a newer version: close and reload rather than strand it.
     blocking(_current, _blocked, event) {
       (event.target as IDBPDatabase<WalletSchema> | null)?.close();
@@ -40,7 +47,7 @@ export function walletDb(): Promise<IDBPDatabase<WalletSchema>> {
       if (typeof location !== "undefined") location.reload();
     },
     blocked() {
-      throw new DatabaseBlockedError();
+      giveUp(new DatabaseBlockedError());
     },
     terminated() {
       dbp = undefined;
@@ -50,6 +57,17 @@ export function walletDb(): Promise<IDBPDatabase<WalletSchema>> {
         if (!db.objectStoreNames.contains(name)) db.createObjectStore(name);
       }
     },
+  });
+  const opening = new Promise<IDBPDatabase<WalletSchema>>((resolve, reject) => {
+    giveUp = (e) => {
+      gaveUp = true;
+      reject(e);
+    };
+    request.then((db) => {
+      // The other tab let go after the caller was told to close it: nobody holds this handle.
+      if (gaveUp) db.close();
+      else resolve(db);
+    }, reject);
   });
   // Never memoise a rejection: it would fail every later call for the tab's life.
   dbp = opening.catch((e: unknown) => {

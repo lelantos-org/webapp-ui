@@ -1,7 +1,7 @@
 import type { SpendableMax } from "@lelantos-org/sdk";
 import { RAY } from "@lelantos-org/sdk/protocol";
 import { describe, expect, it } from "vitest";
-import { maxNoticeCopy, settlingHint, withheldHint } from "./balance-hint";
+import { heldReason, maxNoticeCopy, settlingHint, spendReach, withheldHint } from "./balance-hint";
 
 const META = { symbol: "WETH", decimals: 0, scale: 1n, index: RAY };
 
@@ -104,5 +104,30 @@ describe("maxNoticeCopy", () => {
 
   it("stays silent while the ceiling is unknown", () => {
     expect(maxNoticeCopy({ spendable: undefined, meta: USDC, verb: "Sending" })).toBeUndefined();
+  });
+});
+
+describe("spendReach", () => {
+  const spendable = {
+    max: 100n,
+    withheld: { reserved: 0n, cooldown: 20n, dust: 0n, slots: 50n },
+  } as unknown as SpendableMax;
+
+  it("is direct up to the max, and while the max is unknown", () => {
+    expect(spendReach(100n, spendable)).toBe("direct");
+    expect(spendReach(500n, undefined)).toBe("direct");
+    expect(spendReach(undefined, spendable)).toBe("direct");
+  });
+
+  it("needs a merge for what only the slot cap holds back", () => {
+    expect(spendReach(101n, spendable)).toBe("merge");
+    expect(spendReach(150n, spendable)).toBe("merge");
+  });
+
+  it("is held beyond what a merge can free", () => {
+    expect(spendReach(151n, spendable)).toBe("held");
+    expect(heldReason(spendable, META)).toBe(
+      "150 WETH is the most you can send right now: 20 WETH still settling",
+    );
   });
 });

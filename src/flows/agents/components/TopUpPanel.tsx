@@ -1,15 +1,16 @@
 import { useState } from "react";
 import type { RegisteredAsset } from "@/config/chains";
 import type { StoredAgent } from "@/features/agents";
-import { parseAmountSafe } from "@/features/op-form";
+import { findAsset } from "@/features/assets";
+import { FeeLineSummary } from "@/features/fees";
+import { parseAmountSafe, useSpendAmount } from "@/features/op-form";
+import { userMessage } from "@/shared/lib/errors";
+import { formatAmountForInput, formatAssetAmount } from "@/shared/lib/format/asset";
+import { topUpSubmitBlock } from "../agent-block";
 import { useTopUpAgent } from "../use-top-up-agent";
 import "../agents.css";
 
-/// Send more to an agent that already exists.
-///
-/// Inline rather than a screen of its own: topping up is the routine act, and a
-/// route change to repeat a number the operator already knows would be friction
-/// in the one place there should be none.
+/// Inline form that sends more funds to an existing agent.
 export function TopUpPanel({
   agent,
   assets,
@@ -20,39 +21,51 @@ export function TopUpPanel({
   const { mutation } = useTopUpAgent();
   const [amount, setAmount] = useState("");
   const [assetId, setAssetId] = useState(() => assets[0]?.id.toString() ?? "");
-  const [problem, setProblem] = useState<string | undefined>(undefined);
 
-  const token = assets.find((a) => a.id.toString() === assetId);
+  const token = findAsset(assets, assetId);
+  const spend = useSpendAmount({
+    kind: "transfer",
+    selected: token,
+    amountText: amount,
+    setAmount,
+  });
+  const typed = amount.trim() !== "";
+  const block = topUpSubmitBlock({
+    ...spend.readiness,
+    hasAsset: !!token,
+    typed,
+    validation: spend.validation,
+  });
+  const max = spend.spendable?.max;
 
   const submit = async () => {
-    setProblem(undefined);
-    if (!token) return setProblem("No assets on this network");
-
-    // `undefined` covers both an unparseable figure and one with more decimals
-    // than the token has; either way there is nothing to send.
-    const parsed = parseAmountSafe(amount, token);
-    if (parsed === undefined) return setProblem(`That is not an amount of ${token.symbol}`);
-
+    const parsed = token ? parseAmountSafe(amount, token) : undefined;
+    if (!token || parsed === undefined || block.disabled) return;
     try {
       await mutation.mutateAsync({
         address: agent.address,
         amount: parsed,
         asset: token.id,
+        ...spend.relayerFee,
       });
       setAmount("");
     } catch {
-      // `useTopUpAgent` already toasts; the row keeps its inline slot for parse
-      // errors, which never reach the mutation.
+      // Shown below, from the mutation's error.
     }
   };
+
+  // The row is small, so one line at a time: why Send is held, else how the last one failed.
+  const failure = mutation.error && !mutation.isPending ? userMessage(mutation.error) : undefined;
+  const problem = block.reason ?? failure;
 
   return (
     <div className="agent-topup">
       <label className="agent-topup__field">
         <span className="agent-field__lbl">Top up</span>
         <input
-          className="agent-input"
+          className="text-input"
           inputMode="decimal"
+          enterKeyHint="send"
           placeholder="0.00"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
@@ -60,7 +73,7 @@ export function TopUpPanel({
       </label>
 
       <select
-        className="agent-input agent-topup__asset"
+        className="text-input agent-topup__asset"
         aria-label="Asset to send"
         value={assetId}
         onChange={(e) => setAssetId(e.target.value)}
@@ -76,12 +89,36 @@ export function TopUpPanel({
         type="button"
         className="btn btn--cta btn--sm"
         onClick={() => void submit()}
-        disabled={mutation.isPending || amount.trim() === ""}
+        disabled={mutation.isPending || block.disabled}
       >
         {mutation.isPending ? "Sending…" : "Send"}
       </button>
 
-      {problem ? <span className="agent-row__note agent-row__note--err">{problem}</span> : null}
+      {token && spend.balance !== undefined ? (
+        <p className="agent-row__note agent-topup__have">
+          Shielded {formatAssetAmount(spend.balance, token)}
+          {max !== undefined && max > 0n ? (
+            <button
+              type="button"
+              className="link-btn agent-topup__max"
+              onClick={() => spend.onSetMax(formatAmountForInput(max, token))}
+            >
+              Max
+            </button>
+          ) : null}
+          {typed && spend.fees.model ? (
+            <span className="agent-topup__fee">
+              <FeeLineSummary model={spend.fees.model} />
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+
+      {problem ? (
+        <p className="agent-row__note agent-row__note--err" role="alert">
+          {problem}
+        </p>
+      ) : null}
     </div>
   );
 }

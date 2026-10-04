@@ -9,7 +9,6 @@ export interface PayLegProps {
   pairError: string | undefined;
 }
 
-/// The "You pay" leg of the swap.
 export function PayLeg({ hero, picker, pairError }: PayLegProps) {
   return (
     <div className="swap-leg swap-leg--pay">

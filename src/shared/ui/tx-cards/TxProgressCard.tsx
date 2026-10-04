@@ -1,45 +1,42 @@
 import type { ReactNode } from "react";
 import { cx } from "@/shared/lib/cx";
-import { ArcGlyph, CheckGlyph, CrossGlyph, InfoGlyph } from "@/shared/ui/icons/glyphs";
+import { ArcGlyph, CheckGlyph, InfoGlyph } from "@/shared/ui/icons/glyphs";
 import { type StepState, stepStates } from "@/shared/ui/Stepper";
 import "./txcard.css";
 
 export interface TxProgressStep {
   id: string;
-  /// The step before it starts: "Build the zero-knowledge proof".
+  /// Pending form: "Build the zero-knowledge proof".
   label: string;
-  /// While it runs: "Building the zero-knowledge proof". Falls back to `label`.
+  /// Running form: "Building the zero-knowledge proof". Falls back to `label`.
   activeLabel?: string | undefined;
-  /// Once done: "Built the zero-knowledge proof". Falls back to `label`.
+  /// Done form: "Built the zero-knowledge proof". Falls back to `label`.
   doneLabel?: string | undefined;
   /// Shown under the label while this step is current.
   detail?: ReactNode;
 }
 
 export interface TxProgressCardProps {
-  /// "Proving your transfer".
   title: string;
-  /// "250 USDC · about 20 seconds left".
   subtitle?: ReactNode;
   steps: readonly TxProgressStep[];
-  /// Id of the step in progress. Steps before it are done, after it pending.
+  /// Id of the step in progress; earlier steps are done, later ones pending.
   current?: string | undefined;
-  /// Every step is done.
+  /// Marks every step done.
   done?: boolean;
-  /// The walk-away note under the steps. Omit rather than promise something the op cannot keep.
+  /// Tells the user whether they can leave. Omit when the operation cannot guarantee it.
   note?: ReactNode;
-  /// A trailing control, such as a link home once the proof is handed off.
+  /// Trailing control, e.g. a link home.
   action?: ReactNode;
 }
 
-/// The label for a step in `state`: the plan, the activity, or the result.
 function labelFor(s: TxProgressStep, state: StepState): string {
   if (state === "current") return s.activeLabel ?? s.label;
   if (state === "done") return s.doneLabel ?? s.label;
   return s.label;
 }
 
-/// Bar progress: half a step into the current one, so it moves as a step starts.
+/// Bar fill in [0, 1]. Counts half of the current step, so the bar moves when a step starts.
 function fraction(count: number, currentIdx: number, done: boolean): number {
   if (count === 0) return 0;
   if (done) return 1;
@@ -47,7 +44,7 @@ function fraction(count: number, currentIdx: number, done: boolean): number {
   return Math.min(1, (currentIdx + 0.5) / count);
 }
 
-/// The card shown in place of an action's fields while its transaction is in flight.
+/// Replaces an action's form while its transaction is in flight.
 export function TxProgressCard({
   title,
   subtitle,
@@ -95,8 +92,6 @@ export function TxProgressCard({
                 <span className="txstep__mark" aria-hidden="true">
                   {state === "done" ? (
                     <CheckGlyph size={13} strokeWidth={3} />
-                  ) : state === "failed" ? (
-                    <CrossGlyph size={12} />
                   ) : state === "current" ? (
                     <span className="txstep__dot" />
                   ) : (

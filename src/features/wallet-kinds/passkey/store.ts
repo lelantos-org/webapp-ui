@@ -72,14 +72,14 @@ class PasskeyStore {
   };
 
   /// Enrol a new passkey and attach to it.
-  connect = async (label?: string): Promise<void> => {
+  connect = async (): Promise<void> => {
     if (!passkeysAvailable()) {
       this.set({ status: "error", error: "passkeys are not available in this browser" });
       return;
     }
     this.set({ status: "connecting", error: undefined });
     try {
-      const { credentialId, prf } = await createAndProvePasskey(label);
+      const { credentialId, prf } = await createAndProvePasskey();
       rememberCredential({ id: credentialId, createdAt: Date.now() });
       cacheNsk(passkeyAccountKey(credentialId), prfOutputToNsk(prf));
       this.attach(credentialId);
@@ -104,7 +104,7 @@ class PasskeyStore {
     this.set({ status: "idle", credentialId: undefined, error: undefined });
   };
 
-  /// Test seam, mirroring `eip1193Store.resetForTest`.
+  /// Reset to idle. For tests.
   resetForTest = (): void => {
     this.store.setState(initial);
   };

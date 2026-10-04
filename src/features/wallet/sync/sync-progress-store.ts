@@ -33,7 +33,6 @@ export const syncProgress = {
   },
 };
 
-/// Live note-scan progress.
 export function useSyncProgress(): SyncProgress {
   return useStore(store);
 }

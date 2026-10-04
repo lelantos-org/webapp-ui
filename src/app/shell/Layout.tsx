@@ -8,12 +8,17 @@ import { ChainBadge } from "@/features/chain";
 import { ConnectButton, useWallet } from "@/features/wallet";
 import { GithubIcon } from "@/shared/ui/icons/brand";
 import { HealthIndicator } from "./health/HealthIndicator";
+import { InFlightNotice } from "./InFlightNotice";
+import { InterruptedNotice } from "./InterruptedNotice";
+import { useLeaveGuard } from "./use-leave-guard";
+import { useScreenChange } from "./use-screen-change";
 import "./Layout.css";
 
-/// App shell: backdrop, beta banner, header, main slot and footer.
 export function Layout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const { status } = useWallet();
+  useScreenChange();
+  useLeaveGuard();
   const minimal = pathname === "/claim";
   const connected = status === "ready";
   return (
@@ -45,6 +50,8 @@ export function Layout({ children }: { children: ReactNode }) {
             </span>
           </div>
         </header>
+        <InFlightNotice />
+        <InterruptedNotice />
         <main className="main" id="main" tabIndex={-1}>
           {children}
         </main>

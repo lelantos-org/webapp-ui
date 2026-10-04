@@ -7,11 +7,10 @@ import { formatUsd } from "@/shared/lib/format/money";
 import { amountInWords } from "@/shared/lib/format/words";
 import { type AmountValidation, type AssetMeta, pickAmountError } from "./amount-validation";
 import "./AmountHero.css";
-import { formatAmountForAsset } from "@/shared/lib/format/asset";
+import { formatAmountForInput } from "@/shared/lib/format/asset";
 
 export interface AmountHeroProps {
   inputProps: UseFormRegisterReturn;
-  /// Above the figure: "You send", "You shield", "You pay".
   label: string;
   selected: AssetMeta | undefined;
   /// The raw field text; the words are written from the digits as typed.
@@ -20,11 +19,10 @@ export interface AmountHeroProps {
   amount?: bigint | undefined;
   /// The asset trigger on the figure's row.
   asset?: ReactNode;
-  /// "Shielded", "In your wallet".
   balanceLabel?: string;
   /// The phone form of `balanceLabel`.
   balanceLabelShort?: string;
-  /// Already formatted, since only the caller knows base units from circuit units.
+  /// Already formatted; only the caller knows whether it is in base or circuit units.
   balance?: ReactNode;
   /// What Max writes, in circuit units; no button when `undefined`.
   maxAmount: bigint | undefined;
@@ -39,7 +37,7 @@ export interface AmountHeroProps {
   wordsSymbol?: string | undefined;
 }
 
-/// The amount, twice: a large bare input with the asset trigger, the figure in words, and a balance row with Max.
+/// The amount input with its asset trigger, the figure in words, and a balance row with Max.
 export function AmountHero({
   inputProps,
   label,
@@ -87,6 +85,7 @@ export function AmountHero({
           className="figure amt-hero__inp"
           placeholder="0"
           inputMode="decimal"
+          enterKeyHint="done"
           autoComplete="off"
           spellCheck={false}
           aria-invalid={error ? true : undefined}
@@ -113,7 +112,7 @@ export function AmountHero({
               <button
                 type="button"
                 className="amt-hero__max"
-                onClick={() => onSetMax(formatAmountForAsset(maxAmount, selected))}
+                onClick={() => onSetMax(formatAmountForInput(maxAmount, selected))}
               >
                 Max
               </button>

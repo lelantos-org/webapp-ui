@@ -102,7 +102,7 @@ export function DelegatePanel({
               <span className="gov-field__lbl">Or delegate to another address</span>
               <input
                 id={inputId}
-                className="gov-input mono"
+                className="text-input mono"
                 placeholder="0x…"
                 autoComplete="off"
                 spellCheck={false}

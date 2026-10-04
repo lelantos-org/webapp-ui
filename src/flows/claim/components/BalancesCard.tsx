@@ -5,6 +5,7 @@ import type { EphemeralBalance } from "@/features/claim-links";
 import { formatAmountForAsset } from "@/shared/lib/format/asset";
 import { formatUsd } from "@/shared/lib/format/money";
 import { formatAmount } from "@/shared/lib/format/number";
+import { plural } from "@/shared/lib/format/text";
 import { TokenIcon } from "@/shared/ui/icons/TokenIcon";
 import "./claim-cards.css";
 
@@ -15,11 +16,12 @@ export interface BalancesCardProps {
   /// The chain the link names, for pricing against it.
   linkChainId: bigint | undefined;
   destinationAddress?: string | undefined;
-  busy: boolean;
-  busyAsset?: bigint | undefined;
   /// Disables the buttons for a reason shown elsewhere (wallet on the wrong chain).
   claimDisabled?: boolean;
-  onClaim(asset: bigint): void;
+  /// Absent until a wallet is connected to claim into; the amounts show without it.
+  onClaim?: ((asset: bigint) => void) | undefined;
+  /// Looks at the link again, for the empty state.
+  onRescan(): void;
 }
 
 /// Separate component: `usePrices` throws without an active chain, so mount only on the link's chain.
@@ -33,10 +35,9 @@ export function BalancesCard({
   assets,
   linkChainId,
   destinationAddress,
-  busy,
-  busyAsset,
   claimDisabled = false,
   onClaim,
+  onRescan,
 }: BalancesCardProps) {
   const active = useActiveChainOrUndefined();
   const priced = linkChainId !== undefined && active?.chainId === linkChainId;
@@ -48,8 +49,13 @@ export function BalancesCard({
           <h2 className="claim-card__t">Nothing to claim at this link</h2>
           <p className="claim-card__sub">
             It may already have been claimed, or the sender's transfer hasn't landed yet. If they
-            only just sent it, try the link again in a minute.
+            only just sent it, check again in a minute.
           </p>
+        </div>
+        <div className="claim-cta">
+          <button type="button" className="btn btn--outline" onClick={onRescan}>
+            Check again
+          </button>
         </div>
       </section>
     );
@@ -59,9 +65,7 @@ export function BalancesCard({
     <section className="surface surface--card claim-card">
       <div className="claim-card__title-row">
         <h2 className="claim-card__t">Waiting for you</h2>
-        <span className="claim-card__meta">
-          {balances.length} asset{balances.length === 1 ? "" : "s"}
-        </span>
+        <span className="claim-card__meta">{plural(balances.length, "asset")}</span>
       </div>
 
       <ul className="claim-assets">
@@ -69,7 +73,6 @@ export function BalancesCard({
           const a = findAsset(assets, b.asset);
           const symbol = a?.symbol ?? `#${b.asset.toString()}`;
           const formatted = a ? formatAmountForAsset(b.amount, a) : formatAmount(b.amount);
-          const isBusy = busy && busyAsset === b.asset;
           return (
             <li key={b.asset.toString()} className="claim-asset">
               <TokenIcon
@@ -84,31 +87,21 @@ export function BalancesCard({
                 </span>
                 {priced && a ? <Usd amount={b.amount} asset={a} /> : null}
               </div>
-              <button
-                type="button"
-                className="btn btn--cta btn--sm claim-asset__cta"
-                disabled={busy || claimDisabled}
-                onClick={() => onClaim(b.asset)}
-                aria-label={`Claim ${formatted} ${symbol}`}
-              >
-                {isBusy ? (
-                  <>
-                    <span className="spinner" aria-hidden /> Claiming…
-                  </>
-                ) : (
-                  "Claim"
-                )}
-              </button>
+              {onClaim ? (
+                <button
+                  type="button"
+                  className="btn btn--cta btn--sm claim-asset__cta"
+                  disabled={claimDisabled}
+                  onClick={() => onClaim(b.asset)}
+                  aria-label={`Claim ${formatted} ${symbol}`}
+                >
+                  Claim
+                </button>
+              ) : null}
             </li>
           );
         })}
       </ul>
-
-      {busy ? (
-        <p className="claim-card__sub" role="status">
-          Keep this tab open until the claim is submitted.
-        </p>
-      ) : null}
 
       {destinationAddress ? (
         <>

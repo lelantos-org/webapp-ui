@@ -32,7 +32,6 @@ async function getJson(label: string, url: string): Promise<unknown> {
 }
 
 /// Chains both protocol-webserver and the relayer describe consistently.
-///
 /// Throws when a service is unreachable; resolves `[]` only when both answered with nothing usable.
 export async function loadChainRegistry(): Promise<ChainEntry[]> {
   const [registryChains, assets, relayerChains] = await Promise.all([

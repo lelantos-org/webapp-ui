@@ -81,7 +81,38 @@ describe("phase-machine", () => {
       chainId: CHAIN,
       asset: 1n,
       amount: 100n,
+      rest: undefined,
     });
+  });
+
+  it("sweep-success keeps the key while the link holds another asset", () => {
+    const two = [...balances, { asset: 2n, amount: 7n, notes: 1 }];
+    const done = reduce({ ...sweeping, balances: two }, { t: "sweep-success", txHash: "0xabc" });
+    expect(done).toMatchObject({
+      kind: "done",
+      rest: { nskHex: "x", balances: [{ asset: 2n, amount: 7n, notes: 1 }] },
+    });
+
+    expect(reduce(done, { t: "claim-rest" })).toMatchObject({
+      kind: "ready",
+      nskHex: "x",
+      chainId: CHAIN,
+      balances: [{ asset: 2n, amount: 7n, notes: 1 }],
+    });
+  });
+
+  it("rescan goes back to looking, keeping the key", () => {
+    expect(reduce(ready, { t: "rescan" })).toEqual({
+      kind: "need-wallet",
+      nskHex: "x",
+      chainId: CHAIN,
+    });
+    expect(reduce(sweeping, { t: "rescan" })).toBe(sweeping);
+  });
+
+  it("claim-rest is ignored once the link is empty", () => {
+    const done = reduce(sweeping, { t: "sweep-success", txHash: "0xabc" });
+    expect(reduce(done, { t: "claim-rest" })).toBe(done);
   });
 
   it("sweep-failure → error, recorded as a sweep rather than a scan", () => {

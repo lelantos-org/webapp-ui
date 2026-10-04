@@ -1,5 +1,4 @@
 @layer components {
-  /* Notice */
   .notice {
     display: flex;
     align-items: flex-start;
@@ -54,7 +53,6 @@
     white-space: nowrap;
   }
 
-  /* accent */
   .notice--accent {
     padding: var(--sp-18) var(--sp-20);
     gap: var(--sp-14);
@@ -77,7 +75,6 @@
     color: var(--accent);
   }
 
-  /* err */
   .notice--err {
     border-color: rgba(var(--err-rgb), 0.45);
     background: rgba(var(--err-rgb), 0.07);
@@ -88,7 +85,6 @@
   .notice--err .notice__txt,
   .notice--err .notice__t + .notice__txt { color: var(--err-strong); }
 
-  /* neutral */
   .notice--neutral {
     padding: 13px 15px;
     gap: 11px;

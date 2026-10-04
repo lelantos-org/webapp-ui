@@ -2,7 +2,7 @@ import { ShieldKeyholeGlyph } from "@/shared/ui/icons/shield";
 import { WideNarrow } from "@/shared/ui/WideNarrow";
 import "./ClaimHero.css";
 
-/// The claim page's title block; `subtitle` follows the flow.
+/// Claim page title block; `subtitle` replaces the default line.
 export function ClaimHero({ subtitle }: { subtitle?: string | undefined }) {
   return (
     <div className="claim-hero">

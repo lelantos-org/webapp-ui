@@ -15,6 +15,8 @@ export interface ReviewPanelProps {
   destination: string;
   destinationNote: ReactNode;
   fees: ReactNode;
+  /// The funds are merged before this spend: say what that adds to the fees shown.
+  mergeFirst?: boolean;
   /// Between the fees and the warning: the compact observer block.
   observer?: ReactNode;
   /// What cannot be undone.
@@ -35,6 +37,7 @@ export function ReviewPanel({
   destination,
   destinationNote,
   fees,
+  mergeFirst = false,
   observer,
   warning,
   confirmLabel,
@@ -65,6 +68,12 @@ export function ReviewPanel({
 
       <section className="spend-review__sec" aria-label="Fees">
         {fees}
+        {mergeFirst ? (
+          <p className="spend-review__note">
+            Your funds are combined first, which adds one more relayer fee to the above and takes
+            one extra proof.
+          </p>
+        ) : null}
       </section>
 
       {observer ? <section className="spend-review__sec">{observer}</section> : null}

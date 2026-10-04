@@ -5,6 +5,7 @@ import {
   type FeeReadiness,
   feePendingBlock,
   feeProblemBlock,
+  NO_ASSETS_REASON,
   SUBMIT_OPEN,
   type SubmitBlock,
   type WalletReadiness,
@@ -23,7 +24,7 @@ export interface LinkBlockInput extends WalletReadiness, AmountReadiness, FeeRea
 export function linkSubmitBlock(input: LinkBlockInput): SubmitBlock {
   return (
     walletReadinessBlock("sending", input) ??
-    (input.hasAsset ? undefined : blockedBy("No assets on this network")) ??
+    (input.hasAsset ? undefined : blockedBy(NO_ASSETS_REASON)) ??
     amountBlock(input) ??
     (input.vaultFull
       ? blockedBy("Export your links first — this one would drop the oldest")

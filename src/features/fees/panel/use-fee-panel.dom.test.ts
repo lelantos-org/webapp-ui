@@ -4,7 +4,7 @@ import { asBaseUnits } from "@/shared/domain/units";
 import { makeAsset, USDC_ASSET } from "@/test/fixtures/assets";
 import { feeBlockReason } from "../model/fee-block";
 import { feeLine } from "../model/fee-copy";
-import { useFeePanel } from "./use-fee-panel";
+import { relayerFeeCap, useFeePanel } from "./use-fee-panel";
 
 const WETH = makeAsset(7n, "WETH");
 const USDC = USDC_ASSET;
@@ -217,3 +217,17 @@ describe("useFeePanel on an ERC-20 deposit", () => {
 });
 
 const block = (p: ReturnType<typeof useFeePanel>) => p.block && feeBlockReason(p.block);
+
+describe("relayerFeeCap", () => {
+  const shown = { pending: false, block: undefined, relayerAmount: 250n };
+
+  it("caps the spend at the fee on screen, a subsidised zero included", () => {
+    expect(relayerFeeCap(shown)).toBe(250n);
+    expect(relayerFeeCap({ ...shown, relayerAmount: 0n })).toBe(0n);
+  });
+
+  it("sets no cap while the fee is unknown or cannot be paid", () => {
+    expect(relayerFeeCap({ ...shown, pending: true })).toBeUndefined();
+    expect(relayerFeeCap({ ...shown, block: { kind: "unavailable" } as never })).toBeUndefined();
+  });
+});

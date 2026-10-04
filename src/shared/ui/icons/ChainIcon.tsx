@@ -4,12 +4,12 @@ import { chainBrand } from "./registry";
 
 export interface ChainIconProps {
   chainId: bigint;
-  /// Registry label; supplies the monogram letters for an unrecognised chain.
+  /// Supplies the monogram letters for an unrecognised chain.
   chainName: string;
   className?: string;
 }
 
-/// The decorative mark beside a network's name, seeded on the chain id.
+/// Decorative network mark. The monogram colour is seeded on the chain id.
 export function ChainIcon({ chainId, chainName, className }: ChainIconProps) {
   const brand = chainBrand(chainId);
 

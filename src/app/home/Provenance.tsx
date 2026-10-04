@@ -1,6 +1,6 @@
 import { useId } from "react";
 
-/// Plain-language note on where the balances come from. Claim only what is true: servers do see a decoy superset.
+/// Explains where balances come from. The copy must stay accurate: servers do see a decoy superset.
 export function Provenance() {
   const titleId = useId();
   return (

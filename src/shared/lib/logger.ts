@@ -59,7 +59,6 @@ export interface Logger {
   info(...args: unknown[]): void;
   warn(...args: unknown[]): void;
   error(...args: unknown[]): void;
-  child(subscope: string): Logger;
 }
 
 export function createLogger(scope: string): Logger {
@@ -68,7 +67,6 @@ export function createLogger(scope: string): Logger {
     info: (...a) => emit("info", scope, a),
     warn: (...a) => emit("warn", scope, a),
     error: (...a) => emit("error", scope, a),
-    child: (sub) => createLogger(`${scope}:${sub}`),
   };
 }
 

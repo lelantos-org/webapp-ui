@@ -1,5 +1,5 @@
 import { ADDRESS_HRP } from "@lelantos-org/sdk/primitives";
-import { render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { fakeActionMutation } from "@/test/fakes/operation";
 import { makeAsset } from "@/test/fixtures/assets";
@@ -22,21 +22,11 @@ vi.mock("@/features/chain", async () =>
 );
 vi.mock("@/features/fees", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/features/fees")>();
-  const { blankFeeChrome, idleFeePanel } = await import("@/test/fakes/fees");
+  const { blankFeeChrome, pricedTransferPanel } = await import("@/test/fakes/fees");
   return {
     ...real,
     ...blankFeeChrome(),
-    useFeePanel: (i: { selected: typeof WETH | undefined; amount: bigint | undefined }) =>
-      idleFeePanel({
-        model: real.feeSummary({
-          kind: "transfer",
-          amount: i.amount,
-          spendAsset: i.selected,
-          protocol: undefined,
-          relayer: i.selected ? { amount: 1_000n, asset: i.selected } : undefined,
-        }),
-        relayerAmount: 1_000n,
-      }),
+    useFeePanel: pricedTransferPanel(real.feeSummary, 1_000n),
   };
 });
 vi.mock("@/features/wallet", async () =>
@@ -97,6 +87,36 @@ describe("TransferForm", () => {
     expect(screen.getByRole("button", { name: "Review" })).toBeEnabled();
   });
 
+  it("says why an amount that is not a number cannot be reviewed", () => {
+    render(<TransferForm />, { wrapper: appWrapper });
+    fill("To", ADDRESS);
+
+    fill("You send", "abc");
+    expect(why()).toBe("Enter the amount as a number");
+
+    fill("You send", "0");
+    expect(why()).toBe("Enter an amount you hold");
+  });
+
+  it("does not open the review on Enter while the form is blocked", async () => {
+    render(<TransferForm />, { wrapper: appWrapper });
+    fill("You send", "0.5");
+    fill("To", "lelantos1nope");
+
+    const enter = () =>
+      act(async () => {
+        fireEvent.keyDown(screen.getByLabelText("To"), { key: "Enter" });
+      });
+
+    await enter();
+    expect(screen.queryByRole("heading", { name: "Review" })).not.toBeInTheDocument();
+    expect(mutateAsync).not.toHaveBeenCalled();
+
+    fill("To", ADDRESS);
+    await enter();
+    expect(screen.getByRole("heading", { name: "Review" })).toBeInTheDocument();
+  });
+
   it("reviews first, sends on confirm, and keeps everything but the amount", async () => {
     render(<TransferForm />, { wrapper: appWrapper });
     fill("You send", "0.5");
@@ -113,7 +133,8 @@ describe("TransferForm", () => {
 
     await pressAndSettle("Confirm and send");
     expect(mutateAsync.mock.calls).toEqual([
-      [{ amount: 500_000n, asset: 1n, recipient: ADDRESS, feeAsset: undefined }],
+      // `maxFee` is the relayer fee the review showed.
+      [{ amount: 500_000n, asset: 1n, recipient: ADDRESS, feeAsset: undefined, maxFee: 1_000n }],
     ]);
     expect(screen.getByLabelText("You send")).toHaveValue("");
     expect(screen.getByLabelText("To")).toHaveValue(ADDRESS);

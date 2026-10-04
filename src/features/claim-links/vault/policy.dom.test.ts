@@ -33,6 +33,20 @@ describe("claimLinkPressure", () => {
     expect(p.nextEvicted).toBeUndefined();
   });
 
+  // Only a record whose key is random is lost when it drops; one derived from the wallet is not.
+  it("counts the records whose key exists nowhere else", () => {
+    remember(NOW, "random");
+    vault.rememberClaimLink(
+      { url: "https://app/claim#derived", chainId: 31337n, assetId: 1n, amount: 1n, derived: true },
+      NOW,
+    );
+
+    const p = claimLinkPressure(NOW);
+    expect(p.count).toBe(2);
+    expect(p.unrecoverable).toBe(1);
+    expect(vault.claimLinksSnapshot().filter((r) => r.derived)).toHaveLength(1);
+  });
+
   it("exposes the retention window the copy is written from", () => {
     expect(claimLinkPressure(NOW).ttlMs).toBe(7 * DAY);
   });

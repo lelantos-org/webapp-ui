@@ -1,7 +1,7 @@
 import type { Tallies } from "./client";
 
 /// `IGovernor.ProposalState`, in the contract's order.
-export const PROPOSAL_STATES = [
+const PROPOSAL_STATES = [
   "Pending",
   "Active",
   "Canceled",
@@ -12,7 +12,6 @@ export const PROPOSAL_STATES = [
   "Executed",
 ] as const;
 
-/// A governor proposal state name.
 export type ProposalState = (typeof PROPOSAL_STATES)[number];
 
 /// The contract's `uint8` state, or `undefined` for an unknown value.
@@ -67,12 +66,12 @@ export function proposalWindow(
   };
 }
 
-function bps(part: bigint, whole: bigint): number {
+/// `part` of `whole` in basis points, floored; zero of nothing.
+export function shareBps(part: bigint, whole: bigint): number {
   if (whole <= 0n) return 0;
   return Number((part * 10_000n) / whole);
 }
 
-/// A proposal's tallies laid out on one bar, with the quorum marker.
 export interface TallyBar {
   total: bigint;
   /// For + Abstain: what counts toward quorum.
@@ -98,16 +97,11 @@ export function tallyBar(t: Tallies, quorum: bigint | undefined): TallyBar {
     quorumVotes,
     quorumReached: quorum === undefined ? undefined : quorumVotes >= quorum,
     forLeads: t.for > t.against,
-    forBps: bps(t.for, scale),
-    abstainBps: bps(t.abstain, scale),
-    againstBps: bps(t.against, scale),
-    quorumBps: quorum === undefined || quorum === 0n ? undefined : bps(quorum, scale),
+    forBps: shareBps(t.for, scale),
+    abstainBps: shareBps(t.abstain, scale),
+    againstBps: shareBps(t.against, scale),
+    quorumBps: quorum === undefined || quorum === 0n ? undefined : shareBps(quorum, scale),
   };
-}
-
-/// Share of the votes cast, in basis points.
-export function shareBps(part: bigint, total: bigint): number {
-  return bps(part, total);
 }
 
 /// The longest title the indexer keeps, and so the longest a new proposal is given.
@@ -147,7 +141,6 @@ export function isZeroAddress(a: string | undefined): boolean {
   return a === undefined || ZERO.test(a);
 }
 
-/// Inputs to `voteEligibility`.
 export interface VoteEligibilityInput {
   /// The session can send an EVM transaction (an injected wallet).
   canSign: boolean;
@@ -162,7 +155,6 @@ export interface VoteEligibilityInput {
   currentVotes: bigint;
 }
 
-/// Whether an account may vote, or the reason it may not.
 export type VoteEligibility =
   /// Eligible. `quorumVoteOpen` false means only Against is still accepted.
   | { ok: true; quorumVoteOpen: boolean }

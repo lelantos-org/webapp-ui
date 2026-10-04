@@ -1,4 +1,4 @@
-import type { ChainEntry } from "@/config/chains";
+import { type ChainEntry, findChain } from "@/config/chains";
 
 export interface ChainMismatch {
   link: ChainEntry;
@@ -8,8 +8,7 @@ export interface ChainMismatch {
 
 /// A chain's name, falling back to its id for networks the deployment does not serve.
 export function chainLabel(registry: ChainEntry[], chainId: bigint): string {
-  const known = registry.find((c) => c.chainId === chainId);
-  return known?.chainName ?? `chain ${chainId}`;
+  return findChain(registry, chainId)?.chainName ?? `chain ${chainId}`;
 }
 
 /// The wallet/link chain mismatch to resolve before claiming, or `undefined` if none (yet).

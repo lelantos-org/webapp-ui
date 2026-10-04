@@ -185,5 +185,6 @@ function SyncedAgo({ at }: { at: number }) {
     const id = setInterval(() => force((n) => n + 1), 10_000);
     return () => clearInterval(id);
   }, []);
-  return <>{relativeTime(at)}</>;
+  // Out of the live region around it: the tick every ten seconds is not an update worth reading.
+  return <span aria-live="off">{relativeTime(at)}</span>;
 }

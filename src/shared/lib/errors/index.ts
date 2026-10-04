@@ -4,9 +4,9 @@ import { hasRpcCode, rpcErrorMessage } from "@/shared/lib/rpc-error";
 import { isPresentable, keywordAdvice } from "./keyword-advice";
 import { walletErrorText } from "./wallet-copy";
 
-export { isDuplicateSpend } from "./wallet-copy";
+export { isDuplicateSpend, isFeeMoved, isProverFault } from "./wallet-copy";
 
-/// What a user cancellation reads as, wherever it is shown.
+/// The one message shown for a user cancellation.
 export const CANCELED_IN_WALLET = "Canceled in wallet.";
 
 const GENERIC = "Something went wrong. Please try again.";

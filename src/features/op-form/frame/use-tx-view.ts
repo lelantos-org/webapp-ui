@@ -1,7 +1,7 @@
-import { useState } from "react";
-import type { ProgressView, TxStage } from "@/features/tx";
+import { isWalletError } from "@lelantos-org/sdk";
+import { useEffect, useState } from "react";
+import { opInFlight, type ProgressView, type TxStage } from "@/features/tx";
 
-/// How the op names itself on the progress, settled and failed cards.
 export interface TxCopy {
   progressTitle?: string;
   settledTitle?: string;
@@ -10,10 +10,8 @@ export interface TxCopy {
   amount?: string | undefined;
 }
 
-/// Which card an op's action form shows.
 export type TxView = "form" | "progress" | "settled" | "failed";
 
-/// What `useTxView` reads.
 export interface TxViewInputs {
   busy: boolean;
   error?: unknown;
@@ -23,7 +21,6 @@ export interface TxViewInputs {
   onReset?: (() => void) | undefined;
 }
 
-/// The card to show and what it states.
 export interface TxViewState {
   view: TxView;
   /// Where the op got to; the failing phase once it has failed.
@@ -31,6 +28,8 @@ export interface TxViewState {
   hasSteps: boolean;
   /// Live while the op runs, latched after.
   amount: string | undefined;
+  /// The tx hash: the op's own, or the one a failure of unknown outcome carries.
+  hash: string | undefined;
   leave(): void;
 }
 
@@ -41,19 +40,23 @@ function txView({ busy, error, progress, txHash }: TxViewInputs): TxView {
   return progress?.done && txHash ? "settled" : "form";
 }
 
-/// Mutating, or resolved at broadcast with the tracker still walking the steps.
 function isInFlight(
   busy: boolean,
   progress: ProgressView | undefined,
   txHash: string | undefined,
 ): boolean {
-  const hasSteps = !!progress && progress.steps.length > 0;
-  return busy || (hasSteps && !progress.done && progress.phase !== "failed" && !!txHash);
+  return opInFlight({
+    running: busy,
+    sent: !!txHash,
+    steps: progress?.steps ?? [],
+    done: !!progress?.done,
+    phase: progress?.phase,
+  });
 }
 
 /// Decides which card an op shows and latches the amount it states.
 export function useTxView(inputs: TxViewInputs): TxViewState {
-  const { busy, progress, txHash, liveAmount, onReset } = inputs;
+  const { busy, error, progress, txHash, liveAmount, onReset } = inputs;
   const hasSteps = !!progress && progress.steps.length > 0;
   const phaseFailed = progress?.phase === "failed";
   // Cleared by the next submit, so a fresh op always shows its own outcome.
@@ -62,14 +65,23 @@ export function useTxView(inputs: TxViewInputs): TxViewState {
 
   const [latchedAmount, setLatchedAmount] = useState<string | undefined>(undefined);
   if (busy && liveAmount && liveAmount !== latchedAmount) setLatchedAmount(liveAmount);
-  const amount = (busy ? liveAmount : undefined) || latchedAmount;
+  // Kept with the op too: a form that remounts mid-op has no fields left to read it from.
+  const noteAmount = progress?.noteAmount;
+  const noted = progress?.amount;
+  useEffect(() => {
+    if (busy && liveAmount && liveAmount !== noted) noteAmount?.(liveAmount);
+  }, [busy, liveAmount, noted, noteAmount]);
+  const amount = (busy ? liveAmount : undefined) || latchedAmount || noted;
 
   const view = dismissed && !isInFlight(busy, progress, txHash) ? "form" : txView(inputs);
 
+  const unknown = isWalletError(error, "SPEND_OUTCOME_UNKNOWN") ? error : undefined;
+  const hash = txHash ?? unknown?.txHash;
   const stage: TxStage = {
     steps: progress?.steps ?? [],
     phase: phaseFailed ? progress?.failedAt : progress?.phase,
-    hash: !!txHash,
+    hash: !!hash,
+    outcomeUnknown: !!unknown,
   };
 
   const leave = () => {
@@ -77,5 +89,5 @@ export function useTxView(inputs: TxViewInputs): TxViewState {
     onReset?.();
   };
 
-  return { view, stage, hasSteps, amount, leave };
+  return { view, stage, hasSteps, amount, hash, leave };
 }
