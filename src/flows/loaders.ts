@@ -8,6 +8,8 @@ export const loadSend = () => import("./send/TransferForm");
 export const loadUnshield = () => import("./unshield/WithdrawForm");
 /// Swap: trade one shielded asset for another (`/swap`).
 export const loadSwap = () => import("./swap/SwapForm");
+/// Request: a link asking for a shielded transfer to this wallet (`/request`).
+export const loadRequest = () => import("./request/RequestForm");
 /// Send by link: fund an ephemeral wallet and share its key as a URL (`/send/link`).
 export const loadSendLink = () => import("./send-link/GenerateLinkForm");
 /// Claim: the recipient's side of a claim link (`/claim`).

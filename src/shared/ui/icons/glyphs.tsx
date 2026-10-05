@@ -160,6 +160,24 @@ export const MoonGlyph = glyph(
   { strokeWidth: 1.8, round: "none" },
 );
 
+export const EyeGlyph = glyph(
+  <>
+    <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" />
+    <circle cx="12" cy="12" r="3" />
+  </>,
+  { strokeWidth: 1.8 },
+);
+
+export const EyeOffGlyph = glyph(
+  <>
+    <path d="M9.9 5.2A9.5 9.5 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.8 3.7" />
+    <path d="M6.6 6.6A17.3 17.3 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    <path d="m3 3 18 18" />
+  </>,
+  { strokeWidth: 1.8 },
+);
+
 export const RaysGlyph = glyph(
   <path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4M4.9 19.1l2.9-2.9M16.2 7.8l2.9-2.9" />,
   { strokeWidth: 1.9 },

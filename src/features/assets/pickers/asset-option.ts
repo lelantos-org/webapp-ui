@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { RegisteredAsset } from "@/config/chains";
 import { useActiveChain } from "@/features/chain";
+import { usePrivacy } from "@/shared/hooks/use-privacy";
 import { formatAssetCompact } from "@/shared/lib/format/asset";
 import { useBalances } from "../balances/use-balances";
 import { useRegisteredAssets } from "../registry/registered-assets";
@@ -10,14 +11,16 @@ import { ethOption } from "./eth-option";
 /// Formatted balance beside an asset in a picker; `undefined` when unknown, never a claimed zero.
 export type AssetBalanceLabel = (asset: RegisteredAsset) => string | undefined;
 
-/// Confirmed shielded balance per asset, formatted for pickers. `undefined` until a sync succeeds.
+/// Confirmed shielded balance per asset, formatted for pickers. `undefined` until a sync succeeds
+/// and in privacy mode.
 function useAssetBalanceLabel(): AssetBalanceLabel {
   const { data } = useBalances();
+  const { hidden } = usePrivacy();
   return useMemo((): AssetBalanceLabel => {
-    if (!data) return () => undefined;
+    if (!data || hidden) return () => undefined;
     const byAsset = new Map(data.balances.map((b) => [b.asset, b.balance]));
     return (asset) => formatAssetCompact(byAsset.get(asset.id) ?? 0n, asset);
-  }, [data]);
+  }, [data, hidden]);
 }
 
 /// `USDC · 1,204.5 · 4.18% / yr · 7d`, dropping absent parts; plain text for `<option>`.

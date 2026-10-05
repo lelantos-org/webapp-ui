@@ -9,7 +9,8 @@ import { growthOf, type YieldGain } from "../yield/yield-gains";
 export type EarnedTone = "up" | "down" | "paused";
 
 export interface EarnedLine {
-  text: string;
+  /// "+$12.40", "≥+0.1 WETH": the row follows it with "earned".
+  figure: string;
   tone: EarnedTone;
 }
 
@@ -18,7 +19,7 @@ export function signOf(partial: boolean, down: boolean): string {
   return `${partial ? "≥" : ""}${down ? "−" : "+"}`;
 }
 
-/// The row's earned line ("+$12.40 earned"); `undefined` for plain custody or no resolved basis.
+/// The row's earned figure; `undefined` for plain custody or no resolved basis.
 export function earnedLine(
   gain: YieldGain | undefined,
   meta: Pick<RegisteredAsset, "yieldEnabled" | "yieldHalted" | "decimals" | "symbol">,
@@ -33,7 +34,7 @@ export function earnedLine(
       ? `${formatDecimalCompact(abs, meta.decimals, DISPLAY_FRAC_DIGITS)} ${meta.symbol}`
       : formatUsd(baseUnitsUsd(abs, meta.decimals, priceUsd));
   return {
-    text: `${sign}${figure} earned`,
+    figure: `${sign}${figure}`,
     tone: meta.yieldHalted ? "paused" : down ? "down" : "up",
   };
 }

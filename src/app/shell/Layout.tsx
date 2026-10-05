@@ -2,10 +2,12 @@ import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { Backdrop } from "@/app/shell/chrome/Backdrop";
 import { BetaBanner } from "@/app/shell/chrome/BetaBanner";
+import { PrivacyToggle } from "@/app/shell/chrome/PrivacyToggle";
 import { ThemeToggle } from "@/app/shell/chrome/ThemeToggle";
 import { Wordmark } from "@/app/shell/chrome/Wordmark";
 import { ChainBadge } from "@/features/chain";
 import { ConnectButton, useWallet } from "@/features/wallet";
+import { cx } from "@/shared/lib/cx";
 import { GithubIcon } from "@/shared/ui/icons/brand";
 import { HealthIndicator } from "./health/HealthIndicator";
 import { InFlightNotice } from "./InFlightNotice";
@@ -21,6 +23,8 @@ export function Layout({ children }: { children: ReactNode }) {
   useLeaveGuard();
   const minimal = pathname === "/claim";
   const connected = status === "ready";
+  // A connected app screen: the header carries every control.
+  const full = connected && !minimal;
   return (
     <>
       {minimal ? null : <Backdrop />}
@@ -34,18 +38,16 @@ export function Layout({ children }: { children: ReactNode }) {
             <Wordmark sub={minimal ? "claim" : undefined} />
           </div>
           <div className="hdr__right">
-            {minimal ? (
-              <ChainBadge />
-            ) : connected ? (
-              <>
-                <span className="hdr__health">
-                  <HealthIndicator />
-                </span>
-                <ChainBadge />
-                <ConnectButton />
-              </>
+            {full ? (
+              <span className="hdr__health">
+                <HealthIndicator />
+              </span>
             ) : null}
-            <span className={connected && !minimal ? "hdr__theme hdr__theme--folds" : "hdr__theme"}>
+            {minimal || connected ? <ChainBadge /> : null}
+            {full ? <ConnectButton /> : null}
+            {/* Folded on a phone, where the account menu carries both. */}
+            <span className={cx("hdr__tools", full && "hdr__tools--folds")}>
+              {full ? <PrivacyToggle /> : null}
               <ThemeToggle />
             </span>
           </div>

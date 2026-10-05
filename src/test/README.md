@@ -34,16 +34,17 @@ never loads a module a test is mocking.
 
 | Module                  | What it gives you                                                     |
 | ----------------------- | --------------------------------------------------------------------- |
-| `render.tsx`            | `appWrapper`, `routerWrapper`, `queryWrapper`, `withQueryClient`, `createTestQueryClient`, `renderQueryHook` |
+| `render.tsx`            | `appWrapper`, `appWrapperAt(entry)`, `routerWrapper`, `queryWrapper`, `withQueryClient`, `createTestQueryClient`, `renderQueryHook` |
 | `interact.ts`           | `fill(label, value)`, `press(name)`, `pressAndSettle(name)`           |
 | `spies.ts`              | `lastArg(spy, index?)`: what a stub was last asked                    |
 | `async.ts`              | `deferred()`: hold a promise open across assertions                   |
 | `http.ts`               | `stubFetch(handler)`, `stubFetchRoutes({ path: body })`, `jsonResponse` |
 | `browser.ts`            | `stubReducedMotion`, `stubWebAuthn`                                   |
+| `privacy.ts`            | `hideAmounts()`: privacy mode on until the test ends                  |
 | `result.ts`             | `unwrap(result)`                                                      |
 | `fixtures/assets.ts`    | `makeAsset(id, symbol, over)`, `USDC_ASSET`                           |
 | `fixtures/chains.ts`    | `makeChain(over)`                                                     |
-| `fixtures/addresses.ts` | `hexAddress("11")`, `hexBytes32("ab")`                                |
+| `fixtures/addresses.ts` | `hexAddress("11")`, `hexBytes32("ab")`, `SHIELDED_ADDRESS`            |
 | `fixtures/prices.ts`    | `priceMap`, `yieldGain`                                               |
 | `fixtures/registry.ts`  | The registry and relayer `/chains` bodies                             |
 | `fixtures/governance.ts`| Governance API rows                                                   |

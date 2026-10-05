@@ -5,6 +5,7 @@ import type { RegisteredAsset } from "@/config/chains";
 import { stubReducedMotion } from "@/test/browser";
 import { makeAsset } from "@/test/fixtures/assets";
 import { yieldGain as gain, priceMap as prices } from "@/test/fixtures/prices";
+import { hideAmounts } from "@/test/privacy";
 import type { AssetBalanceView } from "../balances/use-balances";
 import type { PriceMap } from "../prices/prices";
 import type { YieldGains } from "../yield/yield-gains";
@@ -50,6 +51,17 @@ describe("AssetList", () => {
     expect(within(btn).getByText("$2,000.00")).toBeInTheDocument();
     expect(within(btn).getByText("+$20.00 earned")).toBeInTheDocument();
     expect(btn.textContent).not.toContain("4.18%");
+  });
+
+  it("masks the balance, value and earnings in privacy mode, and keeps the asset's name", () => {
+    hideAmounts();
+    const weth = makeAsset(1n, "WETH", { yieldEnabled: true });
+    renderList([weth], new Map([[1n, gain({ gain: 10n ** 16n })]]), prices({ [weth.token]: 2000 }));
+
+    const btn = rowButton("WETH");
+    expect(btn.textContent).not.toMatch(/\d/);
+    expect(btn.querySelector(".pf-row__bal")).toHaveTextContent("••••hidden WETH");
+    expect(btn.querySelector(".pf-row__earned")).toHaveTextContent("••••hidden earned");
   });
 
   it("names the vault beside an earning asset's symbol in the row", () => {

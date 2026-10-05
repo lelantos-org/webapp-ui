@@ -5,6 +5,7 @@ import { formatUsd } from "@/shared/lib/format/money";
 import { plural } from "@/shared/lib/format/text";
 import { relativeTime } from "@/shared/lib/format/time";
 import { ShieldGlyph } from "@/shared/ui/icons/shield";
+import { Masked } from "@/shared/ui/Masked";
 import { signOf } from "./asset-copy";
 import { earnedTotal, portfolioTotal } from "./portfolio-total";
 import { usePortfolio } from "./use-portfolio";
@@ -32,7 +33,9 @@ export function PortfolioHero() {
   ) : priced === 0 ? (
     "—"
   ) : (
-    <UsdFigure usd={usd} approx={unpriced > 0} />
+    <Masked>
+      <UsdFigure usd={usd} approx={unpriced > 0} />
+    </Masked>
   );
 
   let sub: ReactNode;
@@ -56,8 +59,11 @@ export function PortfolioHero() {
           <>
             {" · "}
             <span className={cx("pf-hero__earned mono", earned.usd < 0 && "pf-hero__earned--down")}>
-              {signOf(earned.partial, earned.usd < 0)}
-              {formatUsd(Math.abs(earned.usd))} earned
+              <Masked>
+                {signOf(earned.partial, earned.usd < 0)}
+                {formatUsd(Math.abs(earned.usd))}
+              </Masked>{" "}
+              earned
             </span>
           </>
         ) : null}

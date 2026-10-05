@@ -1,0 +1,52 @@
+@layer features {
+  .reqlink {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-16);
+    min-width: 0;
+  }
+  .reqlink__qr {
+    align-self: center;
+    display: grid;
+    padding: var(--sp-12);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg);
+  }
+  .reqlink__qr svg { display: block; }
+  .reqlink__ask {
+    margin: 0;
+    text-align: center;
+    font-size: var(--fs-15);
+    line-height: 1.5;
+    color: var(--fg-dim);
+  }
+  .reqlink__ask strong {
+    font-weight: 600;
+    color: var(--fg);
+  }
+  .reqlink__url {
+    display: block;
+    padding: var(--sp-12) var(--sp-16);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    background: var(--bg-2);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-size: var(--fs-14);
+    color: var(--fg-dim);
+  }
+
+  .reqlink-empty {
+    margin: 0;
+    padding: var(--sp-24) var(--sp-16);
+    border: 1px dashed var(--line-strong);
+    border-radius: var(--radius);
+    text-align: center;
+    font-size: var(--fs-15);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+}

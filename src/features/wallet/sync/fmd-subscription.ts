@@ -131,7 +131,7 @@ async function ensureFmdSubscription(
     return undefined;
   }
 
-  const detectionKeyHex = detectionKeyToHex(detectionKeyFor(J, P, keys, gamma));
+  const detectionKeyHex = detectionKeyToHex(detectionKeyFor(P, keys, gamma));
   const sub = await fmd.createSubscription({ detectionKeyHex, gamma, tokenHex });
   log.info(sub.created ? "created sub" : "reused server-side sub", {
     gamma: sub.gamma,

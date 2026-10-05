@@ -40,17 +40,19 @@ export const ENTER_AMOUNT_REASON = "Enter an amount you hold";
 export const NO_ASSETS_REASON = "No assets on this network";
 
 /// Why typed text is not an amount to send, or `undefined` when it parses to a positive one.
-/// `parsed` is the text in circuit units, `undefined` when it does not parse.
+/// `parsed` is the text in circuit units, `undefined` when it does not parse. `enter` is what an
+/// empty, zero or half-typed amount is answered with.
 export function amountTextReason(
   amountText: string,
   parsed: bigint | undefined,
   symbol: string | undefined,
+  enter: string = ENTER_AMOUNT_REASON,
 ): string | undefined {
   const text = normalizeNumericInput(amountText);
-  if (text === "") return ENTER_AMOUNT_REASON;
-  if (parsed !== undefined) return parsed > 0n ? undefined : ENTER_AMOUNT_REASON;
+  if (text === "") return enter;
+  if (parsed !== undefined) return parsed > 0n ? undefined : enter;
   // A number still being typed ("12.").
-  if (/^\d*\.?$/.test(text)) return ENTER_AMOUNT_REASON;
+  if (/^\d*\.?$/.test(text)) return enter;
   return /^\d+\.\d+$/.test(text)
     ? `${symbol ?? "This asset"} can't be split that finely`
     : "Enter the amount as a number";

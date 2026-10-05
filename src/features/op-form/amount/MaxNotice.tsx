@@ -5,6 +5,7 @@ import { useAnchoredPopover } from "@/shared/hooks/use-anchored-popover";
 import { useEscapeKey } from "@/shared/hooks/use-escape-key";
 import { cx } from "@/shared/lib/cx";
 import { InfoGlyph } from "@/shared/ui/icons/glyphs";
+import { Masked } from "@/shared/ui/Masked";
 import type { AssetMeta } from "./amount-validation";
 import { maxNoticeCopy } from "./balance-hint";
 import "./MaxNotice.css";
@@ -50,7 +51,10 @@ export function MaxNotice({ spendable, meta, verb }: MaxNoticeProps) {
         ? createPortal(
             <div ref={floatRef} id={popId} className="maxnote__pop" style={style}>
               <span className="maxnote__lead">
-                Max is <span className="mono">{copy.max}</span>
+                Max is{" "}
+                <span className="mono">
+                  <Masked>{copy.max}</Masked>
+                </span>
                 {copy.tail}
               </span>
               <span className="maxnote__follow">{copy.follow}</span>

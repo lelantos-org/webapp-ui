@@ -1,12 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { markClaimLinkCopied, retentionSentence } from "@/features/claim-links";
-import { useCopy } from "@/shared/hooks/use-copy";
 import { cx } from "@/shared/lib/cx";
-import { createLogger } from "@/shared/lib/logger";
 import { CheckGlyph } from "@/shared/ui/icons/glyphs";
+import { LinkActions } from "@/shared/ui/LinkActions";
 import "./LinkResult.css";
-
-const log = createLogger("claim-link:result");
 
 export interface LinkResultProps {
   url: string;
@@ -20,30 +17,12 @@ export interface LinkResultProps {
 /// The created claim link, masked by default, with copy and share actions.
 export function LinkResult({ url, amountLabel, recordId, ttlMs, onReset }: LinkResultProps) {
   const [revealed, setRevealed] = useState(false);
-  const { copy, copied } = useCopy(url);
   const titleId = useId();
   const titleRef = useRef<HTMLHeadingElement>(null);
-
-  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   useEffect(() => {
     titleRef.current?.focus();
   }, []);
-
-  async function copyLink() {
-    await copy();
-    markClaimLinkCopied(recordId);
-  }
-
-  async function shareLink() {
-    if (!canShare) return;
-    try {
-      await navigator.share({ url, title: "Claim link", text: `Claim ${amountLabel}` });
-      markClaimLinkCopied(recordId);
-    } catch (e) {
-      log.debug("share dismissed", e);
-    }
-  }
 
   return (
     <section className="surface surface--card linkres" aria-labelledby={titleId}>
@@ -71,19 +50,11 @@ export function LinkResult({ url, amountLabel, recordId, ttlMs, onReset }: LinkR
         </button>
       </div>
 
-      <div className={cx("linkres__actions", !canShare && "linkres__actions--one")}>
-        <button type="button" className="btn btn--cta btn--sm" onClick={() => void copyLink()}>
-          {copied ? "Copied" : "Copy link"}
-        </button>
-        {canShare ? (
-          <button type="button" className="btn btn--outline" onClick={() => void shareLink()}>
-            Share…
-          </button>
-        ) : null}
-      </div>
-      <span className="sr-only" role="status" aria-live="polite">
-        {copied ? "Link copied" : ""}
-      </span>
+      <LinkActions
+        url={url}
+        share={{ title: "Claim link", text: `Claim ${amountLabel}` }}
+        onShared={() => markClaimLinkCopied(recordId)}
+      />
 
       <p className="footnote">{retentionSentence(ttlMs)}</p>
 

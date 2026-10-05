@@ -15,7 +15,8 @@
   .hdr__left { display: flex; align-items: center; gap: var(--sp-10); min-width: 0; }
   .hdr__right { margin-left: auto; display: flex; align-items: center; gap: var(--sp-10); }
   .hdr__health,
-  .hdr__theme { display: inline-flex; }
+  .hdr__tools { display: inline-flex; }
+  .hdr__tools { gap: var(--sp-10); }
 
   .hdr { --hdr-pill-h: 36px; }
   .hdr__right .pill {
@@ -23,7 +24,7 @@
     height: var(--hdr-pill-h);
     padding-block: 0;
   }
-  .hdr__theme { --theme-toggle-size: var(--hdr-pill-h); }
+  .hdr__tools { --hdr-btn-size: var(--hdr-pill-h); }
   @media (pointer: coarse) {
     .hdr { --hdr-pill-h: 44px; }
   }
@@ -35,7 +36,7 @@
   @media (max-width: 480px) {
     .hdr { padding: var(--sp-14) var(--sp-18); --hdr-pill-h: 32px; }
     .hdr__health,
-    .hdr__theme--folds { display: none; }
+    .hdr__tools--folds { display: none; }
     /* An outage is shown on phones too, as the dot alone: a failed submit should not be the
        first sign of it. */
     .hdr__health:has(.health--down) { display: inline-flex; }

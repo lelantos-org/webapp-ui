@@ -1,21 +1,21 @@
 import { ADDRESS_HRP } from "@lelantos-org/sdk/primitives";
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fakeActionMutation } from "@/test/fakes/operation";
+import { SHIELDED_ADDRESS as ADDRESS } from "@/test/fixtures/addresses";
 import { makeAsset } from "@/test/fixtures/assets";
 import { fill, press, pressAndSettle } from "@/test/interact";
-import { appWrapper } from "@/test/render";
+import { appWrapper, appWrapperAt } from "@/test/render";
 import { TransferForm, transferSchema } from "./TransferForm";
 
 const WETH = makeAsset(1n, "WETH", { scale: 10n ** 12n });
+const DAI = makeAsset(2n, "DAI", { scale: 10n ** 12n });
+let assets = [WETH];
 const mutateAsync = vi.fn(async (_: unknown) => ({ txHash: "0x1" }));
 
 vi.mock("@/features/assets", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/assets")>()),
-  ...(await import("@/test/fakes/assets")).assetReads(() => ({
-    assets: [WETH],
-    balance: 5_000_000n,
-  })),
+  ...(await import("@/test/fakes/assets")).assetReads(() => ({ assets, balance: 5_000_000n })),
 }));
 vi.mock("@/features/chain", async () =>
   (await import("@/test/fakes/chain")).activeChainHooks({ chainId: 1n }),
@@ -34,8 +34,9 @@ vi.mock("@/features/wallet", async () =>
 );
 vi.mock("./use-transfer", () => ({ useTransfer: () => fakeActionMutation(mutateAsync) }));
 
-const ADDRESS =
-  "lelantos1mzzmpusj5uw9jktrllg86psuvjsght583tvlaj0gt5pywqwx3krgyp5h37paffcqkjnrx8zegjcldfgpchw0p6d773g657e5jvfluydsr5za9sgdvm8pdauhzkrzng5tzwpgg2qyhaykrv887pgvsz599ua4r0dl";
+beforeEach(() => {
+  assets = [WETH];
+});
 
 function parseTo(to: string) {
   return transferSchema.safeParse({ to, amount: "1.0", asset: "1" });
@@ -138,5 +139,54 @@ describe("TransferForm", () => {
     ]);
     expect(screen.getByLabelText("You send")).toHaveValue("");
     expect(screen.getByLabelText("To")).toHaveValue(ADDRESS);
+  });
+});
+
+describe("TransferForm opened from a payment request", () => {
+  const openedAt = (fragment: string) => appWrapperAt(`/send#${fragment}`);
+  const request = (chain: string) => `to=${ADDRESS}&asset=1&amount=0.5&chain=${chain}`;
+
+  it("fills the form and still asks for a review", async () => {
+    render(<TransferForm />, { wrapper: openedAt(request("1")) });
+
+    expect(screen.getByLabelText("You send")).toHaveValue("0.5");
+    expect(screen.getByLabelText("To")).toHaveValue(ADDRESS);
+    expect(screen.getByText("Payment request · 0.5 WETH")).toBeInTheDocument();
+    expect(mutateAsync).not.toHaveBeenCalled();
+
+    await pressAndSettle("Review");
+    await pressAndSettle("Confirm and send");
+    expect(mutateAsync.mock.calls).toEqual([
+      [{ amount: 500_000n, asset: 1n, recipient: ADDRESS, feeAsset: undefined, maxFee: 1_000n }],
+    ]);
+  });
+
+  it("keeps the requested asset over the one the page URL opens on", () => {
+    assets = [WETH, DAI];
+    window.history.replaceState(null, "", "/send?asset=1");
+    try {
+      render(<TransferForm />, {
+        wrapper: openedAt(`to=${ADDRESS}&asset=2&amount=0.5&chain=1`),
+      });
+      expect(screen.getByLabelText("Asset")).toHaveValue("2");
+      expect(screen.getByText("Payment request · 0.5 DAI")).toBeInTheDocument();
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
+  });
+
+  it("leaves the form empty for a request made on another network", () => {
+    render(<TransferForm />, { wrapper: openedAt(request("10")) });
+
+    expect(screen.getByLabelText("You send")).toHaveValue("");
+    expect(screen.getByLabelText("To")).toHaveValue("");
+    expect(screen.getByText("This payment request is for another network")).toBeInTheDocument();
+  });
+
+  it("says so when the link cannot be read", () => {
+    render(<TransferForm />, { wrapper: openedAt("to=lelantos1nope&asset=1&amount=0.5&chain=1") });
+
+    expect(screen.getByLabelText("To")).toHaveValue("");
+    expect(screen.getByText("This payment request can't be read")).toBeInTheDocument();
   });
 });

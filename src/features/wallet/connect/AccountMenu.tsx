@@ -1,8 +1,9 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { usePrivacy } from "@/shared/hooks/use-privacy";
 import { useTheme } from "@/shared/hooks/use-theme";
 import "./ConnectButton.css";
 
-/// The phone header's avatar and its disclosure menu: copy address, theme, disconnect.
+/// The phone header's avatar and its disclosure menu: copy address, privacy mode, theme, disconnect.
 export function AccountMenu({
   initials,
   shown,
@@ -62,6 +63,7 @@ export function AccountMenu({
           <button type="button" className="link-btn account-menu__item" onClick={run(onCopy)}>
             Copy address
           </button>
+          <PrivacyItem />
           {/* Mounted only while open, so it reads the theme in force now. */}
           <ThemeItem />
           <button
@@ -74,6 +76,15 @@ export function AccountMenu({
         </div>
       ) : null}
     </span>
+  );
+}
+
+function PrivacyItem() {
+  const { hidden, toggle } = usePrivacy();
+  return (
+    <button type="button" className="link-btn account-menu__item" onClick={toggle}>
+      {hidden ? "Show amounts" : "Hide amounts"}
+    </button>
   );
 }
 

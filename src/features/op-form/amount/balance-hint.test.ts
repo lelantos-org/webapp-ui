@@ -11,6 +11,11 @@ describe("settlingHint", () => {
     expect(settlingHint(1000n, 5n, 7n, META)).toBe("Settling −7 WETH");
   });
 
+  it("keeps the sign and drops the figure when masked", () => {
+    expect(settlingHint(1000n, 5n, 0n, META, true)).toBe("Settling +•••• WETH");
+    expect(settlingHint(1000n, 5n, 7n, META, true)).toBe("Settling −•••• WETH");
+  });
+
   it("says nothing when nothing is in flight or the balance is loading", () => {
     expect(settlingHint(1000n, 0n, 0n, META)).toBeUndefined();
     expect(settlingHint(undefined, 5n, 0n, META)).toBeUndefined();
@@ -28,6 +33,14 @@ describe("withheldHint", () => {
     expect(withheldHint(spendable({ cooldown: 700n }), META)).toBe("700 WETH still settling");
     expect(withheldHint(spendable({ reserved: 5n }), META)).toBe("5 WETH awaiting an earlier send");
     expect(withheldHint(spendable({ dust: 3n }), META)).toBe("3 WETH below the dust threshold");
+  });
+
+  it("names the cause without the amount when masked", () => {
+    expect(withheldHint(spendable({ cooldown: 700n }), META, true)).toBe(
+      "•••• WETH still settling",
+    );
+    const { symbol: _, ...bare } = META;
+    expect(withheldHint(spendable({ dust: 3n }), bare, true)).toBe("•••• below the dust threshold");
   });
 
   it("leaves the slot cap to MaxNotice, which explains it properly", () => {

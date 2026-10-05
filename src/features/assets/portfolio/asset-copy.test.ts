@@ -24,26 +24,24 @@ describe("earnedLine", () => {
 
   it("states a priced gain in dollars", () => {
     expect(earnedLine(gain({ gain: 10n ** 16n }), meta(), 2000)).toEqual({
-      text: "+$20.00 earned",
+      figure: "+$20.00",
       tone: "up",
     });
   });
 
   it("falls back to token units when the asset has no price", () => {
-    expect(earnedLine(gain({ gain: 10n ** 17n }), meta(), undefined)?.text).toBe(
-      "+0.1 WETH earned",
-    );
+    expect(earnedLine(gain({ gain: 10n ** 17n }), meta(), undefined)?.figure).toBe("+0.1 WETH");
   });
 
   it("marks a partial figure as a lower bound", () => {
-    expect(earnedLine(gain({ gain: 10n ** 16n, unknownNotes: 2 }), meta(), 2000)?.text).toBe(
-      "≥+$20.00 earned",
+    expect(earnedLine(gain({ gain: 10n ** 16n, unknownNotes: 2 }), meta(), 2000)?.figure).toBe(
+      "≥+$20.00",
     );
   });
 
   it("renders a venue loss as a negative in warn", () => {
     expect(earnedLine(gain({ gain: -(10n ** 16n) }), meta(), 2000)).toEqual({
-      text: "−$20.00 earned",
+      figure: "−$20.00",
       tone: "down",
     });
   });

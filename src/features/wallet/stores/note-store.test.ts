@@ -14,16 +14,17 @@ function note(id: string, over: Partial<Note> = {}): Note {
     value: "0x5",
     rho: "0x2",
     rcm: "0x3",
+    d: "0",
     cm: `0x${id}`,
     leafIndex: 0,
     spent: false,
     discoveredAt: "2026-01-01T00:00:00.000Z",
     ...over,
-  } as Note;
+  };
 }
 
 const file = (notes: Note[], cursor?: number): NotesFile => ({
-  version: 2,
+  version: 3,
   notes,
   ...(cursor === undefined ? {} : { cursor }),
 });
@@ -37,7 +38,7 @@ beforeEach(() => {
 
 describe("IdbNoteStore", () => {
   it("reads as empty, with no cursor, before anything is written", async () => {
-    expect(await new IdbNoteStore(key).load()).toEqual({ version: 2, notes: [] });
+    expect(await new IdbNoteStore(key).load()).toEqual(file([]));
   });
 
   it("round-trips the notes and the cursor", async () => {
@@ -98,7 +99,7 @@ describe("IdbNoteStore", () => {
   it("reads a record on another schema as empty", async () => {
     const db = await walletDb();
     await db.put(NOTE_STORE, { version: 1, notes: [note("a")], cursor: 5 }, key);
-    expect(await new IdbNoteStore(key).load()).toEqual({ version: 2, notes: [] });
+    expect(await new IdbNoteStore(key).load()).toEqual(file([]));
   });
 
   it("leaves nothing behind once destroyed", async () => {
@@ -108,6 +109,6 @@ describe("IdbNoteStore", () => {
 
     const db = await walletDb();
     expect(await db.getAllKeys(NOTE_STORE, IDBKeyRange.bound(key, `${key}￿`))).toEqual([]);
-    expect(await store.load()).toEqual({ version: 2, notes: [] });
+    expect(await store.load()).toEqual(file([]));
   });
 });

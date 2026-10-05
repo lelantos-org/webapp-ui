@@ -6,6 +6,7 @@ import { makeChain } from "@/test/fixtures/chains";
 interface ActiveChainHooks {
   useActiveChain: () => ChainEntry;
   useActiveChainOrUndefined: () => ChainEntry | undefined;
+  useChainRegistry: () => ChainEntry[];
   useTxExplorerUrl: () => (txHash: string) => string | undefined;
 }
 
@@ -21,6 +22,10 @@ export function activeChainHooks(
       return c;
     },
     useActiveChainOrUndefined: read,
+    useChainRegistry: () => {
+      const c = read();
+      return c ? [c] : [];
+    },
     useTxExplorerUrl: () => () => undefined,
   };
 }

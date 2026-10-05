@@ -5,6 +5,7 @@ import { cx } from "@/shared/lib/cx";
 import { formatAssetCompact } from "@/shared/lib/format/asset";
 import { ChevronDownSmallGlyph } from "@/shared/ui/icons/glyphs";
 import { TokenIcon } from "@/shared/ui/icons/TokenIcon";
+import { Masked } from "@/shared/ui/Masked";
 import type { FeeAssetChoice, FeeAssetOption } from "../model/fee-block";
 import "./FeeAssetPicker.css";
 
@@ -180,9 +181,13 @@ function FeeAssetOptionRow({
           {o.balance === undefined ? (
             <>balance …</>
           ) : o.affordable ? (
-            <>balance {formatAssetCompact(o.balance, o)}</>
+            <>
+              balance <Masked>{formatAssetCompact(o.balance, o)}</Masked>
+            </>
           ) : (
-            <>needs {formatAssetCompact(o.amount - o.balance, o)} more</>
+            <>
+              needs <Masked>{formatAssetCompact(o.amount - o.balance, o)}</Masked> more
+            </>
           )}
         </span>
       </span>

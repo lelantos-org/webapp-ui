@@ -1,6 +1,6 @@
 import { useTheme } from "@/shared/hooks/use-theme";
 import { MoonGlyph, SunGlyph } from "@/shared/ui/icons/glyphs";
-import "./ThemeToggle.css";
+import "./header-button.css";
 
 export function ThemeToggle() {
   const { theme, toggle } = useTheme();
@@ -8,7 +8,7 @@ export function ThemeToggle() {
   return (
     <button
       type="button"
-      className="theme-toggle"
+      className="hdr-btn"
       onClick={toggle}
       title={`switch to ${next} theme`}
       aria-label={`switch to ${next} theme`}

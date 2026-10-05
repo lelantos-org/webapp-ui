@@ -5,6 +5,7 @@ import { preloadProverWorker } from "@/features/wallet";
 import { cx } from "@/shared/lib/cx";
 import { formatUsd } from "@/shared/lib/format/money";
 import { amountInWords } from "@/shared/lib/format/words";
+import { Masked } from "@/shared/ui/Masked";
 import { type AmountValidation, type AssetMeta, pickAmountError } from "./amount-validation";
 import "./AmountHero.css";
 import { formatAmountForInput } from "@/shared/lib/format/asset";
@@ -35,6 +36,8 @@ export interface AmountHeroProps {
   size?: "lg" | "md";
   /// Symbol the words end in; defaults to the selected asset's.
   wordsSymbol?: string | undefined;
+  /// Start loading the prover when the field is focused. Off where the amount is never proved.
+  warmProver?: boolean;
 }
 
 /// The amount input with its asset trigger, the figure in words, and a balance row with Max.
@@ -56,6 +59,7 @@ export function AmountHero({
   hint,
   size = "lg",
   wordsSymbol,
+  warmProver = true,
 }: AmountHeroProps) {
   const id = useId();
   const wordsId = `${id}-words`;
@@ -90,7 +94,7 @@ export function AmountHero({
           spellCheck={false}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          onFocus={() => void preloadProverWorker()}
+          onFocus={warmProver ? () => void preloadProverWorker() : undefined}
         />
         {asset}
       </div>
@@ -151,7 +155,9 @@ function BalanceFigure({
           {short ? <span className="only-narrow">{short}</span> : null}{" "}
         </>
       ) : null}
-      <span className="amt-hero__figure">{balance}</span>
+      <span className="amt-hero__figure">
+        <Masked>{balance}</Masked>
+      </span>
     </span>
   );
 }

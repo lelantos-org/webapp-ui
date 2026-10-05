@@ -3,6 +3,8 @@
 export const LOCAL_KEYS = {
   /// The explicit light/dark choice. Also spelled independently in `public/theme-init.js`.
   theme: "lelantos:theme",
+  /// Privacy mode is on: held figures are masked.
+  hideAmounts: "lelantos:hide-amounts",
   /// Verbose logging switch (`window.__lelantosDebug`).
   debug: "lelantos:debug",
   /// Claim links this browser generated, each carrying its bearer spending key.

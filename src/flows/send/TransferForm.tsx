@@ -22,7 +22,9 @@ import {
   useActionForm,
   useSpendForm,
 } from "@/features/op-form";
+import { usePaymentRequest } from "@/features/payment-request";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
+import { RequestNotice } from "./components/RequestNotice";
 import { useTransfer } from "./use-transfer";
 
 export const transferSchema = z.object({
@@ -40,8 +42,14 @@ export function TransferForm() {
     defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID },
     action,
   });
-  const { register, setValue, errors, clearFinished } = form;
+  const { register, setValue, setAmount, errors, clearFinished } = form;
   const options = useAssetSelectOptions();
+  const request = usePaymentRequest((asked) => {
+    // Dirty, so the form's opening-asset default leaves the requested asset alone.
+    setValue("asset", asked.asset.toString(), { shouldDirty: true });
+    setValue("to", asked.to, { shouldDirty: true, shouldValidate: true });
+    setAmount(asked.amount);
+  });
   const { spend, to, review, onPasteTo, frame, hero, reviewPanel } = useSpendForm(form, action, {
     kind: "transfer",
     recipient: SHIELDED_RECIPIENT,
@@ -101,6 +109,7 @@ export function TransferForm() {
       }
     >
       <SpendNotices />
+      <RequestNotice state={request} />
       <AmountHero
         {...hero}
         maxInfo={

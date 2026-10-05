@@ -5,6 +5,7 @@ import { cx } from "@/shared/lib/cx";
 import { formatFixed } from "@/shared/lib/format/number";
 import { CheckGlyph } from "@/shared/ui/icons/glyphs";
 import { TokenIcon } from "@/shared/ui/icons/TokenIcon";
+import { Masked } from "@/shared/ui/Masked";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
 import { useDepositSourceBalances } from "../balances/transparent-balances";
 import { useRegisteredAssets } from "../registry/registered-assets";
@@ -85,7 +86,7 @@ export function ShieldAssetPicker({ value, onChange, onClose }: ShieldAssetPicke
                     </span>
                     {balance === undefined ? null : balance > 0n ? (
                       <span className="apick__have mono">
-                        You hold {formatFixed(balance, o.decimals, 2, 4)}
+                        You hold <Masked>{formatFixed(balance, o.decimals, 2, 4)}</Masked>
                       </span>
                     ) : (
                       <span className="apick__have">Not held yet</span>

@@ -7,6 +7,7 @@ import { formatAmountForDisplay } from "@/shared/lib/format/asset";
 import { formatUsd } from "@/shared/lib/format/money";
 import { PANEL_COLLAPSE_MS } from "@/shared/lib/motion";
 import { TokenIcon } from "@/shared/ui/icons/TokenIcon";
+import { Masked } from "@/shared/ui/Masked";
 import type { AssetBalanceView } from "../balances/use-balances";
 import { type PriceMap, priceOf } from "../prices/prices";
 import { RateLabelView } from "../yield/RateLabelView";
@@ -105,17 +106,19 @@ const AssetRow = memo(function AssetRow({
                 <span className="bal__spin" aria-hidden />
                 {settling.map((c) => (
                   <span key={c.dir} className={`bal__delta bal__delta--${c.dir}`}>
-                    {c.text}
+                    <Masked>{c.text}</Masked>
                   </span>
                 ))}
               </span>
             ) : null}
-            {fmt(total)} {label}
+            <Masked>{fmt(total)}</Masked> {label}
           </span>
         </span>
         <span className="pf-row__right">
           {usd !== undefined ? (
-            <span className="pf-row__usd mono">{formatUsd(usd)}</span>
+            <span className="pf-row__usd mono">
+              <Masked>{formatUsd(usd)}</Masked>
+            </span>
           ) : (
             <span className="pf-row__usd pf-row__usd--none mono" title="No price for this asset">
               —<span className="sr-only">no price</span>
@@ -123,7 +126,7 @@ const AssetRow = memo(function AssetRow({
           )}
           {earned ? (
             <span className={`pf-row__earned mono pf-row__earned--${earned.tone}`}>
-              {earned.text}
+              <Masked>{earned.figure}</Masked> earned
             </span>
           ) : null}
         </span>
@@ -180,7 +183,7 @@ function YieldFigures({ meta, gain }: { meta: RegisteredAsset; gain: YieldGain |
                   earned.down && "pf-detail__num--down",
                 )}
               >
-                {earned.amount}
+                <Masked>{earned.amount}</Masked>
               </span>
               <span className="pf-detail__pct mono"> {earned.percent}</span>
               {earned.partial ? (

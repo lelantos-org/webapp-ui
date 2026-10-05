@@ -14,6 +14,7 @@ import {
 import { useSpendableMax, useWalletState } from "@/features/wallet";
 import type { FeeKind } from "@/shared/domain/op-kind";
 import type { RelayerFeeTerms } from "@/shared/domain/relayer-fee";
+import { usePrivacy } from "@/shared/hooks/use-privacy";
 import { joinHint } from "@/shared/lib/format/text";
 import {
   type AmountReadiness,
@@ -79,6 +80,7 @@ export function useSpendAmount({
   const { isLoading: balancesLoading } = useBalances();
   const { error: syncError } = useWalletState();
   const balance = row?.balance;
+  const { hidden } = usePrivacy();
 
   const parsed = parseAmountSafe(amountText, selected);
   const validation = validateAmount(parsed, selected, balance);
@@ -113,8 +115,8 @@ export function useSpendAmount({
   // Judged only for an amount the balance covers: the field reports the rest itself.
   const reach = validation.valid ? spendReach(parsed, spendable) : "direct";
   const hint = joinHint(
-    settlingHint(balance, row?.pending ?? 0n, row?.outflow ?? 0n, meta),
-    withheldHint(spendable, meta),
+    settlingHint(balance, row?.pending ?? 0n, row?.outflow ?? 0n, meta, hidden),
+    withheldHint(spendable, meta, hidden),
     reach === "merge" ? MERGE_HINT : undefined,
   );
   const held = reach === "held" && spendable ? heldReason(spendable, meta) : undefined;

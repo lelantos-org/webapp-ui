@@ -6,6 +6,7 @@ import { FeeLineSummary } from "@/features/fees";
 import { parseAmountSafe, useSpendAmount } from "@/features/op-form";
 import { userMessage } from "@/shared/lib/errors";
 import { formatAmountForInput, formatAssetAmount } from "@/shared/lib/format/asset";
+import { Masked } from "@/shared/ui/Masked";
 import { topUpSubmitBlock } from "../agent-block";
 import { useTopUpAgent } from "../use-top-up-agent";
 import "../agents.css";
@@ -96,7 +97,7 @@ export function TopUpPanel({
 
       {token && spend.balance !== undefined ? (
         <p className="agent-row__note agent-topup__have">
-          Shielded {formatAssetAmount(spend.balance, token)}
+          Shielded <Masked>{formatAssetAmount(spend.balance, token)}</Masked>
           {max !== undefined && max > 0n ? (
             <button
               type="button"

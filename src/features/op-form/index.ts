@@ -6,6 +6,7 @@ export {
   NO_META,
   parseAmountSafe,
   pickAmountError,
+  validateAmount,
   validateDepositAmount,
 } from "./amount/amount-validation";
 export { MaxNotice } from "./amount/MaxNotice";

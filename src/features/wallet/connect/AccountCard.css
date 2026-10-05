@@ -22,6 +22,16 @@
     color: var(--fg-dim);
     overflow-wrap: anywhere;
   }
+  .acct__request {
+    align-self: flex-start;
+    margin-top: var(--sp-4);
+    font-size: var(--fs-14);
+    font-weight: 500;
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .acct__request:hover { color: var(--accent-2); }
+  .acct__request:focus-visible { outline: var(--ring); outline-offset: 2px; }
   .acct__actions { display: flex; gap: var(--sp-8); }
   .acct__btn {
     width: 44px;

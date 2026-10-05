@@ -3,7 +3,6 @@
 export type { Eip6963ProviderDetail } from "./eip1193/discovery";
 export { preferredRdns } from "./eip1193/rdns-storage";
 export { currentWalletChainId, eip1193Store } from "./eip1193/store";
-export { useSwitchChain } from "./eip1193/use-switch-chain";
 export type { NskParseError } from "./key-cache/nsk-codec";
 export { NSK_HEX_LEN, nskFieldFromHex, nskHexFromField } from "./key-cache/nsk-codec";
 export {
@@ -15,3 +14,4 @@ export {
 export { kindAdapter, selectKind, useWalletKinds, WALLET_KINDS } from "./kinds";
 export { storedCredential } from "./passkey/credential-storage";
 export type { ChainLayerSpec, WalletKind } from "./types";
+export { useSwitchChain } from "./use-switch-chain";

@@ -5,8 +5,10 @@ import { z } from "zod";
 import { DEFAULT_ASSET_ID } from "@/features/assets";
 import { isDecimalString, isPositiveIntegerString } from "@/shared/lib/format/number";
 
-/// bech32m data part for the SDK's 96-byte payload: 154 characters plus the 6-character checksum.
-const ADDRESS_DATA_LEN = 160;
+/// The SDK's address payload: a 16-byte diversifier and three 32-byte fields (`pk_d`, `pk`, `ck_d`).
+const ADDRESS_PAYLOAD_BYTES = 16 + 3 * 32;
+/// bech32m data part: the payload in 5-bit characters plus the 6-character checksum.
+const ADDRESS_DATA_LEN = Math.ceil((ADDRESS_PAYLOAD_BYTES * 8) / 5) + 6;
 const ADDRESS_LEN = ADDRESS_HRP.length + 1 + ADDRESS_DATA_LEN;
 
 /// Shape check for a shielded address (length, HRP, charset); `decodeAddress` is the definitive check.

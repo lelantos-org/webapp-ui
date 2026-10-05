@@ -4,6 +4,9 @@ export function joinHint(...parts: Array<string | undefined>): string | undefine
   return kept.length > 0 ? kept.join(" · ") : undefined;
 }
 
+/// What privacy mode prints in place of a figure.
+export const MASK = "••••";
+
 export function capitalizeFirst(label: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }

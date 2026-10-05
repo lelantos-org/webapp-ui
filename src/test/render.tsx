@@ -31,10 +31,20 @@ export function routerWrapper({ children }: WrapperProps) {
   return <MemoryRouter future={ROUTER_FUTURE}>{children}</MemoryRouter>;
 }
 
-/// Router outside, query client inside — the order `AppProviders` nests them.
-export function appWrapper({ children }: WrapperProps) {
-  return routerWrapper({ children: queryWrapper({ children }) });
+/// Router outside, query client inside — the order `AppProviders` nests them — with the router
+/// opened at `entry`, e.g. `/send#to=…`.
+export function appWrapperAt(entry: string) {
+  return function AppWrapperAt({ children }: WrapperProps) {
+    return (
+      <MemoryRouter future={ROUTER_FUTURE} initialEntries={[entry]}>
+        {queryWrapper({ children })}
+      </MemoryRouter>
+    );
+  };
 }
+
+/// `appWrapperAt` the root path.
+export const appWrapper = appWrapperAt("/");
 
 /// `renderHook` inside a query client, returned alongside the result.
 export function renderQueryHook<Result, Props>(

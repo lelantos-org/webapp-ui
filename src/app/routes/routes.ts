@@ -4,6 +4,7 @@ import {
   loadAgents,
   loadGovernance,
   loadLinks,
+  loadRequest,
   loadSend,
   loadSendLink,
   loadShield,
@@ -44,6 +45,7 @@ export const ACTIONS: readonly ActionRoute[] = [
   action("/shield", "Shield", "narrow", loadShield, "DepositForm", true),
   action("/send", "Send", "narrow", loadSend, "TransferForm", true),
   action("/send/link", "Send by link", "wide", loadSendLink, "GenerateLinkForm", true),
+  action("/request", "Request", "narrow", loadRequest, "RequestForm", true),
   action("/unshield", "Unshield", "narrow", loadUnshield, "WithdrawForm", true),
   action("/swap", "Swap", "narrow", loadSwap, "SwapForm", true),
   action("/links", "Links", "vault", loadLinks, "LinksPage", false),
@@ -54,7 +56,7 @@ export const ACTIONS: readonly ActionRoute[] = [
   action("/agents/new", "Fund an agent", "narrow", loadAgents, "NewAgentForm", false),
 ];
 
-/// Route chunks behind each Home tile, keyed by path.
+/// Route chunks Home links to, keyed by path.
 export const ACTION_PREFETCH: Readonly<Record<string, () => Promise<unknown>>> = Object.fromEntries(
   ACTIONS.filter((a) => a.prefetch).map((a) => [a.path, a.load]),
 );

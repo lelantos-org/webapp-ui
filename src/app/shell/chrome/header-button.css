@@ -1,10 +1,10 @@
 @layer components {
-  .theme-toggle {
+  .hdr-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--theme-toggle-size, 28px);
-    height: var(--theme-toggle-size, 28px);
+    width: var(--hdr-btn-size, 28px);
+    height: var(--hdr-btn-size, 28px);
     border: 1px solid var(--line);
     background: transparent;
     color: var(--fg-dim);
@@ -12,15 +12,19 @@
     cursor: pointer;
     transition: all var(--dur-120) var(--ease-soft);
   }
-  .theme-toggle:hover {
+  .hdr-btn:hover {
     color: var(--accent);
     border-color: var(--accent-dim);
     background: rgba(var(--accent-rgb), 0.06);
   }
-  .theme-toggle:active { transform: scale(0.95); }
-  .theme-toggle:focus-visible { outline: var(--ring); outline-offset: 2px; }
+  .hdr-btn[aria-pressed="true"] {
+    color: var(--accent);
+    border-color: var(--accent-dim);
+  }
+  .hdr-btn:active { transform: scale(0.95); }
+  .hdr-btn:focus-visible { outline: var(--ring); outline-offset: 2px; }
 
   @media (pointer: coarse) {
-    .theme-toggle { min-width: 44px; min-height: 44px; }
+    .hdr-btn { min-width: 44px; min-height: 44px; }
   }
 }

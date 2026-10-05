@@ -4,7 +4,7 @@ import type { IDBPObjectStore } from "idb";
 import { NOTE_STORE, type WalletSchema, walletDb } from "./db";
 
 /// The notes schema this SDK reads; it rejects any other.
-const NOTES_FILE_VERSION: NotesFile["version"] = 2;
+const NOTES_FILE_VERSION: NotesFile["version"] = 3;
 
 const stores = new WeakMap<WalletApi, NoteStore>();
 

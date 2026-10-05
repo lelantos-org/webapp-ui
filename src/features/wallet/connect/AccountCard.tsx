@@ -1,14 +1,12 @@
-import { lazy, Suspense, useState } from "react";
+import { useState } from "react";
+import { Link } from "react-router-dom";
 import { copyWithToast } from "@/shared/hooks/use-copy";
 import { cx } from "@/shared/lib/cx";
 import { CopyGlyph, QrGlyph } from "@/shared/ui/icons/glyphs";
+import { preloadQrCode, QrCode } from "@/shared/ui/QrCode";
 import "./AccountCard.css";
 
 const QR_SIZE = 156;
-
-/// Loaded when first asked for: the encoder is not needed to show the address.
-const loadQrCode = () => import("qrcode.react").then((m) => ({ default: m.QRCodeSVG }));
-const QrCode = lazy(loadQrCode);
 
 export interface AccountCardProps {
   shielded: string;
@@ -25,6 +23,9 @@ export function AccountCard({ shielded }: AccountCardProps) {
         <p className="acct__addr mono" title={shielded}>
           {shielded}
         </p>
+        <Link to="/request" className="acct__request">
+          Request a payment →
+        </Link>
       </div>
       <div className="acct__actions">
         <button
@@ -40,8 +41,8 @@ export function AccountCard({ shielded }: AccountCardProps) {
           className="icon-btn acct__btn"
           aria-label={showQr ? "Hide QR code" : "Show QR code"}
           aria-expanded={showQr}
-          onPointerEnter={() => void loadQrCode()}
-          onFocus={() => void loadQrCode()}
+          onPointerEnter={() => void preloadQrCode()}
+          onFocus={() => void preloadQrCode()}
           onClick={() => setShowQr((v) => !v)}
         >
           <QrGlyph size={17} />
@@ -50,11 +51,7 @@ export function AccountCard({ shielded }: AccountCardProps) {
 
       {showQr ? (
         <div className="acct__qr">
-          {/* The fallback holds the code's box, so the card does not jump when it lands. */}
-          <Suspense fallback={<span style={{ width: QR_SIZE, height: QR_SIZE }} />}>
-            {/* Literal colours: a scanner needs dark modules on light in any theme. */}
-            <QrCode value={shielded} size={QR_SIZE} bgColor="#ffffff" fgColor="#14110E" level="M" />
-          </Suspense>
+          <QrCode value={shielded} size={QR_SIZE} />
           <p>Scan to send to this shielded address</p>
         </div>
       ) : null}

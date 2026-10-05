@@ -1,10 +1,13 @@
 import type { SpendableMax } from "@lelantos-org/sdk";
-import {
-  formatAmountForDisplay,
-  formatAssetAmount,
-  formatAssetFixed,
-} from "@/shared/lib/format/asset";
+import { formatAssetAmount, formatAssetFixed } from "@/shared/lib/format/asset";
+import { MASK } from "@/shared/lib/format/text";
 import type { AssetMeta } from "./amount-validation";
+
+/// "7 WETH", or "•••• WETH" when `masked`, as privacy mode prints it.
+function heldFigure(value: bigint, meta: AssetMeta, masked: boolean): string {
+  if (!masked) return formatAssetAmount(value, meta);
+  return meta.symbol ? `${MASK} ${meta.symbol}` : MASK;
+}
 
 /// The in-flight change to a balance, "Settling −7 WETH"; outflow wins over inflow.
 export function settlingHint(
@@ -12,11 +15,11 @@ export function settlingHint(
   pending: bigint,
   outflow: bigint,
   meta: AssetMeta,
+  masked = false,
 ): string | undefined {
   if (balance === undefined) return undefined;
-  const suffix = meta.symbol ? ` ${meta.symbol}` : "";
-  if (outflow > 0n) return `Settling −${formatAmountForDisplay(outflow, meta)}${suffix}`;
-  if (pending > 0n) return `Settling +${formatAmountForDisplay(pending, meta)}${suffix}`;
+  if (outflow > 0n) return `Settling −${heldFigure(outflow, meta, masked)}`;
+  if (pending > 0n) return `Settling +${heldFigure(pending, meta, masked)}`;
   return undefined;
 }
 
@@ -24,6 +27,7 @@ export function settlingHint(
 export function withheldHint(
   spendable: SpendableMax | undefined,
   meta: AssetMeta,
+  masked = false,
 ): string | undefined {
   if (!spendable) return undefined;
   const { reserved, cooldown, dust } = spendable.withheld;
@@ -35,7 +39,7 @@ export function withheldHint(
   const worst = causes.reduce((a, b) => (b.value > a.value ? b : a));
   if (worst.value <= 0n) return undefined;
 
-  return `${formatAssetAmount(worst.value, meta)} ${worst.why}`;
+  return `${heldFigure(worst.value, meta, masked)} ${worst.why}`;
 }
 
 /// How an amount sits against what one spend can reach now: within it, within it once the funds
