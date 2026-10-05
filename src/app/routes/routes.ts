@@ -52,7 +52,7 @@ export const ACTIONS: readonly ActionRoute[] = [
   action("/governance", "Governance", "vault", loadGovernance, "ProposalsPage", true),
   action("/governance/new", "New proposal", "wide", loadGovernance, "CreateProposalPage", false),
   action("/governance/:id", "Proposal", "vault", loadGovernance, "ProposalDetailPage", false),
-  action("/agents", "Agents", "vault", loadAgents, "AgentsPage", true),
+  action("/agents", "Agents", "vault", loadAgents, "AgentsPage", false),
   action("/agents/new", "Fund an agent", "narrow", loadAgents, "NewAgentForm", false),
 ];
 

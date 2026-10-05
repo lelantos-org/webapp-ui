@@ -13,7 +13,7 @@ import { FmdClient, GAMMA_MIN } from "@lelantos-org/sdk/services";
 import { chainKey } from "@/config/chains";
 import { DAY_MS } from "@/shared/lib/format/time";
 import { createLogger } from "@/shared/lib/logger";
-import { accountDigest } from "@/shared/lib/storage/digest";
+import { accountDigest, storageDigest } from "@/shared/lib/storage/digest";
 import { LOCAL_KEYS } from "@/shared/lib/storage/keys";
 import { localStore, readJson, writeJson } from "@/shared/lib/storage/safe";
 import { jitter } from "@/shared/query/cadence";
@@ -29,21 +29,23 @@ const DECOY_FLOOR = 64;
 const CACHE_TTL_MS = DAY_MS;
 
 // Expiring hint: trusting a token forever turns an expired subscription into a silent zero balance.
+// Bound to the server it was registered with: another one has never seen it.
 const tokenCache = {
   key: (chainId: bigint, account: string) =>
     `${PREFIX}${chainKey(chainId)}:${accountDigest(account)}`,
 
-  /// The cached token, or `undefined` if absent or past its expiry.
-  get(chainId: bigint, account: string): string | undefined {
+  /// The token cached for `fmdUrl`, or `undefined` if absent, past its expiry or another server's.
+  get(fmdUrl: string, chainId: bigint, account: string): string | undefined {
     const entry = readJson(localStore, this.key(chainId, account), isCacheEntry);
-    if (!entry) return undefined;
+    if (!entry || entry.fmd !== storageDigest(fmdUrl)) return undefined;
     return Date.now() < entry.expiresAt ? entry.token : undefined;
   },
 
-  set(chainId: bigint, account: string, token: string): void {
+  set(fmdUrl: string, chainId: bigint, account: string, token: string): void {
     writeJson(localStore, this.key(chainId, account), {
       token,
       expiresAt: Date.now() + jitter(CACHE_TTL_MS),
+      fmd: storageDigest(fmdUrl),
     });
   },
 
@@ -55,12 +57,16 @@ const tokenCache = {
 interface CacheEntry {
   token: string;
   expiresAt: number;
+  /// Digest of the server's URL.
+  fmd: string;
 }
 
 function isCacheEntry(value: unknown): value is CacheEntry {
   if (typeof value !== "object" || value === null) return false;
   const r = value as Record<string, unknown>;
-  return typeof r.token === "string" && typeof r.expiresAt === "number";
+  return (
+    typeof r.token === "string" && typeof r.expiresAt === "number" && typeof r.fmd === "string"
+  );
 }
 
 /// Forget the subscription registered for `account` (claim links leave no trace).
@@ -112,7 +118,7 @@ async function ensureFmdSubscription(
   const { keys } = await deriveKeysFromNsk(nsk, { P, J });
   const tokenHex = subscriptionTokenToHex(deriveSubscriptionToken(P, keys.ivk));
 
-  if (tokenCache.get(chainId, account) === tokenHex) {
+  if (tokenCache.get(fmdUrl, chainId, account) === tokenHex) {
     log.debug("cache hit");
     return tokenHex;
   }
@@ -143,6 +149,6 @@ async function ensureFmdSubscription(
     tokenCache.clear(chainId, account);
     throw new Error("FMD subscription is not active");
   }
-  tokenCache.set(chainId, account, tokenHex);
+  tokenCache.set(fmdUrl, chainId, account, tokenHex);
   return tokenHex;
 }

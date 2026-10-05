@@ -11,12 +11,21 @@ const REGISTRY_TIMEOUT_MS = 10_000;
 // Keyed on both service URLs: the cached bundle is a merge of the two.
 const registryCacheKey = () => LOCAL_KEYS.chainRegistry(env.registryUrl, env.relayerUrl);
 
+/// The usable chains in `body`, read through the user's rpc-proxy when one is set. Applied to
+/// cache and network alike, so a refresh does not change a chain the wallet was built from.
+function parseEntries(body: unknown, source: "network" | "cache"): ChainEntry[] {
+  const entries = entriesFromResponse(body, source);
+  const proxy = env.rpcProxyUrl;
+  if (proxy === undefined) return entries;
+  return entries.map((entry) => ({ ...entry, readRpcUrl: `${proxy}/v1/${entry.chainId}` }));
+}
+
 /// The last cached registry, or `undefined` (never `[]`) when there is none usable.
 export function readCachedChainRegistry(): ChainEntry[] | undefined {
   const raw = localStore.get(registryCacheKey());
   if (raw === undefined) return undefined;
   try {
-    const entries = entriesFromResponse(JSON.parse(raw), "cache");
+    const entries = parseEntries(JSON.parse(raw), "cache");
     return entries.length > 0 ? entries : undefined;
   } catch (e) {
     log.warn("discarding unusable cached chain registry", e);
@@ -41,7 +50,7 @@ export async function loadChainRegistry(): Promise<ChainEntry[]> {
   ]);
 
   const body = { registryChains, assets, relayerChains };
-  const entries = entriesFromResponse(body, "network");
+  const entries = parseEntries(body, "network");
 
   // Raw bodies, not entries: bigints do not stringify, and the cache read reruns validation.
   if (entries.length > 0) writeJson(localStore, registryCacheKey(), body);

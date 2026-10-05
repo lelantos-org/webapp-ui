@@ -20,9 +20,22 @@ describe("tightenCspHtml", () => {
   it("strips the dev-only allowances from the shipped policy", () => {
     const csp = directives(tightenCspHtml(indexHtml));
     expect(csp.get("script-src")).toBe("'self' 'wasm-unsafe-eval'");
-    expect(csp.get("connect-src")).toBe("'self' https: wss:");
+    expect(csp.get("connect-src")).toBe("'self' https: wss: http://localhost:* http://127.0.0.1:*");
     expect(csp.get("require-trusted-types-for")).toBe("'script'");
     expect(csp.get("trusted-types")).toBe("'none'");
+  });
+
+  // The endpoint settings accept a URL the user types; one the CSP then blocks would break the app.
+  it("admits plain http to exactly the hosts the endpoint settings accept", () => {
+    const source = readFileSync(new URL("../../src/config/endpoints.ts", import.meta.url), "utf8");
+    const list = source.match(/LOOPBACK_HOSTS[^=]*= new Set\(\[([^\]]+)\]\)/)?.[1] ?? "";
+    const hosts = [...list.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+    expect(hosts.length).toBeGreaterThan(0);
+
+    const sources = directives(tightenCspHtml(indexHtml)).get("connect-src")?.split(" ") ?? [];
+    expect(sources.filter((s) => s.startsWith("http:"))).toEqual(
+      hosts.map((host) => `http://${host}:*`),
+    );
   });
 
   it("leaves every other directive as written", () => {

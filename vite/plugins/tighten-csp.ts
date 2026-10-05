@@ -21,7 +21,8 @@ export function tightenCspHtml(html: string): string {
   out = mustReplace(
     out,
     "connect-src 'self' http: https: ws: wss:",
-    "connect-src 'self' https: wss:",
+    // Plain http on this machine only: what `endpointUrl` lets a user name for a local service.
+    "connect-src 'self' https: wss: http://localhost:* http://127.0.0.1:*",
   );
   return mustReplace(
     out,
@@ -30,7 +31,8 @@ export function tightenCspHtml(html: string): string {
   );
 }
 
-/// Build-only: drops dev-only `unsafe-inline`, `http:`/`ws:`, and adds Trusted Types to the meta CSP.
+/// Build-only: drops dev-only `unsafe-inline`, `ws:` and non-loopback `http:`, and adds Trusted
+/// Types to the meta CSP.
 export function tightenCsp(): Plugin {
   return {
     name: "tighten-csp",

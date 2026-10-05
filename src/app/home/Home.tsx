@@ -20,7 +20,6 @@ const TILES = [
   { to: "/send", label: "Send", icon: "send" },
   { to: "/swap", label: "Swap", icon: "swap" },
   { to: "/unshield", label: "Unshield", icon: "unshield" },
-  { to: "/agents", label: "Agents", icon: "agent" },
   { to: "/governance", label: "Governance", icon: "govern", needsGovernor: true },
 ] as const satisfies readonly {
   to: string;

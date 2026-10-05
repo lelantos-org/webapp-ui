@@ -1,4 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { applyEndpointOverrides } from "@/config/endpoints";
+import { overriddenEndpoints } from "@/config/env";
 import { userMessage } from "@/shared/lib/errors";
 import { createLogger } from "@/shared/lib/logger";
 import { ErrorCard } from "./ErrorCard";
@@ -56,6 +58,12 @@ function DefaultFallback({ error, reset }: { error: unknown; reset(): void }) {
       <button type="button" className="btn" onClick={reset}>
         try again
       </button>
+      {/* No header is drawn here, so this is the way back from an endpoint that broke the app. */}
+      {overriddenEndpoints().length > 0 ? (
+        <button type="button" className="btn btn--ghost" onClick={() => applyEndpointOverrides({})}>
+          reset network endpoints and reload
+        </button>
+      ) : null}
     </ErrorCard>
   );
 }

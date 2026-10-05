@@ -20,6 +20,10 @@
       rewrites throw if this tag stops matching. A production build emits no inline
       script; adding one requires changing that plugin.
 
+      The built `connect-src` allows any https origin and http on localhost: users can
+      point the app at their own services (`endpointUrl` in src/config/endpoints.ts
+      enforces the same rule).
+
       No 'unsafe-eval': the wasm prover instantiates through WebAssembly, which
       'wasm-unsafe-eval' covers, and the snarkjs fallback does not eval. On a page that
       derives a spending key, 'unsafe-eval' hands any injection a code path.

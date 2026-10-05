@@ -57,6 +57,25 @@ a self-hosted or third-party relayer safe to point this wallet at, so a
 deployment configured with only one of the two has no usable network rather than
 a degraded one.
 
+### Endpoints chosen by the user
+
+The three required URLs above are a build's defaults. From the gear button in the
+header (or "Network endpoints" in the phone account menu) a user can replace the
+registry, the relayer and the note feed (FMD), and name an rpc-proxy to read
+chain state through instead of the RPC each registry row publishes. The choice is
+kept in this browser's `localStorage` and applied by reloading the page; an empty
+field means the build's own service.
+
+- A URL must be `https`, or `http` on `localhost` / `127.0.0.1`. The built app's
+  CSP `connect-src` allows exactly that ([`vite/plugins/tighten-csp.ts`](vite/plugins/tighten-csp.ts)).
+- The rpc-proxy URL is a base: the app calls `<base>/v1/<chain id>`.
+- A service on another origin must answer CORS for this app's origin, including
+  the preflight for the `Content-Type`, `Authorization` and `Idempotency-Key`
+  request headers. The backend services send no CORS headers themselves, so put
+  them behind a reverse proxy that does.
+- Notes and nullifiers synced from a chosen note feed are stored apart from the
+  build's, so switching feeds rescans and switching back resumes.
+
 ## Scripts
 
 | Command | Description |
@@ -122,4 +141,4 @@ docker build \
   -t lelantos-wallet .
 ```
 
-Environment variables are baked in at build time. The service URLs default to the same-origin paths in `.env.example` (`/registry`, `/relayer`, `/fmd`, `/metaquoter`); override any with `--build-arg VITE_REGISTRY_URL=...` and so on. The npm token secret is required to install `@lelantos-org` packages. The bundled [`nginx.conf`](nginx.conf) serves the SPA on port 80.
+Environment variables are baked in at build time, as the defaults a user can still replace at runtime (see [Endpoints chosen by the user](#endpoints-chosen-by-the-user)). The service URLs default to the same-origin paths in `.env.example` (`/registry`, `/relayer`, `/fmd`, `/metaquoter`); override any with `--build-arg VITE_REGISTRY_URL=...` and so on. The npm token secret is required to install `@lelantos-org` packages. The bundled [`nginx.conf`](nginx.conf) serves the SPA on port 80.

@@ -1,12 +1,14 @@
 import { circuitAmount, type SpendPhase, type WalletApi } from "@lelantos-org/sdk";
 import { deriveKeysFromNsk, type Field } from "@lelantos-org/sdk/primitives";
-import { type ChainEntry, chainKey } from "@/config/chains";
+import type { ChainEntry } from "@/config/chains";
 import {
   clearCachedSubscription,
   computeBalances,
   connectWallet,
   heldNotes,
   IdbNoteStore,
+  linkNoteStoreKey,
+  linkNoteStoreKeys,
 } from "@/features/wallet";
 import { type ChainLayerSpec, kindAdapter, nskFieldFromHex } from "@/features/wallet-kinds";
 import { storageDigest } from "@/shared/lib/storage/digest";
@@ -15,11 +17,6 @@ import { describeClaimError } from "../link/codec";
 export async function deriveEphemeralAddress(nsk: Field): Promise<string> {
   const { address } = await deriveKeysFromNsk(nsk);
   return address;
-}
-
-/// Namespace for one link's note store: a digest of the bearer key, never the key itself.
-function ephNoteStoreKey(chainId: bigint, nskEphHex: string): string {
-  return `notes:eph:${chainKey(chainId)}:${storageDigest(nskEphHex)}`;
 }
 
 /// A throwaway wallet over the link's notes; it persists no tree. Callers must `releaseScanner` it.
@@ -40,7 +37,10 @@ export async function buildEphemeralWallet(
     account: await deriveEphemeralAddress(nsk.value),
     // Borrow only the signer: `derive` is never called, so no key prompt is raised.
     signer: layer ? kindAdapter(layer.kind).keySource(layer, chain).signer : undefined,
-    storage: { notes: new IdbNoteStore(ephNoteStoreKey(chain.chainId, nskEphHex)) },
+    // Keyed by a digest of the bearer key, never the key itself.
+    storage: {
+      notes: new IdbNoteStore(linkNoteStoreKey(chain.chainId, storageDigest(nskEphHex))),
+    },
     scannerSize: 2,
   });
   return wallet;
@@ -94,6 +94,9 @@ export async function sweepEphemeral(
 export async function clearEphemeralStore(chainId: bigint, nskEphHex: string): Promise<void> {
   const nsk = nskFieldFromHex(nskEphHex);
   if (nsk.ok) clearCachedSubscription(chainId, await deriveEphemeralAddress(nsk.value));
-  const store = new IdbNoteStore(ephNoteStoreKey(chainId, nskEphHex));
-  await store.destroy();
+  await Promise.all(
+    linkNoteStoreKeys(chainId, storageDigest(nskEphHex)).map((key) =>
+      new IdbNoteStore(key).destroy(),
+    ),
+  );
 }

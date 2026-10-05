@@ -1,9 +1,11 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { openEndpointsDialog } from "@/shared/hooks/use-endpoints-dialog";
 import { usePrivacy } from "@/shared/hooks/use-privacy";
 import { useTheme } from "@/shared/hooks/use-theme";
 import "./ConnectButton.css";
 
-/// The phone header's avatar and its disclosure menu: copy address, privacy mode, theme, disconnect.
+/// The phone header's avatar and its disclosure menu: copy address, privacy mode, theme, endpoints,
+/// disconnect.
 export function AccountMenu({
   initials,
   shown,
@@ -66,6 +68,13 @@ export function AccountMenu({
           <PrivacyItem />
           {/* Mounted only while open, so it reads the theme in force now. */}
           <ThemeItem />
+          <button
+            type="button"
+            className="link-btn account-menu__item"
+            onClick={run(openEndpointsDialog)}
+          >
+            Network endpoints
+          </button>
           <button
             type="button"
             className="link-btn account-menu__item account-menu__item--danger"

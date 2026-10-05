@@ -41,6 +41,7 @@ never loads a module a test is mocking.
 | `http.ts`               | `stubFetch(handler)`, `stubFetchRoutes({ path: body })`, `jsonResponse` |
 | `browser.ts`            | `stubReducedMotion`, `stubWebAuthn`                                   |
 | `privacy.ts`            | `hideAmounts()`: privacy mode on until the test ends                  |
+| `endpoints.ts`          | `chooseEndpoints(overrides)`: user-chosen service URLs in force until the test ends |
 | `result.ts`             | `unwrap(result)`                                                      |
 | `fixtures/assets.ts`    | `makeAsset(id, symbol, over)`, `USDC_ASSET`                           |
 | `fixtures/chains.ts`    | `makeChain(over)`                                                     |

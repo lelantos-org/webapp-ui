@@ -30,6 +30,8 @@ export const LOCAL_KEYS = {
   passkeyChain: "lelantos:passkey:v1:chain",
   /// The authenticator has been shown to lack PRF.
   passkeyNoPrf: "lelantos:passkey:v1:no-prf",
+  /// Service URLs the user chose in place of the build's.
+  endpoints: "lelantos:endpoints:v1",
   /// Prefix of the cached FMD subscription tokens, one per (chain, account).
   fmdSubscriptionPrefix: "lelantos:fmd-sub:v1:",
   /// The last chain registry fetched from these two services.

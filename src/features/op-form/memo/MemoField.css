@@ -1,0 +1,45 @@
+@layer components {
+  .memo {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    min-width: 0;
+  }
+  .memo__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sp-12);
+  }
+  .memo__lbl {
+    font-size: var(--fs-14);
+    color: var(--fg-mute);
+  }
+  .memo__count {
+    flex: none;
+    font-size: var(--fs-13);
+    font-variant-numeric: tabular-nums;
+    color: var(--fg-mute);
+  }
+  .memo__count--over { color: var(--err); }
+  .memo__inp {
+    resize: vertical;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .memo__err {
+    font-size: var(--fs-14);
+    color: var(--err);
+  }
+  .memo__helper {
+    font-size: var(--fs-14);
+    line-height: 1.5;
+    color: var(--fg-mute);
+  }
+
+  /* As the recipient field above it. */
+  @media (max-width: 480px) {
+    .memo { gap: var(--sp-8); }
+    .memo__lbl { font-size: var(--fs-13); }
+  }
+}

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { loadChainRegistry, readCachedChainRegistry } from "@/config/chains";
 import { env } from "@/config/env";
 import { localStore } from "@/shared/lib/storage/safe";
+import { chooseEndpoints } from "@/test/endpoints";
 import { deployment, relayer } from "@/test/fixtures/registry";
 import { jsonResponse, stubFetch } from "@/test/http";
 
@@ -116,5 +117,25 @@ describe("loadChainRegistry caching", () => {
       url.endsWith("/v1/assets") ? jsonResponse({}, { status: 503 }) : { chains: [] },
     );
     await expect(loadChainRegistry()).rejects.toThrow("registry /v1/assets responded 503");
+  });
+});
+
+describe("the user's rpc-proxy", () => {
+  it("carries every chain's reads, from the network and from the cache alike", async () => {
+    chooseEndpoints({ rpcProxyUrl: "https://rpc.mine.example/" });
+    respondWith(bodies(1, 8453));
+
+    const loaded = await loadChainRegistry();
+    const reads = ["https://rpc.mine.example/v1/1", "https://rpc.mine.example/v1/8453"];
+    expect(loaded.map((c) => c.readRpcUrl)).toEqual(reads);
+    expect(readCachedChainRegistry()?.map((c) => c.readRpcUrl)).toEqual(reads);
+    // The RPC installed in the user's wallet stays the deployment's.
+    expect(loaded.map((c) => c.rpcUrl)).toEqual(["https://rpc.example", "https://rpc.example"]);
+  });
+
+  it("is not used unless set", async () => {
+    respondWith(bodies(8453));
+    const [chain] = await loadChainRegistry();
+    expect(chain?.readRpcUrl).toBe("https://rpc.example");
   });
 });

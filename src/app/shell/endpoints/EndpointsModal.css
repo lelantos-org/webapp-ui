@@ -1,0 +1,9 @@
+@layer components {
+  .epm { display: grid; gap: var(--sp-14); }
+  .epm__field { display: flex; flex-direction: column; gap: var(--sp-6); min-width: 0; }
+  .epm__lbl { font-size: var(--fs-13); font-weight: 600; color: var(--fg); }
+  .epm__hint { font-size: var(--fs-12); line-height: 1.5; color: var(--fg-mute); }
+  .epm__err { font-size: var(--fs-12); line-height: 1.5; color: var(--err); }
+  .epm__actions { flex-wrap: wrap; }
+  .epm__reset { margin-right: auto; }
+}

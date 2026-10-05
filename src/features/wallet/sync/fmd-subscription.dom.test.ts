@@ -130,6 +130,25 @@ describe("resolveSyncStrategy", () => {
     expect(createCalls).toBe(1);
   });
 
+  it("does not trust a token another note feed registered", async () => {
+    await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+    const plan = await resolveSyncStrategy("http://other-fmd", 1n, nsk, ADDR);
+
+    expect(plan.strategy.kind).toBe("matches");
+    expect(createCalls).toBe(2);
+  });
+
+  it("re-confirms an entry that does not say which feed registered it", async () => {
+    await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+    const [key = ""] = Object.keys(localStorage);
+    const { fmd: _feed, ...legacy } = JSON.parse(localStorage.getItem(key) as string);
+    localStorage.setItem(key, JSON.stringify(legacy));
+
+    await resolveSyncStrategy("http://fmd", 1n, nsk, ADDR);
+
+    expect(createCalls).toBe(2);
+  });
+
   it("re-confirms a token once the cache entry ages out", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-01-01"));

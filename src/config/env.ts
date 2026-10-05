@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  ENDPOINT_FIELDS,
+  type EndpointField,
+  type EndpointOverrides,
+  readEndpointOverrides,
+} from "./endpoints";
 import { httpUrl } from "./url";
 
 const url = z
@@ -64,30 +70,83 @@ function camelToScreaming(s: string): string {
   return s.replace(/[A-Z]/g, (c) => `_${c}`).toUpperCase();
 }
 
-let parsed: Env | undefined;
+type Effective = Env & { rpcProxyUrl: string | undefined };
 
-function read(): Env {
-  parsed ??= parseEnv();
-  return parsed;
+interface Snapshot {
+  /// The build's own, which names no rpc-proxy.
+  builtin: Effective;
+  effective: Effective;
+  overridden: readonly EndpointField[];
 }
 
-/// Parse the settings now, throwing `EnvConfigError` if they are invalid.
+// Taken once: a tab keeps the endpoints it loaded with until it reloads, whatever another tab saves.
+let snapshot: Snapshot | undefined;
+
+// A URL that only repeats the build's is not a choice.
+function withoutRepeats(overrides: EndpointOverrides, builtin: Effective): EndpointOverrides {
+  const out: EndpointOverrides = {};
+  for (const field of ENDPOINT_FIELDS) {
+    const url = overrides[field];
+    if (url !== undefined && url !== builtin[field]) out[field] = url;
+  }
+  return out;
+}
+
+function overlay(builtin: Effective): Snapshot {
+  const chosen = withoutRepeats(readEndpointOverrides(), builtin);
+  return {
+    builtin,
+    effective: Object.freeze({ ...builtin, ...chosen }),
+    overridden: ENDPOINT_FIELDS.filter((field) => chosen[field] !== undefined),
+  };
+}
+
+function read(): Snapshot {
+  snapshot ??= overlay({ ...parseEnv(), rpcProxyUrl: undefined });
+  return snapshot;
+}
+
+/// Parse the settings now, throwing `EnvConfigError` if the build's are invalid.
 export function validateEnv(): void {
   read();
 }
 
-/// The parsed settings, read lazily so importing this module needs no page.
-export const env: Env = Object.freeze({
+/// The settings in force: the build's, with the user's endpoint choices over them. Read lazily
+/// so importing this module needs no page.
+export const env: Effective = Object.freeze({
   get registryUrl() {
-    return read().registryUrl;
+    return read().effective.registryUrl;
   },
   get relayerUrl() {
-    return read().relayerUrl;
+    return read().effective.relayerUrl;
   },
   get fmdUrl() {
-    return read().fmdUrl;
+    return read().effective.fmdUrl;
   },
   get metaquoterUrl() {
-    return read().metaquoterUrl;
+    return read().effective.metaquoterUrl;
+  },
+  /// The user's rpc-proxy, serving `/v1/<chainId>`; unset, each chain's registry row decides.
+  get rpcProxyUrl() {
+    return read().effective.rpcProxyUrl;
   },
 });
+
+/// What the build itself points at, whatever the user chose; nothing for the rpc-proxy.
+export function builtinEndpoint(field: EndpointField): string | undefined {
+  return read().builtin[field];
+}
+
+/// `overrides` less those that only repeat the build's, which are not choices.
+export function customEndpoints(overrides: EndpointOverrides): EndpointOverrides {
+  return withoutRepeats(overrides, read().builtin);
+}
+
+/// The endpoints the user's choice is in force for.
+export function overriddenEndpoints(): readonly EndpointField[] {
+  return read().overridden;
+}
+
+export function resetEnvForTest(): void {
+  snapshot = undefined;
+}

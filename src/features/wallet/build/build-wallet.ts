@@ -1,14 +1,14 @@
 import type { WalletApi } from "@lelantos-org/sdk";
 import { requestPersistentStorage } from "@lelantos-org/sdk/advanced";
 import type { Field } from "@lelantos-org/sdk/primitives";
-import { type ChainEntry, chainKey } from "@/config/chains";
+import type { ChainEntry } from "@/config/chains";
 import { type ChainLayerSpec, cacheNsk, getCachedNsk, kindAdapter } from "@/features/wallet-kinds";
 import { createLogger } from "@/shared/lib/logger";
-import { accountDigest } from "@/shared/lib/storage/digest";
 import { toast } from "@/shared/lib/toast";
 import { walletDb } from "../stores/db";
 import { holdNoteStore, IdbNoteStore } from "../stores/note-store";
 import { IdbNullifierPersistence } from "../stores/nullifier-persistence";
+import { walletStoreKey } from "../stores/store-key";
 import { IdbTreePersistence } from "../stores/tree-persistence";
 import { connectWallet } from "./connect-wallet";
 import { timed } from "./perf";
@@ -30,16 +30,6 @@ async function resolveNsk(
   log.info("key derived");
   cacheNsk(accountKey, nsk);
   return nsk;
-}
-
-// Keyed by MASP address too: a redeploy under the same chain id must not reuse a stale tree.
-function storeKey(
-  kind: "notes" | "tree" | "nullifiers",
-  chainId: bigint,
-  maspAddress: string,
-  accountKey: string,
-): string {
-  return `${kind}:${chainKey(chainId)}:${accountDigest(maspAddress)}:${accountDigest(accountKey)}`;
 }
 
 export async function buildWallet(
@@ -65,7 +55,7 @@ export async function buildWallet(
   onKey?.();
 
   const maspAddress = chain.maspAddress;
-  const notes = new IdbNoteStore(storeKey("notes", chain.chainId, maspAddress, accountKey));
+  const notes = new IdbNoteStore(walletStoreKey("notes", chain.chainId, maspAddress, accountKey));
   const { wallet, fullSync } = await connectWallet({
     chain,
     nsk,
@@ -74,9 +64,9 @@ export async function buildWallet(
     denominations: true,
     storage: {
       notes,
-      tree: new IdbTreePersistence(storeKey("tree", chain.chainId, maspAddress, accountKey)),
+      tree: new IdbTreePersistence(walletStoreKey("tree", chain.chainId, maspAddress, accountKey)),
       nullifiers: new IdbNullifierPersistence(
-        storeKey("nullifiers", chain.chainId, maspAddress, accountKey),
+        walletStoreKey("nullifiers", chain.chainId, maspAddress, accountKey),
       ),
     },
   });

@@ -16,6 +16,7 @@ export { useSession } from "./session/session";
 export { WalletProvider } from "./session/WalletProvider";
 export { isConnectionPending } from "./session/wallet-status";
 export { IdbNoteStore } from "./stores/note-store";
+export { linkNoteStoreKey, linkNoteStoreKeys } from "./stores/store-key";
 export type { AssetBalance } from "./sync/balances";
 export { computeBalances, heldNotes } from "./sync/balances";
 export { clearCachedSubscription } from "./sync/fmd-subscription";

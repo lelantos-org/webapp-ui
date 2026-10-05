@@ -2,13 +2,16 @@ import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
 import { Backdrop } from "@/app/shell/chrome/Backdrop";
 import { BetaBanner } from "@/app/shell/chrome/BetaBanner";
+import { EndpointsButton } from "@/app/shell/chrome/EndpointsButton";
 import { PrivacyToggle } from "@/app/shell/chrome/PrivacyToggle";
 import { ThemeToggle } from "@/app/shell/chrome/ThemeToggle";
 import { Wordmark } from "@/app/shell/chrome/Wordmark";
 import { ChainBadge } from "@/features/chain";
 import { ConnectButton, useWallet } from "@/features/wallet";
+import { closeEndpointsDialog, useEndpointsDialogOpen } from "@/shared/hooks/use-endpoints-dialog";
 import { cx } from "@/shared/lib/cx";
 import { GithubIcon } from "@/shared/ui/icons/brand";
+import { EndpointsModal } from "./endpoints/EndpointsModal";
 import { HealthIndicator } from "./health/HealthIndicator";
 import { InFlightNotice } from "./InFlightNotice";
 import { InterruptedNotice } from "./InterruptedNotice";
@@ -19,6 +22,7 @@ import "./Layout.css";
 export function Layout({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const { status } = useWallet();
+  const endpointsOpen = useEndpointsDialogOpen();
   useScreenChange();
   useLeaveGuard();
   const minimal = pathname === "/claim";
@@ -45,13 +49,16 @@ export function Layout({ children }: { children: ReactNode }) {
             ) : null}
             {minimal || connected ? <ChainBadge /> : null}
             {full ? <ConnectButton /> : null}
-            {/* Folded on a phone, where the account menu carries both. */}
+            {/* Folded on a phone, where the account menu carries them. */}
             <span className={cx("hdr__tools", full && "hdr__tools--folds")}>
               {full ? <PrivacyToggle /> : null}
+              {/* Not on a claim: saving reloads, and the link is gone from the address bar. */}
+              {minimal ? null : <EndpointsButton />}
               <ThemeToggle />
             </span>
           </div>
         </header>
+        {endpointsOpen ? <EndpointsModal onClose={closeEndpointsDialog} /> : null}
         <InFlightNotice />
         <InterruptedNotice />
         <main className="main" id="main" tabIndex={-1}>
