@@ -27,7 +27,23 @@ describe("payment request codec", () => {
   });
 
   it("ignores keys it does not know", () => {
-    expect(parsePaymentRequest(`#${encodePaymentRequest(REQUEST)}&memo=rent`)).toEqual(REQUEST);
+    expect(parsePaymentRequest(`#${encodePaymentRequest(REQUEST)}&ref=rent`)).toEqual(REQUEST);
+  });
+
+  it("round-trips a memo, whatever characters it holds", () => {
+    for (const memo of ["rent", "INV-0042 · grazie", "a=b&c#d %20+", "十月份房租", "line\nbreak"]) {
+      const request = { ...REQUEST, memo };
+      expect(parsePaymentRequest(`#${encodePaymentRequest(request)}`)).toEqual(request);
+    }
+    expect(paymentRequestUrl("https://wallet.example", { ...REQUEST, memo: "rent, 3B" })).toBe(
+      `https://wallet.example/send#to=${SHIELDED_ADDRESS}&asset=3&amount=12.5&chain=31337` +
+        "&memo=rent%2C+3B",
+    );
+  });
+
+  it("reads an empty memo as none", () => {
+    expect(parsePaymentRequest(`#${encodePaymentRequest(REQUEST)}&memo=`)).toEqual(REQUEST);
+    expect(encodePaymentRequest({ ...REQUEST, memo: "" })).toBe(encodePaymentRequest(REQUEST));
   });
 
   it.each([

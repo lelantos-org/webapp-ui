@@ -7,7 +7,13 @@ import {
   useRegisteredAssets,
 } from "@/features/assets";
 import { useActiveChain } from "@/features/chain";
-import { AmountHero, AssetSelectPill, parseAmountSafe, validateAmount } from "@/features/op-form";
+import {
+  AmountHero,
+  AssetSelectPill,
+  MemoField,
+  parseAmountSafe,
+  validateAmount,
+} from "@/features/op-form";
 import { useWalletInstance } from "@/features/wallet";
 import { preloadQrCode } from "@/shared/ui/QrCode";
 import { ScreenHeader } from "@/shared/ui/ScreenHeader";
@@ -18,9 +24,10 @@ import "./RequestForm.css";
 interface RequestInput {
   amount: string;
   asset: string;
+  memo: string;
 }
 
-/// Request a payment: an amount and an asset, turned into a link that opens Send filled in.
+/// Request a payment: an amount, an asset and a memo, turned into a link that opens Send filled in.
 /// Nothing is sent or stored; the link is rebuilt as the fields change.
 export function RequestForm() {
   const wallet = useWalletInstance();
@@ -28,13 +35,13 @@ export function RequestForm() {
   const assets = useRegisteredAssets();
   const options = useAssetSelectOptions({ rateTag: false });
   const { register, watch, setValue } = useForm<RequestInput>({
-    defaultValues: { amount: "", asset: DEFAULT_ASSET_ID },
+    defaultValues: { amount: "", asset: DEFAULT_ASSET_ID, memo: "" },
   });
 
   // The code is the page's output: have its encoder in hand before the first valid amount.
   useEffect(() => void preloadQrCode(), []);
 
-  const [amountText, assetId] = watch(["amount", "asset"]);
+  const [amountText, assetId, memoText] = watch(["amount", "asset", "memo"]);
   const selected = findAsset(assets, assetId);
   const parsed = parseAmountSafe(amountText, selected);
   // No balance: what is asked for is not bounded by what the requester holds.
@@ -48,13 +55,14 @@ export function RequestForm() {
     amountText,
     parsed,
     amountValid: validation.valid,
+    memoText,
   });
 
   return (
     <>
       <ScreenHeader
         title="Request a payment"
-        subtitle="A link that opens Send with your shielded address, the asset and the amount filled in."
+        subtitle="A link that opens Send with your shielded address, the asset, the amount and any memo filled in."
       />
       <div className="surface surface--card screen-card">
         <AmountHero
@@ -75,6 +83,13 @@ export function RequestForm() {
               onChange={(next) => setValue("asset", next)}
             />
           }
+        />
+        <hr className="rule" />
+        <MemoField
+          inputProps={register("memo")}
+          label="Memo (optional)"
+          value={memoText}
+          helper="Filled into the payer's form, where they can change it. Anyone holding the link can read it."
         />
         <hr className="rule" />
         {link.url !== undefined ? (

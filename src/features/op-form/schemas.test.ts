@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { evmAddressField, isEvmAddress, PUBLIC_RECIPIENT, SHIELDED_RECIPIENT } from "./schemas";
+import {
+  evmAddressField,
+  isEvmAddress,
+  memoField,
+  PUBLIC_RECIPIENT,
+  SHIELDED_RECIPIENT,
+} from "./schemas";
 
 // Anvil's first account, in its EIP-55 form.
 const CHECKSUMMED = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
@@ -34,5 +40,18 @@ describe("PUBLIC_RECIPIENT", () => {
 describe("SHIELDED_RECIPIENT", () => {
   it("rejects a public address in its own words", () => {
     expect(SHIELDED_RECIPIENT.problem(CHECKSUMMED)).toBe("That is not a shielded address");
+  });
+});
+
+describe("memoField", () => {
+  it("accepts no memo and one within the limit", () => {
+    expect(memoField.safeParse("").success).toBe(true);
+    expect(memoField.safeParse("a".repeat(128)).success).toBe(true);
+  });
+
+  it("gives the schema the same words the form uses", () => {
+    const parsed = memoField.safeParse("a".repeat(129));
+    expect(parsed.success).toBe(false);
+    expect(parsed.error?.issues[0]?.message).toBe("That memo is 1 byte too long");
   });
 });

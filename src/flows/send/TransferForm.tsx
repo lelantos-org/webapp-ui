@@ -12,6 +12,8 @@ import {
   defaultAssetField,
   leavesBalanceLabel,
   MaxNotice,
+  MemoField,
+  memoField,
   NO_META,
   RecipientField,
   ReviewPanel,
@@ -31,15 +33,19 @@ export const transferSchema = z.object({
   to: shieldedAddressField,
   amount: amountField,
   asset: defaultAssetField,
+  memo: memoField.default(""),
 });
 export type TransferInput = z.infer<typeof transferSchema>;
+
+const MEMO_NOTE =
+  "Encrypted with the payment: only the recipient can read it. You will not be able to see it again after sending.";
 
 /// Send privately: a shielded transfer, reviewed before it is sent.
 export function TransferForm() {
   const action = useTransfer();
   const form = useActionForm({
     schema: transferSchema,
-    defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID },
+    defaultValues: { to: "", amount: "", asset: DEFAULT_ASSET_ID, memo: "" },
     action,
   });
   const { register, setValue, setAmount, errors, clearFinished } = form;
@@ -48,17 +54,21 @@ export function TransferForm() {
     // Dirty, so the form's opening-asset default leaves the requested asset alone.
     setValue("asset", asked.asset.toString(), { shouldDirty: true });
     setValue("to", asked.to, { shouldDirty: true, shouldValidate: true });
+    setValue("memo", asked.memo ?? "");
     setAmount(asked.amount);
   });
+  const memo = form.watch("memo");
   const { spend, to, review, onPasteTo, frame, hero, reviewPanel } = useSpendForm(form, action, {
     kind: "transfer",
     recipient: SHIELDED_RECIPIENT,
+    memo,
     titles: { progressTitle: "Sending privately", settledTitle: "Sent privately" },
     send: (values, ctx) =>
       action.mutation.mutateAsync({
         amount: ctx.amount,
         asset: ctx.asset,
         recipient: values.to,
+        memo: values.memo || undefined,
         ...ctx.relayerFee,
       }),
   });
@@ -89,6 +99,8 @@ export function TransferForm() {
             destinationLabel="To this shielded address"
             destination={to}
             destinationNote="Check this against what the recipient gave you. Nothing on the receiving side will confirm it."
+            memo={memo}
+            memoNote={MEMO_NOTE}
             fees={
               <FeeSummary
                 variant="review"
@@ -148,6 +160,13 @@ export function TransferForm() {
             </Link>
           </p>
         }
+      />
+      <hr className="rule" />
+      <MemoField
+        inputProps={register("memo")}
+        label="Memo (optional)"
+        value={memo}
+        helper={MEMO_NOTE}
       />
       <hr className="rule" />
     </ActionForm>

@@ -3,6 +3,7 @@ import { ADDRESS_HRP } from "@lelantos-org/sdk/primitives";
 import { isAddress } from "viem";
 import { z } from "zod";
 import { DEFAULT_ASSET_ID } from "@/features/assets";
+import { memoProblem } from "@/shared/domain/memo";
 import { isDecimalString, isPositiveIntegerString } from "@/shared/lib/format/number";
 
 /// The SDK's address payload: a 16-byte diversifier and three 32-byte fields (`pk_d`, `pk`, `ck_d`).
@@ -49,20 +50,23 @@ export const SHIELDED_RECIPIENT: RecipientRule = {
 
 export const PUBLIC_RECIPIENT: RecipientRule = { problem: evmAddressProblem };
 
-/// A zod string field holding a recipient under `rule`, failing with the rule's own words.
-function recipientField(rule: RecipientRule) {
+/// A zod string field that fails with `problem`'s own words.
+function problemField(problem: (value: string) => string | undefined) {
   return z.string().superRefine((value, ctx) => {
-    const problem = rule.problem(value);
-    if (problem) ctx.addIssue({ code: "custom", message: problem });
+    const message = problem(value);
+    if (message) ctx.addIssue({ code: "custom", message });
   });
 }
 
 export const amountField = z.string().refine(isDecimalString, "Enter a positive number");
 export const assetField = z.string().refine(isPositiveIntegerString, "Choose an asset");
 
+/// A payment's memo; the empty string is none.
+export const memoField = problemField(memoProblem);
+
 export const defaultAssetField = assetField.default(DEFAULT_ASSET_ID);
-export const evmAddressField = recipientField(PUBLIC_RECIPIENT);
-export const shieldedAddressField = recipientField(SHIELDED_RECIPIENT);
+export const evmAddressField = problemField(PUBLIC_RECIPIENT.problem);
+export const shieldedAddressField = problemField(SHIELDED_RECIPIENT.problem);
 
 /// Withdraws through `MASP.withdrawEth`; valid only for the chain's WETH.
 /// Not `z.coerce.boolean()`, which turns `"false"` into `true` and would move native ETH for an ERC-20.

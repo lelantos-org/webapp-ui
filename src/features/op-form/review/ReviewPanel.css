@@ -54,6 +54,13 @@
     color: var(--fg);
     overflow-wrap: anywhere;
   }
+  .spend-review__memo {
+    font-size: var(--fs-17);
+    line-height: 1.5;
+    color: var(--fg);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
   .spend-review__note {
     margin: 7px 0 0;
     font-size: var(--fs-14);

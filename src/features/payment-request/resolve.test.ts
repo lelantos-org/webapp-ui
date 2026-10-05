@@ -24,6 +24,11 @@ describe("resolvePaymentRequest", () => {
     });
   });
 
+  it("carries the memo the request asks for", () => {
+    const state = resolvePaymentRequest(fragment({ memo: "rent, 3B" }), 31337n, ASSETS);
+    expect(state).toMatchObject({ status: "ready", request: { memo: "rent, 3B" } });
+  });
+
   it("waits for the chain's assets", () => {
     expect(resolvePaymentRequest(fragment(), 31337n, [])).toEqual({ status: "none" });
   });
@@ -47,6 +52,8 @@ describe("resolvePaymentRequest", () => {
     ["an amount finer than the asset", { amount: "0.0000001" }],
     ["a zero amount", { amount: "0" }],
     ["a missing chain", { chain: "" }],
+    ["a memo longer than a payment can carry", { memo: "a".repeat(129) }],
+    ["a memo with U+0000", { memo: "a\0b" }],
   ])("rejects %s", (_, over) => {
     expect(resolvePaymentRequest(fragment(over), 31337n, ASSETS)).toEqual({ status: "invalid" });
   });

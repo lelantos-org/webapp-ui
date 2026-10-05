@@ -50,6 +50,18 @@ describe("RequestForm", () => {
     expect(screen.getByTitle(linkFor(2, "12.5"))).toBeInTheDocument();
   });
 
+  it("adds the memo to the link, and withholds the link while the memo is too long", () => {
+    render(<RequestForm />, { wrapper: appWrapper });
+    fill("You request", "12.5");
+
+    fill("Memo (optional)", "rent, 3B");
+    expect(screen.getByTitle(`${linkFor(1, "12.5")}&memo=rent%2C+3B`)).toBeInTheDocument();
+
+    fill("Memo (optional)", "a".repeat(129));
+    expect(screen.getByText("That memo is 1 byte too long")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copy link" })).not.toBeInTheDocument();
+  });
+
   it("does not bound the request by what the wallet holds", () => {
     render(<RequestForm />, { wrapper: appWrapper });
     fill("You request", "1000000");

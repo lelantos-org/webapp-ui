@@ -12,6 +12,7 @@ const ready: RequestLinkInputs = {
   amountText: "12.5",
   parsed: 12_500_000n,
   amountValid: true,
+  memoText: "",
 };
 
 describe("requestLink", () => {
@@ -20,6 +21,15 @@ describe("requestLink", () => {
       url: `https://wallet.example/send#to=${SHIELDED_ADDRESS}&asset=1&amount=12.5&chain=31337`,
       amountLabel: "12.5 USDC",
     });
+  });
+
+  it("carries the memo, and none when the field is empty", () => {
+    const link = requestLink({ ...ready, memoText: "INV-0042 · grazie" });
+    expect(link.url).toBe(
+      `https://wallet.example/send#to=${SHIELDED_ADDRESS}&asset=1&amount=12.5&chain=31337` +
+        "&memo=INV-0042+%C2%B7+grazie",
+    );
+    expect(requestLink(ready).url).not.toContain("memo");
   });
 
   it("writes the amount the way the payer's field reads it", () => {
@@ -40,6 +50,7 @@ describe("requestLink", () => {
     ],
     ["an amount the field already rejects", { amountValid: false }, undefined],
     ["a wallet still being built", { address: undefined }, undefined],
+    ["a memo the field already rejects", { memoText: "a".repeat(129) }, undefined],
   ])("has no link for %s", (_, over, reason) => {
     expect(requestLink({ ...ready, ...over })).toEqual({ reason });
   });

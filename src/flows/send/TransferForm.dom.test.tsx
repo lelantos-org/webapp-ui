@@ -69,9 +69,10 @@ describe("transferSchema.to", () => {
   });
 });
 
-describe("TransferForm", () => {
-  const why = () => document.querySelector(".action-form__why")?.textContent;
+/// The reason under the submit button, when it is held.
+const why = () => document.querySelector(".action-form__why")?.textContent;
 
+describe("TransferForm", () => {
   it("says what is missing under the button, in order", () => {
     render(<TransferForm />, { wrapper: appWrapper });
     expect(why()).toBe("Enter an amount you hold");
@@ -142,6 +143,50 @@ describe("TransferForm", () => {
   });
 });
 
+describe("TransferForm memo", () => {
+  it("shows the memo in the review and sends it with the payment", async () => {
+    mutateAsync.mockClear();
+    render(<TransferForm />, { wrapper: appWrapper });
+    fill("You send", "0.5");
+    fill("To", ADDRESS);
+    fill("Memo (optional)", "INV-0042 · grazie");
+    expect(screen.getByText("18 / 128 bytes")).toBeInTheDocument();
+
+    await pressAndSettle("Review");
+    expect(screen.getByRole("region", { name: "Memo" })).toHaveTextContent("INV-0042 · grazie");
+
+    await pressAndSettle("Confirm and send");
+    expect(mutateAsync.mock.calls).toEqual([
+      [
+        {
+          amount: 500_000n,
+          asset: 1n,
+          recipient: ADDRESS,
+          memo: "INV-0042 · grazie",
+          feeAsset: undefined,
+          maxFee: 1_000n,
+        },
+      ],
+    ]);
+  });
+
+  it("holds the review while the memo is too long, and the field says by how much", () => {
+    render(<TransferForm />, { wrapper: appWrapper });
+    fill("You send", "0.5");
+    fill("To", ADDRESS);
+
+    fill("Memo (optional)", "租".repeat(43));
+    expect(screen.getByRole("button", { name: "Review" })).toBeDisabled();
+    expect(screen.getByLabelText("Memo (optional)")).toBeInvalid();
+    // Said once, by the field.
+    expect(screen.getAllByText("That memo is 1 byte too long")).toHaveLength(1);
+    expect(why()).toBeUndefined();
+
+    fill("Memo (optional)", "租".repeat(42));
+    expect(screen.getByRole("button", { name: "Review" })).toBeEnabled();
+  });
+});
+
 describe("TransferForm opened from a payment request", () => {
   const openedAt = (fragment: string) => appWrapperAt(`/send#${fragment}`);
   const request = (chain: string) => `to=${ADDRESS}&asset=1&amount=0.5&chain=${chain}`;
@@ -159,6 +204,18 @@ describe("TransferForm opened from a payment request", () => {
     expect(mutateAsync.mock.calls).toEqual([
       [{ amount: 500_000n, asset: 1n, recipient: ADDRESS, feeAsset: undefined, maxFee: 1_000n }],
     ]);
+  });
+
+  it("fills the memo the request asks for, and says it came from the link", async () => {
+    mutateAsync.mockClear();
+    render(<TransferForm />, { wrapper: openedAt(`${request("1")}&memo=rent%2C+3B`) });
+
+    expect(screen.getByLabelText("Memo (optional)")).toHaveValue("rent, 3B");
+    expect(screen.getByText(/The amount, asset, address and memo came from/)).toBeInTheDocument();
+
+    await pressAndSettle("Review");
+    await pressAndSettle("Confirm and send");
+    expect(mutateAsync.mock.calls[0]?.[0]).toMatchObject({ memo: "rent, 3B" });
   });
 
   it("keeps the requested asset over the one the page URL opens on", () => {

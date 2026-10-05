@@ -33,6 +33,13 @@ describe("spendSubmitBlock", () => {
     expect(reason({ recipient: "   " })).toBe("Enter a recipient address");
   });
 
+  it("gates a memo too long to send, after the recipient, and leaves the reason to the field", () => {
+    expect(spendSubmitBlock(ok({ memo: "" }))).toEqual({ disabled: false });
+    expect(spendSubmitBlock(ok({ memo: "rent, October" }))).toEqual({ disabled: false });
+    expect(spendSubmitBlock(ok({ memo: "a".repeat(129) }))).toEqual({ disabled: true });
+    expect(reason({ memo: "a".repeat(129), recipient: "" })).toBe("Enter a recipient address");
+  });
+
   it("names the kind of address a malformed recipient is not", () => {
     expect(reason({ recipient: "0xdeadbeef" })).toBe("That is not a shielded address");
     expect(

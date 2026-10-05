@@ -29,6 +29,18 @@ describe("ReviewPanel", () => {
     expect(screen.queryByText(/combined first/)).not.toBeInTheDocument();
   });
 
+  it("shows the memo as the text it is, and no section without one", () => {
+    const { rerender } = render(<ReviewPanel {...props} />);
+    expect(screen.queryByRole("region", { name: "Memo" })).not.toBeInTheDocument();
+
+    const memo = '<a href="https://evil.example">rent</a>';
+    rerender(<ReviewPanel {...props} memo={memo} memoNote="Only the recipient can read it." />);
+    const section = screen.getByRole("region", { name: "Memo" });
+    expect(section).toHaveTextContent(memo);
+    expect(section.querySelector("a")).toBeNull();
+    expect(section).toHaveTextContent(/Only the recipient can read it/);
+  });
+
   it("holds the confirm and says why", () => {
     render(<ReviewPanel {...props} confirmBlocked="Working out the fee…" />);
     expect(screen.getByRole("button", { name: "Confirm and send" })).toBeDisabled();

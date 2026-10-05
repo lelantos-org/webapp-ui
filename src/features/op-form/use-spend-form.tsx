@@ -32,6 +32,8 @@ export type SpendFormValues = ActionFormValues & { to: string; asset: string };
 export interface SpendFormOptions<T>
   extends Omit<SpendAmountInputs, "selected" | "amountText" | "setAmount"> {
   recipient: RecipientRule;
+  /// The memo field's text, on a form that sends one.
+  memo?: string | undefined;
   titles: Pick<TxCopy, "progressTitle" | "settledTitle">;
   /// Sends validated values, with the amount in circuit units.
   send(
@@ -64,7 +66,7 @@ export interface SpendForm {
 export function useSpendForm<T extends SpendFormValues, I, R extends OperationResult>(
   form: ActionFormApi<T>,
   { mutation: m, progress }: ActionMutation<I, R>,
-  { recipient, titles, send, ...amountInputs }: SpendFormOptions<T>,
+  { recipient, memo, titles, send, ...amountInputs }: SpendFormOptions<T>,
 ): SpendForm {
   const { selected, register, errors } = form;
   const amountText = form.watch("amount" as Path<T>) as string;
@@ -81,7 +83,12 @@ export function useSpendForm<T extends SpendFormValues, I, R extends OperationRe
   const { parsed, fees, display } = spend;
   const symbol = display?.symbol ?? "";
 
-  const block = spendSubmitBlock({ ...spend.readiness, recipient: to, recipientRule: recipient });
+  const block = spendSubmitBlock({
+    ...spend.readiness,
+    recipient: to,
+    recipientRule: recipient,
+    memo,
+  });
 
   const onSubmit = useActionSubmit<T>(
     form,
@@ -91,7 +98,9 @@ export function useSpendForm<T extends SpendFormValues, I, R extends OperationRe
   );
 
   // Covers every field that changes what is sent, so an edit closes the review before stale figures are confirmed.
-  const review = useReview([asset, amountText, to, spend.feeAsset].map((p) => p ?? "").join("|"));
+  const review = useReview(
+    [asset, amountText, to, spend.feeAsset, memo].map((p) => p ?? "").join("|"),
+  );
   const figures =
     selected && parsed !== undefined ? reviewFigure(parsed, selected, symbol) : undefined;
 

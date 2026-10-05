@@ -30,8 +30,8 @@ export function RequestNotice({ state }: { state: RequestState }) {
           tone="neutral"
           title={`Payment request · ${state.request.amount} ${state.asset.symbol}`}
         >
-          The amount, asset and address came from the link you opened. Pay it only if you know who
-          sent it.
+          The {state.request.memo ? "amount, asset, address and memo" : "amount, asset and address"}{" "}
+          came from the link you opened. Pay it only if you know who sent it.
         </Notice>
       );
   }

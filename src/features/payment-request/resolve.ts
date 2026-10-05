@@ -1,6 +1,7 @@
 import type { RegisteredAsset } from "@/config/chains";
 import { findAsset } from "@/features/assets";
 import { parseAmountSafe, SHIELDED_RECIPIENT } from "@/features/op-form";
+import { memoProblem } from "@/shared/domain/memo";
 import { isPaymentRequestFragment, type PaymentRequest, parsePaymentRequest } from "./codec";
 
 /// What the page's fragment asks of the Send form on the active chain.
@@ -28,6 +29,7 @@ export function resolvePaymentRequest(
 
   const request = parsePaymentRequest(hash);
   if (!request || SHIELDED_RECIPIENT.problem(request.to) !== undefined) return INVALID;
+  if (memoProblem(request.memo ?? "") !== undefined) return INVALID;
   if (request.chainId !== chainId) return { status: "other-chain", chainId: request.chainId };
   if (assets.length === 0) return NONE;
 

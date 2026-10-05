@@ -32,6 +32,8 @@ export interface TransferCall extends RelayerFeeTerms {
   /// The recipient note's value.
   amount: CircuitAmount;
   asset: bigint;
+  /// Text encrypted to the recipient with the note.
+  memo?: string | undefined;
 }
 
 export interface WithdrawCall extends RelayerFeeTerms {
@@ -72,6 +74,7 @@ export function createSdkActions(wallet: WalletApi) {
         recipient: r.recipient,
         amount: r.amount,
         asset: r.asset,
+        memo: r.memo,
         feeAsset: r.feeAsset,
         maxFee: r.maxFee,
         autoConsolidate: true,

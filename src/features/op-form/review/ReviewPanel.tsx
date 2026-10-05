@@ -14,6 +14,9 @@ export interface ReviewPanelProps {
   /// The raw address; grouped here for reading.
   destination: string;
   destinationNote: ReactNode;
+  /// The memo sent with the payment; the section is left out when there is none.
+  memo?: string | undefined;
+  memoNote?: ReactNode;
   fees: ReactNode;
   /// The funds are merged before this spend: say what that adds to the fees shown.
   mergeFirst?: boolean;
@@ -36,6 +39,8 @@ export function ReviewPanel({
   destinationLabel,
   destination,
   destinationNote,
+  memo,
+  memoNote,
   fees,
   mergeFirst = false,
   observer,
@@ -65,6 +70,14 @@ export function ReviewPanel({
         <div className="spend-review__addr mono">{grouped(destination)}</div>
         <p className="spend-review__note">{destinationNote}</p>
       </section>
+
+      {memo ? (
+        <section className="spend-review__sec" aria-label="Memo">
+          <div className="caps spend-review__cap">Memo</div>
+          <div className="spend-review__memo">{memo}</div>
+          <p className="spend-review__note">{memoNote}</p>
+        </section>
+      ) : null}
 
       <section className="spend-review__sec" aria-label="Fees">
         {fees}

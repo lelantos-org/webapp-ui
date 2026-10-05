@@ -16,6 +16,7 @@ export { BoundaryLine } from "./frame/BoundaryLine";
 export { SpendNotices } from "./frame/SpendNotices";
 export { useActionForm, useActionSubmit } from "./frame/use-action-form";
 export { useAskedAsset, useHeldAssetDefault } from "./frame/use-opening-asset";
+export { MemoField } from "./memo/MemoField";
 export { RecipientField } from "./recipient/RecipientField";
 export { ReviewPanel } from "./review/ReviewPanel";
 export { headlineLabel, leavesBalanceLabel } from "./review/review";
@@ -27,6 +28,7 @@ export {
   defaultAssetField,
   evmAddressField,
   isEvmAddress,
+  memoField,
   PUBLIC_RECIPIENT,
   SHIELDED_RECIPIENT,
   shieldedAddressField,
