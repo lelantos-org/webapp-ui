@@ -15,6 +15,9 @@ export const LOCAL_KEYS = {
   /// Agent wallets this browser funded, each holding a long-lived spending key. Never expired:
   /// the stored `nsk` is the only copy, and dropping a record strands the agent's funds.
   agents: "lelantos:agents:v1",
+  /// Prefix of the handles an account claimed from this browser, one list per (chain, account).
+  /// Public on-chain; kept so the app can show the handle without asking the chain whose it is.
+  claimedHandlesPrefix: "lelantos:handles:v1:",
   /// Prefix of the asset last sent, one per chain: what a spend form opens on.
   lastAssetPrefix: "lelantos:last-asset:v1:",
   /// Recent proving durations, for the progress card's estimate.

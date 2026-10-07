@@ -22,10 +22,14 @@ export function stubFetch(
   return spy;
 }
 
-/// Stub `fetch` with a 200 JSON body per pathname; any other path is a 404.
+/// Stub `fetch` per pathname: a 200 JSON body, a `Response`, or a handler asked on every call.
+/// Any other path is a 404.
 export function stubFetchRoutes(routes: Record<string, unknown>) {
-  return stubFetch((url) => {
-    const body = routes[new URL(url, "http://localhost").pathname];
-    return body === undefined ? jsonResponse({}, { status: 404 }) : body;
+  return stubFetch((url, init) => {
+    const route = routes[new URL(url, "http://localhost").pathname];
+    const body = typeof route === "function" ? (route as Handler)(url, init) : route;
+    if (body === undefined) return jsonResponse({}, { status: 404 });
+    // A `Response` is read once, and a route answers many calls.
+    return body instanceof Response ? body.clone() : body;
   });
 }

@@ -53,7 +53,7 @@
   }
   .rcpt__inp::placeholder { color: var(--fg-mute); opacity: 1; }
 
-  .rcpt__grouped { display: none; }
+  .rcpt__laid { display: none; }
   .rcpt__ok {
     flex: none;
     display: inline-grid;
@@ -106,12 +106,9 @@
     .rcpt__inp { font-size: var(--fs-14); line-height: 1.7; }
     .rcpt__helper,
     .rcpt__ok { display: none; }
-    .rcpt--valid .rcpt__grouped {
+    .rcpt--valid .rcpt__laid {
       display: block;
       font-size: var(--fs-14);
-      line-height: 1.7;
-      color: var(--fg);
-      overflow-wrap: anywhere;
     }
     .rcpt--valid:not(:focus-within) .rcpt__inp {
       position: absolute;
@@ -119,13 +116,11 @@
       height: 100%;
       opacity: 0;
     }
-    .rcpt--valid:focus-within .rcpt__grouped { display: none; }
+    .rcpt--valid:focus-within .rcpt__laid { display: none; }
   }
 
-  /* iOS zooms the page on focusing a field under 16px and does not zoom back. The grouped
-     overlay matches, so the address does not resize between focus and blur. */
+  /* iOS zooms the page on focusing a field under 16px and does not zoom back. */
   @media (pointer: coarse) {
-    .rcpt__inp,
-    .rcpt--valid .rcpt__grouped { font-size: var(--fs-16); }
+    .rcpt__inp { font-size: var(--fs-16); }
   }
 }

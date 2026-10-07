@@ -1,5 +1,5 @@
 import { ChainIcon } from "@/shared/ui/icons/ChainIcon";
-import { useActiveChainOrUndefined } from "./ChainProvider";
+import { useActiveChainOrUndefined } from "./context";
 import "./ChainBadge.css";
 
 /// Read-only pill naming the connected network; nothing when there is no supported chain.

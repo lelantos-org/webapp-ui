@@ -1,17 +1,12 @@
 import { circuitAmount, type QuoteSwapOptions } from "@lelantos-org/sdk";
 import { waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { renderQueryHook } from "@/test/render";
+import { fakeWalletApi } from "@/features/wallet/testing";
+import { renderAppHook } from "@/test/app";
 import { useSwapQuote } from "./use-swap-quote";
 
-const quoteSwap = vi.hoisted(() => vi.fn());
-
-vi.mock("@/features/wallet", () => ({
-  useWalletInstance: () => ({ address: "lelantos1me", quoteSwap }),
-}));
-vi.mock("@/features/chain", async () =>
-  (await import("@/test/fakes/chain")).activeChainHooks({ chainId: 31337n }),
-);
+const quoteSwap = vi.fn();
+const connected = { wallet: { wallet: fakeWalletApi({ address: "lelantos1me", quoteSwap }) } };
 
 function request(gross: bigint): QuoteSwapOptions {
   return { assetIn: 1n, assetOut: 2n, gross: circuitAmount(gross), slippageBps: 50 };
@@ -23,7 +18,7 @@ describe("useSwapQuote", () => {
   });
 
   it("settles on a request the caller rebuilds every render", async () => {
-    const { result, rerender } = renderQueryHook(() => useSwapQuote(request(1_000n)));
+    const { result, rerender } = renderAppHook(() => useSwapQuote(request(1_000n)), connected);
     rerender();
     rerender();
 
@@ -37,7 +32,7 @@ describe("useSwapQuote", () => {
 
   it("goes stale the moment the request changes, before the new quote lands", async () => {
     let amount = 1_000n;
-    const { result, rerender } = renderQueryHook(() => useSwapQuote(request(amount)));
+    const { result, rerender } = renderAppHook(() => useSwapQuote(request(amount)), connected);
     await waitFor(() => expect(result.current.data).toBeDefined());
 
     amount = 2_000n;
@@ -47,7 +42,7 @@ describe("useSwapQuote", () => {
   });
 
   it("does not quote an incomplete request", () => {
-    const { result } = renderQueryHook(() => useSwapQuote(undefined));
+    const { result } = renderAppHook(() => useSwapQuote(undefined), connected);
 
     expect(result.current.data).toBeUndefined();
     expect(quoteSwap).not.toHaveBeenCalled();

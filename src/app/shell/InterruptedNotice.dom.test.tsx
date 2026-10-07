@@ -1,15 +1,12 @@
-import { render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ROUTER_FUTURE } from "@/app/providers/router-future";
+import { screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import { type InterruptedOp, opScope, reloadInterruptedForTest } from "@/features/tx";
+import { fakeWalletApi } from "@/features/wallet/testing";
 import { SESSION_KEYS } from "@/shared/lib/storage/keys";
 import { sessionStore, writeJson } from "@/shared/lib/storage/safe";
+import { renderApp } from "@/test/app";
 import { press } from "@/test/interact";
 import { InterruptedNotice } from "./InterruptedNotice";
-
-vi.mock("@/features/wallet", () => ({ useWallet: () => ({ wallet: { address: "lelantos1me" } }) }));
-vi.mock("@/features/chain", () => ({ useActiveChainOrUndefined: () => ({ chainId: 31337n }) }));
 
 const SCOPE = opScope(31337n, "lelantos1me");
 
@@ -26,17 +23,12 @@ const op = (over: Partial<InterruptedOp> = {}): InterruptedOp => ({
 function reloadedAt(path: string, ops: InterruptedOp[]) {
   writeJson(sessionStore, SESSION_KEYS.opsRunning, ops);
   reloadInterruptedForTest();
-  return render(
-    <MemoryRouter initialEntries={[path]} future={ROUTER_FUTURE}>
-      <InterruptedNotice />
-    </MemoryRouter>,
-  );
+  return renderApp(<InterruptedNotice />, {
+    route: path,
+    chain: { chainId: 31337n },
+    wallet: { wallet: fakeWalletApi({ address: "lelantos1me" }) },
+  });
 }
-
-beforeEach(() => {
-  sessionStore.remove(SESSION_KEYS.opsRunning);
-  sessionStore.remove(SESSION_KEYS.opsInterrupted);
-});
 
 describe("InterruptedNotice", () => {
   it("is absent when no reload cut anything short", () => {

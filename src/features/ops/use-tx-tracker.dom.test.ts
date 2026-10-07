@@ -1,14 +1,18 @@
 // The tracker runs after the tx is broadcast, so nothing it does may report the tx as failed.
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { fakeWalletApi, fakeWalletContext } from "@/test/fakes/wallet";
-import { renderQueryHook } from "@/test/render";
+import { fakeWalletApi } from "@/features/wallet/testing";
+import { renderAppHook } from "@/test/app";
 
 const addPendingMany = vi.fn();
 const clearPending = vi.fn();
 const trackTxLifecycle = vi.fn();
 const invalidate = vi.fn();
 const state = vi.fn();
+const scene = {
+  chain: { chainId: 1n },
+  wallet: { wallet: fakeWalletApi({ chain: {}, state }) },
+};
 
 vi.mock("@/features/tx", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/tx")>()),
@@ -16,15 +20,11 @@ vi.mock("@/features/tx", async (importOriginal) => ({
   addPendingMany: (...a: unknown[]) => addPendingMany(...a),
   clearPending: (...a: unknown[]) => clearPending(...a),
 }));
-vi.mock("@/features/chain", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/chain")>()),
-  ...(await import("@/test/fakes/chain")).activeChainHooks({ chainId: 1n }),
-}));
 vi.mock("@/features/wallet", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/wallet")>()),
-  useWallet: () => fakeWalletContext({ wallet: fakeWalletApi({ chain: {}, state }) }),
-  useWalletInstance: () => fakeWalletApi({ chain: {}, state }),
-  useInvalidateWalletState: () => invalidate,
+  ...({
+    useInvalidateWalletState: () => invalidate,
+  } satisfies Partial<typeof import("@/features/wallet")>),
 }));
 
 const { useTxTracker } = await import("./use-tx-tracker");
@@ -51,7 +51,7 @@ beforeEach(() => {
 
 describe("useTxTracker", () => {
   it("records the pending overlay and starts the lifecycle watch", async () => {
-    const { result } = renderQueryHook(() => useTxTracker());
+    const { result } = renderAppHook(() => useTxTracker(), scene);
 
     await result.current(swapArgs as never);
 
@@ -60,7 +60,7 @@ describe("useTxTracker", () => {
   });
 
   it("keys the overlay by operation and settles only that operation", async () => {
-    const { result } = renderQueryHook(() => useTxTracker());
+    const { result } = renderAppHook(() => useTxTracker(), scene);
 
     await result.current(swapArgs as never);
 
@@ -75,7 +75,7 @@ describe("useTxTracker", () => {
   });
 
   it("watermarks the leg-B note at the quote's credit over the confirmed baseline", async () => {
-    const { result } = renderQueryHook(() => useTxTracker());
+    const { result } = renderAppHook(() => useTxTracker(), scene);
 
     await result.current(swapArgs as never);
 
@@ -89,7 +89,7 @@ describe("useTxTracker", () => {
     state.mockImplementation(() => {
       throw new Error("disposed");
     });
-    const { result } = renderQueryHook(() => useTxTracker());
+    const { result } = renderAppHook(() => useTxTracker(), scene);
 
     await expect(result.current(swapArgs as never)).resolves.toBeUndefined();
 
@@ -99,7 +99,7 @@ describe("useTxTracker", () => {
 
   it("still tracks the tx when the post-submit refetch fails", async () => {
     invalidate.mockRejectedValue(new Error("offline"));
-    const { result } = renderQueryHook(() => useTxTracker());
+    const { result } = renderAppHook(() => useTxTracker(), scene);
 
     await expect(result.current(swapArgs as never)).resolves.toBeUndefined();
 
@@ -108,7 +108,7 @@ describe("useTxTracker", () => {
 
   it("hands a deposit's escrow to the lifecycle", async () => {
     const escrow = { commitment: "0xc0" };
-    const { result } = renderQueryHook(() => useTxTracker());
+    const { result } = renderAppHook(() => useTxTracker(), scene);
 
     await result.current({
       label: "deposit",

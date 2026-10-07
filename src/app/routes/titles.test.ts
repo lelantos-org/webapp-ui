@@ -18,6 +18,11 @@ describe("screenTitle", () => {
     expect(screenTitle("/claim")).toBe("Claim · Lelantos Wallet");
   });
 
+  it("names the handle screens, and never the handle a profile is for", () => {
+    expect(screenTitle("/name")).toBe("Claim a handle · Lelantos Wallet");
+    expect(screenTitle("/profile")).toBe("Profile · Lelantos Wallet");
+  });
+
   it("falls back to the app's name on home and unknown paths", () => {
     expect(screenTitle("/")).toBe("Lelantos Wallet");
     expect(screenTitle("/nope")).toBe("Lelantos Wallet");

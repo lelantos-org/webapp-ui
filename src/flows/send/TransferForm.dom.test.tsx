@@ -232,6 +232,24 @@ describe("TransferForm opened from a payment request", () => {
     }
   });
 
+  it("fills only the recipient of a recipient-only request", () => {
+    render(<TransferForm />, { wrapper: openedAt(`to=${ADDRESS}`) });
+
+    expect(screen.getByLabelText("To")).toHaveValue(ADDRESS);
+    expect(screen.getByLabelText("You send")).toHaveValue("");
+    expect(screen.getByLabelText("Memo (optional)")).toHaveValue("");
+    expect(screen.getByLabelText("Asset")).toHaveValue("1");
+    expect(screen.getByText("Paying an address from a link")).toBeInTheDocument();
+    expect(mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("does not take a bad address from a recipient-only request", () => {
+    render(<TransferForm />, { wrapper: openedAt("to=lelantos1nope") });
+
+    expect(screen.getByLabelText("To")).toHaveValue("");
+    expect(screen.getByText("This payment request can't be read")).toBeInTheDocument();
+  });
+
   it("leaves the form empty for a request made on another network", () => {
     render(<TransferForm />, { wrapper: openedAt(request("10")) });
 

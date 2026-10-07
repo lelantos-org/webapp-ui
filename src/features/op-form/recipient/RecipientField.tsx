@@ -8,12 +8,14 @@ import {
   useState,
 } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
-import { grouped } from "@/shared/lib/address";
 import { cx } from "@/shared/lib/cx";
 import { createLogger } from "@/shared/lib/logger";
 import { toast } from "@/shared/lib/toast";
+import { AddressBlock } from "@/shared/ui/address/AddressBlock";
+import { AddressEnds } from "@/shared/ui/address/AddressEnds";
+import { AddressFingerprint } from "@/shared/ui/address/AddressFingerprint";
 import { CheckGlyph } from "@/shared/ui/icons/glyphs";
-import type { RecipientRule } from "../schemas";
+import { isShieldedAddress, type RecipientRule } from "../schemas";
 import "./RecipientField.css";
 
 const log = createLogger("forms:recipient");
@@ -55,6 +57,7 @@ export function RecipientField({
 
   const problem = rule.problem(value);
   const valid = !formError && problem === undefined;
+  const shielded = valid && isShieldedAddress(value);
   const error = formError ?? (left && value.trim() !== "" ? problem : undefined);
 
   const canPaste = !!onPaste && typeof navigator !== "undefined" && !!navigator.clipboard?.readText;
@@ -92,8 +95,8 @@ export function RecipientField({
       <div className="rcpt__box">
         <div className="rcpt__field">
           {valid ? (
-            <div className="rcpt__grouped mono" aria-hidden="true">
-              {grouped(value)}
+            <div className="rcpt__laid" aria-hidden="true">
+              {shielded ? <AddressEnds value={value} /> : <AddressBlock value={value} />}
             </div>
           ) : null}
           <textarea
@@ -136,6 +139,7 @@ export function RecipientField({
           </button>
         ) : null}
       </div>
+      {shielded ? <AddressFingerprint inline value={value} /> : null}
       {error ? (
         <span className="rcpt__err" id={errId}>
           {error}

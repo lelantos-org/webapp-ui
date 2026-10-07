@@ -21,6 +21,10 @@ const registryChainRow = z.object({
   treeDepth: z.number().optional(),
   nativeAdapterAddress: z.string().optional(),
   swapWrapperAddress: z.string().optional(),
+  genericCallWrapperAddress: z.string().optional(),
+  /// The handle registrar, and the ENS parents its handles are served under (first is displayed).
+  nameRegistrarAddress: z.string().optional(),
+  nameParents: z.array(z.string()).optional().catch(undefined),
   /// Governance contracts; a zero address is read as absent.
   governorAddress: z.string().optional(),
   govTokenAddress: z.string().optional(),

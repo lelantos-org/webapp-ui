@@ -17,10 +17,16 @@ const queryClient = new QueryClient({
   },
 });
 
-export function AppProviders({ children }: { children: ReactNode }) {
+interface AppProvidersProps {
+  children: ReactNode;
+  /// Default: the app's own client.
+  client?: QueryClient | undefined;
+}
+
+export function AppProviders({ children, client = queryClient }: AppProvidersProps) {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+      <QueryClientProvider client={client}>
         {/* Router must wrap ChainProvider: RouteErrorBoundary resets on location. */}
         <BrowserRouter future={ROUTER_FUTURE}>
           <ChainProvider>

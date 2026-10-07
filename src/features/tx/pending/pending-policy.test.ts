@@ -47,6 +47,37 @@ describe("pendingShapesFor", () => {
     expect(pendingShapesFor(ctx)).toEqual([{ asset: 2n, pendingIn: 5n, outflow: 95n }]);
   });
 
+  describe("registerName", () => {
+    const registration = (registered: boolean | undefined, fee: bigint | null = 5n) =>
+      ({
+        kind: "registerName",
+        result: {
+          asset: asset(1n),
+          change: 40n,
+          registered,
+          registrationFee: fee === null ? null : money(fee),
+        },
+      }) as unknown as PendingContext;
+
+    it("counts the registrar's fee as outflow and the change as inflow", () => {
+      expect(pendingShapesFor(registration(true))).toEqual([
+        { asset: 1n, pendingIn: 40n, outflow: 5n },
+      ]);
+      expect(pendingShapesFor(registration(undefined))).toEqual([
+        { asset: 1n, pendingIn: 40n, outflow: 5n },
+      ]);
+    });
+
+    it("reports no outflow for a refunded or a free registration", () => {
+      expect(pendingShapesFor(registration(false))).toEqual([
+        { asset: 1n, pendingIn: 40n, outflow: 0n },
+      ]);
+      expect(pendingShapesFor(registration(true, null))).toEqual([
+        { asset: 1n, pendingIn: 40n, outflow: 0n },
+      ]);
+    });
+  });
+
   describe("swap", () => {
     const legA = { asset: asset(1n), change: 10n, gross: money(90n) };
 

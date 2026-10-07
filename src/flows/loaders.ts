@@ -20,3 +20,7 @@ export const loadLinks = () => import("./links/LinksPage");
 export const loadGovernance = () => import("./governance/GovernanceRoutes");
 /// Agents: shielded wallets funded here and handed to a process (`/agents`).
 export const loadAgents = () => import("./agents/AgentsRoutes");
+/// Handle: claim a public name for a shielded address (`/name`).
+export const loadName = () => import("./name/ClaimNameForm");
+/// Profile: a handle's public page, with its address and a way to pay it (`/profile`).
+export const loadProfile = () => import("./profile/ProfilePage");

@@ -1,9 +1,11 @@
 // An agent is marked revoked only once its whole wallet is empty, not when one
 // asset is swept.
 
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StoredAgent } from "@/features/agents";
+import { fakeWalletApi } from "@/features/wallet/testing";
+import { renderAppHook } from "@/test/app";
 
 const markAgentRevoked = vi.fn((_id: string) => undefined);
 const sweepEphemeral = vi.fn(async (_eph: unknown, _to: string, _asset: bigint) => "0xswept");
@@ -24,12 +26,15 @@ vi.mock("@/features/claim-links", () => ({
   sweepEphemeral: (eph: unknown, to: string, asset: bigint) => sweepEphemeral(eph, to, asset),
 }));
 
-vi.mock("@/features/chain", () => ({ useChainRegistry: () => [{ chainId: 31337n }] }));
-vi.mock("@/config/chains", () => ({ findChain: () => ({ chainId: 31337n }) }));
-vi.mock("@/features/wallet", () => ({
+vi.mock("@/features/wallet", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/wallet")>()),
   useSession: () => ({ layer: { kind: "eip1193" } }),
-  useWallet: () => ({ wallet: { address: "lelantos1me" } }),
 }));
+
+const SCENE = {
+  chain: { chainId: 31337n },
+  wallet: { wallet: fakeWalletApi({ address: "lelantos1me" }) },
+};
 
 const { useAgentWallet } = await import("./use-agent-wallet");
 
@@ -53,7 +58,7 @@ describe("useAgentWallet", () => {
   it("does not revoke when another asset is still held", async () => {
     // Sweep USDC; the rescan still finds WETH.
     scans = [[{ asset: 2n, amount: 5n, notes: 1 }]];
-    const { result } = renderHook(() => useAgentWallet(AGENT));
+    const { result } = renderAppHook(() => useAgentWallet(AGENT), SCENE);
 
     await act(async () => {
       await result.current.sweep(1n);
@@ -69,7 +74,7 @@ describe("useAgentWallet", () => {
 
   it("revokes once the rescan finds nothing left", async () => {
     scans = [[]];
-    const { result } = renderHook(() => useAgentWallet(AGENT));
+    const { result } = renderAppHook(() => useAgentWallet(AGENT), SCENE);
 
     await act(async () => {
       await result.current.sweep(1n);
@@ -83,7 +88,7 @@ describe("useAgentWallet", () => {
 
   it("treats a zero balance as empty", async () => {
     scans = [[{ asset: 1n, amount: 0n, notes: 0 }]];
-    const { result } = renderHook(() => useAgentWallet(AGENT));
+    const { result } = renderAppHook(() => useAgentWallet(AGENT), SCENE);
 
     await act(async () => {
       await result.current.sweep(1n);
@@ -94,7 +99,7 @@ describe("useAgentWallet", () => {
 
   it("sweeps every asset, one transfer each", async () => {
     scans = [[]];
-    const { result } = renderHook(() => useAgentWallet(AGENT));
+    const { result } = renderAppHook(() => useAgentWallet(AGENT), SCENE);
 
     await act(async () => {
       await result.current.sweepAll([1n, 2n, 3n]);
@@ -111,7 +116,7 @@ describe("useAgentWallet", () => {
     sweepEphemeral.mockImplementationOnce(async () => {
       throw new Error("relayer said no");
     });
-    const { result } = renderHook(() => useAgentWallet(AGENT));
+    const { result } = renderAppHook(() => useAgentWallet(AGENT), SCENE);
 
     await act(async () => {
       await result.current.sweepAll([1n, 2n]);
@@ -128,13 +133,7 @@ describe("useAgentWallet", () => {
   });
 
   it("refuses to sweep with no wallet to sweep into", async () => {
-    vi.doMock("@/features/wallet", () => ({
-      useSession: () => ({ layer: { kind: "eip1193" } }),
-      useWallet: () => ({ wallet: undefined }),
-    }));
-    vi.resetModules();
-    const { useAgentWallet: fresh } = await import("./use-agent-wallet");
-    const { result } = renderHook(() => fresh(AGENT));
+    const { result } = renderAppHook(() => useAgentWallet(AGENT), { chain: SCENE.chain });
 
     await act(async () => {
       await result.current.sweep(1n);
@@ -142,6 +141,5 @@ describe("useAgentWallet", () => {
 
     expect(sweepEphemeral).not.toHaveBeenCalled();
     expect(result.current.state.kind).toBe("error");
-    vi.doUnmock("@/features/wallet");
   });
 });

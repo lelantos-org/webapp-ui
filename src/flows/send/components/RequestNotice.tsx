@@ -24,6 +24,13 @@ export function RequestNotice({ state }: { state: RequestState }) {
       );
     case "other-chain":
       return <OtherChainNotice chainId={state.chainId} />;
+    case "recipient":
+      return (
+        <Notice tone="neutral" title="Paying an address from a link">
+          The address came from the link you opened. Check it is who you mean to pay, then choose
+          the asset and the amount.
+        </Notice>
+      );
     case "ready":
       return (
         <Notice

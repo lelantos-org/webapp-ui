@@ -12,6 +12,9 @@ export interface PaymentRequest {
   memo?: string | undefined;
 }
 
+/// A request naming only who to pay: the payer chooses the asset, the amount and the memo.
+export type RecipientRequest = Pick<PaymentRequest, "to">;
+
 /// The path a request link opens: the Send form.
 const PAY_PATH = "/send";
 
@@ -34,6 +37,11 @@ export function encodePaymentRequest({ to, asset, amount, chainId, memo }: Payme
 /// The link that asks for `request`. It rides in the fragment, which is never sent to a server.
 export function paymentRequestUrl(origin: string, request: PaymentRequest): string {
   return `${origin}${PAY_PATH}#${encodePaymentRequest(request)}`;
+}
+
+/// The in-app link that opens Send with only the recipient filled in.
+export function recipientRequestPath(to: string): string {
+  return `${PAY_PATH}#${new URLSearchParams({ to })}`;
 }
 
 function fragmentParams(hash: string): URLSearchParams {
@@ -59,4 +67,16 @@ export function parsePaymentRequest(hash: string): PaymentRequest | undefined {
   const chainId = BigInt(chain);
   if (chainId === 0n) return undefined;
   return { chainId, to, asset: BigInt(asset), amount, ...(memo ? { memo } : {}) };
+}
+
+/// The keys of a full request besides `to`.
+const TERMS = ["asset", "amount", "chain", "memo"] as const;
+
+/// Reads a URL hash as a recipient-only request: `to` and none of a full request's other keys.
+/// One that names any of them is a full request and is read by `parsePaymentRequest` alone.
+export function parseRecipientRequest(hash: string): RecipientRequest | undefined {
+  const params = fragmentParams(hash);
+  const to = params.get("to");
+  if (!to || TERMS.some((key) => params.has(key))) return undefined;
+  return { to };
 }

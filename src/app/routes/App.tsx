@@ -4,12 +4,10 @@ import { ErrorCard } from "@/app/errors/ErrorCard";
 import { RouteErrorBoundary } from "@/app/errors/RouteErrorBoundary";
 import { Layout } from "@/app/shell/Layout";
 import { LoadingFallback } from "@/app/shell/LoadingFallback";
-import { loadClaim } from "@/flows/loaders";
-import { ACTIONS, lazyNamed } from "./routes";
+import { ACTIONS, lazyNamed, STANDALONE } from "./routes";
 
 const Home = lazyNamed(() => import("@/app/home/Home"), "Home");
 const ActionScreen = lazyNamed(() => import("@/app/shell/ActionScreen"), "ActionScreen");
-const ClaimPage = lazyNamed(loadClaim, "ClaimPage");
 
 function NotFound() {
   return (
@@ -40,7 +38,9 @@ export function App() {
                 }
               />
             ))}
-            <Route path="/claim" element={<ClaimPage />} />
+            {STANDALONE.map(({ path, Screen }) => (
+              <Route key={path} path={path} element={<Screen />} />
+            ))}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

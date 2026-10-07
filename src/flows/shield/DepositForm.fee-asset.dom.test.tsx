@@ -1,13 +1,13 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { FeePanel } from "@/features/fees";
+import { renderApp } from "@/test/app";
 import { idleFeePanel } from "@/test/fakes/fees";
 import { fakeActionMutation } from "@/test/fakes/operation";
 import { ALL_CAPABILITIES, fakeWalletContext } from "@/test/fakes/wallet";
 import { hexAddress } from "@/test/fixtures/addresses";
 import { makeAsset } from "@/test/fixtures/assets";
 import { fill, press, pressAndSettle } from "@/test/interact";
-import { appWrapper } from "@/test/render";
 import { lastArg } from "@/test/spies";
 import { DepositForm } from "./DepositForm";
 
@@ -53,9 +53,6 @@ vi.mock("@/features/assets", async (importOriginal) => ({
     </div>
   ),
 }));
-vi.mock("@/features/chain", async () =>
-  (await import("@/test/fakes/chain")).activeChainHooks({ chainId: 1n }),
-);
 vi.mock("@/features/fees", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/fees")>()),
   FeeDetails: () => null,
@@ -88,7 +85,7 @@ vi.mock("./use-deposit-setup", () => ({
 }));
 
 function renderForm() {
-  render(<DepositForm />, { wrapper: appWrapper });
+  renderApp(<DepositForm />, { chain: { chainId: 1n } });
   fill("You shield", "100");
   return {
     chooseFeeAsset: (asset: bigint) => {

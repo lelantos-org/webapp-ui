@@ -261,3 +261,24 @@ describe("duplicate spend", () => {
     expect(isFeeMoved(rejected("internal", 500))).toBe(false);
   });
 });
+
+describe("handle registration", () => {
+  it("words a label that is already registered", () => {
+    const taken = new InvalidArgumentError('registerName: "mehow" is already registered', {
+      argument: "label",
+      details: { reason: "taken" },
+    });
+    expect(walletErrorText(taken)).toEqual({
+      text: "That handle is already taken. Nothing was sent; choose another.",
+      curated: true,
+    });
+  });
+
+  it("leaves a malformed label to the SDK's own words", () => {
+    const malformed = new InvalidArgumentError("a handle is 3 to 32 characters", {
+      argument: "name",
+      details: { reason: "label" },
+    });
+    expect(walletErrorText(malformed).curated).toBe(false);
+  });
+});

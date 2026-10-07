@@ -4,6 +4,7 @@
 //   3. Flows are imported only by src/flows/loaders.ts, dynamically.
 //   4. No import cycles between features.
 //   5. In-app links go through react-router, not a bare `<a href="/...">`.
+//   6. A feature's `testing` entry is referenced only by tests.
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
@@ -42,6 +43,15 @@ function resolveFile(base) {
     if (existsSync(c) && statSync(c).isFile()) return c;
   }
   return undefined;
+}
+
+/**
+ * Whether a path is a feature's test-only entry, `features/x/testing`.
+ * @param {string} path
+ */
+function isTestingEntry(path) {
+  const parts = relative(SRC, path).split(sep);
+  return parts[0] === "features" && parts.length === 3 && /^testing\.tsx?$/.test(parts[2] ?? "");
 }
 
 /** @typedef {"static" | "dynamic" | "mock" | "typeof"} Kind */
@@ -84,7 +94,7 @@ const featureEdges = new Map();
 
 for (const file of sourceFiles(SRC)) {
   const from = moduleOf(file);
-  const isTest = /\.(test|spec)\.tsx?$/.test(file) || from === "test";
+  const isTest = /\.(test|spec)\.tsx?$/.test(file) || from === "test" || isTestingEntry(file);
   for (const { spec, kind, line } of references(readFileSync(file, "utf8"))) {
     const where = `${file}:${line}`;
     const base = spec.startsWith("@/") ? join(SRC, spec.slice(2)) : resolve(dirname(file), spec);
@@ -95,6 +105,12 @@ for (const file of sourceFiles(SRC)) {
     }
     const target = relative(process.cwd(), resolved);
     const to = moduleOf(target);
+
+    // 6. test-only entries stay out of the app
+    if (isTestingEntry(target) && !isTest) {
+      report(where, `${spec} is a test-only entry — only tests and src/test may reference it`);
+    }
+
     if (to === from) continue;
 
     // 2. crossings use the alias
@@ -103,7 +119,8 @@ for (const file of sourceFiles(SRC)) {
     }
 
     // 1. what Biome cannot see must also go through the barrel
-    if (kind !== "static" && to.startsWith("features/") && target !== join(SRC, to, "index.ts")) {
+    const entry = target === join(SRC, to, "index.ts") || isTestingEntry(target);
+    if (kind !== "static" && to.startsWith("features/") && !entry) {
       report(where, `${spec} reaches into ${to} — use its barrel "@/${to}"`);
     }
 

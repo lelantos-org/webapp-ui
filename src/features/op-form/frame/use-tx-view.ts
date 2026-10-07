@@ -1,10 +1,22 @@
 import { isWalletError } from "@lelantos-org/sdk";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { opInFlight, type ProgressView, type TxStage } from "@/features/tx";
+
+/// A settled card worded from the op's own result, in place of `settledTitle`.
+export interface SettledOutcome {
+  title: string;
+  /// The op landed without doing what was asked, or it is not known whether it did: no success mark.
+  unconfirmed?: boolean;
+  note?: ReactNode;
+  /// A control above "Done", e.g. a link to what the op made.
+  action?: ReactNode;
+}
 
 export interface TxCopy {
   progressTitle?: string;
   settledTitle?: string;
+  /// Set for an op whose landing does not say what it did.
+  settled?: SettledOutcome | undefined;
   failedTitle?: string;
   /// The amount being moved ("250 USDC"), latched at start since the form clears it on resolve.
   amount?: string | undefined;

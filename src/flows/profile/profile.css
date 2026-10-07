@@ -1,0 +1,102 @@
+@layer features {
+  .profile-page {
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+    padding-top: var(--sp-16);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-24);
+  }
+  .profile-page__foot { line-height: 1.55; }
+
+  .profile-hero {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--sp-8);
+    text-align: center;
+    min-width: 0;
+  }
+  .profile-hero__t {
+    margin: 0;
+    max-width: 100%;
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    overflow-wrap: anywhere;
+  }
+  .profile-hero__sub {
+    margin: 0;
+    font-size: var(--fs-16);
+    line-height: 1.5;
+    color: var(--fg-dim);
+  }
+
+  .profile-card { gap: var(--sp-16); }
+  .profile-card--warn { border-color: rgba(var(--warn-rgb), 0.4); }
+  .profile-card--err { border-color: rgba(var(--err-rgb), 0.4); }
+  .profile-card__t {
+    margin: 0;
+    font-size: var(--fs-17);
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .profile-card__p,
+  .profile-card__note {
+    margin: 0;
+    font-size: var(--fs-14);
+    line-height: 1.55;
+    color: var(--fg-dim);
+    overflow-wrap: anywhere;
+  }
+  .profile-card__note { color: var(--fg-mute); }
+  .profile-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sp-10);
+  }
+  .profile-card__qr {
+    align-self: center;
+    display: grid;
+    padding: var(--sp-12);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--bg);
+  }
+  .profile-card__qr svg { display: block; }
+  .profile-card__sec {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-8);
+    min-width: 0;
+  }
+  .profile-card__sec > .btn { align-self: flex-start; }
+  .profile-card__addr {
+    padding: var(--sp-12) var(--sp-14);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-14);
+    background: var(--bg-2);
+    font-size: var(--fs-14);
+  }
+  .profile-wait {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-14);
+  }
+
+  @media (max-width: 480px) {
+    .profile-page { padding-top: var(--sp-6); gap: var(--sp-16); }
+    .profile-page__foot { font-size: var(--fs-13); }
+    .profile-hero__t { font-size: 25px; }
+    .profile-hero__sub { font-size: var(--fs-14); }
+    .profile-card { padding: var(--sp-16); gap: var(--sp-14); }
+    .profile-card__addr { font-size: var(--fs-13); }
+  }
+}

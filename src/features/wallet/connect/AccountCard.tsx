@@ -10,15 +10,26 @@ const QR_SIZE = 156;
 
 export interface AccountCardProps {
   shielded: string;
+  /// The handle this account claimed: the name it is shown under, and its profile page.
+  handle?: { name: string; to: string } | undefined;
 }
 
-/// The shielded address at the foot of Home, with copy and QR.
-export function AccountCard({ shielded }: AccountCardProps) {
+/// The shielded address at the foot of Home, with copy and QR, under the account's handle if it
+/// has one.
+export function AccountCard({ shielded, handle }: AccountCardProps) {
   const [showQr, setShowQr] = useState(false);
 
   return (
     <section className={cx("acct", showQr && "acct--open")} aria-label="Your shielded address">
       <div className="acct__main">
+        {handle ? (
+          <p className="acct__handle">
+            <Link to={handle.to} className="acct__handle-name">
+              {handle.name}
+            </Link>{" "}
+            <span className="acct__lbl">your public handle</span>
+          </p>
+        ) : null}
         <p className="acct__lbl">Your shielded address — safe to share, reveals nothing</p>
         <p className="acct__addr mono" title={shielded}>
           {shielded}

@@ -2,8 +2,11 @@ import { type ComponentType, type LazyExoticComponent, lazy } from "react";
 import type { ActionScreenProps } from "@/app/shell/ActionScreen";
 import {
   loadAgents,
+  loadClaim,
   loadGovernance,
   loadLinks,
+  loadName,
+  loadProfile,
   loadRequest,
   loadSend,
   loadSendLink,
@@ -54,6 +57,27 @@ export const ACTIONS: readonly ActionRoute[] = [
   action("/governance/:id", "Proposal", "vault", loadGovernance, "ProposalDetailPage", false),
   action("/agents", "Agents", "vault", loadAgents, "AgentsPage", false),
   action("/agents/new", "Fund an agent", "narrow", loadAgents, "NewAgentForm", false),
+  action("/name", "Claim a handle", "narrow", loadName, "ClaimNameForm", true),
+];
+
+interface StandaloneRoute {
+  path: string;
+  /// Names the page in the document title.
+  title: string;
+  /// The word the header carries beside the wordmark.
+  mark: string;
+  Screen: LazyExoticComponent<ComponentType>;
+}
+
+/// The pages that stand outside the wallet, routed outside the action table.
+export const STANDALONE: readonly StandaloneRoute[] = [
+  { path: "/claim", title: "Claim", mark: "claim", Screen: lazyNamed(loadClaim, "ClaimPage") },
+  {
+    path: "/profile",
+    title: "Profile",
+    mark: "profile",
+    Screen: lazyNamed(loadProfile, "ProfilePage"),
+  },
 ];
 
 /// Route chunks Home links to, keyed by path.

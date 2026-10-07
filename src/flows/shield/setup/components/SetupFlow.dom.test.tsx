@@ -1,6 +1,7 @@
-import { render, waitFor } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { fakeWalletApi, fakeWalletContext } from "@/test/fakes/wallet";
+import { fakeWalletApi } from "@/features/wallet/testing";
+import { renderApp } from "@/test/app";
 import { hexAddress } from "@/test/fixtures/addresses";
 import { makeAsset } from "@/test/fixtures/assets";
 import { press } from "@/test/interact";
@@ -10,17 +11,8 @@ import { SetupFlow } from "./SetupFlow";
 const T0 = Date.UTC(2026, 0, 1);
 const HOUR = 3600 * 1000;
 
-const setup = vi.hoisted(() => ({ batch: vi.fn(async (..._args: unknown[]) => {}) }));
+const setup = { batch: vi.fn(async (..._args: unknown[]) => {}) };
 
-vi.mock("@/features/wallet", () => ({
-  useWallet: () =>
-    fakeWalletContext({ wallet: fakeWalletApi({ setupDepositAllowance: setup.batch }) }),
-  useWalletInstance: () => fakeWalletApi({ setupDepositAllowance: setup.batch }),
-}));
-vi.mock("@/features/chain", async () => ({
-  ...(await import("@/test/fakes/chain")).activeChainHooks(() => undefined),
-  useTxExplorerUrl: () => () => undefined,
-}));
 vi.mock("../use-setup-status", () => ({ useInvalidateSetupStatus: () => async () => {} }));
 
 const TOKEN = hexAddress("11");
@@ -29,13 +21,17 @@ const assets = [makeAsset(1n, "AAA", { token: TOKEN })];
 describe("SetupFlow", () => {
   it("counts the granted window from the press, not from the last render", async () => {
     const now = vi.spyOn(Date, "now").mockReturnValue(T0);
-    render(
+    renderApp(
       <SetupFlow
         assets={assets}
         willApproveErc20={() => false}
         onSuccess={() => {}}
         onCancel={() => {}}
       />,
+      {
+        chain: null,
+        wallet: { wallet: fakeWalletApi({ setupDepositAllowance: setup.batch }) },
+      },
     );
 
     now.mockReturnValue(T0 + HOUR);

@@ -19,6 +19,10 @@ function governance(chainId: bigint | undefined) {
   return ["governance", chain(chainId)] as const;
 }
 
+function names(chainId: bigint | undefined, registrar: string | undefined) {
+  return ["names", chain(chainId), registrar?.toLowerCase() ?? null] as const;
+}
+
 /// Every React Query key the app uses; family keys are prefixes of their members.
 export const queryKeys = {
   /// The chains this deployment serves, from protocol-webserver and the relayer.
@@ -121,4 +125,23 @@ export const queryKeys = {
   /// One account's LNT balance, delegate and voting power.
   governanceVotingPower: (chainId: bigint | undefined, account: string | undefined) =>
     [...governance(chainId), "voting-power", account ?? null] as const,
+
+  /// Prefix of every read of one handle registrar, so a registration refreshes them all.
+  names,
+
+  /// One handle's record: its published value and controller.
+  nameRecord: (chainId: bigint | undefined, registrar: string | undefined, label: string) =>
+    [...names(chainId, registrar), "record", label] as const,
+
+  /// Whether one label can still be claimed.
+  nameAvailable: (chainId: bigint | undefined, registrar: string | undefined, label: string) =>
+    [...names(chainId, registrar), "available", label] as const,
+
+  /// What the registrar charges for a registration.
+  nameFee: (chainId: bigint | undefined, registrar: string | undefined) =>
+    [...names(chainId, registrar), "fee"] as const,
+
+  /// The shielded address one account publishes under its handle; `account` is its shielded address.
+  publishedAddress: (chainId: bigint, account: string) =>
+    ["published-address", chain(chainId), account] as const,
 };

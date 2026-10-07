@@ -1,7 +1,7 @@
 import { waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { fakeWalletApi, fakeWalletContext } from "@/test/fakes/wallet";
-import { renderQueryHook } from "@/test/render";
+import { renderAppHook } from "@/test/app";
+import { fakeWalletApi } from "../testing";
 import { useSpendableMax } from "./use-spendable-max";
 
 const ASSET = 1n;
@@ -11,20 +11,14 @@ const state = vi.hoisted(() => ({
   balances: [{ asset: 1n, balance: 500n, notes: 2, pending: 0n, outflow: 0n }],
   syncedAt: 1,
 }));
-const spendableMax = vi.hoisted(() => vi.fn(async () => ({ max: 500n })));
+const spendableMax = vi.fn(async () => ({ max: 500n }));
+const connected = { wallet: { wallet: fakeWalletApi({ address: "0xabc", spendableMax }) } };
 
-vi.mock("../session/context", () => ({
-  useWallet: () => fakeWalletContext({ wallet: fakeWalletApi({ address: "0xabc", spendableMax }) }),
-  useWalletInstance: () => fakeWalletApi({ address: "0xabc", spendableMax }),
-}));
 vi.mock("./use-wallet-state", () => ({ useWalletState: () => ({ data: state }) }));
-vi.mock("@/features/chain", async () =>
-  (await import("@/test/fakes/chain")).activeChainHooks({ chainId: 31337n }),
-);
 
 describe("useSpendableMax", () => {
   it("does not re-read when a sync lands with nothing moved", async () => {
-    const { result, rerender } = renderQueryHook(() => useSpendableMax(ASSET, TRANSFER));
+    const { result, rerender } = renderAppHook(() => useSpendableMax(ASSET, TRANSFER), connected);
     await waitFor(() => expect(result.current?.max).toBe(500n));
     const reads = spendableMax.mock.calls.length;
 
@@ -36,7 +30,7 @@ describe("useSpendableMax", () => {
   });
 
   it("re-reads when the holdings actually move", async () => {
-    const { result, rerender } = renderQueryHook(() => useSpendableMax(ASSET, TRANSFER));
+    const { result, rerender } = renderAppHook(() => useSpendableMax(ASSET, TRANSFER), connected);
     await waitFor(() => expect(result.current?.max).toBe(500n));
 
     spendableMax.mockResolvedValueOnce({ max: 900n });
@@ -47,8 +41,9 @@ describe("useSpendableMax", () => {
   });
 
   it("asks the SDK for the spend's own fee reservation", async () => {
-    const { result } = renderQueryHook(() =>
-      useSpendableMax(ASSET, { kind: "withdraw", feeAsset: 2n, native: true }),
+    const { result } = renderAppHook(
+      () => useSpendableMax(ASSET, { kind: "withdraw", feeAsset: 2n, native: true }),
+      connected,
     );
     await waitFor(() => expect(result.current?.max).toBeDefined());
     expect(spendableMax).toHaveBeenLastCalledWith(ASSET, {
@@ -59,9 +54,9 @@ describe("useSpendableMax", () => {
   });
 
   it("holds the previous ceiling while a changed key reloads", async () => {
-    const { result, rerender } = renderQueryHook(
+    const { result, rerender } = renderAppHook(
       ({ fee }: { fee: bigint }) => useSpendableMax(ASSET, { ...TRANSFER, quotedFee: fee }),
-      { initialProps: { fee: 0n } },
+      { ...connected, initialProps: { fee: 0n } },
     );
     await waitFor(() => expect(result.current?.max).toBe(500n));
 

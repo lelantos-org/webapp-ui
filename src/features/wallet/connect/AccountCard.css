@@ -15,6 +15,18 @@
     font-size: var(--fs-14);
     color: var(--fg-mute);
   }
+  .acct__handle {
+    margin: 0 0 var(--sp-4);
+    overflow-wrap: anywhere;
+  }
+  .acct__handle-name {
+    font-size: var(--fs-16);
+    font-weight: 600;
+    color: var(--fg);
+    text-decoration: none;
+  }
+  .acct__handle-name:hover { color: var(--accent); }
+  .acct__handle-name:focus-visible { outline: var(--ring); outline-offset: 2px; }
   .acct__addr {
     margin: 0;
     font-size: var(--fs-15);

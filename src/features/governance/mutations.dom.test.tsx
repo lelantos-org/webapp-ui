@@ -1,4 +1,5 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { evmAddress } from "@lelantos-org/sdk";
+import { act, waitFor } from "@testing-library/react";
 import {
   decodeFunctionData,
   encodeAbiParameters,
@@ -6,8 +7,8 @@ import {
   type TransactionReceipt,
 } from "viem";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderAppHook } from "@/test/app";
 import { hexBytes32 } from "@/test/fixtures/addresses";
-import { renderQueryHook } from "@/test/render";
 import { governorAbi, govTokenAbi } from "./abi";
 import {
   createdProposalId,
@@ -30,28 +31,16 @@ const h = vi.hoisted(() => ({
   waitForTransactionReceipt: vi.fn(),
 }));
 
-vi.mock("@/features/chain", async () => {
-  const { makeChain } = await import("@/test/fixtures/chains");
-  const { evmAddress } = await import("@lelantos-org/sdk");
-  const chain = makeChain({
-    governorAddress: evmAddress("0x5555555555555555555555555555555555555555"),
-    govTokenAddress: evmAddress("0x6666666666666666666666666666666666666666"),
-  });
-  return { useActiveChain: () => chain, useActiveChainOrUndefined: () => chain };
-});
-const LAYER = {
-  kind: "eip1193",
-  provider: {},
-  address: "0x1111111111111111111111111111111111111111",
-};
-vi.mock("@/features/wallet", async () => {
-  const { fakeWalletContext } = await import("@/test/fakes/wallet");
-  return {
-    useWallet: () =>
-      fakeWalletContext({ ethAddress: "0x1111111111111111111111111111111111111111" }),
-    useSession: () => ({ kind: "eip1193", layer: LAYER }),
-  };
-});
+const SCENE = {
+  chain: { governorAddress: evmAddress(GOVERNOR), govTokenAddress: evmAddress(TOKEN) },
+  wallet: { ethAddress: ME },
+} as const;
+const LAYER = { kind: "eip1193", provider: {}, address: ME };
+
+vi.mock("@/features/wallet", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/wallet")>()),
+  useSession: () => ({ kind: "eip1193", layer: LAYER }),
+}));
 vi.mock("@/features/wallet-kinds", () => ({
   kindAdapter: () => ({
     keySource: () =>
@@ -77,7 +66,7 @@ function proposalCreatedLog(id: bigint, address = GOVERNOR) {
 }
 
 function setup<T>(hook: () => T) {
-  const r = renderQueryHook(hook);
+  const r = renderAppHook(hook, SCENE);
   return { ...r, invalidate: vi.spyOn(r.client, "invalidateQueries") };
 }
 
@@ -92,7 +81,7 @@ beforeEach(() => {
 
 describe("useGovernanceSigner", () => {
   it("takes the signer from the kind's key source", () => {
-    const { result } = renderHook(() => useGovernanceSigner());
+    const { result } = renderAppHook(() => useGovernanceSigner(), SCENE);
     expect(result.current).toBeDefined();
   });
 });

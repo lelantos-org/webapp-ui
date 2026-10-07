@@ -1,13 +1,13 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { FeePanel, FeeSummaryModel } from "@/features/fees";
+import { renderApp } from "@/test/app";
 import { idleFeePanel } from "@/test/fakes/fees";
 import { fakeActionMutation } from "@/test/fakes/operation";
 import { fakeWalletContext } from "@/test/fakes/wallet";
 import { hexAddress } from "@/test/fixtures/addresses";
 import { makeAsset } from "@/test/fixtures/assets";
 import { fill } from "@/test/interact";
-import { appWrapper } from "@/test/render";
 import { lastArg } from "@/test/spies";
 import { WithdrawForm } from "./WithdrawForm";
 
@@ -45,9 +45,6 @@ vi.mock("@/features/assets", async (importOriginal) => ({
     ],
   })),
 }));
-vi.mock("@/features/chain", async () =>
-  (await import("@/test/fakes/chain")).activeChainHooks({ chainId: 1n }),
-);
 vi.mock("@/features/fees", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/fees")>()),
   ...(await import("@/test/fakes/fees")).blankFeeChrome(),
@@ -65,7 +62,7 @@ vi.mock("./use-withdraw", () => ({ useWithdraw: () => fakeActionMutation() }));
 const FOOTNOTE = "The relayer is paid from your USDC balance, not the amount above.";
 
 function renderForm() {
-  render(<WithdrawForm />, { wrapper: appWrapper });
+  renderApp(<WithdrawForm />, { chain: { chainId: 1n } });
   fill("You unshield", "0.5");
   fill("To public address", hexAddress("ab"));
   return {

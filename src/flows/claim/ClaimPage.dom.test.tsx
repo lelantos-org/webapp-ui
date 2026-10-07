@@ -1,11 +1,11 @@
-import { render, screen } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { stepsFor } from "@/features/tx";
+import { renderApp } from "@/test/app";
 import { idleProgress } from "@/test/fakes/operation";
 import { makeAsset } from "@/test/fixtures/assets";
 import { makeChain } from "@/test/fixtures/chains";
 import { press } from "@/test/interact";
-import { routerWrapper } from "@/test/render";
 import { ClaimPage } from "./ClaimPage";
 import type { ClaimFlow } from "./use-claim-flow";
 
@@ -23,14 +23,6 @@ const flow = vi.hoisted(() => ({ value: undefined as unknown }));
 const connect = vi.fn();
 
 vi.mock("./use-claim-flow", () => ({ useClaimFlow: () => flow.value }));
-vi.mock("@/features/wallet", () => ({
-  useWallet: () => ({ wallet: undefined, status: "disconnected", connect }),
-  isConnectionPending: () => false,
-}));
-vi.mock("@/features/chain", () => ({
-  useActiveChainOrUndefined: () => undefined,
-  useTxExplorerUrl: () => () => undefined,
-}));
 
 function show(over: Partial<ClaimFlow>) {
   flow.value = {
@@ -45,7 +37,7 @@ function show(over: Partial<ClaimFlow>) {
     retry: vi.fn(),
     ...over,
   } satisfies ClaimFlow;
-  render(<ClaimPage />, { wrapper: routerWrapper });
+  renderApp(<ClaimPage />, { chain: null, wallet: { connect } });
   return flow.value as ClaimFlow;
 }
 

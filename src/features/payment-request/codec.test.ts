@@ -4,7 +4,9 @@ import {
   encodePaymentRequest,
   type PaymentRequest,
   parsePaymentRequest,
+  parseRecipientRequest,
   paymentRequestUrl,
+  recipientRequestPath,
 } from "./codec";
 
 const REQUEST: PaymentRequest = {
@@ -59,5 +61,37 @@ describe("payment request codec", () => {
     ["a claim-link fragment", "7a69:deadbeef"],
   ])("rejects %s", (_, fragment) => {
     expect(parsePaymentRequest(`#${fragment}`)).toBeUndefined();
+  });
+});
+
+describe("recipient-only request", () => {
+  it("round-trips through the fragment of the Send page", () => {
+    const path = recipientRequestPath(SHIELDED_ADDRESS);
+    expect(path).toBe(`/send#to=${SHIELDED_ADDRESS}`);
+    expect(parseRecipientRequest(path.slice(path.indexOf("#")))).toEqual({ to: SHIELDED_ADDRESS });
+    expect(parseRecipientRequest(`to=${SHIELDED_ADDRESS}`)).toEqual({ to: SHIELDED_ADDRESS });
+  });
+
+  it("ignores keys that are not a request's", () => {
+    expect(parseRecipientRequest(`#to=${SHIELDED_ADDRESS}&ref=profile`)).toEqual({
+      to: SHIELDED_ADDRESS,
+    });
+  });
+
+  it("is not a full request, and a full request is not one", () => {
+    expect(parsePaymentRequest(`#to=${SHIELDED_ADDRESS}`)).toBeUndefined();
+    expect(parseRecipientRequest(`#${encodePaymentRequest(REQUEST)}`)).toBeUndefined();
+  });
+
+  it.each([
+    ["an empty fragment", ""],
+    ["an empty address", "to="],
+    ["an asset", `to=${SHIELDED_ADDRESS}&asset=3`],
+    ["an amount", `to=${SHIELDED_ADDRESS}&amount=12.5`],
+    ["a chain", `to=${SHIELDED_ADDRESS}&chain=31337`],
+    ["a memo", `to=${SHIELDED_ADDRESS}&memo=rent`],
+    ["an empty amount", `to=${SHIELDED_ADDRESS}&amount=`],
+  ])("does not read a fragment with %s as one", (_, fragment) => {
+    expect(parseRecipientRequest(`#${fragment}`)).toBeUndefined();
   });
 });

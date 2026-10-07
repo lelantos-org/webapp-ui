@@ -1,12 +1,12 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderApp } from "@/test/app";
 import { deferred } from "@/test/async";
 import { idleFeePanel } from "@/test/fakes/fees";
 import { fakeActionMutation } from "@/test/fakes/operation";
 import { hexAddress } from "@/test/fixtures/addresses";
 import { makeAsset } from "@/test/fixtures/assets";
 import { fill } from "@/test/interact";
-import { routerWrapper } from "@/test/render";
 import { GenerateLinkForm } from "./GenerateLinkForm";
 
 const USDC = makeAsset(1n, "USDC", { decimals: 6, token: hexAddress("11") });
@@ -17,11 +17,6 @@ let balance = 0n;
 vi.mock("@/features/assets", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/assets")>()),
   ...(await import("@/test/fakes/assets")).assetReads(() => ({ assets: [USDC], balance })),
-}));
-vi.mock("@/features/chain", () => ({
-  useChainRegistry: () => [],
-  useRecordAssets: () => () => [],
-  useTxExplorerUrl: () => () => undefined,
 }));
 vi.mock("@/features/fees", () => ({
   FeeDetails: () => null,
@@ -50,7 +45,7 @@ vi.mock("./components/GenerateModal", () => ({ GenerateModal: () => null }));
 vi.mock("./components/LinkResult", () => ({ LinkResult: () => null }));
 
 function renderForm() {
-  render(<GenerateLinkForm />, { wrapper: routerWrapper });
+  renderApp(<GenerateLinkForm />, { chain: null });
   const button = screen.getByRole("button", { name: "Create link" });
   return {
     button,

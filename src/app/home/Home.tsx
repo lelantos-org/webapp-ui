@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ACTION_PREFETCH } from "@/app/routes/routes";
 import { AssetsCard, PortfolioHero } from "@/features/assets";
 import { useActiveChainOrUndefined } from "@/features/chain";
+import { handleName, profilePath, useClaimedHandle } from "@/features/names";
 import {
   AccountCard,
   type Capability,
@@ -13,7 +14,6 @@ import {
 import { cx } from "@/shared/lib/cx";
 import { whenIdle } from "@/shared/lib/when-idle";
 import { ActionIcon, type ActionIconName } from "./ActionIcon";
-import { Provenance } from "./Provenance";
 import "./Home.css";
 const TILES = [
   { to: "/shield", label: "Shield", icon: "shield", capability: "deposit", primary: true },
@@ -21,6 +21,7 @@ const TILES = [
   { to: "/swap", label: "Swap", icon: "swap" },
   { to: "/unshield", label: "Unshield", icon: "unshield" },
   { to: "/governance", label: "Governance", icon: "govern", needsGovernor: true },
+  { to: "/name", label: "Handle", icon: "handle", needsRegistrar: true },
 ] as const satisfies readonly {
   to: string;
   label: string;
@@ -28,6 +29,7 @@ const TILES = [
   capability?: Capability;
   primary?: boolean;
   needsGovernor?: boolean;
+  needsRegistrar?: boolean;
 }[];
 
 function warmTile(to: string): void {
@@ -38,8 +40,17 @@ function warmTile(to: string): void {
 export function Home() {
   const { wallet, status, capabilities } = useWallet();
   const ready = status === "ready" && !!wallet;
-  const governed = !!useActiveChainOrUndefined()?.governorAddress;
-  const tiles = TILES.filter((t) => !("needsGovernor" in t) || governed);
+  const chain = useActiveChainOrUndefined();
+  const governed = !!chain?.governorAddress;
+  const named = !!chain?.nameRegistrarAddress;
+  const tiles = TILES.filter(
+    (t) => (!("needsGovernor" in t) || governed) && (!("needsRegistrar" in t) || named),
+  );
+  const claimed = useClaimedHandle(chain?.chainId, wallet?.address);
+  const handle =
+    claimed && chain && named
+      ? { name: handleName(claimed.label, chain.nameParents), to: profilePath(claimed.label) }
+      : undefined;
   const gateOf = (t: (typeof TILES)[number]) =>
     "capability" in t ? capabilities[t.capability] : undefined;
   const offWhyId = useId();
@@ -104,8 +115,7 @@ export function Home() {
             </p>
           ) : null}
           <AssetsCard />
-          <AccountCard shielded={wallet.address} />
-          <Provenance />
+          <AccountCard shielded={wallet.address} handle={handle} />
         </div>
       )}
     </ConnectedGate>

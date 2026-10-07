@@ -15,9 +15,9 @@
     gap: var(--sp-12);
     margin-top: -6px;
   }
-  /* Five tiles: the core actions. */
+  /* Five tiles: governance or the handle joins the core actions. */
   .tiles--five { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-  /* Six tiles: the governance tile joins. */
+  /* Six tiles: both do. */
   .tiles--six { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .tile {
     display: flex;
@@ -73,29 +73,6 @@
     flex: none;
   }
 
-  .provenance {
-    display: flex;
-    flex-direction: column;
-    gap: var(--sp-8);
-    padding: var(--sp-18) var(--sp-20);
-    margin-top: -14px;
-  }
-  .provenance__t {
-    margin: 0;
-  }
-  .provenance__facts {
-    margin: 0;
-    font-size: var(--fs-14);
-    line-height: 1.75;
-    color: var(--fg-dim);
-  }
-  .provenance__note {
-    margin: 2px 0 0;
-    font-size: var(--fs-14);
-    line-height: 1.55;
-    color: var(--fg-mute);
-  }
-
   @media (max-width: 480px) {
     .home { gap: var(--sp-22); padding: var(--sp-10) var(--sp-8) 0; }
     .tiles { gap: var(--sp-8); margin-top: 0; }
@@ -108,8 +85,5 @@
     }
     /* Two rows of three. */
     .tiles--six { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .provenance { padding: var(--sp-14) var(--sp-16); margin-top: -8px; }
-    .provenance__facts,
-    .provenance__note { font-size: var(--fs-13); }
   }
 }

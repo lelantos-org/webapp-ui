@@ -155,6 +155,34 @@ describe("toChainEntry", () => {
     expect(e.timelockAddress).toBeUndefined();
   });
 
+  it("takes the generic wrapper, the handle registrar and its parents", () => {
+    const e = usable({
+      ...deployment(1),
+      genericCallWrapperAddress: "0x8888888888888888888888888888888888888888",
+      nameRegistrarAddress: "0x9999999999999999999999999999999999999999",
+      nameParents: ["Lelantos.xyz", "lelantosid.eth"],
+    });
+    expect(e.genericCallWrapperAddress).toBe("0x8888888888888888888888888888888888888888");
+    expect(e.nameRegistrarAddress).toBe("0x9999999999999999999999999999999999999999");
+    // Lowercased, order kept: the first is the one shown.
+    expect(e.nameParents).toEqual(["lelantos.xyz", "lelantosid.eth"]);
+  });
+
+  it("offers no handles where the deployment declares no registrar", () => {
+    const zero = "0x0000000000000000000000000000000000000000";
+    const bare = usable(deployment(8453));
+    expect(bare.nameRegistrarAddress).toBeUndefined();
+    expect(bare.genericCallWrapperAddress).toBeUndefined();
+    expect(bare.nameParents).toEqual([]);
+    const zeroed = usable({
+      ...deployment(8453),
+      nameRegistrarAddress: zero,
+      genericCallWrapperAddress: zero,
+    });
+    expect(zeroed.nameRegistrarAddress).toBeUndefined();
+    expect(zeroed.genericCallWrapperAddress).toBeUndefined();
+  });
+
   it("names an undescribed chain after its id rather than leaving it blank", () => {
     const { chainName: _drop, ...rest } = deployment(8453);
     expect(usable(rest).chainName).toBe("chain 8453");

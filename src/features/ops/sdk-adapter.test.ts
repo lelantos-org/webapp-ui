@@ -18,7 +18,8 @@ function fakeWallet() {
   const transfer = vi.fn().mockResolvedValue({ txHash: "0xtx" });
   const withdraw = vi.fn().mockResolvedValue({ txHash: "0xwd" });
   const swap = vi.fn().mockResolvedValue({ txHash: "0xsw" });
-  return fakeWalletApi({ deposit, transfer, withdraw, swap });
+  const registerName = vi.fn().mockResolvedValue({ txHash: "0xrn" });
+  return fakeWalletApi({ deposit, transfer, withdraw, swap, registerName });
 }
 
 function lastArgs(fn: unknown): Record<string, unknown> {
@@ -90,6 +91,24 @@ describe("createSdkActions", () => {
 
     await a.swap({ quote: { kind: "swapQuote" } as never, maxFee });
     expect(lastArgs(w.swap)).toMatchObject({ maxFee });
+  });
+
+  it("registerName forwards the label and names no account", async () => {
+    const w = fakeWallet();
+    await expect(createSdkActions(w).registerName({ label: "mehow" })).resolves.toEqual({
+      txHash: "0xrn",
+    });
+    expect(lastArgs(w.registerName)).toEqual({
+      label: "mehow",
+      asset: undefined,
+      feeAsset: undefined,
+      maxFee: undefined,
+      autoConsolidate: true,
+      onPhase: undefined,
+    });
+
+    await createSdkActions(w).registerName({ label: "mehow", asset: 3n });
+    expect(lastArgs(w.registerName)).toMatchObject({ label: "mehow", asset: 3n });
   });
 
   it("swap passes the quote through", async () => {

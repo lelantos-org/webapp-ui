@@ -1,7 +1,9 @@
 import { type ReactNode, useId } from "react";
-import { grouped } from "@/shared/lib/address";
+import { AddressBlock } from "@/shared/ui/address/AddressBlock";
+import { AddressSummary } from "@/shared/ui/address/AddressSummary";
 import { Notice } from "@/shared/ui/Notice";
 import { SUBMITTING_LABEL } from "../frame/ActionForm";
+import { isShieldedAddress } from "../schemas";
 import "./ReviewPanel.css";
 
 export interface ReviewPanelProps {
@@ -11,7 +13,7 @@ export interface ReviewPanelProps {
   /// The same figure in words, from `reviewFigure`.
   words: string;
   destinationLabel: string;
-  /// The raw address; grouped here for reading.
+  /// The raw address. A shielded one is shown by its fingerprint, a public one in full.
   destination: string;
   destinationNote: ReactNode;
   /// The memo sent with the payment; the section is left out when there is none.
@@ -31,7 +33,7 @@ export interface ReviewPanelProps {
   onCancel(): void;
 }
 
-/// The review step of a spend: amount in figures and words, grouped destination, fees, warning, Confirm.
+/// The review step of a spend: amount in figures and words, the destination to check, fees, warning, Confirm.
 export function ReviewPanel({
   figure,
   symbol,
@@ -67,7 +69,11 @@ export function ReviewPanel({
 
       <section className="spend-review__sec" aria-label="Destination">
         <div className="caps spend-review__cap">{destinationLabel}</div>
-        <div className="spend-review__addr mono">{grouped(destination)}</div>
+        {isShieldedAddress(destination) ? (
+          <AddressSummary className="spend-review__dest" value={destination} />
+        ) : (
+          <AddressBlock className="spend-review__addr" value={destination} />
+        )}
         <p className="spend-review__note">{destinationNote}</p>
       </section>
 

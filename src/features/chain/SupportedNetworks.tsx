@@ -1,6 +1,6 @@
 import type { ChainEntry } from "@/config/chains";
 import { ChainIcon } from "@/shared/ui/icons/ChainIcon";
-import { useChainRegistry } from "./ChainProvider";
+import { useChainRegistry } from "./context";
 import "./SupportedNetworks.css";
 
 /// The served networks, shown before connecting from the registry an earlier session cached.

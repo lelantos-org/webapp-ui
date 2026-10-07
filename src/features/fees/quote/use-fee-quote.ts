@@ -8,8 +8,12 @@ import { queryKeys } from "@/shared/query/keys";
 
 /// The relayer's amount-independent fee quote for `kind`, one option per accepted asset.
 ///
-/// `native` is a native-coin withdrawal, which the relayer prices separately.
-export function useFeeQuote(kind: FeeKind, native = false): UseQueryResult<FeeQuote> {
+/// `native` is a native-coin withdrawal, which the relayer prices separately. A registration is
+/// quoted for the fixed gas its calls are forwarded.
+export function useFeeQuote(
+  kind: FeeKind | "registerName",
+  native = false,
+): UseQueryResult<FeeQuote> {
   const wallet = useWalletInstance();
   const { chainId } = useActiveChain();
 

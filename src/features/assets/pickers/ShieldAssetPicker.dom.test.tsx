@@ -1,7 +1,9 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { evmAddress } from "@lelantos-org/sdk";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { renderApp } from "@/test/app";
+import { hexAddress } from "@/test/fixtures/addresses";
 import { makeAsset } from "@/test/fixtures/assets";
-import { routerWrapper } from "@/test/render";
 import { ethOption } from "./eth-option";
 import { ShieldAssetPicker } from "./ShieldAssetPicker";
 
@@ -18,9 +20,6 @@ const ASSETS = [
   makeAsset(3n, "WBTC", { yieldEnabled: true, yieldHalted: true, decimals: 8 }),
 ];
 
-vi.mock("@/features/chain", () => ({
-  useActiveChain: () => ({ chainName: "Base", nativeAdapterAddress: "0xadapter" }),
-}));
 vi.mock("../registry/registered-assets", async (orig) => ({
   ...(await orig<typeof import("../registry/registered-assets")>()),
   useRegisteredAssets: () => ASSETS,
@@ -35,8 +34,8 @@ beforeEach(() => {
 function renderPicker(value = "2") {
   const onChange = vi.fn();
   const onClose = vi.fn();
-  render(<ShieldAssetPicker value={value} onChange={onChange} onClose={onClose} />, {
-    wrapper: routerWrapper,
+  renderApp(<ShieldAssetPicker value={value} onChange={onChange} onClose={onClose} />, {
+    chain: { chainName: "Base", nativeAdapterAddress: evmAddress(hexAddress("ad")) },
   });
   return { onChange, onClose };
 }

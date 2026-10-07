@@ -1,5 +1,7 @@
-import { renderHook } from "@testing-library/react";
+import { evmAddress } from "@lelantos-org/sdk";
 import { describe, expect, it, vi } from "vitest";
+import { renderAppHook } from "@/test/app";
+import { hexAddress } from "@/test/fixtures/addresses";
 import { type AssetOverrides, makeAsset } from "@/test/fixtures/assets";
 import {
   type AssetSelectOptionsInputs,
@@ -9,12 +11,11 @@ import {
 } from "./asset-option";
 import { ethOption } from "./eth-option";
 
-const { chain, shielded } = vi.hoisted(() => ({
-  chain: { nativeAdapterAddress: "0xadapter" as string | undefined },
-  shielded: { data: undefined as { balances: { asset: bigint; balance: bigint }[] } | undefined },
-}));
+const shielded = {
+  data: undefined as { balances: { asset: bigint; balance: bigint }[] } | undefined,
+};
+const ADAPTER = evmAddress(hexAddress("ad"));
 
-vi.mock("@/features/chain", () => ({ useActiveChain: () => chain }));
 vi.mock("../registry/registered-assets", async (orig) => ({
   ...(await orig<typeof import("../registry/registered-assets")>()),
   useRegisteredAssets: () => [PLAIN_WETH, DAI, YIELD_WETH],
@@ -98,22 +99,24 @@ describe("assetSelectOptions", () => {
 describe("useAssetSelectOptions", () => {
   it("reads the registry, the balances and the chain's native adapter", () => {
     shielded.data = { balances: [{ asset: 1n, balance: 2n * 10n ** 18n }] };
-    chain.nativeAdapterAddress = "0xadapter";
-    const withAdapter = renderHook(() => useAssetSelectOptions({ showEth: true }));
+    const withAdapter = renderAppHook(() => useAssetSelectOptions({ showEth: true }), {
+      chain: { nativeAdapterAddress: ADAPTER },
+    });
     expect(withAdapter.result.current.map((o) => o.label).slice(0, 3)).toEqual([
       "ETH (native) · 2 · does not earn",
       "ETH (native) · 0 · 3.12% / yr · 7d",
       "WETH · 2 · does not earn",
     ]);
 
-    chain.nativeAdapterAddress = undefined;
-    const without = renderHook(() => useAssetSelectOptions({ showEth: true }));
+    const without = renderAppHook(() => useAssetSelectOptions({ showEth: true }));
     expect(without.result.current.map((o) => o.symbol)).toEqual(["WETH", "mDAI", "WETH"]);
   });
 
   it("labels bare symbols until a sync has succeeded, rather than claiming zeros", () => {
     shielded.data = undefined;
-    const { result } = renderHook(() => useAssetSelectOptions({ rateTag: false }));
+    const { result } = renderAppHook(() => useAssetSelectOptions({ rateTag: false }), {
+      chain: { nativeAdapterAddress: ADAPTER },
+    });
     expect(result.current.map((o) => o.label)).toEqual(["WETH", "mDAI", "WETH"]);
   });
 });

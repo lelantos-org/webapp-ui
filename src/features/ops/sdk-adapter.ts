@@ -3,6 +3,7 @@ import {
   type DepositPhase,
   type DepositResult,
   evmAddress,
+  type RegisterNameResult,
   type SpendPhase,
   type SwapQuote,
   type SwapResult,
@@ -54,6 +55,15 @@ export interface SwapCall extends RelayerFeeTerms {
   quote: SwapQuote;
 }
 
+/// A handle registration: the registrar's fee is unshielded and the handle claimed in one spend.
+export interface RegisterNameCall extends RelayerFeeTerms {
+  /// The bare label, without a parent.
+  label: string;
+  /// The asset the registrar's fee is unshielded from. Defaults to the pool asset of its fee token;
+  /// required where registration is free.
+  asset?: bigint | undefined;
+}
+
 type WithPhase<C> = C & { onPhase?: ((phase: TxPhase) => void) | undefined };
 
 export type ShieldedActions = ReturnType<typeof createSdkActions>;
@@ -94,6 +104,15 @@ export function createSdkActions(wallet: WalletApi) {
     swap: (r: WithPhase<SwapCall>): Promise<SwapResult> =>
       wallet.swap({
         quote: r.quote,
+        feeAsset: r.feeAsset,
+        maxFee: r.maxFee,
+        autoConsolidate: true,
+        onPhase: r.onPhase && spendPhases(r.onPhase),
+      }),
+    registerName: (r: WithPhase<RegisterNameCall>): Promise<RegisterNameResult> =>
+      wallet.registerName({
+        label: r.label,
+        asset: r.asset,
         feeAsset: r.feeAsset,
         maxFee: r.maxFee,
         autoConsolidate: true,

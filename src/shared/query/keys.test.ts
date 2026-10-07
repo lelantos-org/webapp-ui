@@ -82,4 +82,26 @@ describe("queryKeys", () => {
       null,
     ]);
   });
+
+  it("files every read of a registrar under its prefix, whatever the address's case", () => {
+    const registrar = queryKeys.names(CHAIN, "0xReGiStRaR");
+    expect(registrar).toEqual(["names", "31337", "0xregistrar"]);
+    expect(queryKeys.names(undefined, undefined)).toEqual(["names", null, null]);
+    expect(queryKeys.nameRecord(CHAIN, "0xregistrar", "mehow")).toEqual([
+      ...registrar,
+      "record",
+      "mehow",
+    ]);
+    expect(queryKeys.nameAvailable(CHAIN, "0xregistrar", "mehow")).toEqual([
+      ...registrar,
+      "available",
+      "mehow",
+    ]);
+    expect(queryKeys.nameFee(CHAIN, "0xregistrar")).toEqual([...registrar, "fee"]);
+    expect(queryKeys.publishedAddress(CHAIN, "lelantos1me")).toEqual([
+      "published-address",
+      "31337",
+      "lelantos1me",
+    ]);
+  });
 });

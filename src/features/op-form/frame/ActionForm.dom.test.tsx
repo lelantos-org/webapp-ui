@@ -158,6 +158,39 @@ describe("ActionForm", () => {
     expect(screen.getByRole("link", { name: "Explorer ↗" })).toBeInTheDocument();
   });
 
+  it("words the settled card from the op's own result, when the form gives one", () => {
+    renderForm({
+      txHash: "0xabcd",
+      progress: progress("mined", true),
+      tx: {
+        settledTitle: "Sent privately",
+        settled: {
+          title: "Handle not claimed",
+          unconfirmed: true,
+          note: "Only fees were spent.",
+          action: <a href="https://example.test">Look it up</a>,
+        },
+      },
+    });
+    const card = screen.getByRole("status", { name: "Handle not claimed" });
+    expect(card).toHaveTextContent("Only fees were spent.");
+    expect(card.querySelector(".txcard__ring--warn")).not.toBeNull();
+    expect(screen.queryByText("Sent privately")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Look it up" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Done" })).toBeInTheDocument();
+  });
+
+  it("marks the op's own result a success unless it says otherwise", () => {
+    renderForm({
+      txHash: "0xabcd",
+      progress: { ...progress("mined", true), endedAs: "unknown" },
+      tx: { settled: { title: "mehow.lelantos.xyz is yours" } },
+    });
+    const card = screen.getByRole("status", { name: "mehow.lelantos.xyz is yours" });
+    expect(card.querySelector(".txcard__ring--warn")).toBeNull();
+    expect(card).not.toHaveTextContent("We stopped watching");
+  });
+
   it("returns to the form from the settled card, clearing the finished op", () => {
     const onReset = vi.fn();
     renderForm({ progress: progress("mined", true), txHash: "0xabc", onReset });

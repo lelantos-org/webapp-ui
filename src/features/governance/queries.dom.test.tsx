@@ -1,9 +1,9 @@
 import { evmAddress } from "@lelantos-org/sdk";
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { renderAppHook } from "@/test/app";
 import { detailRow, summaryRow, voteRow } from "@/test/fixtures/governance";
 import { stubFetch, stubFetchRoutes } from "@/test/http";
-import { renderQueryHook } from "@/test/render";
 import {
   useGovernance,
   useNowSeconds,
@@ -17,32 +17,13 @@ const GOVERNOR = "0x5555555555555555555555555555555555555555";
 const TOKEN = "0x6666666666666666666666666666666666666666";
 const ME = "0x1111111111111111111111111111111111111111";
 
-const chainState = vi.hoisted(() => ({ governed: true, eth: true }));
-const readContract = vi.hoisted(() => vi.fn());
+const GOVERNED = { governorAddress: evmAddress(GOVERNOR), govTokenAddress: evmAddress(TOKEN) };
+const CONNECTED = { chain: GOVERNED, wallet: { ethAddress: ME } } as const;
+const UNGOVERNED = { chain: {}, wallet: { ethAddress: ME } } as const;
+const NO_ACCOUNT = { chain: GOVERNED } as const;
 
-vi.mock("@/features/chain", async () => {
-  const { makeChain } = await import("@/test/fixtures/chains");
-  const { evmAddress: addr } = await import("@lelantos-org/sdk");
-  const read = () =>
-    makeChain(
-      chainState.governed
-        ? {
-            governorAddress: addr("0x5555555555555555555555555555555555555555"),
-            govTokenAddress: addr("0x6666666666666666666666666666666666666666"),
-          }
-        : {},
-    );
-  return { useActiveChain: read, useActiveChainOrUndefined: read };
-});
-vi.mock("@/features/wallet", async () => {
-  const { fakeWalletContext } = await import("@/test/fakes/wallet");
-  return {
-    useWallet: () =>
-      fakeWalletContext({
-        ethAddress: chainState.eth ? "0x1111111111111111111111111111111111111111" : undefined,
-      }),
-  };
-});
+const readContract = vi.fn();
+
 vi.mock("./onchain", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./onchain")>()),
   governanceClient: () => ({ readContract }),
@@ -84,8 +65,6 @@ function answer(c: { functionName: string; args?: readonly unknown[] }) {
 }
 
 beforeEach(() => {
-  chainState.governed = true;
-  chainState.eth = true;
   readContract.mockReset();
   readContract.mockImplementation(async (c) => answer(c));
 });
@@ -93,7 +72,7 @@ afterEach(() => vi.useRealTimers());
 
 describe("useGovernance", () => {
   it("names the governor and the EVM account", () => {
-    const { result } = renderHook(() => useGovernance());
+    const { result } = renderAppHook(() => useGovernance(), CONNECTED);
     expect(result.current.governor).toBe(GOVERNOR);
     expect(result.current.account).toBe(evmAddress(ME));
   });
@@ -106,7 +85,7 @@ describe("useProposalList", () => {
         proposals: [summaryRow({ proposalId: "1" }), summaryRow({ proposalId: "2" })],
       },
     });
-    const { result } = renderQueryHook(() => useProposalList());
+    const { result } = renderAppHook(() => useProposalList(), CONNECTED);
     await waitFor(() => expect(result.current.items[1]?.chain).toBeDefined());
     expect(result.current.items.map((p) => p.id)).toEqual(["1", "2"]);
     expect(result.current.items[0]?.chain).toEqual({
@@ -117,9 +96,8 @@ describe("useProposalList", () => {
   });
 
   it("fetches nothing on a chain without a governor", () => {
-    chainState.governed = false;
     const fetchMock = stubFetchRoutes({});
-    const { result } = renderQueryHook(() => useProposalList());
+    const { result } = renderAppHook(() => useProposalList(), UNGOVERNED);
     expect(result.current.items).toEqual([]);
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -131,7 +109,7 @@ describe("useProposalList", () => {
         ? { proposals: [summaryRow({ proposalId: "2" })], nextCursor: "c" }
         : { proposals: [summaryRow({ proposalId: "1" })] },
     );
-    const { result } = renderQueryHook(() => useProposalList());
+    const { result } = renderAppHook(() => useProposalList(), CONNECTED);
     await waitFor(() => expect(result.current.hasMore).toBe(true));
     act(() => result.current.loadMore());
     await waitFor(() => expect(result.current.items).toHaveLength(2));
@@ -141,7 +119,7 @@ describe("useProposalList", () => {
 describe("useProposal", () => {
   it("reads the indexed detail and the live figures for the account", async () => {
     stubFetchRoutes({ "/registry/v1/governance/proposals/7": detailRow() });
-    const { result } = renderQueryHook(() => useProposal("7"));
+    const { result } = renderAppHook(() => useProposal("7"), CONNECTED);
     await waitFor(() => expect(result.current.live.data).toBeDefined());
     await waitFor(() => expect(result.current.detail.data).toBeDefined());
     expect(result.current.live.data?.account).toEqual({ hasVoted: true, votesAtSnapshot: 9n });
@@ -150,7 +128,7 @@ describe("useProposal", () => {
 
   it("does not read the chain for an id that is not a number", () => {
     stubFetchRoutes({});
-    renderQueryHook(() => useProposal("abc"));
+    renderAppHook(() => useProposal("abc"), CONNECTED);
     expect(readContract).not.toHaveBeenCalled();
   });
 });
@@ -158,7 +136,7 @@ describe("useProposal", () => {
 describe("useProposalVotes", () => {
   it("pages through the indexed votes", async () => {
     stubFetchRoutes({ "/registry/v1/governance/proposals/7/votes": { votes: [voteRow()] } });
-    const { result } = renderQueryHook(() => useProposalVotes("7"));
+    const { result } = renderAppHook(() => useProposalVotes("7"), CONNECTED);
     await waitFor(() => expect(result.current.votes).toHaveLength(1));
     expect(result.current.hasMore).toBe(false);
   });
@@ -166,14 +144,13 @@ describe("useProposalVotes", () => {
 
 describe("useVotingPower", () => {
   it("reads the account's LNT and votes", async () => {
-    const { result } = renderQueryHook(() => useVotingPower());
+    const { result } = renderAppHook(() => useVotingPower(), CONNECTED);
     await waitFor(() => expect(result.current.data).toBeDefined());
     expect(result.current.data).toMatchObject({ token: TOKEN, balance: 10n, votes: 9n });
   });
 
   it("stays idle without an EVM account", () => {
-    chainState.eth = false;
-    const { result } = renderQueryHook(() => useVotingPower());
+    const { result } = renderAppHook(() => useVotingPower(), NO_ACCOUNT);
     expect(result.current.fetchStatus).toBe("idle");
     expect(readContract).not.toHaveBeenCalled();
   });
@@ -181,10 +158,9 @@ describe("useVotingPower", () => {
 
 describe("useNowSeconds", () => {
   it("ticks", () => {
-    chainState.governed = false;
     vi.useFakeTimers();
     vi.setSystemTime(10_000);
-    const { result } = renderQueryHook(() => useNowSeconds(1_000));
+    const { result } = renderAppHook(() => useNowSeconds(1_000), UNGOVERNED);
     expect(result.current).toBe(10);
     act(() => {
       vi.advanceTimersByTime(2_000);
@@ -197,7 +173,7 @@ describe("useNowSeconds", () => {
     readContract.mockImplementation((c: { functionName: string }) =>
       c.functionName === "clock" ? 250 : answer(c),
     );
-    const { result } = renderQueryHook(() => useNowSeconds(1_000));
+    const { result } = renderAppHook(() => useNowSeconds(1_000), CONNECTED);
     // The chain is 240s ahead; voting windows close on the chain's time, not the browser's.
     await waitFor(() => expect(result.current).toBe(250));
   });

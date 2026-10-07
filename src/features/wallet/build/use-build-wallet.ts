@@ -57,6 +57,8 @@ function buildSignature(chain: ChainEntry | undefined): string | undefined {
     chain.permit2Address,
     chain.nativeAdapterAddress,
     chain.swapWrapperAddress,
+    chain.genericCallWrapperAddress,
+    chain.nameRegistrarAddress,
     chain.treeDepth,
   ].join("|");
 }

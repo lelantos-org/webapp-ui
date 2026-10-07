@@ -1,7 +1,7 @@
 import type { ChainEntry } from "@/config/chains";
 import { useSwitchChain } from "@/features/wallet-kinds";
 import { ChainIcon } from "@/shared/ui/icons/ChainIcon";
-import { useActiveChainOrUndefined, useChainRegistry } from "./ChainProvider";
+import { useActiveChainOrUndefined, useChainRegistry } from "./context";
 
 /// Buttons that switch the wallet to another supported chain (the current one is omitted).
 export function ChainSwitchButtons() {

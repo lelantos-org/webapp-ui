@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { WalletKind } from "@/features/wallet-kinds";
-import { fakeWalletContext } from "@/test/fakes/wallet";
+import { renderApp } from "@/test/app";
 import { press } from "@/test/interact";
 import type { WalletStatus } from "../session/context";
 import { Welcome } from "./Welcome";
@@ -31,16 +31,6 @@ vi.mock("./mobile-wallet-link", () => ({
 vi.mock("./use-connect-flow", () => ({
   useWalletChoices: () => h.choices,
 }));
-vi.mock("../session/context", () => ({
-  useWallet: () =>
-    fakeWalletContext({
-      status: h.status,
-      kind: h.kind,
-      error: "rejected",
-      connect: h.connect,
-      disconnect: h.disconnect,
-    }),
-}));
 
 const METAMASK: WalletChoice = { kind: "eip1193", id: "mm", name: "MetaMask", icon: "" };
 const PASSKEY: WalletChoice = { kind: "passkey", id: "passkey", name: "Passkey" };
@@ -52,8 +42,21 @@ beforeEach(() => {
   h.metamaskLink = undefined;
 });
 
+/// Render the screen for the session `h` describes.
+function show() {
+  return renderApp(<Welcome />, {
+    wallet: {
+      status: h.status,
+      kind: h.kind,
+      error: "rejected",
+      connect: h.connect,
+      disconnect: h.disconnect,
+    },
+  });
+}
+
 function card(title: string) {
-  render(<Welcome />);
+  show();
   return screen.getByRole("region", { name: title });
 }
 
@@ -66,7 +69,7 @@ describe("Welcome", () => {
 
   it("points Connect wallet at the first row when there are several", () => {
     h.choices = [PASSKEY, METAMASK];
-    render(<Welcome />);
+    show();
     press("Connect wallet");
     expect(screen.getByRole("button", { name: /Passkey/ })).toHaveFocus();
     expect(h.connect).not.toHaveBeenCalled();
@@ -74,7 +77,7 @@ describe("Welcome", () => {
 
   it("connects straight away when there is one wallet or none", () => {
     h.choices = [METAMASK];
-    render(<Welcome />);
+    show();
     press("Connect wallet");
     expect(h.connect).toHaveBeenCalledTimes(1);
   });
@@ -125,7 +128,7 @@ describe("Welcome", () => {
     h.status = status;
     h.kind = "eip1193";
     h.disconnect.mockClear();
-    render(<Welcome />);
+    show();
     press("Cancel");
     expect(h.disconnect).toHaveBeenCalledOnce();
   });
@@ -146,7 +149,7 @@ describe("Welcome", () => {
   it("carries the signing kind's warning while deriving, and not the passkey's", () => {
     h.status = "deriving";
     h.kind = "eip1193";
-    const { unmount } = render(<Welcome />);
+    const { unmount } = show();
     const signing = screen.getByRole("region", { name: "Check your wallet" });
     expect(within(signing).getByText(/^This signature IS your shielded spending key/)).toBeTruthy();
     unmount();

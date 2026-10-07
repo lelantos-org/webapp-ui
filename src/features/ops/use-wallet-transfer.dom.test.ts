@@ -4,9 +4,9 @@
 import { act, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetOpsForTest } from "@/features/tx";
+import { fakeWalletApi } from "@/features/wallet/testing";
+import { type AppScene, renderAppHook } from "@/test/app";
 import { deferred } from "@/test/async";
-import { fakeWalletApi } from "@/test/fakes/wallet";
-import { renderQueryHook } from "@/test/render";
 import type { WalletTransferContext } from "./mutation";
 
 const addPendingMany = vi.fn();
@@ -14,7 +14,8 @@ const trackTxLifecycle = vi.fn();
 const invalidate = vi.fn();
 const toastError = vi.fn();
 const wallet = fakeWalletApi({ address: "lelantos1sender" });
-const walletHook = vi.fn<() => typeof wallet | undefined>();
+const CONNECTED = { chain: { chainId: 31337n }, wallet: { wallet } };
+const DISCONNECTED = { chain: { chainId: 31337n } };
 
 vi.mock("@/features/tx", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/tx")>()),
@@ -22,13 +23,8 @@ vi.mock("@/features/tx", async (importOriginal) => ({
   addPendingMany: (...a: unknown[]) => addPendingMany(...a),
   clearPending: () => {},
 }));
-vi.mock("@/features/chain", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/features/chain")>()),
-  ...(await import("@/test/fakes/chain")).activeChainHooks({ chainId: 31337n }),
-}));
 vi.mock("@/features/wallet", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/features/wallet")>()),
-  useWalletInstance: () => walletHook(),
   useInvalidateWalletState: () => invalidate,
   isProverLoaded: () => true,
   whenProverLoaded: async () => {},
@@ -50,14 +46,19 @@ const tx = {
   ownCommitments: [],
 } as never;
 
-function hook(run: (w: unknown, input: string, ctx: WalletTransferContext) => Promise<never>) {
-  return renderQueryHook(() =>
-    useWalletTransfer<string, never>({
-      key: "fund-agent",
-      label: "fund agent",
-      failed: "funding failed",
-      run,
-    }),
+function hook(
+  run: (w: unknown, input: string, ctx: WalletTransferContext) => Promise<never>,
+  scene: AppScene = CONNECTED,
+) {
+  return renderAppHook(
+    () =>
+      useWalletTransfer<string, never>({
+        key: "fund-agent",
+        label: "fund agent",
+        failed: "funding failed",
+        run,
+      }),
+    scene,
   );
 }
 
@@ -65,7 +66,6 @@ beforeEach(() => {
   resetOpsForTest();
   toastError.mockClear();
   invalidate.mockResolvedValue(undefined);
-  walletHook.mockReturnValue(wallet);
 });
 
 describe("useWalletTransfer", () => {
@@ -96,13 +96,15 @@ describe("useWalletTransfer", () => {
   it("opens on the step `run` takes before it spends", async () => {
     const sent = deferred<never>();
     const lead = { id: "reserving", label: "Reserve an address" } as const;
-    const { result } = renderQueryHook(() =>
-      useWalletTransfer<string, never>({
-        label: "claim link",
-        failed: "claim link failed",
-        lead,
-        run: () => sent.promise,
-      }),
+    const { result } = renderAppHook(
+      () =>
+        useWalletTransfer<string, never>({
+          label: "claim link",
+          failed: "claim link failed",
+          lead,
+          run: () => sent.promise,
+        }),
+      CONNECTED,
     );
 
     act(() => void result.current.mutation.mutateAsync("input"));
@@ -179,9 +181,8 @@ describe("useWalletTransfer", () => {
   });
 
   it("refuses to run without a wallet", async () => {
-    walletHook.mockReturnValue(undefined);
     const run = vi.fn(async () => ({ tx }) as never);
-    const { result } = hook(run);
+    const { result } = hook(run, DISCONNECTED);
 
     await act(() => result.current.mutation.mutateAsync("input").catch(() => {}));
 
@@ -216,12 +217,14 @@ describe("useWalletTransfer", () => {
   it("keeps each instance's op to itself when the spec has no key", async () => {
     const sent = deferred<never>();
     const row = () =>
-      renderQueryHook(() =>
-        useWalletTransfer<string, never>({
-          label: "top up agent",
-          failed: "top-up failed",
-          run: () => sent.promise,
-        }),
+      renderAppHook(
+        () =>
+          useWalletTransfer<string, never>({
+            label: "top up agent",
+            failed: "top-up failed",
+            run: () => sent.promise,
+          }),
+        CONNECTED,
       );
     const a = row();
     const b = row();

@@ -1,48 +1,13 @@
-import type { WalletApi } from "@lelantos-org/sdk";
 import type { UseQueryResult } from "@tanstack/react-query";
-import type {
-  useSpendableMax,
-  WalletCapabilities,
-  WalletContextValue,
-  WalletState,
-} from "@/features/wallet";
+import type { useSpendableMax, WalletContextValue, WalletState } from "@/features/wallet";
+import { fakeWalletContext } from "@/features/wallet/testing";
 
-const DISCONNECTED = { allowed: false, reason: "Connect a wallet first." } as const;
-
-const NO_CAPABILITIES: WalletCapabilities = {
-  deposit: DISCONNECTED,
-  depositEth: DISCONNECTED,
-  govern: DISCONNECTED,
-};
-
-export const ALL_CAPABILITIES: WalletCapabilities = {
-  deposit: { allowed: true },
-  depositEth: { allowed: true },
-  govern: { allowed: true },
-};
-
-export function deniedCapabilities(reason: string): WalletCapabilities {
-  const no = { allowed: false, reason } as const;
-  return { deposit: no, depositEth: no, govern: no };
-}
-
-/// A `WalletApi` carrying only the members a test gives it.
-export function fakeWalletApi(
-  members: Partial<WalletApi> | Record<string, unknown> = {},
-): WalletApi {
-  return members as WalletApi;
-}
-
-/// A full `useWallet()` value; `status` follows `wallet` unless given.
-export function fakeWalletContext(over: Partial<WalletContextValue> = {}): WalletContextValue {
-  return {
-    status: over.wallet ? "ready" : "disconnected",
-    capabilities: NO_CAPABILITIES,
-    connect: () => {},
-    disconnect: () => {},
-    ...over,
-  };
-}
+export {
+  ALL_CAPABILITIES,
+  deniedCapabilities,
+  fakeWalletApi,
+  fakeWalletContext,
+} from "@/features/wallet/testing";
 
 interface SpendFormWalletHooks {
   SyncNotice: () => null;

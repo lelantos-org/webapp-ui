@@ -7,7 +7,7 @@ const ids = (kind: OpKind, opts?: Parameters<typeof stepsFor>[1]) =>
 
 describe("stepsFor", () => {
   it("gives every spend the same four steps, ending at inclusion", () => {
-    for (const kind of ["transfer", "withdraw", "withdrawEth", "swap"] as const) {
+    for (const kind of ["transfer", "withdraw", "withdrawEth", "swap", "registerName"] as const) {
       expect(ids(kind)).toEqual(["preparing", "proving", "submitting", "mined"]);
     }
   });

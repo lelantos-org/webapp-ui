@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
+import { STANDALONE } from "@/app/routes/routes";
 import { Backdrop } from "@/app/shell/chrome/Backdrop";
 import { BetaBanner } from "@/app/shell/chrome/BetaBanner";
 import { EndpointsButton } from "@/app/shell/chrome/EndpointsButton";
@@ -25,7 +26,8 @@ export function Layout({ children }: { children: ReactNode }) {
   const endpointsOpen = useEndpointsDialogOpen();
   useScreenChange();
   useLeaveGuard();
-  const minimal = pathname === "/claim";
+  const standalone = STANDALONE.find((route) => route.path === pathname);
+  const minimal = standalone !== undefined;
   const connected = status === "ready";
   // A connected app screen: the header carries every control.
   const full = connected && !minimal;
@@ -39,7 +41,7 @@ export function Layout({ children }: { children: ReactNode }) {
         {minimal || connected ? <BetaBanner /> : null}
         <header className="hdr">
           <div className="hdr__left">
-            <Wordmark sub={minimal ? "claim" : undefined} />
+            <Wordmark sub={standalone?.mark} />
           </div>
           <div className="hdr__right">
             {full ? (
@@ -52,7 +54,8 @@ export function Layout({ children }: { children: ReactNode }) {
             {/* Folded on a phone, where the account menu carries them. */}
             <span className={cx("hdr__tools", full && "hdr__tools--folds")}>
               {full ? <PrivacyToggle /> : null}
-              {/* Not on a claim: saving reloads, and the link is gone from the address bar. */}
+              {/* Not on a claim: saving reloads, and the link is gone from the address bar. A
+                  profile keeps the same bare header. */}
               {minimal ? null : <EndpointsButton />}
               <ThemeToggle />
             </span>

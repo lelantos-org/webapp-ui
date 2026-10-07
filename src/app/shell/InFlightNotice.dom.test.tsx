@@ -1,23 +1,20 @@
-import { act, render, screen } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ROUTER_FUTURE } from "@/app/providers/router-future";
+import { act, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 import { beginOp, opKey, opScope, resetOpsForTest, settleOp } from "@/features/tx";
+import { fakeWalletApi } from "@/features/wallet/testing";
+import { renderApp } from "@/test/app";
 import { InFlightNotice } from "./InFlightNotice";
-
-vi.mock("@/features/wallet", () => ({ useWallet: () => ({ wallet: { address: "lelantos1me" } }) }));
-vi.mock("@/features/chain", () => ({ useActiveChainOrUndefined: () => ({ chainId: 31337n }) }));
 
 const SCOPE = opScope(31337n, "lelantos1me");
 const start = (name: string, path: string) =>
   beginOp(opKey(SCOPE, name), { label: name, path, scope: SCOPE });
 
 const at = (path: string) =>
-  render(
-    <MemoryRouter initialEntries={[path]} future={ROUTER_FUTURE}>
-      <InFlightNotice />
-    </MemoryRouter>,
-  );
+  renderApp(<InFlightNotice />, {
+    route: path,
+    chain: { chainId: 31337n },
+    wallet: { wallet: fakeWalletApi({ address: "lelantos1me" }) },
+  });
 
 beforeEach(() => resetOpsForTest());
 

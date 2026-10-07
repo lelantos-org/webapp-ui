@@ -51,9 +51,11 @@ export function TransferForm() {
   const { register, setValue, setAmount, errors, clearFinished } = form;
   const options = useAssetSelectOptions();
   const request = usePaymentRequest((asked) => {
+    setValue("to", asked.to, { shouldDirty: true, shouldValidate: true });
+    // A recipient-only request: the asset, the amount and the memo stay the payer's.
+    if (!("asset" in asked)) return;
     // Dirty, so the form's opening-asset default leaves the requested asset alone.
     setValue("asset", asked.asset.toString(), { shouldDirty: true });
-    setValue("to", asked.to, { shouldDirty: true, shouldValidate: true });
     setValue("memo", asked.memo ?? "");
     setAmount(asked.amount);
   });
@@ -98,7 +100,7 @@ export function TransferForm() {
             {...reviewPanel}
             destinationLabel="To this shielded address"
             destination={to}
-            destinationNote="Check this against what the recipient gave you. Nothing on the receiving side will confirm it."
+            destinationNote="Ask the recipient for the fingerprint of their address: it is on their home screen, and on their handle's page. If it differs from this one, the address is not theirs. Nothing on the receiving side will confirm it."
             memo={memo}
             memoNote={MEMO_NOTE}
             fees={

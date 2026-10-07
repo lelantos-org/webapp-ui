@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 import { alias, appDefine, fsAllow } from "./vite/shared";
@@ -5,7 +6,14 @@ import { alias, appDefine, fsAllow } from "./vite/shared";
 // Vitest ignores vite.config.ts when this exists, so shared settings are imported explicitly.
 export default defineConfig({
   define: appDefine(),
-  resolve: { alias },
+  resolve: {
+    alias: {
+      ...alias,
+      "virtual:pwa-register/react": fileURLToPath(
+        new URL("./src/test/stubs/pwa-register.ts", import.meta.url),
+      ),
+    },
+  },
   plugins: [react()],
   server: { fs: { allow: fsAllow } },
   test: {
@@ -29,6 +37,7 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "node",
+          setupFiles: ["./src/test/setup/timers.ts"],
           include: ["src/**/*.test.ts"],
           exclude: ["src/**/*.dom.test.ts"],
         },
@@ -39,7 +48,16 @@ export default defineConfig({
           name: "dom",
           environment: "jsdom",
           include: ["src/**/*.dom.test.{ts,tsx}"],
-          setupFiles: ["./src/test/setup/dom.ts"],
+          setupFiles: ["./src/test/setup/timers.ts", "./src/test/setup/dom.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "app",
+          environment: "jsdom",
+          include: ["src/**/*.app.test.tsx"],
+          setupFiles: ["./src/test/setup/timers.ts", "./src/test/setup/dom.ts"],
         },
       },
       {
@@ -47,6 +65,7 @@ export default defineConfig({
         test: {
           name: "tooling",
           environment: "node",
+          setupFiles: ["./src/test/setup/timers.ts"],
           include: ["vite/**/*.test.ts"],
         },
       },
@@ -54,11 +73,15 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "html"],
+      // A couple of points under what the suite reaches, so a slide shows up as a failure.
       thresholds: {
-        statements: 65,
-        lines: 65,
-        branches: 86,
-        functions: 75,
+        statements: 84,
+        lines: 84,
+        branches: 89,
+        functions: 83,
+        // The layers everything else stands on.
+        "src/shared/**": { statements: 93, lines: 93, branches: 90, functions: 91 },
+        "src/config/**": { statements: 90, lines: 90, branches: 94, functions: 89 },
       },
       include: ["src/**/*.{ts,tsx}", "vite/**/*.ts"],
       exclude: [
@@ -67,6 +90,7 @@ export default defineConfig({
         "src/**/*.d.ts",
         "src/app/main.tsx",
         "src/test/**",
+        "src/features/*/testing.{ts,tsx}",
       ],
     },
   },

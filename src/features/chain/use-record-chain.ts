@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { type ChainEntry, findChain, type RegisteredAsset } from "@/config/chains";
-import { useChainRegistry } from "./ChainProvider";
+import { useChainRegistry } from "./context";
 
 /// A stored record, naming its chain as a decimal string.
 interface ChainStamped {

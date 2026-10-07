@@ -46,6 +46,11 @@ export interface ChainEntry {
   /// Absent means no native-ETH deposit or withdrawal on this chain.
   nativeAdapterAddress?: EvmAddress | undefined;
   swapWrapperAddress?: EvmAddress | undefined;
+  genericCallWrapperAddress?: EvmAddress | undefined;
+  /// The handle registrar; absent means no handles on this chain.
+  nameRegistrarAddress?: EvmAddress | undefined;
+  /// ENS parents the registrar's handles are served under, lowercase; the first is the one shown.
+  readonly nameParents: readonly string[];
   /// Governance contracts, absent where the deployment runs none.
   governorAddress?: EvmAddress | undefined;
   govTokenAddress?: EvmAddress | undefined;

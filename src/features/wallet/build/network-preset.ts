@@ -15,5 +15,9 @@ export function networkPreset(chain: ChainEntry): NetworkPreset {
     ...(chain.nativeAdapterAddress ? { nativeAdapterAddress: chain.nativeAdapterAddress } : {}),
     ...(env.metaquoterUrl ? { quoterUrl: env.metaquoterUrl } : {}),
     ...(chain.swapWrapperAddress ? { swapWrapperAddress: chain.swapWrapperAddress } : {}),
+    ...(chain.genericCallWrapperAddress
+      ? { genericCallWrapperAddress: chain.genericCallWrapperAddress }
+      : {}),
+    ...(chain.nameRegistrarAddress ? { nameRegistrarAddress: chain.nameRegistrarAddress } : {}),
   };
 }

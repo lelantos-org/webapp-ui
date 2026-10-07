@@ -78,10 +78,20 @@ export function walletErrorText(e: AnyWalletError): { text: string; curated: boo
   if (isWalletError(e, "INVALID_ARGUMENT") && e.argument === "feeAsset") {
     return { text: DEPOSIT_FEE_ASSET_REFUSED, curated: true };
   }
+  if (isHandleTaken(e)) return { text: HANDLE_TAKEN, curated: true };
   const copy = WALLET_CODE_COPY[e.code] as string | ((e: AnyWalletError) => string) | undefined;
   if (copy === undefined) return { text: e.message, curated: false };
   return { text: typeof copy === "string" ? copy : copy(e), curated: true };
 }
+
+/// A registration refused before anything was proven: the label is already someone's.
+function isHandleTaken(e: unknown): boolean {
+  return (
+    isWalletError(e, "INVALID_ARGUMENT") && e.argument === "label" && e.details?.reason === "taken"
+  );
+}
+
+const HANDLE_TAKEN = "That handle is already taken. Nothing was sent; choose another.";
 
 const DEPOSIT_FEE_ASSET_REFUSED =
   "That token can't pay the relayer fee for this deposit. Pay it in the asset you're shielding.";

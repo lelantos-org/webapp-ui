@@ -1,28 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { queryKeys } from "@/shared/query/keys";
+import { renderAppHook } from "@/test/app";
 import { deferred } from "@/test/async";
-import { fakeWalletApi, fakeWalletContext } from "@/test/fakes/wallet";
-import { createTestQueryClient, withQueryClient } from "@/test/render";
+import { createTestQueryClient } from "@/test/render";
+import { fakeWalletApi } from "../testing";
 import { useInvalidateWalletState, useWalletState } from "./use-wallet-state";
 
 const CHAIN = 31337n;
 const ADDRESS = "lelantos1me";
 
 const chainHead = vi.hoisted(() => ({ value: null as string | null }));
-const wallet = vi.hoisted(() => ({
-  address: "lelantos1me",
+const wallet = {
+  address: ADDRESS,
   sync: vi.fn(async () => {}),
   notes: vi.fn(async () => []),
-}));
+};
+const scene = { chain: { chainId: CHAIN }, wallet: { wallet: fakeWalletApi(wallet) } };
 
-vi.mock("../session/context", () => ({
-  useWallet: () => fakeWalletContext({ wallet: fakeWalletApi(wallet) }),
-  useWalletInstance: () => fakeWalletApi(wallet),
-}));
 vi.mock("./use-sync-head", () => ({ useSyncHead: () => chainHead.value }));
-vi.mock("@/features/chain", () => ({ useActiveChain: () => ({ chainId: CHAIN }) }));
 
 describe("useInvalidateWalletState", () => {
   it("re-quotes this account's relayer fee once the sync has landed", async () => {
@@ -32,7 +29,7 @@ describe("useInvalidateWalletState", () => {
     const quoteFee = vi.fn(async () => ({ charged: false, options: [] }));
     const otherAccount = vi.fn(async () => ({ charged: false, options: [] }));
 
-    const { result } = renderHook(
+    const { result } = renderAppHook(
       () => {
         useQuery({
           queryKey: queryKeys.walletState(CHAIN, ADDRESS),
@@ -51,7 +48,7 @@ describe("useInvalidateWalletState", () => {
         });
         return useInvalidateWalletState();
       },
-      { wrapper: withQueryClient(client) },
+      { ...scene, client },
     );
     sync.resolve({ balances: [], syncedAt: 1 });
     await waitFor(() => expect(quoteFee).toHaveBeenCalledOnce());
@@ -74,14 +71,11 @@ describe("useWalletState on a new chain head", () => {
   it("syncs once per head however many callers are mounted", async () => {
     chainHead.value = "10:3";
     wallet.sync.mockClear();
-    const { rerender } = renderHook(
-      () => {
-        useWalletState();
-        useWalletState();
-        useWalletState();
-      },
-      { wrapper: withQueryClient(createTestQueryClient()) },
-    );
+    const { rerender } = renderAppHook(() => {
+      useWalletState();
+      useWalletState();
+      useWalletState();
+    }, scene);
     await waitFor(() => expect(wallet.sync).toHaveBeenCalledTimes(1));
 
     chainHead.value = "11:3";

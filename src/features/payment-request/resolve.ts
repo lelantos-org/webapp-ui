@@ -2,7 +2,13 @@ import type { RegisteredAsset } from "@/config/chains";
 import { findAsset } from "@/features/assets";
 import { parseAmountSafe, SHIELDED_RECIPIENT } from "@/features/op-form";
 import { memoProblem } from "@/shared/domain/memo";
-import { isPaymentRequestFragment, type PaymentRequest, parsePaymentRequest } from "./codec";
+import {
+  isPaymentRequestFragment,
+  type PaymentRequest,
+  parsePaymentRequest,
+  parseRecipientRequest,
+  type RecipientRequest,
+} from "./codec";
 
 /// What the page's fragment asks of the Send form on the active chain.
 export type RequestState =
@@ -14,7 +20,9 @@ export type RequestState =
   | { status: "other-chain"; chainId: bigint }
   /// The active chain registers no asset under the requested id.
   | { status: "unlisted-asset" }
-  | { status: "ready"; request: PaymentRequest; asset: RegisteredAsset };
+  | { status: "ready"; request: PaymentRequest; asset: RegisteredAsset }
+  /// Only who to pay; the same address on every chain, so no chain or asset is checked.
+  | { status: "recipient"; request: RecipientRequest };
 
 const NONE: RequestState = { status: "none" };
 const INVALID: RequestState = { status: "invalid" };
@@ -26,6 +34,13 @@ export function resolvePaymentRequest(
   assets: readonly RegisteredAsset[],
 ): RequestState {
   if (chainId === undefined || !isPaymentRequestFragment(hash)) return NONE;
+
+  const recipient = parseRecipientRequest(hash);
+  if (recipient) {
+    return SHIELDED_RECIPIENT.problem(recipient.to) === undefined
+      ? { status: "recipient", request: recipient }
+      : INVALID;
+  }
 
   const request = parsePaymentRequest(hash);
   if (!request || SHIELDED_RECIPIENT.problem(request.to) !== undefined) return INVALID;

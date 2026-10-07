@@ -1,4 +1,10 @@
-import type { DepositResult, SwapResult, TransferResult, WithdrawResult } from "@lelantos-org/sdk";
+import type {
+  DepositResult,
+  RegisterNameResult,
+  SwapResult,
+  TransferResult,
+  WithdrawResult,
+} from "@lelantos-org/sdk";
 import type { OpKind } from "@/shared/domain/op-kind";
 import type { PendingShape } from "./pending-store";
 
@@ -12,7 +18,8 @@ export type PendingContext =
       result: SwapResult;
       /// Omitted without a wallet, in which case only leg-A change is shown.
       legB?: SwapLegBData;
-    };
+    }
+  | { kind: "registerName"; result: RegisterNameResult };
 
 export interface SwapLegBData {
   /// Asset the B-note credits.
@@ -40,6 +47,9 @@ const builders: { [K in OpKind]: Builder<K> } = {
     ...shape(ctx.result.asset.id, ctx.result.change, ctx.result.gross.amount),
     ...(ctx.legB ? swapLegB(ctx.legB) : []),
   ],
+  // Only the registrar's fee leaves for good, and not at all when the registration was refunded.
+  registerName: ({ result: r }) =>
+    shape(r.asset.id, r.change, r.registered === false ? 0n : (r.registrationFee?.amount ?? 0n)),
 };
 
 /// The pending overlay entries for a settled mutation.

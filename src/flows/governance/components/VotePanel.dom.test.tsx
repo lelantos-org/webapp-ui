@@ -1,11 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { VoteEligibility } from "@/features/governance";
+import { renderApp } from "@/test/app";
 import { fill, press } from "@/test/interact";
-import { routerWrapper } from "@/test/render";
 import { VotePanel, type VotePanelProps } from "./VotePanel";
-
-vi.mock("@/features/chain", () => ({ useTxExplorerUrl: () => () => undefined }));
 
 const E18 = 10n ** 18n;
 
@@ -24,7 +22,7 @@ function renderPanel(over: Partial<VotePanelProps> = {}) {
     tx: { status: "idle", error: null, hash: undefined, reset: vi.fn() },
     ...over,
   };
-  render(<VotePanel {...props} />, { wrapper: routerWrapper });
+  renderApp(<VotePanel {...props} />);
   return { onVote, props };
 }
 
@@ -91,7 +89,7 @@ describe("VotePanel", () => {
 
   it("replaces the form with the transaction's progress, then its outcome", () => {
     const reset = vi.fn();
-    const { rerender } = render(
+    const { rerender } = renderApp(
       <VotePanel
         eligibility={{ ok: true, quorumVoteOpen: true }}
         now={200}
@@ -103,7 +101,6 @@ describe("VotePanel", () => {
         onVote={vi.fn()}
         tx={{ status: "pending", error: null, hash: undefined, reset }}
       />,
-      { wrapper: routerWrapper },
     );
     expect(screen.getByText("Waiting for your wallet")).toBeInTheDocument();
     expect(screen.queryByRole("radio")).toBeNull();

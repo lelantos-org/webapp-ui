@@ -46,6 +46,25 @@ describe("resolvePaymentRequest", () => {
     });
   });
 
+  it("resolves a recipient-only request on any chain, before its assets are known", () => {
+    const state = { status: "recipient", request: { to: SHIELDED_ADDRESS } };
+    expect(resolvePaymentRequest(`#to=${SHIELDED_ADDRESS}`, 31337n, ASSETS)).toEqual(state);
+    expect(resolvePaymentRequest(`#to=${SHIELDED_ADDRESS}`, 10n, [])).toEqual(state);
+  });
+
+  it("rejects a recipient-only request whose address is not a shielded one", () => {
+    for (const to of ["lelantos1nope", "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"]) {
+      expect(resolvePaymentRequest(`#to=${to}`, 31337n, ASSETS)).toEqual({ status: "invalid" });
+    }
+  });
+
+  it("holds a request that names part of the terms to the full rules", () => {
+    for (const partial of [{ asset: "1" }, { amount: "12.5" }, { chain: "31337" }, { memo: "x" }]) {
+      const hash = `#${new URLSearchParams({ to: SHIELDED_ADDRESS, ...partial })}`;
+      expect(resolvePaymentRequest(hash, 31337n, ASSETS)).toEqual({ status: "invalid" });
+    }
+  });
+
   it.each([
     ["an address that is not shielded", { to: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266" }],
     ["a truncated address", { to: SHIELDED_ADDRESS.slice(0, -1) }],

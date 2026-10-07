@@ -1,12 +1,10 @@
 import { evmAddress } from "@lelantos-org/sdk";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import { renderApp } from "@/test/app";
 import { hexBytes32 } from "@/test/fixtures/addresses";
 import { fill, press } from "@/test/interact";
-import { routerWrapper } from "@/test/render";
 import { DelegatePanel, type DelegatePanelProps, delegateLabel } from "./DelegatePanel";
-
-vi.mock("@/features/chain", () => ({ useTxExplorerUrl: () => () => "https://explorer/tx" }));
 
 const ME = evmAddress("0x1111111111111111111111111111111111111111");
 const OTHER = "0x2222222222222222222222222222222222222222";
@@ -14,7 +12,7 @@ const ZERO = "0x0000000000000000000000000000000000000000";
 
 function renderPanel(over: Partial<DelegatePanelProps> = {}) {
   const onDelegate = vi.fn();
-  render(
+  renderApp(
     <DelegatePanel
       account={ME}
       currentDelegate={ZERO}
@@ -23,7 +21,7 @@ function renderPanel(over: Partial<DelegatePanelProps> = {}) {
       tx={{ status: "idle", error: null, hash: undefined, reset: vi.fn() }}
       {...over}
     />,
-    { wrapper: routerWrapper },
+    { chain: { explorerUrl: "https://explorer" } },
   );
   return { onDelegate };
 }
@@ -77,7 +75,7 @@ describe("DelegatePanel", () => {
     expect(screen.getByText("Delegation updated")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Explorer/ })).toHaveAttribute(
       "href",
-      "https://explorer/tx",
+      `https://explorer/tx/${hexBytes32("ab")}`,
     );
     press("Done");
     expect(reset).toHaveBeenCalled();

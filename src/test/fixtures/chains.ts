@@ -14,6 +14,7 @@ export function makeChain(over: Partial<ChainEntry> = {}): ChainEntry {
     relayerAddress: PLACEHOLDER,
     treeDepth: 20,
     tokens: [],
+    nameParents: [],
     ...over,
   };
 }

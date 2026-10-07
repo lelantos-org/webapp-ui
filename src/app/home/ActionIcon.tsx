@@ -19,7 +19,14 @@ export function ActionIcon({ name }: { name: ActionIconName }) {
   );
 }
 
-export type ActionIconName = "shield" | "send" | "swap" | "unshield" | "govern" | "agent";
+export type ActionIconName =
+  | "shield"
+  | "send"
+  | "swap"
+  | "unshield"
+  | "govern"
+  | "agent"
+  | "handle";
 
 const POOL = "M12 3 20 6.2v6.1c0 4.3-3.4 7.3-8 8.7-4.6-1.4-8-4.4-8-8.7V6.2Z";
 
@@ -71,6 +78,13 @@ const PATHS: Record<ActionIconName, React.ReactNode> = {
       <path d="M14.5 9.5h.01" />
       <path d="M12 14v3.5" />
       <path d="M7.5 17.5h9" />
+    </>
+  ),
+  // An at sign.
+  handle: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.92 7.94" />
     </>
   ),
 };

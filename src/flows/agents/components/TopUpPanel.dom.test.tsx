@@ -1,6 +1,7 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { StoredAgent } from "@/features/agents";
+import { renderApp } from "@/test/app";
 import { fakeActionMutation } from "@/test/fakes/operation";
 import { makeAsset } from "@/test/fixtures/assets";
 import { fill, press } from "@/test/interact";
@@ -25,9 +26,6 @@ vi.mock("@/features/assets", async (importOriginal) => ({
     balance: held.balance,
   })),
 }));
-vi.mock("@/features/chain", async () =>
-  (await import("@/test/fakes/chain")).activeChainHooks({ chainId: 1n }),
-);
 vi.mock("@/features/fees", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/features/fees")>();
   const { blankFeeChrome, pricedTransferPanel } = await import("@/test/fakes/fees");
@@ -64,7 +62,7 @@ const AGENT: StoredAgent = {
 function setup(assets = [USDC, WETH], over: Partial<typeof held> = {}) {
   mutateAsync.mockClear();
   Object.assign(held, { balance: 5_000_000n, error: null }, over);
-  return render(<TopUpPanel agent={AGENT} assets={assets} />);
+  return renderApp(<TopUpPanel agent={AGENT} assets={assets} />, { chain: { chainId: 1n } });
 }
 
 describe("TopUpPanel", () => {

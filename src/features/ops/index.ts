@@ -3,6 +3,7 @@ export { useSpendMutation, useTrackedMutation, useWalletTransfer } from "./mutat
 export type {
   DepositCall,
   GenerateLinkCall,
+  RegisterNameCall,
   SwapCall,
   TransferCall,
   WithdrawCall,

@@ -1,6 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+import { addressFingerprint } from "@/shared/lib/address-fingerprint";
+import { hexAddress, SHIELDED_ADDRESS } from "@/test/fixtures/addresses";
 import { ReviewPanel, type ReviewPanelProps } from "./ReviewPanel";
+
+const FINGERPRINT = addressFingerprint(SHIELDED_ADDRESS)
+  .map((mark) => mark.emoji)
+  .join("");
 
 const props: ReviewPanelProps = {
   figure: "250.00",
@@ -17,6 +23,22 @@ const props: ReviewPanelProps = {
 };
 
 describe("ReviewPanel", () => {
+  it("shows a shielded destination by its fingerprint, with the address itself behind it", () => {
+    render(<ReviewPanel {...props} destination={SHIELDED_ADDRESS} />);
+    const section = screen.getByRole("region", { name: "Destination" });
+    expect(section).toHaveTextContent(FINGERPRINT);
+    const full = screen.getByText("Show the full address").closest("details");
+    expect(full).not.toHaveAttribute("open");
+    expect(full).toHaveTextContent(SHIELDED_ADDRESS);
+  });
+
+  it("shows a public destination in full, and gives it no fingerprint", () => {
+    render(<ReviewPanel {...props} destination={hexAddress("1a")} />);
+    const section = screen.getByRole("region", { name: "Destination" });
+    expect(section).toHaveTextContent(hexAddress("1a"));
+    expect(screen.queryByText("Fingerprint")).not.toBeInTheDocument();
+  });
+
   it("says what a merge adds, beside the fees it adds to", () => {
     render(<ReviewPanel {...props} mergeFirst />);
     const fees = screen.getByRole("region", { name: "Fees" });

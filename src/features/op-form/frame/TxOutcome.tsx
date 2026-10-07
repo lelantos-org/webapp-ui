@@ -52,21 +52,29 @@ export function TxOutcome({
           subtitle={joinHint(amount, eta)}
         />
       );
-    case "settled":
+    case "settled": {
+      const own = tx?.settled;
+      const copy = own
+        ? { title: own.title, unconfirmed: own.unconfirmed ?? false, note: own.note }
+        : settledCopy(progress?.endedAs, progress?.steps ?? [], tx?.settledTitle ?? "Done");
       return (
         <TxSettledCard
-          {...settledCopy(progress?.endedAs, progress?.steps ?? [], tx?.settledTitle ?? "Done")}
+          {...copy}
           amount={amount}
           hash={hash}
           explorerUrl={explorer}
           operation={operation}
           action={
-            <button type="button" className="btn btn--outline btn--sm" onClick={state.leave}>
-              Done
-            </button>
+            <>
+              {own?.action}
+              <button type="button" className="btn btn--outline btn--sm" onClick={state.leave}>
+                Done
+              </button>
+            </>
           }
         />
       );
+    }
     case "failed":
       return (
         <TxFailedCard

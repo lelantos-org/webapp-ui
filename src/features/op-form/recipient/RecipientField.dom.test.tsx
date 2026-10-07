@@ -1,12 +1,17 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
-import { hexAddress } from "@/test/fixtures/addresses";
+import { addressFingerprint } from "@/shared/lib/address-fingerprint";
+import { hexAddress, SHIELDED_ADDRESS } from "@/test/fixtures/addresses";
 import { fill } from "@/test/interact";
 import { RecipientField } from "./RecipientField";
 
+const FINGERPRINT = addressFingerprint(SHIELDED_ADDRESS)
+  .map((mark) => mark.emoji)
+  .join("");
+
 const VALID = hexAddress("ab");
-const isValid = (v: string) => /^0x[0-9a-f]{40}$/i.test(v);
+const isValid = (v: string) => /^0x[0-9a-f]{40}$/i.test(v) || v === SHIELDED_ADDRESS;
 
 function Harness({
   onSubmit = vi.fn(),
@@ -100,5 +105,17 @@ describe("RecipientField", () => {
 
     expect(allowed).toBe(false);
     expect(onPaste).toHaveBeenCalledWith(VALID);
+  });
+
+  it("gives a shielded address its fingerprint once it is whole, and a public one none", () => {
+    const { container } = render(<Harness />);
+    fill("To", VALID);
+    expect(screen.queryByText("Fingerprint")).toBeNull();
+
+    fill("To", SHIELDED_ADDRESS.slice(0, -1));
+    expect(screen.queryByText("Fingerprint")).toBeNull();
+
+    fill("To", SHIELDED_ADDRESS);
+    expect(container.querySelector(".addr-fp")).toHaveTextContent(FINGERPRINT);
   });
 });

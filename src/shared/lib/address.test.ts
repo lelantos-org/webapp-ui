@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { grouped, sameAddress, shortAddr } from "./address";
+import { hexAddress, SHIELDED_ADDRESS } from "@/test/fixtures/addresses";
+import { addressEnds, addressLayout, sameAddress, shortAddr } from "./address";
 
 describe("shortAddr", () => {
   it("elides the middle of a full address", () => {
@@ -24,16 +25,36 @@ describe("sameAddress", () => {
   });
 });
 
-describe("grouped", () => {
-  it("breaks an address into readable fours", () => {
-    expect(grouped("0x9E2b41Ac")).toBe("0x9E 2b41 Ac");
+describe("addressLayout", () => {
+  it("sets a shielded address's prefix apart and rows the rest in six groups of four", () => {
+    const { prefix, rows } = addressLayout(SHIELDED_ADDRESS);
+    expect(prefix).toBe("lelantos1");
+    expect(rows[0]).toEqual(["kywv", "2fth", "uaqw", "s06v", "elmd", "vnuf"]);
+    expect(rows).toHaveLength(8);
+    expect(rows.at(-1)).toEqual(["pn4z", "k9l9", "0s5q", "2sha", "mv"]);
   });
 
-  it("leaves no trailing space on an exact multiple", () => {
-    expect(grouped("abcdefgh")).toBe("abcd efgh");
+  it("keeps every character, in order", () => {
+    for (const value of [SHIELDED_ADDRESS, hexAddress("1a"), "ab", ""]) {
+      const { prefix, rows } = addressLayout(value);
+      expect(prefix + rows.flat().join("")).toBe(value);
+    }
   });
 
-  it("handles a short value without padding it", () => {
-    expect(grouped("ab")).toBe("ab");
+  it("rows an EVM address in two, after its 0x", () => {
+    const { prefix, rows } = addressLayout(hexAddress("1a"));
+    expect(prefix).toBe("0x");
+    expect(rows.map((row) => row.length)).toEqual([6, 4]);
+    expect(rows[1]?.at(-1)).toBe("1a1a");
+  });
+});
+
+describe("addressEnds", () => {
+  it("gives the groups an address starts and ends on, as its full layout has them", () => {
+    expect(addressEnds(SHIELDED_ADDRESS)).toEqual({
+      prefix: "lelantos1",
+      head: "kywv 2fth",
+      tail: "2sha mv",
+    });
   });
 });

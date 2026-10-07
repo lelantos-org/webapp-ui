@@ -50,9 +50,10 @@
   .spend-review__addr {
     font-size: var(--fs-17);
     line-height: 1.7;
-    letter-spacing: 0.02em;
-    color: var(--fg);
-    overflow-wrap: anywhere;
+  }
+  .spend-review__dest {
+    --addr-fp-size: 30px;
+    font-size: var(--fs-15);
   }
   .spend-review__memo {
     font-size: var(--fs-17);
@@ -99,6 +100,10 @@
     .spend-review__sym { font-size: 20px; }
     .spend-review__words-txt { font-size: var(--fs-15); }
     .spend-review__addr { font-size: var(--fs-14); }
+    .spend-review__dest {
+      --addr-fp-size: 26px;
+      font-size: var(--fs-14);
+    }
     .spend-review__actions .btn--outline { padding: var(--sp-14) var(--sp-20); }
   }
 }

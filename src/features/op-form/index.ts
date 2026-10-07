@@ -14,8 +14,9 @@ export { useSpendAmount } from "./amount/use-spend-amount";
 export { ActionForm } from "./frame/ActionForm";
 export { BoundaryLine } from "./frame/BoundaryLine";
 export { SpendNotices } from "./frame/SpendNotices";
-export { useActionForm, useActionSubmit } from "./frame/use-action-form";
+export { useActionForm, useActionSubmit, useClearFinishedOp } from "./frame/use-action-form";
 export { useAskedAsset, useHeldAssetDefault } from "./frame/use-opening-asset";
+export type { SettledOutcome } from "./frame/use-tx-view";
 export { MemoField } from "./memo/MemoField";
 export { RecipientField } from "./recipient/RecipientField";
 export { ReviewPanel } from "./review/ReviewPanel";
@@ -28,6 +29,7 @@ export {
   defaultAssetField,
   evmAddressField,
   isEvmAddress,
+  isShieldedAddress,
   memoField,
   PUBLIC_RECIPIENT,
   SHIELDED_RECIPIENT,
